@@ -1,0 +1,21 @@
+.logo-hub-img{
+    width: 200px;
+}
+
+@media (min-width: 400px) {
+    .logo-hub-img{
+        width: 150px;
+    }
+}
+
+@media (min-width: 700px) {
+    .logo-hub-img{
+        width: 180px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .logo-hub-img{
+        width: 200px;
+    }
+}
