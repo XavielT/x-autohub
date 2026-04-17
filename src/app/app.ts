@@ -1,10 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { LogoHub } from '../shared/components/logo-hub/logo-hub';
+import { Navbar } from '../shared/components/navbar/navbar';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, LogoHub],
+  standalone: true,
+  imports: [RouterOutlet, LogoHub, Navbar],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
