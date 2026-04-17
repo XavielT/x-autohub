@@ -1,4 +1,10 @@
+//Global Palette colors
 :root{
+    --Hub: #ffb300;
+    --Hub-rgb: 255, 179, 0;
+    --HubShadow: #d0d0d0;
+    --SpaceIndigo: #2D3047;
+    --HubDark: #ff8f00;
     --main:#121212;
     --main-light:#474646;
     --main-ultra-light:#929090;
@@ -16,6 +22,103 @@
     --tertiary-ultra-dark:#a26c00;
 }
 
+//Global Fonts
+/*@font-face {
+    font-family: 'Poppins';
+    src: url('assets/fonts/Poppins-Regular.ttf');
+    font-weight: 400;
+    font-style: normal;
+}*/
+@font-face {
+    font-family: 'ROLNER';
+    src: url(/assets/fonts/ROLNER/ROLNER.woff2) format('woff2'),
+        url(/assets/fonts/ROLNER/ROLNER.woff) format('woff'),
+        url(/assets/fonts/ROLNER/ROLNER.otf) format('opentype');
+}
+
+@font-face {
+    font-family: 'Gefika';
+    src: url(/assets/fonts/Gefika/Gefika.woff2) format('woff2'),
+        url(/assets/fonts/Gefika/Gefika.woff) format('woff'),
+        url(/assets/fonts/Gefika/Gefika.otf) format('opentype');
+}
+
+@font-face {
+    font-family: 'Lemon-beach';
+    src: url(/assets/fonts/lemon-beach/Lemon-Beach.otf) format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Work-krow';
+    src: url(/assets/fonts/work-krow/Work-krow.otf) format('opentype'),
+        url(/assets/fonts/work-krow/Work-krow.ttf) format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Spoiler-script';
+    src: url(/assets/fonts/spoiler-script/Spoilers-Script.woff2) format('woff2'),
+        url(/assets/fonts/spoiler-script/Spoilers-Script.woff) format('woff'),
+        url(/assets/fonts/spoiler-script/Spoilers-Script.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Ducks-Fiesta';
+    src: url(/assets/fonts/Ducks-Fiesta/Ducks-Fiesta.ttf) format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Super-Wonder';
+    src: url(/assets/fonts/Super-Wonder/Super-Wonder.ttf) format('truetype');
+}
+
+/*Scrolls bars*/
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+    display: none;
+}
+
 html{
     background-color:var(--main) ;
+
+    /* Firefox */
+    scrollbar-width: none;
+}
+
+body {
+    /* IE / Edge antiguo */
+    -ms-overflow-style: none;
+
+    margin: 0;
+    min-height: 100vh;
+    background-attachment: fixed;
+}
+
+/*Making the navbar scroolling smooth*/
+html,
+body {
+    scroll-behavior: smooth;
+    scroll-padding-top: 100px;
+}
+
+/*Responsive mock*/
+@media (max-width: 415px) {
+    
+}
+
+@media (min-width: 416px) {
+    
+}
+
+@media (min-width: 700px) {
+    
+}
+
+@media screen and (min-width: 1024px) {
+    
 }

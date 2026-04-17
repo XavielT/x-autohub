@@ -1,1 +1,50 @@
-<p>navbar works!</p>
+<!-- Navbar -->
+<div class="navbar" [class.navbar-mobile-open]="isMobileMenuOpen">
+    <div class="navbar-logo">
+        <a routerLink="/">
+            <app-logo-hub></app-logo-hub>
+        </a>
+    </div>
+    <button class="navbar-mobile-toggle" type="button" aria-label="Toggle navigation menu" (click)="toggleMobileMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    <div class="navbar-menu">
+        <ul class="navbar-menu-list">
+            <li class="navbar-menu-list-item">
+                <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" #rlaHome="routerLinkActive"
+                    (click)="closeMobileMenu()"> <img class="navbar-menu-list-item-icon"
+                    [src]="rlaHome.isActive ? 'assets/icons/home-hub-icon.svg' : 'assets/icons/home-icon.svg'" alt="Home icon"> Home</a>
+            </li>
+            <li class="navbar-menu-list-item">
+                <a routerLink="/catalogo" routerLinkActive="active" #rlaCatalogo="routerLinkActive" (click)="closeMobileMenu()"> <img
+                        class="navbar-menu-list-item-icon" [src]="rlaCatalogo.isActive ? 'assets/icons/cart-hub-icon.svg' : 'assets/icons/cart-icon.svg'" alt="Cart icon">
+                    Catalogo</a>
+            </li>
+            <li class="navbar-menu-list-item">
+                <a routerLink="/hub-market" routerLinkActive="active" #rlaMarket="routerLinkActive" (click)="closeMobileMenu()"> <img
+                        class="navbar-menu-list-item-icon" [src]="rlaMarket.isActive ? 'assets/icons/market-hub-icon.svg' : 'assets/icons/market-icon.svg'" alt="Hub Market icon"> Hub
+                    Market</a>
+            </li>
+            <li class="navbar-menu-list-item">
+                <a routerLink="/social-hub" routerLinkActive="active" #rlaSocial="routerLinkActive" (click)="closeMobileMenu()"> <img
+                        class="navbar-menu-list-item-icon" [src]="rlaSocial.isActive ? 'assets/icons/network2-hub-icon.svg' : 'assets/icons/network2-icon.svg'" alt="Social Hub icon">
+                    Social Hub</a>
+            </li>
+        </ul>
+    </div>
+    <div class="navbar-actions">
+        <a class="navbar-act-btn-sec" routerLink="/login" (click)="closeMobileMenu()">
+            <!--<app-icon-button icon="user"></app-icon-button>-->
+            <button class="navbar-actions-button nav-button-secondary">
+                <span>Login</span>
+            </button>
+        </a>
+        <a class="navbar-act-btn-pri" routerLink="/publicar" (click)="closeMobileMenu()">
+            <button class="navbar-actions-button nav-button-primary">
+                Publicar
+            </button>
+        </a>
+    </div>
+</div>
