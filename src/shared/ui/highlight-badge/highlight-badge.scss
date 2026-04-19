@@ -1,0 +1,28 @@
+.highlight-badge-container{
+    display: flex;
+    align-items: stretch;
+    background-color: var(--Hub-translucid);
+    width: 280px;
+    gap: 10px;
+}
+
+.badge-highlight-line{
+    background-color: var(--Hub);
+    width: 6px;
+}
+
+.highlight-badge-content{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.highlight-badge-content img{
+    width: 23px;
+}
+
+.highlight-badge-content h4{
+    color: var(--Hub);
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}

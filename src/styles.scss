@@ -1,6 +1,7 @@
 //Global Palette colors
 :root{
     --Hub: #ffb300;
+    --Hub-translucid:#ffb3002a;
     --Hub-rgb: 255, 179, 0;
     --HubShadow: #d0d0d0;
     --SpaceIndigo: #2D3047;
@@ -75,6 +76,43 @@
 @font-face {
     font-family: 'Super-Wonder';
     src: url(/assets/fonts/Super-Wonder/Super-Wonder.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Diary-Story';
+    src: url(/assets/fonts/Diary-Story/Diary-Story.otf) format('opentype');
+}
+
+
+@font-face {
+    font-family: 'Dimona';
+    src: url(/assets/fonts/Dimona/Dimona-En.ttf) format('truetype');
+}
+
+
+@font-face {
+    font-family: 'Biotrip-Serif-Italic';
+    src: url(/assets/fonts/Biotrip-Serif/Biotrip-Serif-Italic.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Biotrip-Serif';
+    src: url(/assets/fonts/Biotrip-Serif/Biotrip-Serif.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Grime-Slime-Regular';
+    src: url(/assets/fonts/Grime-Slime/Grime-Slime-Regular.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Designer';
+    src: url(/assets/fonts/Designer/Designer.otf) format('opentype');
+}
+
+@font-face {
+    font-family: 'Batman';
+    src: url(/assets/fonts/Batman/Batman.ttf) format('truetype');
 }
 
 /*Scrolls bars*/

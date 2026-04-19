@@ -1,0 +1,111 @@
+.home-container {
+    position: relative;
+    overflow: hidden;
+}
+
+//background
+.home-bg-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+//making the bg darknes
+.home-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+//Making the bg didnt take the clicks
+.home-bg-video,
+.home-bg-overlay {
+    pointer-events: none;
+}
+
+.home-welcome-container {
+    position: relative;
+    z-index: 2; /* over of the video and the overlay */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    
+}
+
+.home-welcome-info-wrapper{
+    color: #ffffff;
+    margin-left: 20px;
+}
+
+.home-welcome-info{
+    font-family: 'Batman', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+.home-welcome-info h1{
+    font-size: 80px;
+    font-weight: lighter;
+    font-style: italic;
+    margin: 0;
+    margin-top: 50px;
+}
+
+.welcome-info-highlight{
+    color: var(--Hub);
+}
+
+.home-welcome-info p{
+    //font-family: 'Biotrip-Serif', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-size: 23px;
+    margin:0;
+    margin-top: 20px;
+}
+
+.home-welcome-cta{
+    display: flex;
+    gap: 15px;
+    margin-top: 70px;
+}
+
+.hm-wlc-cta-btn{
+    width: 250px;
+    height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-weight: bold;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+.home-welcome-cta-pri{
+    background-color: var(--Hub);
+    color: #000000;
+    transition: all 0.15s ease;
+    box-shadow: 7px 7px 0 0 var(--Hub-translucid);
+}
+
+.home-welcome-cta-pri:hover{
+    cursor: pointer;
+    transform: translateY(-5px);
+}
+
+.home-welcome-cta-sec{
+    border: 1px solid var(--main-ultra-light);
+    width: 185px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: #ffffff;
+}
+
+.home-welcome-cta-sec:hover{
+    cursor: pointer;
+    transform: translateY(-5px);
+    
+}
