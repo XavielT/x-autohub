@@ -1,0 +1,39 @@
+.page-counter-overview{
+    display: flex;
+    background-color: var(--secondary);
+    justify-content: space-around;
+    align-items: center;
+    padding: 30px 0;
+}
+
+.pg-cnt-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+
+    padding: 0 40px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+}
+
+.pg-cnt-number{
+    font-family: 'Batman', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-size: 45px;
+    color: var(--Hub);
+}
+
+.pg-cnt-info{
+    display: flex;
+    flex-direction: column;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-size: 16px;
+}
+
+.pg-cnt-info h4{
+    color: var(--main-ultra-light);
+    margin: 0;
+}
+
+.pg-cnt-info span{
+    color: #ffffff;
+}
