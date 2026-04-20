@@ -1,0 +1,20 @@
+<article class="catalog-card" [class.catalog-card--featured]="item.variant === 'featured'" [class.catalog-card--secondary]="item.variant === 'secondary'">
+    <div class="catalog-card__image-wrapper">
+        <img
+        [src]="item.imageUrl"
+        [alt]="item.title"
+        class="catalog-card__image"
+        />
+    </div>
+
+    <div class="catalog-card__content">
+        <span class="catalog-card__category">{{ item.category }}</span>
+        <h4 class="catalog-card__title">{{ item.title }}</h4>
+
+        @if (item.variant === 'featured' && item.ctaLabel) {
+            <a [routerLink]="item.ctaLink" class="catalog-card__cta">
+                {{ item.ctaLabel }}
+            </a>
+        }
+    </div>
+</article>
