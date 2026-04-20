@@ -4,6 +4,7 @@
     justify-content: space-around;
     align-items: center;
     padding: 30px 0;
+    gap: 20px;
 }
 
 .pg-cnt-container{
@@ -36,4 +37,41 @@
 
 .pg-cnt-info span{
     color: #ffffff;
+}
+
+@media (max-width: 1024px) {
+    .page-counter-overview {
+        padding: 24px 12px;
+    }
+
+    .pg-cnt-container {
+        gap: 16px;
+        padding: 0 24px;
+    }
+
+    .pg-cnt-number {
+        font-size: 38px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-counter-overview {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0;
+        padding: 12px 0;
+    }
+
+    .pg-cnt-container {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 18px 16px;
+        border-left: 0;
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .pg-cnt-number {
+        font-size: 34px;
+        min-width: 80px;
+    }
 }

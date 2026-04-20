@@ -2,7 +2,8 @@
     display: flex;
     align-items: stretch;
     background-color: var(--Hub-translucid);
-    width: 280px;
+    width: fit-content;
+    max-width: 100%;
     gap: 10px;
 }
 
@@ -25,4 +26,32 @@
 .highlight-badge-content h4{
     color: var(--Hub);
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    margin: 0;
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .highlight-badge-container {
+        width: 100%;
+        max-width: 360px;
+        gap: 8px;
+    }
+
+    .badge-highlight-line {
+        width: 4px;
+    }
+
+    .highlight-badge-content {
+        justify-content: flex-start;
+        padding: 10px 12px 10px 0;
+    }
+
+    .highlight-badge-content img {
+        width: 20px;
+    }
+
+    .highlight-badge-content h4 {
+        font-size: 14px;
+        line-height: 1.25;
+    }
 }

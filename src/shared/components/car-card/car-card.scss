@@ -1,7 +1,10 @@
 .car-card{
     background-color: var(--secondary);
-    width: 410px;
+    width: 100%;
+    max-width: 410px;
+    margin: 0 auto;
     transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
 .car-card:hover{
@@ -21,8 +24,10 @@
 }
 
 .car-card-link img{
-    width: 350px;
-    height: 220px;
+    width: 100%;
+    max-width: 350px;
+    aspect-ratio: 16 / 10;
+    height: auto;
     border-radius: 10px;
     object-fit: cover;
 }
@@ -36,13 +41,15 @@
     display: flex;
     gap: 18px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
+    padding: 0 12px;
 }
 
 .car-card-info-up-left{
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .car-card-link h4{
@@ -68,17 +75,29 @@
     font-size: 28px;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     color: var(--Hub);
+    margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.car-card-info-up-right h5{
+    margin: 0;
 }
 
 .car-card-info-down{
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 10px;
 }
 
 .car-card-info-down-item{
     display: flex;
     flex-direction: column;
     padding: 30px 0;
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
 }
 
 .car-card-info-down-item span{
@@ -94,4 +113,89 @@
     color: #ffffff;
     font-size: 20px;
     margin: 0;
+}
+
+@media (max-width: 1024px) {
+    .car-card-link h4 {
+        font-size: 26px;
+    }
+
+    .car-card-info-up-right {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .car-card {
+        max-width: 100%;
+    }
+
+    .car-card-img {
+        padding: 16px 12px 0;
+    }
+
+    .car-card-link img {
+        max-width: 100%;
+    }
+
+    .car-card-info-up {
+        gap: 12px;
+        justify-content: space-between;
+    }
+
+    .car-card-link h4 {
+        font-size: 22px;
+        line-height: 1.15;
+    }
+
+    .car-card-info-up-left span {
+        font-size: 14px;
+    }
+
+    .car-card-info-up-right {
+        font-size: 20px;
+    }
+
+    .car-card-info-down {
+        padding: 0 6px;
+        gap: 6px;
+    }
+
+    .car-card-info-down-item {
+        padding: 20px 0;
+    }
+
+    .car-card-info-down-item span {
+        font-size: 12px;
+    }
+
+    .car-card-info-down-item h6 {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .car-card-link h4 {
+        font-size: 20px;
+    }
+
+    .car-card-info-up-left span {
+        font-size: 12px;
+    }
+
+    .car-card-info-up-right {
+        font-size: 18px;
+    }
+
+    .car-card-info-down-item {
+        padding: 16px 0;
+    }
+
+    .car-card-info-down-item span {
+        font-size: 11px;
+    }
+
+    .car-card-info-down-item h6 {
+        font-size: 13px;
+    }
 }
