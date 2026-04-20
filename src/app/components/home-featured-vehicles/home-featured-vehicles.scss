@@ -1,0 +1,72 @@
+//&rarr; to create an arrow
+
+//home featured vehicles container
+.home-featured-vehicles{
+    display: flex;
+    flex-direction: column;
+    background-color: var(--main);
+    column-gap: 40px;
+    padding: 90px 25px;
+}
+
+//home featured vehicles header
+.hm-ft-vh-header{
+    display: flex;
+    align-items: center;
+    justify-content:space-between;
+}
+
+.hm-ft-vh-title{
+    display: flex;
+    flex-direction: column;
+}
+
+.hm-ft-vh-title span{
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    color: var(--Hub);
+    font-size: 20px;
+}
+
+.hm-ft-vh-title h3{
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-style: italic;
+    font-size: 37px;
+    color: #ffffff;
+    margin: 0;
+}
+
+//home featured vehicleas cta
+.link-arrow {
+    text-decoration: none;
+    color: var(--main-ultra-light);
+    transition: all 0.2s ease;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+.link-arrow:hover {
+    color: var(--Hub);
+}
+
+.link-arrow::after {
+    content: '→';
+    margin-left: 6px;
+    transition: transform 0.2s ease;
+}
+
+.link-arrow:hover::after {
+    transform: translateX(4px);
+}
+
+.hm-ft-vh-cards-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 35px 0;
+}
+
+.hm-ft-vh-cards{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    //TODO: change the grid template for this: grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 50px;
+}

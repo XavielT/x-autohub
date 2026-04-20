@@ -1,0 +1,19 @@
+<div class="home-featured-vehicles">
+    <!-- home ftestured vehicules header -->
+    <div class="hm-ft-vh-header">
+        <div class="hm-ft-vh-title">
+            <span>Hub Market</span>
+            <h3>Vehiculos destacados</h3>
+        </div>
+        <div class="hm-ft-vh-cta">
+            <a class="link-arrow" routerLink="/hub-market">Ver mas vehiculos</a>
+        </div>
+    </div>
+    
+    <!-- Home featured vehicles cards content -->
+    <div class="hm-ft-vh-cards-container">
+        <div class="hm-ft-vh-cards">
+            <app-car-card *ngFor="let car of cars" [car]="car"></app-car-card>
+        </div>
+    </div>
+</div>

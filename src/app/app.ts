@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { LogoHub } from '../shared/components/logo-hub/logo-hub';
 import { Navbar } from '../shared/components/navbar/navbar';
 
+
 @Component({
   selector: 'app-root',
   standalone: true,
