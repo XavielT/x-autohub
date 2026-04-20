@@ -34,14 +34,11 @@
     min-height: 100vh;
     display: flex;
     align-items: center;
-    padding: 80px 0;
 }
 
 .home-welcome-info-wrapper{
     color: #ffffff;
     margin-left: 20px;
-    max-width: 900px;
-    padding-right: 20px;
 }
 
 .home-welcome-info{
@@ -54,12 +51,6 @@
     font-style: italic;
     margin: 0;
     margin-top: 50px;
-    line-height: 1.05;
-    text-wrap: balance;
-}
-
-.home-welcome-title-line{
-    display: block;
 }
 
 .welcome-info-highlight{
@@ -72,19 +63,16 @@
     font-size: 23px;
     margin:0;
     margin-top: 20px;
-    max-width: 740px;
-    line-height: 1.4;
 }
 
 .home-welcome-cta{
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 250px));
+    display: flex;
     gap: 15px;
     margin-top: 70px;
 }
 
 .hm-wlc-cta-btn{
-    width: 100%;
+    width: 250px;
     height: 65px;
     display: flex;
     align-items: center;
@@ -109,7 +97,7 @@
 
 .home-welcome-cta-sec{
     border: 1px solid var(--main-ultra-light);
-    min-width: 185px;
+    width: 185px;
     cursor: pointer;
     transition: all 0.15s ease;
     color: #ffffff;
@@ -123,7 +111,6 @@
 @media (max-width: 1024px) {
     .home-welcome-info h1 {
         font-size: 62px;
-        line-height: 1.08;
     }
 
     .home-welcome-info p {
@@ -147,11 +134,6 @@
         font-size: 44px;
         margin-top: 28px;
         line-height: 1.12;
-        text-wrap: pretty;
-    }
-
-    .home-welcome-title-line {
-        display: inline;
     }
 
     .home-welcome-info p {
@@ -166,18 +148,20 @@
 
     .home-welcome-cta {
         margin-top: 36px;
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
         gap: 12px;
         width: min(100%, 320px);
     }
 
     .hm-wlc-cta-btn {
+        width: 100%;
         height: 56px;
         font-size: 16px;
     }
 
     .home-welcome-cta-sec {
-        min-width: 0;
+        width: 100%;
     }
 }
 

@@ -68,7 +68,6 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 50px;
-    justify-items: center;
 }
 
 @media (max-width: 1024px) {
@@ -83,7 +82,6 @@
     .hm-ft-vh-cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 30px;
-        justify-items: center;
     }
 }
 
