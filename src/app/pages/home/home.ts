@@ -3,10 +3,11 @@ import { HomeWelcome } from '../../components/home-welcome/home-welcome';
 import { PageCounterOverview } from '../../components/page-counter-overview/page-counter-overview';
 import { RouterModule } from '@angular/router';
 import { HomeFeaturedVehicles } from '../../components/home-featured-vehicles/home-featured-vehicles';
+import { HomeFeaturedCatalog } from '../../components/home-featured-catalog/home-featured-catalog';
 
 @Component({
   selector: 'app-home',
-  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles],
+  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
