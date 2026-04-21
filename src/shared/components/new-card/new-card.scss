@@ -1,0 +1,148 @@
+:host {
+    display: block;
+    width: 100%;
+    min-width: 0;     
+}
+
+.new-card{
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+    //background-color: var(--secondary);
+
+    &__up{
+        display: flex;
+        position: relative;
+        margin-bottom: 10px;
+    }
+
+    &__badge{
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+    }
+
+    &__img{
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 10px;
+        box-shadow: 0 0 10px 3px var(--main-ultra-light);
+        transition: all 0.2s ease;
+    }
+
+    &__img:hover{
+        box-shadow: 0 0 15px 4px var(--Hub-translucid);
+    }
+
+    &__down{
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__date{
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 13px;
+        color: var(--main-ultra-light);
+        padding: 15px 0;
+    }
+
+    &__titleLink{
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    &__titleLink:hover{
+        color: var(--Hub);
+    }
+
+    &__title{
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 25px;
+        font-style: italic;
+        color: #ffffff;
+        margin: 0;
+        transition: all 0.2s ease;
+    }
+
+    &__title:hover{
+        color: var(--Hub);
+    }
+
+    &__text{
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 16px;
+        color: var(--main-ultra-light);
+    }
+
+    &__link{
+        text-decoration: none;
+        color: var(--Hub);
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 16px;
+        transition: all 0.2s ease;
+    }
+
+    &__link:hover{
+        transform: translateY(-5px);
+    }
+}
+
+@media (max-width: 1024px) {
+    .new-card {
+        padding: 16px;
+
+        &__img {
+            height: 260px;
+        }
+
+        &__title {
+            font-size: 22px;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .new-card {
+        padding: 12px;
+
+        &__img {
+            height: 220px;
+        }
+
+        &__date {
+            padding: 12px 0;
+        }
+
+        &__title {
+            font-size: 20px;
+        }
+
+        &__text,
+        &__link {
+            font-size: 15px;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .new-card {
+        padding: 8px;
+
+        &__img {
+            height: 200px;
+        }
+
+        &__badge {
+            top: 8px;
+            left: 8px;
+        }
+
+        &__title {
+            font-size: 18px;
+        }
+    }
+}

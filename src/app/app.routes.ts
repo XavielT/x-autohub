@@ -4,11 +4,13 @@ import { CatalogoComponent } from './pages/catalogo/catalogo';
 import { HubMarketComponent } from './pages/hub-market/hub-market';
 import { SocialHubComponent } from './pages/social-hub/social-hub';
 import { CarDetails } from './pages/car-details/car-details';
+import { NewDetails } from './pages/new-details/new-details';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'catalogo', component: CatalogoComponent },
   { path: 'hub-market', component: HubMarketComponent },
   { path: 'social-hub', component: SocialHubComponent },
-  { path: 'car-details', component: CarDetails },
+  { path: 'car-details/:id', component: CarDetails },
+  { path: 'news/:id', component: NewDetails},
 ];

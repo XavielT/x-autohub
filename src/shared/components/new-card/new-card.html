@@ -1,0 +1,18 @@
+<div class="new-card">
+    <div class="new-card__up">
+        <div class="new-card__badge">
+            <app-info-badge [text]="newCard.location"/>
+        </div>
+        <a class="new-card__imgLink" [routerLink]="['/news', newCard.id]">
+            <img class="new-card__img" [src]="newCard.imageUrl"/>
+        </a>
+    </div>
+    <div class="new-card__down">
+        <span class="new-card__date">{{ newCard.date }}</span>
+        <a class="new-card__titleLink" [routerLink]="['/news', newCard.id]">
+            <h4 class="new-card__title">{{ newCard.title }}</h4>
+        </a>
+        <p class="new-card__text">{{ newCard.text }}</p>
+        <a class="new-card__link" [routerLink]="['/news', newCard.id]"><span>Leer mas</span></a>
+    </div>
+</div>

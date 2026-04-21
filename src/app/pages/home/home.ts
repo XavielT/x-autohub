@@ -4,10 +4,11 @@ import { PageCounterOverview } from '../../components/page-counter-overview/page
 import { RouterModule } from '@angular/router';
 import { HomeFeaturedVehicles } from '../../components/home-featured-vehicles/home-featured-vehicles';
 import { HomeFeaturedCatalog } from '../../components/home-featured-catalog/home-featured-catalog';
+import { HomeNews } from '../../components/home-news/home-news';
 
 @Component({
   selector: 'app-home',
-  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog],
+  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog, HomeNews],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

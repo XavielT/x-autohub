@@ -1,0 +1,12 @@
+<section class="home-news">
+    <div class="home-news__header">
+        <h3 class="home-news__title">Hub News</h3>
+        <div class="home-news__line"></div>
+        <p class="home-news__p">Ultimas novedades del mundo automotriz.</p>
+    </div>
+    <div class="home-news__content">
+        @for (new of news; track new.id) {
+            <app-new-card [newCard]="new" />
+        }
+    </div>
+</section>

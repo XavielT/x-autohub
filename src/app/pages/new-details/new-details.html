@@ -1,0 +1,11 @@
+@if (new) {
+    <div class="new-details">
+        <img class="new-details__img" [src]="new.imageUrl"/>
+        <h1 class="new-details__title">{{ new.title }}</h1>
+        <span class="new-details__date">{{ new.date }}</span>
+        <p class="new-details__text">{{ new.text }}</p>
+    </div>
+} @else {
+    <p class="new-details__notFound">Noticia no encontrada.</p>
+    <img class="new-details__notFound-img" src="#"/>
+}
