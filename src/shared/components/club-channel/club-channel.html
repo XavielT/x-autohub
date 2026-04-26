@@ -1,0 +1,37 @@
+<section id="hub-channel" class="hub-channel">
+    <h2 class="hub-channel__title">UNETE AL CLUB</h2>
+    <p class="hub-channel__text">
+      Forma parte de la comunidad motorizada mas grande de RD. Recibe alertas
+      de productos de tu interes, ofertas en piezas y acceso a eventos exclusivos.
+    </p>
+  
+    <div class="hub-channel__inner">
+      <input
+        class="hub-channel__email-input"
+        [(ngModel)]="email"
+        placeholder="tucorreo@gmail.com"
+        type="email"
+        [disabled]="isLoading"
+      />
+      <button
+        class="hub-channel__button"
+        (click)="onSubmit()"
+        [disabled]="isLoading"
+      >
+        {{ isLoading ? 'Registrando...' : 'Registrarme' }}
+      </button>
+    </div>
+  
+    <!-- Dynamic feedback -->
+    @if (feedbackMessage) {
+      <span
+        class="hub-channel__feedback"
+        [class.hub-channel__feedback--success]="feedbackType === 'success'"
+        [class.hub-channel__feedback--error]="feedbackType === 'error'"
+      >
+        {{ feedbackMessage }}
+      </span>
+    }
+  
+    <span class="hub-channel__span">NO SPAM, PURE POWER ONLY</span>
+  </section>
