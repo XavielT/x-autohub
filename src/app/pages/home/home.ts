@@ -6,10 +6,11 @@ import { HomeFeaturedVehicles } from '../../components/home-featured-vehicles/ho
 import { HomeFeaturedCatalog } from '../../components/home-featured-catalog/home-featured-catalog';
 import { HomeNews } from '../../components/home-news/home-news';
 import { ClubChannel } from '../../../shared/components/club-channel/club-channel';
+import { Footer } from '../../../shared/components/footer/footer';
 
 @Component({
   selector: 'app-home',
-  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog, HomeNews, ClubChannel],
+  imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog, HomeNews, ClubChannel, Footer],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
