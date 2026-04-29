@@ -5,6 +5,7 @@ import { HubMarketComponent } from './pages/hub-market/hub-market';
 import { SocialHubComponent } from './pages/social-hub/social-hub';
 import { CarDetails } from './pages/car-details/car-details';
 import { NewDetails } from './pages/new-details/new-details';
+import { TerminosCondiciones } from './pages/terminos-condiciones/terminos-condiciones';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -13,4 +14,5 @@ export const routes: Routes = [
   { path: 'social-hub', component: SocialHubComponent },
   { path: 'car-details/:id', component: CarDetails },
   { path: 'news/:id', component: NewDetails},
+  { path: 'terminos-condiciones', component: TerminosCondiciones}
 ];
