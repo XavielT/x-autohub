@@ -1,0 +1,25 @@
+<div class="hub-part-card">
+    <div class="hub-part-card__top">
+        <a class="hub-part-card__image-link" [routerLink]="['/hub-part-details', hubPart.id]"><img class="hub-part-card__img"
+                [src]="hubPart.imgUrl" /></a>
+    </div>
+    <div class="hub-part-card__middle">
+        <div class="hub-part-card__middle-header">
+            <span>{{hubPart.brand}}</span>
+            <div class="hub-part-card__stars">
+                <img src="../../../assets/icons/star-icon.svg" /><span>{{hubPart.starsCalification}}</span>
+            </div>
+        </div>
+        <div class="hub-part-card__middle-content">
+            <a [routerLink]="['/hub-part-details', hubPart.id]">
+                <h4 class="hub-part-card__name">{{hubPart.name}}</h4>
+            </a>
+        </div>
+    </div>
+    <div class="hub-part-card__bottom">
+        <h6 class="hub-part-card__price">{{hubPart.price}}</h6>
+        <a href="#">
+            <div class="hub-part-card__cart-button"><img src="../../../assets/icons/cart-icon.svg" /></div>
+        </a>
+    </div>
+</div>

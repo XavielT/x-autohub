@@ -1,1 +1,50 @@
-<p>catalogo works!</p>
+<section class="catalogo">
+    <div class="catalogo__header">
+        <div class="catalogo__title">
+            <h2>Catalogo <span class="catalogo__title-highlight">Oficial</span></h2>
+            <p>Todo para tu auto en un solo lugar</p>
+        </div>
+        <div class="catalogo__search">
+            <search>
+                <input class="catalogo__input" placeholder="Que estas buscando?" [(ngModel)]="searchQuery"
+                    (input)="onSearch()" /><button class="catalogo__search-button"><img class="catalogo__search-icon"
+                        src="../../../assets/icons/search-icon.svg" /></button>
+            </search>
+        </div>
+    </div>
+
+    <div class="catalogo__content">
+        <div class="catalogo__content-left">
+            <div class="catalogo__category-filter">
+                <div class="catalogo__category-filter-top">
+                    <div class="catalogo__category-title-line"></div>
+                    <h4>Categorias</h4>
+                </div>
+                <div class="catalogo__category-filter-bottom">
+                    <ul class="catalogo__category-filter-list">
+                        @for (cat of categories; track cat.value) {
+                            <li
+                              class="catalogo__category-filter-list-item"
+                              [class.active]="selectedCategory === cat.value"
+                              (click)="onCategorySelect(cat.value)"
+                            >
+                              {{ cat.label }}
+                            </li>
+                          }
+                    </ul>
+                </div>
+            </div>
+            <div class="catalogo__help">
+                <h4 class="catalogo__help-title">Consulta un experto</h4>
+                <span class="catalogo__help-text">No estas seguro si esa pieza es compatible con tu vehiculo? Contacta
+                    nuestro equipo experto.</span>
+                <a class="catalogo__help-link" href="https://wa.me/18097799782?text=Hola%20X%20AutoHub">Contactar &rarr;</a>
+            </div>
+        </div>
+        <div class="catalogo__content-main">
+            @for (part of filteredParts; track part.id){
+            <app-catalogo-card [hubPart]="part"></app-catalogo-card>
+            }
+        </div>
+    </div>
+</section>

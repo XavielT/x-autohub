@@ -1,0 +1,72 @@
+.hub-part-card{
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ffffff;
+    align-items: center;
+    justify-content: center;
+    width: 400px;
+    height: 500px;
+
+    &__top{
+        width: 300px;
+        height: 220px;
+        background: var(--Hub-translucid);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        overflow: hidden;
+    }
+
+    &__image-link {
+        width: 100%;
+        height: 100%;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        text-decoration: none;
+    }
+
+    &__img{
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        padding: 10px;
+        display: block;
+    }
+
+    &__middle{}
+
+    &__middle-header{}
+
+    &__middle-header span{}
+
+    &__stars{}
+
+    &__stars img{
+        width: 20px;
+    }
+
+    &__stars span{}
+
+    &__middle-content{}
+
+    &__middle-content a{}
+
+    &__name{}
+
+    &__bottom{}
+
+    &__price{}
+
+    &__bottom a{}
+
+    &__cart-button{}
+
+    &__cart-button img{
+        width: 30px;
+    }
+}
