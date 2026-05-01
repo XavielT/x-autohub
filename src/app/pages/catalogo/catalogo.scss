@@ -59,19 +59,19 @@
         box-shadow: 0 0 6px 1px var(--HubShadow);
     }
 
-    &__search-button{
+    &__cart-button{
         background-color: var(--Hub);
         border: none;
         transition: all 0.2s ease;
         border-radius: 5px;
     }
 
-    &__search-button:hover{
+    &__cart-button:hover{
         box-shadow: 0 0 6px 1px var(--HubShadow);
     }
 
-    &__search-icon{
-        width: 20px;
+    &__cart-icon{
+        width: 24px;
         padding: 10px;
     }
 
@@ -91,6 +91,7 @@
     &__content-left{
         display: flex;
         flex-direction: column;
+        margin-right: 20px;
     }
 
     &__category-filter{
@@ -171,7 +172,7 @@
         font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
         color: var(--main-ultra-light);
         font-size: 16px;
-        max-width: 350px;
+        max-width: 320px;
         line-height: 1.45;
     }
 
@@ -185,5 +186,13 @@
 
     &__help-link:hover{
         text-shadow: 0 0 10px var(--HubShadow);
+    }
+
+    //cards container
+    &__content-main{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 18px 16px;
+        flex: 1;
     }
 }

@@ -1,0 +1,42 @@
+@if (cartService.isOpen()) {
+    <div class="cart-overlay" (click)="close()"></div>
+  
+    <div class="cart-modal">
+      <div class="cart-modal__header">
+        <h3 class="cart-modal__title">Tu <span class="cart-modal__highlight">Carrito</span></h3>
+        <button class="cart-modal__close" (click)="close()">✕</button>
+      </div>
+  
+      @if (cartService.items().length === 0) {
+        <div class="cart-modal__empty">
+          <p>Tu carrito está vacío</p>
+        </div>
+      } @else {
+        <div class="cart-modal__items">
+          @for (item of cartService.items(); track item.part.id) {
+            <div class="cart-modal__item">
+              <img class="cart-modal__item-img" [src]="item.part.imgUrl" [alt]="item.part.name" />
+              <div class="cart-modal__item-info">
+                <span class="cart-modal__item-name">{{ item.part.name }}</span>
+                <span class="cart-modal__item-brand">{{ item.part.brand }}</span>
+                <span class="cart-modal__item-price">${{ item.part.price * item.quantity | number }}</span>
+              </div>
+              <div class="cart-modal__item-qty">
+                <span>x{{ item.quantity }}</span>
+              </div>
+              <button class="cart-modal__item-remove" (click)="removeItem(item.part.id)">✕</button>
+            </div>
+          }
+        </div>
+  
+        <div class="cart-modal__footer">
+          <div class="cart-modal__total">
+            <span>Total</span>
+            <span>${{ cartService.totalPrice() | number }}</span>
+          </div>
+          <button class="cart-modal__clear" (click)="clearCart()">Vaciar carrito</button>
+          <button type="button" class="cart-modal__checkout" (click)="proceedToCheckout()">Proceder al pago →</button>
+        </div>
+      }
+    </div>
+  }

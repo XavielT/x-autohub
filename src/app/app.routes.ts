@@ -7,6 +7,7 @@ import { CarDetails } from './pages/car-details/car-details';
 import { NewDetails } from './pages/new-details/new-details';
 import { TerminosCondiciones } from './pages/terminos-condiciones/terminos-condiciones';
 import { HubPartDetails } from './pages/hub-part-details/hub-part-details';
+import { CheckoutComponent } from './pages/checkout/checkout';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -16,5 +17,6 @@ export const routes: Routes = [
   { path: 'social-hub', component: SocialHubComponent },
   { path: 'car-details/:id', component: CarDetails },
   { path: 'news/:id', component: NewDetails},
-  { path: 'terminos-condiciones', component: TerminosCondiciones}
+  { path: 'terminos-condiciones', component: TerminosCondiciones},
+  { path: 'checkout', component: CheckoutComponent },
 ];

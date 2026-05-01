@@ -1,0 +1,134 @@
+<div class="checkout">
+  <div class="checkout__inner">
+    <nav class="checkout__breadcrumb" aria-label="Navegación">
+      <a routerLink="/catalogo" class="checkout__back">← Volver al catálogo</a>
+    </nav>
+
+    @if (cartService.items().length === 0) {
+      <div class="checkout__sheet checkout__sheet--empty">
+        <h1 class="checkout__title">Tu <span class="checkout__title-highlight">carrito</span> está vacío</h1>
+        <p class="checkout__lead">Agrega piezas desde el catálogo para continuar con el pago.</p>
+        <a routerLink="/catalogo" class="checkout__cta">Ir al catálogo</a>
+      </div>
+    } @else {
+      <header class="checkout__page-header">
+        <h1 class="checkout__title">Finalizar <span class="checkout__title-highlight">compra</span></h1>
+        <p class="checkout__subtitle">Revisa tu pedido y completa los datos de envío. Los totales usan tu carrito actual.</p>
+      </header>
+
+      <div class="checkout__grid">
+        <section class="checkout__sheet checkout__sheet--form" aria-labelledby="checkout-form-heading">
+          <h2 id="checkout-form-heading" class="checkout__section-title">Datos de contacto y envío</h2>
+
+          <div class="checkout__fields">
+            <label class="checkout__label">
+              <span>Correo electrónico</span>
+              <input class="checkout__input" type="email" name="email" [(ngModel)]="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+            </label>
+            <label class="checkout__label">
+              <span>Teléfono</span>
+              <input class="checkout__input" type="tel" name="phone" [(ngModel)]="phone" autocomplete="tel" placeholder="Ej: 809-000-1234" />
+            </label>
+            <label class="checkout__label checkout__label--full">
+              <span>Nombre completo</span>
+              <input class="checkout__input" type="text" name="fullName" [(ngModel)]="fullName" autocomplete="name" placeholder="Nombre y apellidos" />
+            </label>
+            <label class="checkout__label checkout__label--full">
+              <span>Dirección</span>
+              <input class="checkout__input" type="text" name="addressLine1" [(ngModel)]="addressLine1" autocomplete="street-address" placeholder="Calle, número" />
+            </label>
+            <label class="checkout__label">
+              <span>Ciudad</span>
+              <input class="checkout__input" type="text" name="city" [(ngModel)]="city" autocomplete="address-level2" />
+            </label>
+            <label class="checkout__label">
+              <span>Código postal</span>
+              <input class="checkout__input" type="text" name="postalCode" [(ngModel)]="postalCode" autocomplete="postal-code" />
+            </label>
+          </div>
+
+          <h3 class="checkout__subsection-title">Método de envío</h3>
+          <ul class="checkout__options">
+            @for (opt of shippingOptions; track opt.id) {
+              <li class="checkout__option">
+                <label class="checkout__option-label">
+                  <input type="radio" name="shipping" [value]="opt.id" [(ngModel)]="selectedShippingId" />
+                  <span class="checkout__option-body">
+                    <span class="checkout__option-title">{{ opt.label }}</span>
+                    <span class="checkout__option-desc">{{ opt.description }}</span>
+                    <span class="checkout__option-meta">{{ opt.etaLabel }}</span>
+                  </span>
+                  <span class="checkout__option-price">
+                    @if (opt.price === 0) { Gratis } @else { ${{ opt.price | number }} }
+                  </span>
+                </label>
+              </li>
+            }
+          </ul>
+
+          <h3 class="checkout__subsection-title">Método de pago</h3>
+          <ul class="checkout__options">
+            @for (pm of paymentOptions; track pm.id) {
+              <li class="checkout__option">
+                <label class="checkout__option-label">
+                  <input type="radio" name="payment" [value]="pm.id" [(ngModel)]="selectedPaymentId" />
+                  <span class="checkout__option-body">
+                    <span class="checkout__option-title">{{ pm.label }}</span>
+                    <span class="checkout__option-desc">{{ pm.description }}</span>
+                  </span>
+                </label>
+              </li>
+            }
+          </ul>
+
+          <label class="checkout__label checkout__label--full">
+            <span>Notas del pedido <span class="checkout__optional">(opcional)</span></span>
+            <textarea class="checkout__textarea" name="orderNotes" [(ngModel)]="orderNotes" rows="3" placeholder="Indicaciones de entrega, referencias…"></textarea>
+          </label>
+
+          <button type="button" class="checkout__submit" (click)="submitOrder()">Confirmar pedido (demo)</button>
+        </section>
+
+        <aside class="checkout__sheet checkout__sheet--summary" aria-labelledby="checkout-summary-heading">
+          <h2 id="checkout-summary-heading" class="checkout__section-title">Resumen del pedido</h2>
+
+          <ul class="checkout__lines">
+            @for (item of cartService.items(); track item.part.id) {
+              <li class="checkout__line">
+                <img class="checkout__line-img" [src]="item.part.imgUrl" [alt]="item.part.name" />
+                <div class="checkout__line-info">
+                  <span class="checkout__line-name">{{ item.part.name }}</span>
+                  <span class="checkout__line-brand">{{ item.part.brand }}</span>
+                  <span class="checkout__line-qty">Cantidad: {{ item.quantity }}</span>
+                </div>
+                <span class="checkout__line-price">${{ item.part.price * item.quantity | number }}</span>
+              </li>
+            }
+          </ul>
+
+          <div class="checkout__totals">
+            <div class="checkout__total-row">
+              <span>Subtotal</span>
+              <span>${{ cartService.totalPrice() | number }}</span>
+            </div>
+            <div class="checkout__total-row">
+              <span>Envío</span>
+              <span>
+                @if (shippingPrice === 0) { Gratis } @else { ${{ shippingPrice | number }} }
+              </span>
+            </div>
+            <div class="checkout__divider"></div>
+            <div class="checkout__total-row checkout__total-row--grand">
+              <span>Total</span>
+              <span>${{ grandTotal | number }}</span>
+            </div>
+          </div>
+
+          <p class="checkout__disclaimer">
+            Los métodos de pago mostrados son de demostración. Aquí se integrará la pasarela real y la confirmación con el backend.
+          </p>
+        </aside>
+      </div>
+    }
+  </div>
+</div>

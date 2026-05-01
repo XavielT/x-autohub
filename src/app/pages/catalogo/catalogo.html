@@ -7,8 +7,8 @@
         <div class="catalogo__search">
             <search>
                 <input class="catalogo__input" placeholder="Que estas buscando?" [(ngModel)]="searchQuery"
-                    (input)="onSearch()" /><button class="catalogo__search-button"><img class="catalogo__search-icon"
-                        src="../../../assets/icons/search-icon.svg" /></button>
+                    (input)="onSearch()" /><button (click)="openCart()" class="catalogo__cart-button"><img class="catalogo__cart-icon"
+                        src="../../../assets/icons/cart-b-icon.svg" /></button>
             </search>
         </div>
     </div>

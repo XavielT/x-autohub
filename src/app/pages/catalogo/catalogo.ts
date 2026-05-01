@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
 import { HubPartModel } from '../../../shared/models/hub-part.model';
 import { HUB_PART_MOCK } from '../../../shared/models/hub-part.mock';
+import { CartService } from '../../../shared/services/cart';
 
 interface CategoryOption {
   value: string;
@@ -65,5 +66,11 @@ export class CatalogoComponent {
 
       return matchesSearch && matchesCategory;
     });
+  }
+
+  constructor(private cartService: CartService) {}
+
+  openCart(): void {
+    this.cartService.toggleCart();
   }
 }

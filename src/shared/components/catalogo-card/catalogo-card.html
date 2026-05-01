@@ -12,14 +12,14 @@
         </div>
         <div class="hub-part-card__middle-content">
             <a [routerLink]="['/hub-part-details', hubPart.id]">
-                <h4 class="hub-part-card__name">{{hubPart.name}}</h4>
+                <h3 class="hub-part-card__name">{{hubPart.name}}</h3>
             </a>
         </div>
     </div>
     <div class="hub-part-card__bottom">
-        <h6 class="hub-part-card__price">{{hubPart.price}}</h6>
-        <a href="#">
-            <div class="hub-part-card__cart-button"><img src="../../../assets/icons/cart-icon.svg" /></div>
+        <h4 class="hub-part-card__price">${{hubPart.price}}</h4>
+        <a class="hub-part-card__cart-button" (click)="addToCart()">
+            <img src="../../../assets/icons/cart-icon.svg"/>
         </a>
     </div>
 </div>
