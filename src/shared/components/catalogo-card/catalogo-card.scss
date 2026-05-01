@@ -136,3 +136,40 @@
         filter: drop-shadow(0 0 5px #000000);
     }
 }
+
+@media (max-width: 1023px) {
+    .hub-part-card {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        align-items: stretch;
+
+        &__top {
+            min-height: 220px;
+        }
+    }
+}
+
+@media (max-width: 767px) {
+    .hub-part-card {
+        &__top {
+            min-height: 200px;
+        }
+
+        &__middle-header span {
+            font-size: 16px;
+        }
+
+        &__name {
+            font-size: 18px;
+        }
+
+        &__price {
+            font-size: 26px;
+        }
+
+        &__cart-button img {
+            width: 26px;
+        }
+    }
+}
