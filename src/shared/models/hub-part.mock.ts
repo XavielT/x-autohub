@@ -5,6 +5,7 @@ export const HUB_PART_MOCK: HubPartModel[] = [
         id: 1,
         category: "frenos",
         imgUrl: "assets/imgs/hub-parts/disco-brembo-gtr.jpg",
+        images: ["assets/imgs/hub-parts/disco-brembo-gtr.jpg", "assets/imgs/hub-parts/disco-brembo-gtr-2.jpg", "assets/imgs/hub-parts/disco-brembo-gtr-3.jpg"],
         name: "Disco ventilado GTR 355mm",
         brand: "Brembo",
         starsCalification: "4.9",

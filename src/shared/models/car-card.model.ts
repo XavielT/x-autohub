@@ -1,4 +1,5 @@
 export interface CarCardModel{
+    id: number;
     image: string;
     brand: string;
     model: string;

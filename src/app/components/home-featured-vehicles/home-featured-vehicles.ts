@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
 export class HomeFeaturedVehicles {
   cars: CarCardModel[] = [
     {
+      id: 1,
       image: 'assets/imgs/supra-white.jpg',
       brand: 'Toyota',
       model: 'Supra',
@@ -25,6 +26,7 @@ export class HomeFeaturedVehicles {
       mileage: 180000
     },
     {
+      id: 2,
       image: 'assets/imgs/vw-golf-mk4.png',
       brand: 'Volkswagen',
       model: 'Golf',
@@ -36,6 +38,7 @@ export class HomeFeaturedVehicles {
       mileage: 210000
     },
     {
+      id: 3,
       image: 'assets/imgs/citroen-c3.png',
       brand: 'Citroen',
       model: 'C3',

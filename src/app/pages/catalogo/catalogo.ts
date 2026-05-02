@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
 import { HubPartModel } from '../../../shared/models/hub-part.model';
-import { HUB_PART_MOCK } from '../../../shared/models/hub-part.mock';
+//import { HUB_PART_MOCK } from '../../../shared/models/hub-part.mock';
 import { CartService } from '../../../shared/services/cart';
+import { HubPartService } from '../../../shared/services/hub-part.service';
+import { ActivatedRoute } from '@angular/router';
 
 interface CategoryOption {
   value: string;
@@ -17,31 +19,31 @@ interface CategoryOption {
   styleUrl: './catalogo.scss',
 })
 
-export class CatalogoComponent {
-  allParts: HubPartModel[] = HUB_PART_MOCK;
+export class CatalogoComponent implements OnInit{
+  allParts: HubPartModel[] = [];
 
-  filteredParts: HubPartModel[] = [...this.allParts];
+  filteredParts: HubPartModel[] = [];
   searchQuery: string = '';
   selectedCategory: string = '';
 
   //category filter
   readonly categories: CategoryOption[] = [
-    { value: 'frenos',       label: 'Frenos' },
-    { value: 'suspension',   label: 'Suspensión y Chassis' },
-    { value: 'motor',        label: 'Motor' },
-    { value: 'escape',       label: 'Escape / Mufflers' },
-    { value: 'filtros',      label: 'Filtros' },
-    { value: 'luces',        label: 'Luces' },
-    { value: 'electrico',    label: 'Eléctrico' },
-    { value: 'refrigeracion',label: 'Refrigeración' },
-    { value: 'transmision',  label: 'Transmisión' },
-    { value: 'llantas',      label: 'Aros y Gomas' },
-    { value: 'bateria',      label: 'Batería' },
-    { value: 'audio',        label: 'Audio' },
-    { value: 'interior',     label: 'Interior' },
-    { value: 'exterior',     label: 'Exterior' },
-    { value: 'aceites',      label: 'Aceites' },
-    { value: 'detailing',    label: 'Detailing' },
+    { value: 'frenos', label: 'Frenos' },
+    { value: 'suspension', label: 'Suspensión y Chassis' },
+    { value: 'motor', label: 'Motor' },
+    { value: 'escape', label: 'Escape / Mufflers' },
+    { value: 'filtros', label: 'Filtros' },
+    { value: 'luces', label: 'Luces' },
+    { value: 'electrico', label: 'Eléctrico' },
+    { value: 'refrigeracion', label: 'Refrigeración' },
+    { value: 'transmision', label: 'Transmisión' },
+    { value: 'llantas', label: 'Aros y Gomas' },
+    { value: 'bateria', label: 'Batería' },
+    { value: 'audio', label: 'Audio' },
+    { value: 'interior', label: 'Interior' },
+    { value: 'exterior', label: 'Exterior' },
+    { value: 'aceites', label: 'Aceites' },
+    { value: 'detailing', label: 'Detailing' },
     { value: 'herramientas', label: 'Herramientas' },
   ];
 
@@ -68,7 +70,22 @@ export class CatalogoComponent {
     });
   }
 
-  constructor(private cartService: CartService) {}
+  constructor(
+    private cartService: CartService,
+    private hubPartService: HubPartService,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    this.allParts = this.hubPartService.getAll();
+    this.filteredParts = [...this.allParts];
+
+    const categoryFromUrl = this.route.snapshot.queryParamMap.get('category');
+    if (categoryFromUrl && this.categories.some((category) => category.value === categoryFromUrl)) {
+      this.selectedCategory = categoryFromUrl;
+      this.applyFilters();
+    }
+  }
 
   openCart(): void {
     this.cartService.toggleCart();

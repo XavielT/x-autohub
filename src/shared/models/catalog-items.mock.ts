@@ -3,11 +3,11 @@ import { CatalogItem } from "./catalog-item.model";
 export const CATALOG_ITEMS_MOCK: CatalogItem[] = [
     {
         id: 1,
-        category: 'SISTEMAS DE INDUCCION',
-        title: 'TURBOS',
-        imageUrl: 'assets/imgs/catalog/turbo.png',
+        category: 'EXTERIOR & INTERIOR',
+        title: 'ACCESORIOS',
+        imageUrl: 'assets/imgs/catalog/accesorios.png',
         ctaLabel: 'VER TODOS',
-        ctaLink: '/catalog/turbos',
+        ctaLink: '/catalog/accesorios',
         variant: 'featured',
     },
     {
@@ -20,7 +20,7 @@ export const CATALOG_ITEMS_MOCK: CatalogItem[] = [
     {
         id: 3,
         category: 'MOTOR',
-        title: 'SISTEMAS DE ESCAPE',
+        title: 'BUJIAS / FILTROS / ...',
         imageUrl: 'assets/imgs/catalog/motor.png',
         variant: 'secondary',
     },
