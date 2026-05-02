@@ -1,11 +1,77 @@
 @if (new) {
-    <div class="new-details">
-        <img class="new-details__img" [src]="new.imageUrl"/>
-        <h1 class="new-details__title">{{ new.title }}</h1>
-        <span class="new-details__date">{{ new.date }}</span>
-        <p class="new-details__text">{{ new.text }}</p>
-    </div>
+<div class="new-details">
+    <section
+        class="new-details__carousel"
+        role="region"
+        [attr.aria-label]="'Galería: ' + new.title"
+        (touchstart)="onCarouselTouchStart($event)"
+        (touchend)="onCarouselTouchEnd($event)"
+    >
+        <div class="new-details__carousel-viewport">
+            @if (gallerySlides.length > 1) {
+            <button
+                type="button"
+                class="new-details__carousel-btn new-details__carousel-btn--prev"
+                (click)="prevSlide()"
+                aria-label="Imagen anterior"
+            >
+                <span class="new-details__carousel-btn-icon" aria-hidden="true">&#8249;</span>
+            </button>
+            }
+            <div
+                class="new-details__carousel-track"
+                [style.width.%]="gallerySlides.length * 100"
+                [style.transform]="carouselTrackTransform"
+            >
+                @for (src of gallerySlides; track $index; let i = $index) {
+                <div
+                    class="new-details__carousel-slide"
+                    [style.flexBasis.%]="slideBasisPercent"
+                >
+                    <img
+                        class="new-details__carousel-img"
+                        [src]="src"
+                        [alt]="new.title + ' — foto ' + (i + 1) + ' de ' + gallerySlides.length"
+                        draggable="false"
+                    />
+                </div>
+                }
+            </div>
+            @if (gallerySlides.length > 1) {
+            <button
+                type="button"
+                class="new-details__carousel-btn new-details__carousel-btn--next"
+                (click)="nextSlide()"
+                aria-label="Imagen siguiente"
+            >
+                <span class="new-details__carousel-btn-icon" aria-hidden="true">&#8250;</span>
+            </button>
+            }
+        </div>
+        @if (gallerySlides.length > 1) {
+        <div class="new-details__carousel-dots" role="tablist" aria-label="Seleccionar imagen">
+            @for (src of gallerySlides; track $index; let i = $index) {
+            <button
+                type="button"
+                role="tab"
+                class="new-details__carousel-dot"
+                [class.new-details__carousel-dot--active]="slideIndex === i"
+                [attr.aria-selected]="slideIndex === i"
+                (click)="goToSlide(i)"
+                [attr.aria-label]="'Ir a la imagen ' + (i + 1)"
+            ></button>
+            }
+        </div>
+        }
+    </section>
+    <h1 class="new-details__title">{{ new.title }}</h1>
+    <span class="new-details__date">{{ new.date }}</span>
+    <p class="new-details__text">{{ new.textLarge }}</p>
+</div>
 } @else {
-    <p class="new-details__notFound">Noticia no encontrada.</p>
-    <img class="new-details__notFound-img" src="#"/>
+<div class="new-details__notFound-container">
+    <p class="new-details__notFound">Noticia no encontrada</p>
+    <img class="new-details__notFound-img" src="#" />
+    <a class="new-details__notFound-link" routerLink="/">Volver a la página principal</a>
+</div>
 }
