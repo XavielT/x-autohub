@@ -1,0 +1,226 @@
+.publicar {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  padding: 40px 20px;
+
+  &__container {
+    max-width: 700px;
+    margin: 0 auto;
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow:
+      0 0 0 1px rgba(255, 179, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      0 32px 80px rgba(0, 0, 0, 0.4);
+  }
+
+  &__title {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 40px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+  }
+}
+
+.publicar-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+
+  .form-label {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+  }
+
+  .form-input {
+    padding: 14px 16px;
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 15px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--Hub);
+      box-shadow: 0 0 0 2px rgba(var(--Hub-rgb), 0.2);
+    }
+
+    &::placeholder {
+      color: #888;
+    }
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.image-upload {
+  border: 2px dashed #3a3a3a;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #2a2a2a;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+
+  &:hover {
+    border-color: var(--Hub);
+    background-color: rgba(var(--Hub-rgb), 0.05);
+  }
+
+  &.drag-over {
+    border-color: var(--Hub);
+    background-color: rgba(var(--Hub-rgb), 0.1);
+    transform: scale(1.02);
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__icon {
+    opacity: 0.7;
+  }
+
+  &__text {
+    color: var(--main-ultra-light);
+    font-size: 16px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    margin: 0;
+  }
+
+  &__link {
+    color: var(--Hub);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: #ffb300;
+    }
+  }
+
+  &__input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+
+  &__img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+  }
+
+  &__remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+      transform: scale(1.1);
+    }
+  }
+}
+
+.publicar-submit {
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--Hub) 0%, #ffb300 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 16px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(var(--Hub-rgb), 0.4);
+  }
+
+  &:disabled {
+    background: #444;
+    color: #888;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .publicar {
+    padding: 20px 15px;
+
+    &__container {
+      padding: 24px 20px;
+    }
+
+    &__title {
+      font-size: 24px;
+    }
+  }
+
+  .image-upload {
+    padding: 24px 16px;
+  }
+
+  .form-row {
+    gap: 12px;
+  }
+}

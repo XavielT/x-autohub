@@ -1,1 +1,39 @@
-<p>hub-market works!</p>
+<section class="hub-market">
+  <header class="hub-market__header">
+    <div class="hub-market__title-wrap">
+      <span>Comunidad AutoHub</span>
+      <h1>Hub Market</h1>
+      <p>Publicaciones de vehiculos, piezas y accesorios hechas por la comunidad.</p>
+    </div>
+  </header>
+
+  <div class="hub-market__filters">
+    <input
+      type="text"
+      class="hub-market__search"
+      placeholder="Buscar por titulo, descripcion o vendedor..."
+      [(ngModel)]="searchQuery"
+      (input)="onSearch()"
+    />
+
+    <div class="hub-market__chips">
+      <button
+        type="button"
+        class="hub-market__chip"
+        *ngFor="let category of categories"
+        [class.hub-market__chip--active]="selectedCategory === category.value"
+        (click)="onCategorySelect(category.value)"
+      >
+        {{ category.label }}
+      </button>
+    </div>
+  </div>
+
+  <div class="hub-market__grid">
+    <app-hub-market-card *ngFor="let item of filteredItems" [item]="item"></app-hub-market-card>
+  </div>
+
+  <p class="hub-market__empty" *ngIf="filteredItems.length === 0">
+    No encontramos resultados para tu busqueda.
+  </p>
+</section>

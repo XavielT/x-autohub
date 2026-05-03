@@ -1,0 +1,21 @@
+<div class="hub-market-card">
+    <div class="hub-market-card__top">
+        <a class="hub-market-card__image-link" [routerLink]="itemLink"><img class="hub-market-card__img"
+                [src]="item.image" /></a>
+    </div>
+    <div class="hub-market-card__middle">
+        <div class="hub-market-card__middle-header">
+            <span>{{displayCategory}}</span>
+        </div>
+        <div class="hub-market-card__middle-content">
+            <a [routerLink]="itemLink">
+                <h3 class="hub-market-card__name">{{item.title}}</h3>
+            </a>
+            <p class="hub-market-card__user">Por: {{item.sellerName}}</p>
+            <p class="hub-market-card__meta">{{item.location}}</p>
+        </div>
+    </div>
+    <div class="hub-market-card__bottom">
+        <h4 class="hub-market-card__price">${{item.price}}</h4>
+    </div>
+</div>

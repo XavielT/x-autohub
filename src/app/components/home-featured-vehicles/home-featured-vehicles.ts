@@ -3,6 +3,7 @@ import { CarCard } from '../../../shared/components/car-card/car-card';
 import { CarCardModel } from '../../../shared/models/car-card.model';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { HubMarketService } from '../../../shared/services/hub-market.service';
 
 @Component({
   selector: 'app-home-featured-vehicles',
@@ -12,42 +13,9 @@ import { RouterLink } from '@angular/router';
   styleUrl: './home-featured-vehicles.scss',
 })
 export class HomeFeaturedVehicles {
-  cars: CarCardModel[] = [
-    {
-      id: 1,
-      image: 'assets/imgs/supra-white.jpg',
-      brand: 'Toyota',
-      model: 'Supra',
-      price: '$130,000',
-      year: '1994',
-      hp: 873,
-      zeroTo100: 3.8,
-      topSpeed: 350,
-      mileage: 180000
-    },
-    {
-      id: 2,
-      image: 'assets/imgs/vw-golf-mk4.png',
-      brand: 'Volkswagen',
-      model: 'Golf',
-      price: '$8,000',
-      year: '2003',
-      hp: 325,
-      zeroTo100: 10.0,
-      topSpeed: 220,
-      mileage: 210000
-    },
-    {
-      id: 3,
-      image: 'assets/imgs/citroen-c3.png',
-      brand: 'Citroen',
-      model: 'C3',
-      price: '$5,000',
-      year: '2003',
-      hp: 110,
-      zeroTo100: 14.9,
-      topSpeed: 180,
-      mileage: 185000
-    },
-  ]
+  cars: CarCardModel[] = [];
+
+  constructor(private hubMarketService: HubMarketService) {
+    this.cars = this.hubMarketService.getFeaturedVehicles();
+  }
 }

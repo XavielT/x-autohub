@@ -1,0 +1,75 @@
+<div class="hub-market-part-details">
+    @if (part) {
+      <div class="hub-market-part-details__container">
+        <div class="hub-market-part-details__container-left">
+          <a class="hub-market-part-details__back-link" [routerLink]="['/hub-market']">
+            &larr; Volver al Hub Market
+          </a>
+
+          <div class="hub-market-part-details__carousel">
+            @if (images.length > 1) {
+              <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--prev"
+                      (click)="prevImage()">&#8249;</button>
+            }
+
+            <img class="hub-market-part-details__img"
+                 [src]="images[currentImageIndex]"
+                 [alt]="part.title" />
+
+            @if (images.length > 1) {
+              <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--next"
+                      (click)="nextImage()">&#8250;</button>
+            }
+
+            <!-- Dots -->
+            @if (images.length > 1) {
+              <div class="hub-market-part-details__dots">
+                @for (img of images; track $index) {
+                  <span class="hub-market-part-details__dot"
+                        [class.active]="$index === currentImageIndex"
+                        (click)="selectImage($index)">
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="hub-market-part-details__container-right">
+          <span class="hub-market-part-details__category">{{ part.category }}</span>
+          <h1 class="hub-market-part-details__name">{{ part.title }}</h1>
+          <div class="hub-market-part-details__meta">
+            <span class="hub-market-part-details__seller">Vendedor: {{ part.sellerName }}</span>
+            <span class="hub-market-part-details__location">{{ part.location }}</span>
+          </div>
+          <p class="hub-market-part-details__description">{{ part.description }}</p>
+          <span class="hub-market-part-details__price">${{ part.price }}</span>
+          <div class="hub-market-part-details__actions">
+            <a class="hub-market-part-details__contact-btn" href="mailto:?subject=Interesado en {{part.title}}">
+              Contactar Vendedor
+            </a>
+            <a class="hub-market-part-details__market-btn" [routerLink]="['/hub-market']">
+              Ver más en Hub Market
+            </a>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="hub-market-part-details__not-found">
+        <h2 class="hub-market-part-details__not-found-title">Upss, Artículo no encontrado!</h2>
+        <p class="hub-market-part-details__not-found-text">Abajo tienes opciones parecidas.</p>
+        <img class="hub-market-part-details__not-found-img" src="../../../assets/icons/not-found-hub-icon.svg"/>
+      </div>
+    }
+
+    <div class="hub-market-part-details__related-parts">
+      <div class="hub-market-part-details__related-header">
+        <h3>Relacionados</h3>
+      </div>
+      <div class="hub-market-part-details__related-grid">
+        @for (item of relatedParts; track item.id) {
+          <app-hub-market-card [item]="item"></app-hub-market-card>
+        }
+      </div>
+    </div>
+  </div>

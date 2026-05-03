@@ -1,16 +1,16 @@
 <div class="car-card">
     <div class="car-card-img">
-        <a [routerLink]="['/car-details', car.id]" class="car-card-link">
+        <a [routerLink]="car.detailRoute || ['/car-details', car.id]" class="car-card-link">
             <img class="car-card-img-item" [src]="car.image"/>
         </a>
     </div>
     <div class="car-card-info">
         <div class="car-card-info-up">
             <div class="car-card-info-up-left">
-                <a [routerLink]="['/car-details', car.id]" class="car-card-link">
-                    <h4>{{car.brand}} {{car.model}}</h4>
+                <a [routerLink]="car.detailRoute || ['/car-details', car.id]" class="car-card-link">
+                    <h4>{{car.vehicleSpecs?.brand}} {{car.vehicleSpecs?.model}}</h4>
                 </a>
-                <span>{{car.year}} &bull; {{car.mileage}} KM</span>
+                <span>{{car.vehicleSpecs?.year}} &bull; {{car.vehicleSpecs?.mileage}} KM</span>
             </div>
             <div class="car-card-info-up-right">
                 <h5>{{car.price}}</h5>
@@ -19,15 +19,15 @@
         <div class="car-card-info-down">
             <div class="car-card-info-down-item">
                 <span>HP</span>
-                <h6>{{car.hp}} HP</h6>
+                <h6>{{car.vehicleSpecs?.hp}} HP</h6>
             </div>
             <div class="car-card-info-down-item">
                 <span>0-100</span>
-                <h6>{{car.zeroTo100}}S</h6>
+                <h6>{{car.vehicleSpecs?.zeroTo100}}S</h6>
             </div>
             <div class="car-card-info-down-item">
                 <span>Top Speed</span>
-                <h6>{{car.topSpeed}} KM/H</h6>
+                <h6>{{car.vehicleSpecs?.topSpeed}} KM/H</h6>
             </div>
         </div>
     </div>

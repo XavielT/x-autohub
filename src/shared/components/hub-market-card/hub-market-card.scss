@@ -1,0 +1,162 @@
+.hub-market-card{
+    display: flex;
+    flex-direction: column;
+    //border: 1px solid #ffffff;
+    align-items: center;
+    justify-content: center;
+    width: 330px;
+    height: 430px;
+
+    &__top{
+        //width: 300px;
+        //height: 220px;
+        width: 100%;
+        height: 100%;
+        background: var(--main-light);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        overflow: hidden;
+    }
+
+    &__image-link {
+        width: 100%;
+        height: 100%;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        text-decoration: none;
+    }
+
+    &__img{
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        padding: 10px;
+        display: block;
+        border-radius: 30px;
+        //box-shadow: 0 0 5px 1px var(--main-ultra-light);
+    }
+
+    &__middle{
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        //padding: 0 10px;
+    }
+
+    &__middle-header{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 10px;
+    }
+
+    &__middle-header span{
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 18px;
+        color: var(--main-ultra-light);
+    }
+
+    &__stars{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__stars span{
+        color: var(--Hub);
+        font-size: 16px;
+    }
+
+    &__stars img{
+        width: 20px;
+    }
+
+    &__middle-content{
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__middle-content a{
+        text-decoration: none;
+    }
+
+    &__name{
+        color: #ffffff;
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 20px;
+        margin: 0;
+        transition: all 0.2s ease;
+    }
+
+    &__name:hover{
+        color: var(--Hub);
+    }
+
+    &__user{
+        color: var(--main-ultra-light);
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 14px;
+        margin: 4px 0 0 0;
+    }
+
+    &__meta{
+        color: var(--main-ultra-light);
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 12px;
+        margin: 2px 0 0 0;
+    }
+
+    &__bottom{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    &__price{
+        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 30px;
+        color: #ffffff;
+        margin: 0;
+    }
+}
+
+@media (max-width: 1023px) {
+    .hub-market-card {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        align-items: stretch;
+
+        &__top {
+            min-height: 220px;
+        }
+    }
+}
+
+@media (max-width: 767px) {
+    .hub-market-card {
+        &__top {
+            min-height: 200px;
+        }
+
+        &__middle-header span {
+            font-size: 16px;
+        }
+
+        &__name {
+            font-size: 18px;
+        }
+
+        &__price {
+            font-size: 26px;
+        }
+    }
+}

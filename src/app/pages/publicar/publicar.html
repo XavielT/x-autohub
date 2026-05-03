@@ -1,0 +1,89 @@
+<div class="publicar">
+  <div class="publicar__container">
+    <h1 class="publicar__title">Publicar en Hub Market</h1>
+
+    <form [formGroup]="publishForm" (ngSubmit)="onSubmit()" class="publicar-form">
+
+      <!-- Image Upload Section -->
+      <div class="form-group">
+        <label class="form-label">Imagen del Artículo</label>
+        <div class="image-upload"
+             [class.drag-over]="isDragOver"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)">
+          <div class="image-upload__content">
+            <div class="image-upload__icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="var(--main-ultra-light)"/>
+              </svg>
+            </div>
+            <p class="image-upload__text">Arrastra imágenes aquí o <span class="image-upload__link">haz click para seleccionar</span></p>
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" class="image-upload__input" multiple>
+          </div>
+        </div>
+
+        <div class="image-preview-grid" *ngIf="imagePreviews.length > 0">
+          <div class="image-preview-item" *ngFor="let preview of imagePreviews; let idx = index">
+            <img [src]="preview" alt="Preview {{ idx + 1 }}" class="image-preview__img">
+            <button type="button" (click)="removeImage(idx)" class="image-preview__remove">
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Fields -->
+      <div class="form-group">
+        <label for="category" class="form-label">Categoría</label>
+        <select id="category" formControlName="category" class="form-input">
+          <option value="">Seleccionar categoría</option>
+          <option *ngFor="let cat of categories" [value]="cat.value">{{cat.label}}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="title" class="form-label">Título</label>
+        <input type="text" id="title" formControlName="title" class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label for="description" class="form-label">Descripción</label>
+        <textarea id="description" formControlName="description" class="form-input form-textarea"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="price" class="form-label">Precio (RD$)</label>
+        <input type="number" id="price" formControlName="price" class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label for="location" class="form-label">Ubicación</label>
+        <input type="text" id="location" formControlName="location" class="form-input">
+      </div>
+
+      <div *ngIf="isVehicle" class="form-row">
+        <div class="form-group">
+          <label for="year" class="form-label">Año</label>
+          <input type="number" id="year" formControlName="year" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="mileage" class="form-label">Kilometraje</label>
+          <input type="number" id="mileage" formControlName="mileage" class="form-input">
+        </div>
+      </div>
+
+      <div *ngIf="isPartOrAccessory" class="form-group">
+        <label for="condition" class="form-label">Condición</label>
+        <select id="condition" formControlName="condition" class="form-input">
+          <option value="new">Nuevo</option>
+          <option value="used">Usado</option>
+        </select>
+      </div>
+
+      <button type="submit" [disabled]="!publishForm.valid || imagePreviews.length === 0" class="publicar-submit">
+        Publicar Artículo
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,1 +1,66 @@
-<p>car-details works!</p>
+<div class="car-details" *ngIf="car">
+  <div class="car-details__body">
+    <div class="car-details__media">
+      <div class="car-details__carousel">
+        <img [src]="images[currentImageIndex]" [alt]="car.title" class="car-details__main-image" />
+
+        <button *ngIf="images.length > 1" class="car-details__carousel-btn car-details__carousel-btn--prev" (click)="prevImage()">
+          &#8249;
+        </button>
+        <button *ngIf="images.length > 1" class="car-details__carousel-btn car-details__carousel-btn--next" (click)="nextImage()">
+          &#8250;
+        </button>
+      </div>
+
+      <div class="car-details__thumbs" *ngIf="images.length > 1">
+        <button *ngFor="let img of images; let idx = index"
+                class="car-details__thumb"
+                [class.active]="idx === currentImageIndex"
+                (click)="selectImage(idx)">
+          <img [src]="img" [alt]="car.title" />
+        </button>
+      </div>
+    </div>
+
+    <div class="car-details__info">
+      <div class="car-details__info-top">
+        <div>
+          <h1 class="car-details__title">{{car.title}}</h1>
+          <p class="car-details__location">{{car.location}}</p>
+        </div>
+        <div class="car-details__price">
+          <span>Precio</span>
+          <h2>RD$ {{car.price | number:'1.0-0'}}</h2>
+        </div>
+      </div>
+
+      <div class="car-details__specs" *ngIf="car.vehicleSpecs">
+        <div class="car-details__spec">
+          <span>Año</span>
+          <strong>{{car.vehicleSpecs.year}}</strong>
+        </div>
+        <div class="car-details__spec">
+          <span>Kilometraje</span>
+          <strong>{{car.vehicleSpecs.mileage}} KM</strong>
+        </div>
+      </div>
+
+      <div class="car-details__description">
+        <h3>Descripción</h3>
+        <p>{{car.description}}</p>
+      </div>
+
+      <div class="car-details__seller">
+        <h3>Vendedor</h3>
+        <p>{{car.sellerName}}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="related-vehicles" *ngIf="relatedVehicles.length > 0">
+  <h2 class="related-vehicles__title">Vehículos Relacionados</h2>
+  <div class="related-vehicles__grid">
+    <app-hub-market-card *ngFor="let vehicle of relatedVehicles" [item]="vehicle"></app-hub-market-card>
+  </div>
+</div>
