@@ -4,8 +4,9 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
   {
     id: 101,
     title: 'Toyota Supra MK4',
-    description: '2JZ armado, interior restaurado y listo para calle/pista.',
+    description: '2JZ armado, interior restaurado y listo para calle/pista. Incluye sistema de escape deportivo, frenos mejorados y un historial de mantenimiento completo. El auto ha sido pulido recientemente, con pintura en impecable estado y detalles interiores renovados para ofrecer una experiencia de conducción tanto para uso diario como para eventos. Se entrega con documentación al día y una inspección mecánica reciente que certifica el excelente estado de todos sus componentes.',
     image: 'assets/imgs/supra-white.jpg',
+    images:['assets/imgs/supra-white.jpg','assets/imgs/supra-mk4-2.jpg', 'assets/imgs/supra-mk4-3.jpg'],
     price: 130000,
     location: 'Santo Domingo',
     sellerName: 'Juan M.',

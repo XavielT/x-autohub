@@ -36,6 +36,9 @@ export class PublicarComponent {
       location: ['', Validators.required],
       year: [null],
       mileage: [null],
+      hp: [null],
+      zeroTo100: [null],
+      topSpeed: [null],
       condition: ['']
     });
   }
@@ -109,7 +112,10 @@ export class PublicarComponent {
         ...(formValue.category === 'vehiculos' && {
           vehicleSpecs: {
             year: formValue.year,
-            mileage: formValue.mileage
+            mileage: formValue.mileage,
+            hp: formValue.hp || undefined,
+            zeroTo100: formValue.zeroTo100 || undefined,
+            topSpeed: formValue.topSpeed || undefined
           }
         })
       };

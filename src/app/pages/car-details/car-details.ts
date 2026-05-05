@@ -3,11 +3,11 @@ import { ActivatedRoute } from '@angular/router';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { CommonModule } from '@angular/common';
-import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
+import { CarCard } from '../../../shared/components/car-card/car-card';
 
 @Component({
   selector: 'app-car-details',
-  imports: [CommonModule, HubMarketCard],
+  imports: [CommonModule, CarCard],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
 })
@@ -16,6 +16,8 @@ export class CarDetails implements OnInit {
   relatedVehicles: HubMarketItemModel[] = [];
   images: string[] = [];
   currentImageIndex = 0;
+  isDescriptionExpanded = false;
+  maxDescriptionLength = 200;
 
   constructor(
     private route: ActivatedRoute,
@@ -49,5 +51,9 @@ export class CarDetails implements OnInit {
   nextImage(): void {
     if (this.images.length <= 1) return;
     this.currentImageIndex = (this.currentImageIndex + 1) % this.images.length;
+  }
+
+  toggleDescription(): void {
+    this.isDescriptionExpanded = !this.isDescriptionExpanded;
   }
 }

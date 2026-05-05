@@ -35,24 +35,41 @@
       </div>
 
       <div class="car-details__specs" *ngIf="car.vehicleSpecs">
-        <div class="car-details__spec">
-          <span>Año</span>
-          <strong>{{car.vehicleSpecs.year}}</strong>
+        <div class="car-details__specs-grid">
+          <div class="car-details__spec-item">
+            <span>Año</span>
+            <strong>{{car.vehicleSpecs.year}}</strong>
+          </div>
+          <div class="car-details__spec-item">
+            <span>Kilometraje</span>
+            <strong>{{car.vehicleSpecs.mileage}} KM</strong>
+          </div>
+          <div class="car-details__spec-item">
+            <span>HP</span>
+            <strong>{{car.vehicleSpecs.hp || 'N/A'}}</strong>
+          </div>
+          <div class="car-details__spec-item">
+            <span>0-100 km/h</span>
+            <strong>{{car.vehicleSpecs.zeroTo100 ? car.vehicleSpecs.zeroTo100 + 's' : 'N/A'}}</strong>
+          </div>
+          <div class="car-details__spec-item">
+            <span>Velocidad máxima</span>
+            <strong>{{car.vehicleSpecs.topSpeed ? car.vehicleSpecs.topSpeed + ' km/h' : 'N/A'}}</strong>
+          </div>
         </div>
-        <div class="car-details__spec">
-          <span>Kilometraje</span>
-          <strong>{{car.vehicleSpecs.mileage}} KM</strong>
-        </div>
-      </div>
-
-      <div class="car-details__description">
-        <h3>Descripción</h3>
-        <p>{{car.description}}</p>
       </div>
 
       <div class="car-details__seller">
         <h3>Vendedor</h3>
         <p>{{car.sellerName}}</p>
+      </div>
+
+      <div class="car-details__description">
+        <h3>Descripción</h3>
+        <p>{{ isDescriptionExpanded ? car.description : (car.description | slice:0:maxDescriptionLength) + (car.description.length > maxDescriptionLength ? '...' : '') }}</p>
+        <button *ngIf="car.description.length > maxDescriptionLength" class="car-details__toggle-btn" (click)="toggleDescription()">
+          {{ isDescriptionExpanded ? 'Ver menos' : 'Ver más' }}
+        </button>
       </div>
     </div>
   </div>
@@ -61,6 +78,6 @@
 <div class="related-vehicles" *ngIf="relatedVehicles.length > 0">
   <h2 class="related-vehicles__title">Vehículos Relacionados</h2>
   <div class="related-vehicles__grid">
-    <app-hub-market-card *ngFor="let vehicle of relatedVehicles" [item]="vehicle"></app-hub-market-card>
+    <app-car-card *ngFor="let vehicle of relatedVehicles" [car]="vehicle"></app-car-card>
   </div>
 </div>
