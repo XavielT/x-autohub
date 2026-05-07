@@ -55,7 +55,8 @@ export class HubMarketPartDetails implements OnInit {
       return;
     }
 
-    this.images = this.part.images?.length ? this.part.images : [this.part.image];
+    //this.images = this.part.images?.length ? this.part.images : [this.part.images];
+    this.images = this.part.images;
     this.relatedParts = this.hubMarketService
       .getByCategory(this.part.category)
       .filter((item) => item.id !== this.part?.id)

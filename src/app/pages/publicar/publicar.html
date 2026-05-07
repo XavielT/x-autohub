@@ -54,7 +54,7 @@
 
       <div class="form-group">
         <label for="price" class="form-label">Precio (RD$)</label>
-        <input type="number" id="price" formControlName="price" class="form-input">
+        <input type="text" id="price" formControlName="price" class="form-input" (input)="formatPriceDisplay($event)" placeholder="0">
       </div>
 
       <div class="form-group">

@@ -17,7 +17,7 @@
         </div>
     </div>
     <div class="hub-part-card__bottom">
-        <h4 class="hub-part-card__price">${{hubPart.price}}</h4>
+        <h4 class="hub-part-card__price">${{hubPart.price | number:'1.0-0'}}</h4>
         <a class="hub-part-card__cart-button" (click)="addToCart()">
             <img src="../../../assets/icons/cart-icon.svg"/>
         </a>

@@ -1,7 +1,7 @@
 <div class="car-card">
     <div class="car-card-img">
         <a [routerLink]="car.detailRoute || ['/car-details', car.id]" class="car-card-link">
-            <img class="car-card-img-item" [src]="car.image"/>
+            <img class="car-card-img-item" [src]="car.images[0]"/>
         </a>
     </div>
     <div class="car-card-info">
@@ -13,7 +13,7 @@
                 <span>{{car.vehicleSpecs?.year}} &bull; {{car.vehicleSpecs?.mileage}} KM</span>
             </div>
             <div class="car-card-info-up-right">
-                <h5>{{car.price}}</h5>
+                <h5>RD$ {{car.price | number:'1.0-0'}}</h5>
             </div>
         </div>
         <div class="car-card-info-down">

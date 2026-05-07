@@ -96,6 +96,21 @@ export class PublicarComponent {
     this.imagePreviews.splice(index, 1);
   }
 
+  //price format / input format
+  formatPriceDisplay(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    // Delete all that's not code
+    const raw = input.value.replace(/\D/g, '');
+    const numeric = Number(raw);
+
+    // Refeesh fom control with the nue value
+    this.publishForm.get('price')?.setValue(numeric, { emiEvent: false });
+
+    // Format displayed number with ","
+    input.value = numeric > 0 ? numeric.toLocaleString('en-US') : '';
+  }
+
   onSubmit(): void {
     if (this.publishForm.valid && this.imagePreviews.length > 0) {
       const formValue = this.publishForm.value;
@@ -105,7 +120,7 @@ export class PublicarComponent {
         title: formValue.title,
         description: formValue.description,
         price: formValue.price,
-        image: this.imagePreviews[0],
+        //image: this.imagePreviews[0],
         images: this.imagePreviews,
         sellerName: 'Usuario Actual', // Temporal, vendría de auth
         location: formValue.location,

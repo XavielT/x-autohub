@@ -165,7 +165,7 @@
     background: #161616;
     border: 1px solid #2d2d2d;
     border-radius: 14px;
-    padding: 22px;
+    padding: 13px 22px;
 
     h3 {
       color: #fff;
@@ -177,6 +177,19 @@
       color: var(--main-ultra-light);
       line-height: 1.7;
       margin: 0 0 12px 0;
+    }
+  }
+
+  &__seller{
+    display: flex;
+    gap: 5px;
+    align-items: center;
+
+    h3{
+      margin: 0;
+    }
+    p{
+      margin: 0;
     }
   }
 

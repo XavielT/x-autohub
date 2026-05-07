@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { HubPartModel } from '../../models/hub-part.model';
 import { CartService } from '../../services/cart';
 import { ToastService } from '../../services/toast.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-catalogo-card',
-  imports: [RouterLink],
+  imports: [RouterLink, CommonModule],
   templateUrl: './catalogo-card.html',
   styleUrl: './catalogo-card.scss',
 })

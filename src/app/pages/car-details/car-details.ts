@@ -31,7 +31,8 @@ export class CarDetails implements OnInit {
       this.currentImageIndex = 0;
 
       if (this.car) {
-        this.images = this.car.images?.length ? this.car.images : [this.car.image];
+        //this.images = this.car.images?.length ? this.car.images : [this.car.images];
+        this.images = this.car.images;
         this.relatedVehicles = this.hubMarketService.getByCategory('vehiculos')
           .filter(vehicle => vehicle.id !== this.car?.id)
           .slice(0, 4);

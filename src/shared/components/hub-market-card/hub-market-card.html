@@ -1,7 +1,7 @@
 <div class="hub-market-card">
     <div class="hub-market-card__top">
         <a class="hub-market-card__image-link" [routerLink]="itemLink"><img class="hub-market-card__img"
-                [src]="item.image" /></a>
+                [src]="item.images[0]" /></a>
     </div>
     <div class="hub-market-card__middle">
         <div class="hub-market-card__middle-header">
@@ -16,6 +16,6 @@
         </div>
     </div>
     <div class="hub-market-card__bottom">
-        <h4 class="hub-market-card__price">${{item.price}}</h4>
+        <h4 class="hub-market-card__price">${{item.price | number:'1.0-0'}}</h4>
     </div>
 </div>
