@@ -11,6 +11,8 @@ import { AccessoryDetails } from './pages/accessory-details/accessory-details';
 import { PublicarComponent } from './pages/publicar/publicar';
 import { CheckoutComponent } from './pages/checkout/checkout';
 import { HubMarketPartDetails } from './pages/hub-market-part-details/hub-market-part-details';
+import { AutoHub } from './pages/auto-hub/auto-hub';
+import { Servicios } from './pages/servicios/servicios';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -25,4 +27,6 @@ export const routes: Routes = [
   { path: 'news/:id', component: NewDetails},
   { path: 'terminos-condiciones', component: TerminosCondiciones},
   { path: 'checkout', component: CheckoutComponent },
+  { path: 'auto-hub', component: AutoHub},
+  { path: 'servicios', component: Servicios},
 ];

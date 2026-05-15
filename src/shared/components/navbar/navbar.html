@@ -18,6 +18,11 @@
                     [src]="rlaHome.isActive ? 'assets/icons/home-hub-icon.svg' : 'assets/icons/home-icon.svg'" alt="Home icon"> Home</a>
             </li>
             <li class="navbar-menu-list-item">
+                <a routerLink="/auto-hub" routerLinkActive="active" #rlaAutoHub="routerLinkActive" (click)="closeMobileMenu()"> <img
+                        class="navbar-menu-list-item-icon" [src]="rlaAutoHub.isActive ? 'assets/icons/auto-hub-icon.svg' : 'assets/icons/auto-icon.svg'" alt="Auto icon">
+                    Auto Hub</a>
+            </li>
+            <li class="navbar-menu-list-item">
                 <a routerLink="/catalogo" routerLinkActive="active" #rlaCatalogo="routerLinkActive" (click)="closeMobileMenu()"> <img
                         class="navbar-menu-list-item-icon" [src]="rlaCatalogo.isActive ? 'assets/icons/cart-hub-icon.svg' : 'assets/icons/cart-icon.svg'" alt="Cart icon">
                     Catalogo</a>
@@ -26,6 +31,10 @@
                 <a routerLink="/hub-market" routerLinkActive="active" #rlaMarket="routerLinkActive" (click)="closeMobileMenu()"> <img
                         class="navbar-menu-list-item-icon" [src]="rlaMarket.isActive ? 'assets/icons/market-hub-icon.svg' : 'assets/icons/market-icon.svg'" alt="Hub Market icon"> Hub
                     Market</a>
+            </li>
+            <li class="navbar-menu-list-item">
+                <a routerLink="/servicios" routerLinkActive="active" #rlaServicios="routerLinkActive" (click)="closeMobileMenu()"> <img
+                        class="navbar-menu-list-item-icon" [src]="rlaServicios.isActive ? 'assets/icons/services-hub-icon.svg' : 'assets/icons/services-icon.svg'" alt="Services icon">Servicios</a>
             </li>
             <li class="navbar-menu-list-item">
                 <a routerLink="/social-hub" routerLinkActive="active" #rlaSocial="routerLinkActive" (click)="closeMobileMenu()"> <img
