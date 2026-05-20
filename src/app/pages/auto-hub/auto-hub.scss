@@ -1,0 +1,99 @@
+.autohub {
+    display: flex;
+    flex-direction: column;
+    padding: 20px 30px;
+    box-sizing: border-box;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        //padding: 30px 20px;
+        //border-bottom: 1px solid var(--main-ultra-light);
+        margin-bottom: 20px;
+    }
+
+    &__title {
+
+        h2 {
+            margin: 0;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            color: #ffffff;
+            font-size: 40px;
+
+            span {
+                margin: 0;
+                font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+                color: var(--Hub);
+                font-size: 40px;
+            }
+        }
+
+        span {
+            margin: 0;
+            color: var(--main-ultra-light);
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-size: 16px;
+        }
+    }
+
+    &__search {
+        input {
+            border: none;
+            background-color: var(--main-light);
+            color: var(--Hub);
+            min-width: 350px;
+            padding: 20px 10px;
+            margin: 0;
+            transition: all 0.2s ease;
+            border-radius: 5px;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-size: 16px;
+
+            &:focus{
+                border: none;
+                outline: none;
+                box-shadow: 0 0 6px 1px var(--HubShadow);
+            }
+        }
+    }
+
+    &__content {
+        display: flex;
+        flex-direction: column;
+        background-color: #1a1a1a;
+        border: 1px solid #2e2e2e;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow:
+            0 0 0 1px rgba(255, 179, 0, 0.06),
+            0 8px 32px rgba(0, 0, 0, 0.5),
+            0 32px 80px rgba(0, 0, 0, 0.4);
+
+        //display: grid;
+        //grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 18px 16px;
+        flex: 1;
+        min-height: 650px;
+    }
+}
+
+.empty-state{
+    margin-top: 20px;
+    padding: 34px 20px;
+    text-align: center;
+    border: 1px dashed #3c3c3c;
+    border-radius: 14px;
+    background: #1a1a1a;
+
+    h4{
+        margin: 0;
+    color: #fff;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-size: 28px;
+    }
+
+    img{
+        width: 92px;
+    }
+}

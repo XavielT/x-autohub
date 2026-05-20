@@ -13,6 +13,7 @@ import { CheckoutComponent } from './pages/checkout/checkout';
 import { HubMarketPartDetails } from './pages/hub-market-part-details/hub-market-part-details';
 import { AutoHub } from './pages/auto-hub/auto-hub';
 import { Servicios } from './pages/servicios/servicios';
+import { AutoHubDetails } from './pages/auto-hub-details/auto-hub-details';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -28,5 +29,6 @@ export const routes: Routes = [
   { path: 'terminos-condiciones', component: TerminosCondiciones},
   { path: 'checkout', component: CheckoutComponent },
   { path: 'auto-hub', component: AutoHub},
+  { path: 'auto-hub-details/:id', component: AutoHubDetails},
   { path: 'servicios', component: Servicios},
 ];

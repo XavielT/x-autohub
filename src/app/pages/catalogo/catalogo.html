@@ -44,6 +44,11 @@
         <div class="catalogo__content-main">
             @for (part of filteredParts; track part.id){
             <app-catalogo-card [hubPart]="part"></app-catalogo-card>
+            }@empty {
+                <div class="empty-state">
+                    <h4>Upss, No hay articulos para mostrar</h4>
+                    <img src="../../../assets/icons/not-found-hub-icon.svg"/>
+                </div>
             }
         </div>
     </div>

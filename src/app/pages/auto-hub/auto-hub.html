@@ -1,1 +1,25 @@
-<p>auto-hub works!</p>
+<div class="autohub">
+    <div class="autohub__header">
+        <div class="autohub__title">
+            <h2>Auto <span class="autohub__title-highlight">Hub</span></h2>
+            <span>Vehiculos verificados por X AutoHub</span>
+        </div>
+        <div class="autohub__search">
+            <search>
+                <input class="autohub__input" placeholder="Que estas buscando?" [(ngModel)]="searchQuery"
+                    (input)="onSearch()" />
+            </search>
+        </div>
+    </div>
+    <div class="autohub__content">
+        @for (auto of filteredAutos; track auto.id){
+        <app-autohub-card [autoHub]="auto"></app-autohub-card>
+        }
+        @empty {
+            <div class="empty-state">
+                <h4>Upss, No hay articulos para mostrar</h4>
+                <img src="../../../assets/icons/not-found-hub-icon.svg"/>
+            </div>
+        }
+    </div>
+</div>

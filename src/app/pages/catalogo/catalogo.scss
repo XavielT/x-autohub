@@ -198,6 +198,26 @@
     }
 }
 
+.empty-state{
+    margin-top: 20px;
+    padding: 34px 20px;
+    text-align: center;
+    border: 1px dashed #3c3c3c;
+    border-radius: 14px;
+    background: #1a1a1a;
+
+    h4{
+        margin: 0;
+    color: #fff;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-size: 28px;
+    }
+
+    img{
+        width: 92px;
+    }
+}
+
 @media (max-width: 1023px) {
     .catalogo {
         padding: 20px;
