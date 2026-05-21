@@ -1,7 +1,8 @@
 import { Component, Input } from '@angular/core';
-import { CarCardModel } from '../../models/car-card.model';
+//import { CarCardModel } from '../../models/car-card.model';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { HubMarketItemModel } from '../../models/hub-market-item.model';
 
 @Component({
   selector: 'app-car-card',
@@ -12,5 +13,5 @@ import { CommonModule } from '@angular/common';
 })
 export class CarCard {
 
-  @Input() car!: CarCardModel;
+  @Input() car!: HubMarketItemModel;
 }

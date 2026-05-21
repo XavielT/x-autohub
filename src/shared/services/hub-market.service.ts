@@ -26,9 +26,21 @@ export class HubMarketService {
   }
 
   getFeaturedVehicles(limit = 3): HubMarketItemModel[] {
-    return HUB_MARKET_ITEMS_MOCK
+    const featured = HUB_MARKET_ITEMS_MOCK.filter(item => item.category === 'vehiculos' && item.isFeatured && item.vehicleSpecs).sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+    if (featured.length >= limit) {
+      return featured.slice(0, limit);
+    }
+
+    //Fallback: complete with the recent items if not included
+    const featuredIds = new Set(featured.map(f => f.id));
+    const recent = HUB_MARKET_ITEMS_MOCK.filter(item => item.category === 'vehiculos' && item.vehicleSpecs && !featuredIds.has(item.id)).sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+    return [...featured, ...recent].slice(0, limit);
+
+    /*return HUB_MARKET_ITEMS_MOCK
       .filter(item => item.category === 'vehiculos' && item.isFeatured && item.vehicleSpecs)
-      .slice(0, limit);
+      .slice(0, limit);*/
   }
 
   addItem(item: HubMarketItemModel): void {

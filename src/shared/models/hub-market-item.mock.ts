@@ -102,5 +102,27 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
     sellerName: 'Accesorios Hub',
     category: 'accesorios',
     createdAt: '2026-03-29'
-  }
+  },
+  {
+    id: 104,
+    title: 'Volkswagen Amarok',
+    description: 'Uso diario, mantenimiento al dia y pintura reciente.',
+    images: ['assets/imgs/amarok.jpeg'],
+    price: 847000,
+    location: 'Neiba',
+    sellerName: 'Jose T.',
+    category: 'vehiculos',
+    isFeatured: true,
+    detailRoute: '/car-details/201',
+    createdAt: '2026-05-20',
+    vehicleSpecs: {
+      year: 2018,
+      mileage: 97000,
+      hp: 220,
+      zeroTo100: 11.3,
+      topSpeed: 240,
+      brand: 'Volkswagen',
+      model: 'Amarok',
+    }
+  },
 ];
