@@ -5,6 +5,8 @@
     border-radius: 10px;
     align-items: center;
     //justify-content: center;
+    border: 1px solid #2d2d2d;
+    padding: 15px 15px;
 
     a{
         text-decoration: none;
@@ -37,7 +39,7 @@
 
         h3{
             margin: 0;
-            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-family: var(--font-brand);
             font-size: 24px;
             color: #ffffff;
             transition: all 0.1s ease;
@@ -51,15 +53,21 @@
         h5{
             margin: 0;
             color: var(--Hub);
-            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-family: var(--font-price);
             font-size: 18px;
+        }
+    }
+
+    &__info-content{
+        p{
+            font-family: var(--font-body);
         }
     }
 
     &__location{
         display: flex;
         align-items: center;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 15px;
         color: var(--main-ultra-light);
         img{

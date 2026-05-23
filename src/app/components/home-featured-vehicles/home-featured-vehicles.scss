@@ -22,13 +22,13 @@
 }
 
 .hm-ft-vh-title span{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-brand);
     color: var(--Hub);
     font-size: 20px;
 }
 
 .hm-ft-vh-title h3{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-body);
     font-style: italic;
     font-size: 37px;
     color: #ffffff;
@@ -40,7 +40,7 @@
     text-decoration: none;
     color: var(--main-ultra-light);
     transition: all 0.2s ease;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-brand);
 }
 
 .link-arrow:hover {

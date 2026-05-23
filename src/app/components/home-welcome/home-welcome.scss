@@ -43,6 +43,7 @@
 
 .home-welcome-info{
     font-family: 'Batman', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: var(--font-brand);
 }
 
 .home-welcome-info h1{
@@ -65,7 +66,8 @@
 
 .home-welcome-info p{
     //font-family: 'Biotrip-Serif', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-body);
     font-size: 23px;
     margin:0;
     margin-top: 20px;
@@ -85,7 +87,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-btns);
     font-weight: bold;
     font-size: 18px;
     text-decoration: none;

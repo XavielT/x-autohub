@@ -9,23 +9,39 @@
   margin: 0 auto 2rem;
 }
 
+.hub-market__title-wrap{
+  display: flex;
+  flex-direction: column;
+}
+
 .hub-market__title-wrap span {
   color: var(--Hub);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.8rem;
+  font-family: var(--font-brand);
 }
 
 .hub-market__title-wrap h1 {
   color: #fff;
-  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-  font-style: italic;
+  font-family: var(--font-brand);
+  //font-style: italic;
   font-size: 2.6rem;
   margin: 0.3rem 0 0.6rem;
 }
 
+.hub-market__title-wrap .hub-market__title-highlight{
+  font-family: var(--font-brand);
+  color: var(--Hub);
+  //font-style: italic;
+  font-size: 2.6rem;
+  margin: 0.3rem 0 0.6rem;
+  text-transform: none;
+}
+
 .hub-market__title-wrap p {
   color: var(--main-ultra-light);
+  font-family: var(--font-body);
   margin: 0;
 }
 
@@ -43,6 +59,7 @@
   color: #fff;
   padding: 0.85rem 1rem;
   outline: none;
+  font-family: var(--font-body);
 }
 
 .hub-market__search:focus {
@@ -59,6 +76,7 @@
   border: 1px solid #2d2d2d;
   background: transparent;
   color: var(--main-ultra-light);
+  font-family: var(--font-body);
   padding: 0.5rem 1rem;
   text-transform: uppercase;
   font-size: 0.72rem;
@@ -158,6 +176,7 @@
   max-width: 1200px;
   margin: 2.5rem auto 0;
   color: var(--main-ultra-light);
+  font-family: var(--font-body);
 }
 
 @media (max-width: 1024px) {

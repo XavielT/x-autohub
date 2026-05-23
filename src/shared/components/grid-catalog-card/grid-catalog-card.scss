@@ -38,17 +38,20 @@
 
   &__category {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.79rem;
     letter-spacing: 0.15em;
     color: var(--Hub);
     text-transform: uppercase;
     margin-bottom: 0.3rem;
+    font-family: var(--font-brand);
   }
 
   &__title {
     margin: 0 0 1rem;
     a {
+      font-family: var(--font-brand);
       font-size: 1.4rem;
+      letter-spacing: 0.07em;
       font-style: italic;
       text-decoration: none;
       font-weight: 800;
@@ -62,6 +65,7 @@
     display: inline-block;
     padding: 0.6rem 1.4rem;
     border: 1px solid var(--main-ultra-light);
+    font-family: var(--font-btns);
     color: white;
     text-decoration: none;
     font-size: 0.75rem;

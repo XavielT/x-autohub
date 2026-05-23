@@ -10,7 +10,7 @@
     padding: 120px 0;
 
     &__title {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 55px;
         font-style: italic;
         font-weight: bold;
@@ -19,7 +19,7 @@
     }
 
     &__text {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 20px;
         color: var(--main-ultra-light);
         margin: 10px auto 30px auto;
@@ -39,6 +39,7 @@
 
     &__email-input {
         font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        //font-family: var(--font-brand);
         font-size: 20px;
         font-style: italic;
         background-color: var(--secondary);
@@ -55,11 +56,12 @@
         outline: none;
         //border: 1px solid var(--HubDark);
         box-shadow: 0 0 10px 1px var(--HubShadow);
+        border-radius: 10px;
     }
 
     &__button {
         font-size: 20px;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-btns);
         font-style: italic;
         background-color: var(--Hub);
         box-shadow: 7px 7px 0 0 var(--Hub-translucid);
@@ -80,7 +82,7 @@
     }
 
     &__span {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 15px;
         margin: 20px 0;
         color: var(--main-ultra-light);

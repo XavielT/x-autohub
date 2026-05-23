@@ -26,16 +26,18 @@
 .pg-cnt-info{
     display: flex;
     flex-direction: column;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     font-size: 16px;
 }
 
 .pg-cnt-info h4{
+    font-family: var(--font-brand);
     color: var(--main-ultra-light);
     margin: 0;
 }
 
 .pg-cnt-info span{
+    font-family: var(--font-body);
     color: #ffffff;
 }
 

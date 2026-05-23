@@ -22,7 +22,7 @@
     font-weight: 700;
     text-align: center;
     margin-bottom: 40px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-brand);
   }
 }
 
@@ -41,7 +41,7 @@
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 8px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-brand);
   }
 
   .form-input {
@@ -51,7 +51,7 @@
     border-radius: 8px;
     color: #fff;
     font-size: 15px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-body);
     transition: all 0.2s ease;
 
     &:focus {
@@ -68,7 +68,7 @@
   .form-textarea {
     resize: vertical;
     min-height: 100px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-body);
   }
 }
 
@@ -117,7 +117,7 @@
   &__text {
     color: var(--main-ultra-light);
     font-size: 16px;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-body);
     margin: 0;
   }
 
@@ -184,7 +184,7 @@
   border-radius: 8px;
   font-size: 16px;
   font-weight: 700;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-family: var(--font-btns);
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 16px;

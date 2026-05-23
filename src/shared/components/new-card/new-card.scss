@@ -44,7 +44,7 @@
     }
 
     &__date{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-date);
         font-size: 13px;
         color: var(--main-ultra-light);
         padding: 15px 0;
@@ -60,7 +60,7 @@
     }
 
     &__title{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 25px;
         font-style: italic;
         color: #ffffff;
@@ -73,7 +73,7 @@
     }
 
     &__text{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 16px;
         color: var(--main-ultra-light);
     }
@@ -81,7 +81,7 @@
     &__link{
         text-decoration: none;
         color: var(--Hub);
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 16px;
         transition: all 0.2s ease;
     }

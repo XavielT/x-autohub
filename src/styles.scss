@@ -115,6 +115,32 @@
     src: url(/assets/fonts/Batman/Batman.ttf) format('truetype');
 }
 
+@font-face {
+    font-family: 'Space-Grotesk';
+    src: url(/assets/fonts/main-fonts/Space-Grotesk/SpaceGrotesk-VariableFont_wght.ttf) format('truetype');
+}
+
+@font-face {
+    font-family: 'Manrope';
+    src: url(/assets/fonts/main-fonts/Space-Grotesk/Manrope-VariableFont_wght.ttf) format('truetype');
+}
+
+:root{
+    // Main Fonts
+    --font-brand: 'Space-Grotesk', sans-serif;
+    //--font-brand: 'ROLNER', sans-serif;
+    --font-brand2: 'ROLNER', sans-serif;
+    --font-heading: 'Gefika', sans-serif;
+    --font-body: 'Manrope', sans-serif;
+    --font-body2: 'Trebuchet MS', sans-serif;
+    --font-highlight:       'Spoiler-script', cursive;
+    --font-card-title:   'Biotrip-Serif', serif;
+    --font-btns: 'Space-Grotesk', sans-serif;
+    --font-card-title: 'Space-Grotesk', sans-serif;
+    --font-date: 'Manrope', sans-serif;
+    --font-price: 'Manrope', sans-serif;
+}
+
 /*Scrolls bars*/
 /* Chrome, Edge, Safari */
 ::-webkit-scrollbar {

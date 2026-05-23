@@ -57,7 +57,7 @@
     }
 
     &__middle-header span{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 18px;
         color: var(--main-ultra-light);
     }
@@ -70,11 +70,14 @@
 
     &__stars span{
         color: var(--Hub);
-        font-size: 16px;
+        font-size: 18px;
+        font-family: var(--font-brand2);
+        letter-spacing: 1px;
     }
 
     &__stars img{
         width: 20px;
+        margin: 0;
     }
 
     &__middle-content{
@@ -87,7 +90,7 @@
 
     &__name{
         color: #ffffff;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 20px;
         margin: 0;
         transition: all 0.2s ease;
@@ -106,7 +109,7 @@
     }
 
     &__price{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-price);
         font-size: 30px;
         color: #ffffff;
         margin: 0;

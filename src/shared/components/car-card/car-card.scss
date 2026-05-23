@@ -49,7 +49,7 @@
 
 .car-card-link h4{
     color: #ffffff;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-brand);
     font-size: 30px;
     font-style: italic;
     margin: 0;
@@ -61,14 +61,15 @@
 }
 
 .car-card-info-up-left span{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-body);
     color: var(--main-ultra-light);
     font-size: 17px;
 }
 
 .car-card-info-up-right{
     font-size: 28px;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-body);
     color: var(--Hub);
 }
 
@@ -89,13 +90,14 @@
 
 .car-card-info-down-item span{
     color: var(--main-ultra-light);
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-body);
     font-weight: bold;
     font-size: 16px;
 }
 
 .car-card-info-down-item h6{
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    //font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: var(--font-brand);
     font-style: italic;
     color: #ffffff;
     font-size: 20px;

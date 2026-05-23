@@ -18,7 +18,7 @@
 
 
     &__title {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         margin: 0;
         font-size: 35px;
         font-style: italic;
@@ -33,7 +33,7 @@
     }
 
     &__p {
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 17px;
         color: var(--main-ultra-light);
         white-space: nowrap;

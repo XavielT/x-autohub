@@ -17,7 +17,7 @@
     }
 
     &__title h2{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 40px;
         color: #ffffff;
         margin: 0;
@@ -28,7 +28,7 @@
     }
 
     &__title p{
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 15px;
         color: var(--main-ultra-light);
         margin: 5px 0 0 0;
@@ -50,7 +50,7 @@
         margin: 0;
         transition: all 0.2s ease;
         border-radius: 5px;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         font-size: 16px;
     }
 
@@ -113,14 +113,14 @@
 
     &__category-filter-top h4{
         color: #ffffff;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 20px;
         margin: 0;
     }
 
     &__category-filter-bottom{
         color: var(--main-ultra-light);
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         font-size: 16px;
     }
 
@@ -162,7 +162,7 @@
 
     &__help-title{
         margin: 0;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-brand);
         color: #ffffff;
         margin-bottom: 5px;
         font-size: 20px;
@@ -170,7 +170,7 @@
 
     &__help-text{
         margin: 0;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         color: var(--main-ultra-light);
         font-size: 16px;
         max-width: 320px;
@@ -179,7 +179,7 @@
 
     &__help-link{
         text-decoration: none;
-        font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-family: var(--font-body);
         color: var(--Hub);
         margin-top: 10px;
         transition: all 0.2s ease;
@@ -209,7 +209,7 @@
     h4{
         margin: 0;
     color: #fff;
-    font-family: 'Trebuchet MS', Arial, sans-serif;
+    font-family: var(--font-brand);
     font-size: 28px;
     }
 
