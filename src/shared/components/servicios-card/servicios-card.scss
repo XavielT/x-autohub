@@ -1,0 +1,36 @@
+.servicios-card {
+    background-color: var(--secondary);
+    border-top: 1px solid var(--Hub);
+    width: 270px;
+    height: 270px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 15px;
+
+    &__wrapper {
+
+        display: flex;
+        flex-direction: column;
+
+        img {
+            width: 40px;
+            margin-bottom: 18px;
+        }
+
+        h2 {
+            font-family: var(--font-brand);
+            color: #ffffff;
+            font-size: 26px;
+            margin: 0;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-family: var(--font-body);
+            color: var(--main-ultra-light);
+            font-size: 18px;
+            margin: 0;
+        }
+    }
+}

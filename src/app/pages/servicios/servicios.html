@@ -1,1 +1,21 @@
-<p>servicios works!</p>
+<div class="servicios">
+    <div class="servicios__header">
+        <div class="servicios__title">
+            <h2>Servicios <span class="servicios__title-highlight">Hub</span></h2>
+            <span class="servicios__title-description">Mantenimiento, Reparacion, Chequeo, Revision de
+                vehiculos...</span>
+        </div>
+    </div>
+    <div class="servicios__content">
+        <div class="servicios__content-header">
+            <h2><span>¿</span>En que te ayudamos hoy<span>?</span></h2>
+        </div>
+        <div class="servicios__content-grid">
+            @for (servicio of servicios; track servicio.id){
+            <app-servicios-card [serviciosCard]="servicio"></app-servicios-card>
+            }
+        </div>
+        <a class="servicios__link" href="https://wa.me/18099539782?text=Hola%20X%20AutoHub,%20Quiero%20solicitar%20el%20servicio%20de" target="_blank"
+            rel="noopener noreferrer"><img src="assets/icons/chat-round-icon.svg" /> Solicitar Servicio por Whatsapp</a>
+    </div>
+</div>
