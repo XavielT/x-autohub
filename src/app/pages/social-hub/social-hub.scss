@@ -1,0 +1,365 @@
+// Tokens locales: repetir la misma superficie de tarjeta en post/club/event.
+$surface: #1a1a1a;
+$surface-line: #2e2e2e;
+
+@mixin card {
+  background-color: $surface;
+  border: 1px solid $surface-line;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.social {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 30px;
+  box-sizing: border-box;
+  min-height: 750px;
+
+  &__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  &__title {
+    display: flex;
+    flex-direction: column;
+
+    h2 {
+      margin: 0;
+      color: #fff;
+      font-family: var(--font-brand);
+      font-size: 40px;
+    }
+  }
+
+  &__title-highlight {
+    color: var(--Hub);
+  }
+
+  &__title-description {
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+  }
+
+  &__cta {
+    padding: 12px 20px;
+    border-radius: 8px;
+    background-color: var(--Hub);
+    color: #000;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: box-shadow 0.15s ease;
+
+    &:hover {
+      box-shadow: 0 0 6px 1px var(--HubShadow);
+    }
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid $surface-line;
+  }
+
+  &__tab {
+    padding: 12px 20px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--main-ultra-light);
+    font-family: var(--font-brand);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: #fff;
+    }
+
+    &.is-active {
+      border-bottom-color: var(--Hub);
+      color: var(--Hub);
+    }
+  }
+
+  &__feed {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 22px;
+  }
+
+  &__empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    text-align: center;
+
+    h4 {
+      margin: 0;
+      font-family: var(--font-brand);
+      font-size: 18px;
+    }
+
+    img {
+      width: 90px;
+      opacity: 0.8;
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 16px;
+
+    &__title h2 {
+      font-size: 30px;
+    }
+
+    &__tabs {
+      overflow-x: auto;
+    }
+  }
+}
+
+/* --- Publicacion del feed --- */
+.post {
+  @include card;
+  padding: 18px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  &__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--Hub);
+    color: var(--main);
+    font-family: var(--font-brand);
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  &__identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  &__verified {
+    padding: 2px 7px;
+    border-radius: 20px;
+    background-color: var(--Hub-translucid);
+    color: var(--Hub);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  &__meta {
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+
+  &__text {
+    margin: 0 0 14px;
+    color: #e6e6e6;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  &__img {
+    display: block;
+    width: 100%;
+    max-height: 380px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    object-fit: cover;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__tag {
+    color: var(--tertiary-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 18px;
+    padding-top: 12px;
+    border-top: 1px solid #262626;
+  }
+
+  &__stat {
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+}
+
+/* --- Tarjetas de club y evento --- */
+.club,
+.event {
+  @include card;
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    border-color: rgba(var(--Hub-rgb), 0.45);
+    transform: translateY(-3px);
+  }
+
+  &__img {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px;
+  }
+
+  &__description {
+    margin: 0;
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  &__meta {
+    color: var(--tertiary-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+}
+
+.club {
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: 20px;
+  }
+
+  &__badge {
+    padding: 3px 8px;
+    border-radius: 20px;
+    background-color: var(--Hub);
+    color: var(--main);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  &__members {
+    margin-top: auto;
+    padding-top: 6px;
+    color: #fff;
+    font-family: var(--font-price);
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.event {
+  &__date {
+    color: var(--Hub);
+    font-family: var(--font-date);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  &__title {
+    margin: 0;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #262626;
+  }
+
+  &__price {
+    color: #fff;
+    font-family: var(--font-price);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  &__attendees {
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+}

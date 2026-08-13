@@ -1,17 +1,16 @@
-import { Component, Input } from '@angular/core';
-//import { CarCardModel } from '../../models/car-card.model';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HubMarketItemModel } from '../../models/hub-market-item.model';
 
 @Component({
   selector: 'app-car-card',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, CommonModule, NgOptimizedImage],
   templateUrl: './car-card.html',
   styleUrl: './car-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CarCard {
-
-  @Input() car!: HubMarketItemModel;
+  readonly car = input.required<HubMarketItemModel>();
 }

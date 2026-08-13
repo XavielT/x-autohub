@@ -1,60 +1,69 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { DecimalPipe, SlicePipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
-import { CommonModule } from '@angular/common';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 
 @Component({
   selector: 'app-car-details',
-  imports: [CommonModule, CarCard],
+  imports: [CarCard, RouterLink, DecimalPipe, SlicePipe],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CarDetails implements OnInit {
-  car: HubMarketItemModel | undefined;
-  relatedVehicles: HubMarketItemModel[] = [];
-  images: string[] = [];
-  currentImageIndex = 0;
-  isDescriptionExpanded = false;
-  maxDescriptionLength = 200;
+  private readonly route = inject(ActivatedRoute);
+  private readonly hubMarketService = inject(HubMarketService);
 
-  constructor(
-    private route: ActivatedRoute,
-    private hubMarketService: HubMarketService
-  ) {}
+  readonly car = signal<HubMarketItemModel | undefined>(undefined);
+  readonly relatedVehicles = signal<HubMarketItemModel[]>([]);
+  readonly images = signal<string[]>([]);
+  readonly currentImageIndex = signal(0);
+  readonly isLoading = signal(true);
+
+  readonly isDescriptionExpanded = signal(false);
+  readonly maxDescriptionLength = 200;
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
-      this.car = this.hubMarketService.getById(id);
-      this.currentImageIndex = 0;
+      this.isLoading.set(true);
+      this.currentImageIndex.set(0);
 
-      if (this.car) {
-        //this.images = this.car.images?.length ? this.car.images : [this.car.images];
-        this.images = this.car.images;
-        this.relatedVehicles = this.hubMarketService.getByCategory('vehiculos')
-          .filter(vehicle => vehicle.id !== this.car?.id)
-          .slice(0, 4);
-      }
+      forkJoin({
+        car: this.hubMarketService.getById(id),
+        related: this.hubMarketService.getByCategory('vehiculos'),
+      }).subscribe({
+        next: ({ car, related }) => {
+          this.car.set(car);
+          this.images.set(car?.images ?? []);
+          this.relatedVehicles.set(related.filter((v) => v.id !== id).slice(0, 4));
+          this.isLoading.set(false);
+        },
+        error: () => this.isLoading.set(false),
+      });
     });
   }
 
   selectImage(index: number): void {
-    this.currentImageIndex = index;
+    this.currentImageIndex.set(index);
   }
 
   prevImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex - 1 + this.images.length) % this.images.length;
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i - 1 + total) % total);
   }
 
   nextImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex + 1) % this.images.length;
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i + 1) % total);
   }
 
   toggleDescription(): void {
-    this.isDescriptionExpanded = !this.isDescriptionExpanded;
+    this.isDescriptionExpanded.update((expanded) => !expanded);
   }
 }

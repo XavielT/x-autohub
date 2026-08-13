@@ -5,7 +5,7 @@
         <p class="home-news__p">Ultimas novedades del mundo automotriz.</p>
     </div>
     <div class="home-news__content">
-        @for (new of news; track new.id) {
+        @for (new of news(); track new.id) {
             <app-new-card [newCard]="new" />
         }
     </div>

@@ -1,0 +1,244 @@
+/**
+ * Traducción entre las filas de Postgres (snake_case) y los modelos del
+ * frontend (camelCase).
+ *
+ * Todo el mapeo vive aquí a propósito: los componentes siguen consumiendo los
+ * mismos modelos que consumían con los mocks, y conectar Supabase no obligó a
+ * tocar ni una plantilla.
+ *
+ * Si cambias una columna en supabase/migrations/, el cambio se propaga por
+ * database.types.ts hasta acá y TypeScript te dice exactamente qué romper.
+ */
+
+import { AutoHubModel } from '../../shared/models/auto-hub.model';
+import { HubPartModel } from '../../shared/models/hub-part.model';
+import { HubMarketItemModel } from '../../shared/models/hub-market-item.model';
+import { NewCardModel } from '../../shared/models/new-card.model';
+import { ServiciosCardModel } from '../../shared/models/servicios-card.model';
+import {
+  SocialClubModel,
+  SocialEventModel,
+  SocialPostModel,
+} from '../../shared/models/social-hub.model';
+import {
+  CheckoutPaymentMethodOption,
+  CheckoutShippingOption,
+} from '../../shared/models/checkout.model';
+import { UserModel } from '../../shared/models/user.model';
+import {
+  AutoHubVehicleRow,
+  HubMarketItemRow,
+  HubPartRow,
+  NewsRow,
+  PaymentMethodRow,
+  ProfileRow,
+  ServiceRow,
+  ShippingOptionRow,
+  SocialClubRow,
+  SocialEventRow,
+  SocialPostRow,
+} from './database.types';
+
+export function toUser(row: ProfileRow): UserModel {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    email: row.email,
+    phone: row.phone ?? undefined,
+    location: row.location ?? undefined,
+    avatarUrl: row.avatar_url ?? undefined,
+    isVerified: row.is_verified,
+    createdAt: row.created_at,
+  };
+}
+
+export function toAutoHubVehicle(row: AutoHubVehicleRow): AutoHubModel {
+  return {
+    id: row.id,
+    brand: row.brand,
+    model: row.model,
+    year: row.year,
+    price: Number(row.price),
+    color: row.color,
+    mileage: row.mileage,
+    chasisType: row.chasis_type,
+    doors: row.doors,
+    traction: row.traction,
+    fuel: row.fuel,
+    cylinders: row.cylinders,
+    images: row.images ?? [],
+    description: row.description,
+    location: row.location,
+    contact: row.contact,
+  };
+}
+
+export function toHubPart(row: HubPartRow): HubPartModel {
+  return {
+    id: row.id,
+    category: row.category,
+    imgUrl: row.img_url,
+    images: row.images?.length ? row.images : undefined,
+    name: row.name,
+    brand: row.brand,
+    starsRating: Number(row.stars_calification),
+    price: Number(row.price),
+    description: row.description,
+  };
+}
+
+/** Ruta de detalle según la categoría. Antes venía guardada en el mock. */
+function detailRouteFor(row: HubMarketItemRow): string {
+  switch (row.category) {
+    case 'vehiculos':
+      return `/car-details/${row.id}`;
+    case 'piezas':
+      return `/hub-market-part-details/${row.id}`;
+    case 'accesorios':
+      return `/accessory-details/${row.id}`;
+  }
+}
+
+export function toHubMarketItem(row: HubMarketItemRow): HubMarketItemModel {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    images: row.images ?? [],
+    price: Number(row.price),
+    location: row.location,
+    // Si hay vendedor real, manda el nombre de su perfil; si no, el sembrado.
+    sellerName: row.profiles?.display_name ?? row.seller_name,
+    sellerId: row.seller_id ?? undefined,
+    category: row.category,
+    isFeatured: row.is_featured,
+    detailRoute: detailRouteFor(row),
+    createdAt: row.created_at,
+    condition: row.condition ?? undefined,
+    // spec_year es obligatorio para 'vehiculos' (constraint en el esquema),
+    // así que su presencia es lo que decide si hay ficha técnica.
+    vehicleSpecs:
+      row.spec_year !== null
+        ? {
+            year: row.spec_year,
+            mileage: row.spec_mileage ?? 0,
+            hp: row.spec_hp ?? undefined,
+            zeroTo100: row.spec_zero_to_100 ?? undefined,
+            topSpeed: row.spec_top_speed ?? undefined,
+            brand: row.spec_brand ?? undefined,
+            model: row.spec_model ?? undefined,
+          }
+        : undefined,
+  };
+}
+
+/** Modelo → fila, para publicar en Hub Market. */
+export function fromHubMarketItem(
+  item: Omit<HubMarketItemModel, 'id'>,
+  sellerId: string,
+  sellerName: string,
+) {
+  return {
+    seller_id: sellerId,
+    seller_name: sellerName,
+    title: item.title,
+    description: item.description,
+    images: item.images,
+    price: item.price,
+    location: item.location,
+    category: item.category,
+    condition: item.condition ?? null,
+    spec_year: item.vehicleSpecs?.year ?? null,
+    spec_mileage: item.vehicleSpecs?.mileage ?? null,
+    spec_hp: item.vehicleSpecs?.hp ?? null,
+    spec_zero_to_100: item.vehicleSpecs?.zeroTo100 ?? null,
+    spec_top_speed: item.vehicleSpecs?.topSpeed ?? null,
+    spec_brand: item.vehicleSpecs?.brand ?? null,
+    spec_model: item.vehicleSpecs?.model ?? null,
+  };
+}
+
+export function toService(row: ServiceRow): ServiciosCardModel {
+  return {
+    id: row.id,
+    icon: row.icon,
+    title: row.title,
+    description: row.description,
+  };
+}
+
+export function toNews(row: NewsRow): NewCardModel {
+  return {
+    id: row.id,
+    imageUrl: row.image_url,
+    location: row.scope,
+    // published_at llega como 'YYYY-MM-DD'. Se parsea a mediodía UTC para que
+    // el cambio de zona horaria no mueva la fecha al día anterior en RD (-4).
+    date: new Date(`${row.published_at}T12:00:00Z`),
+    title: row.title,
+    text: row.text,
+    images: row.images ?? [],
+    textLarge: row.text_large,
+    author: row.author ?? undefined,
+  };
+}
+
+export function toSocialPost(row: SocialPostRow): SocialPostModel {
+  return {
+    id: row.id,
+    authorName: row.profiles?.display_name ?? row.author_name,
+    authorClub: row.author_club ?? undefined,
+    isVerified: row.profiles?.is_verified ?? false,
+    createdAt: row.created_at,
+    text: row.text,
+    imageUrl: row.image_url ?? undefined,
+    tags: row.tags ?? [],
+    likes: row.likes,
+    comments: row.comments,
+  };
+}
+
+export function toSocialClub(row: SocialClubRow): SocialClubModel {
+  return {
+    id: row.id,
+    name: row.name,
+    location: row.location,
+    members: row.members,
+    focus: row.focus,
+    description: row.description,
+    imageUrl: row.image_url ?? undefined,
+    isOfficial: row.is_official,
+  };
+}
+
+export function toSocialEvent(row: SocialEventRow): SocialEventModel {
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.event_date,
+    location: row.location,
+    organizer: row.organizer,
+    description: row.description,
+    imageUrl: row.image_url ?? undefined,
+    attendees: row.attendees,
+    price: Number(row.price),
+  };
+}
+
+export function toShippingOption(row: ShippingOptionRow): CheckoutShippingOption {
+  return {
+    id: row.id,
+    label: row.label,
+    description: row.description,
+    price: Number(row.price),
+    etaLabel: row.eta_label,
+  };
+}
+
+export function toPaymentMethod(row: PaymentMethodRow): CheckoutPaymentMethodOption {
+  return {
+    id: row.id,
+    label: row.label,
+    description: row.description,
+  };
+}

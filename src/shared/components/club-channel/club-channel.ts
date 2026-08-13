@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { EmailSubscriptionService } from '../../services/email-subscription.service';
 import { FormsModule } from '@angular/forms';
 
@@ -7,36 +7,39 @@ import { FormsModule } from '@angular/forms';
   imports: [FormsModule],
   templateUrl: './club-channel.html',
   styleUrl: './club-channel.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClubChannel {
-  email: string = '';
-  isLoading: boolean = false;
-  feedbackMessage: string = '';
-  feedbackType: 'success' | 'error' | '' = '';
+  private readonly emailService = inject(EmailSubscriptionService);
 
-  constructor(private emailService: EmailSubscriptionService) { }
+  readonly email = signal('');
+  readonly isLoading = signal(false);
+  readonly feedbackMessage = signal('');
+  readonly feedbackType = signal<'success' | 'error' | ''>('');
 
   onSubmit(): void {
-    if (!this.email || !this.isValidEmail(this.email)) {
+    const email = this.email();
+
+    if (!email || !this.isValidEmail(email)) {
       this.setFeedback('Por favor ingresa un correo válido.', 'error');
       return;
     }
 
-    this.isLoading = true;
-    this.feedbackMessage = '';
+    this.isLoading.set(true);
+    this.feedbackMessage.set('');
 
-    this.emailService.subscribe(this.email).subscribe({
+    this.emailService.subscribe(email).subscribe({
       next: () => {
         this.setFeedback('¡Bienvenido al club! Revisa tu correo.', 'success');
-        this.email = '';
+        this.email.set('');
       },
       error: (err) => {
         this.setFeedback('Algo salió mal. Intenta de nuevo.', 'error');
         console.error(err);
       },
       complete: () => {
-        this.isLoading = false;
-      }
+        this.isLoading.set(false);
+      },
     });
   }
 
@@ -45,8 +48,8 @@ export class ClubChannel {
   }
 
   private setFeedback(message: string, type: 'success' | 'error'): void {
-    this.feedbackMessage = message;
-    this.feedbackType = type;
-    this.isLoading = false;
+    this.feedbackMessage.set(message);
+    this.feedbackType.set(type);
+    this.isLoading.set(false);
   }
 }

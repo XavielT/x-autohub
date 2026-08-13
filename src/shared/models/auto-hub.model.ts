@@ -14,5 +14,6 @@ export interface AutoHubModel{
     images: string[];
     description: string;
     location: string;
-    contact: number;
+    /** Teléfono de contacto. string, no number: un 809 con formato no es un número. */
+    contact: string;
 }

@@ -1,20 +1,38 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
 import { LogoHub } from '../logo-hub/logo-hub';
-import { RouterModule } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
+
 @Component({
   selector: 'app-navbar',
   imports: [LogoHub, RouterModule],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Navbar {
-  isMobileMenuOpen = false;
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
+
+  readonly isLoggedIn = this.auth.isLoggedIn;
+  readonly user = this.auth.user;
+
+  readonly isMobileMenuOpen = signal(false);
 
   toggleMobileMenu(): void {
-    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+    this.isMobileMenuOpen.update((open) => !open);
   }
 
   closeMobileMenu(): void {
-    this.isMobileMenuOpen = false;
+    this.isMobileMenuOpen.set(false);
+  }
+
+  logout(): void {
+    this.auth.logout();
+    this.closeMobileMenu();
+    this.toast.show('Sesion cerrada.');
+    void this.router.navigateByUrl('/');
   }
 }

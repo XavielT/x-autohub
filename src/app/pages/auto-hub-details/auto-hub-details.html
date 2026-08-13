@@ -1,23 +1,23 @@
-@if (auto) {
+@if (auto(); as auto) {
     <div class="auto-hub-details">
       <div class="auto-hub-details__body">
   
         <div class="auto-hub-details__media">
           <div class="auto-hub-details__carousel">
-            <img [src]="images[currentImageIndex]" [alt]="auto.model"
+            <img [src]="images()[currentImageIndex()]" [alt]="auto.model"
                  class="auto-hub-details__main-image" />
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <button class="auto-hub-details__carousel-btn auto-hub-details__carousel-btn--prev"
                       (click)="prevImage()">&#8249;</button>
               <button class="auto-hub-details__carousel-btn auto-hub-details__carousel-btn--next"
                       (click)="nextImage()">&#8250;</button>
             }
           </div>
-          @if (images.length > 1) {
+          @if (images().length > 1) {
             <div class="auto-hub-details__thumbs">
-              @for (img of images; track $index) {
+              @for (img of images(); track $index) {
                 <button class="auto-hub-details__thumb"
-                        [class.active]="$index === currentImageIndex"
+                        [class.active]="$index === currentImageIndex()"
                         (click)="selectImage($index)">
                   <img [src]="img" [alt]="auto.model" />
                 </button>
@@ -78,11 +78,11 @@
   
           <div class="auto-hub-details__description">
             <h3>Descripción</h3>
-            <p>{{ isDescriptionExpanded ? auto.description : (auto.description | slice:0:maxDescriptionLength) +
+            <p>{{ isDescriptionExpanded() ? auto.description : (auto.description | slice:0:maxDescriptionLength) +
                 (auto.description.length > maxDescriptionLength ? '...' : '') }}</p>
             @if (auto.description.length > maxDescriptionLength) {
               <button class="auto-details__toggle-btn" (click)="toggleDescription()">
-                {{ isDescriptionExpanded ? 'Ver menos' : 'Ver más' }}
+                {{ isDescriptionExpanded() ? 'Ver menos' : 'Ver más' }}
               </button>
             }
           </div>
@@ -94,6 +94,6 @@
     <div class="auto-hub-details__not-found">
       <h2>Upss! Vehículo no encontrado</h2>
       <span>Este articulo es inexistente o fue borrado.</span>
-      <img src="../../../assets/icons/not-found-hub-icon.svg"/>
+      <img src="assets/icons/not-found-hub-icon.svg"/>
     </div>
   }

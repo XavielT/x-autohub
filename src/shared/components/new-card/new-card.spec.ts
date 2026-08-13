@@ -1,23 +1,19 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
 import { NewCard } from './new-card';
+import { NEWS_MOCK } from '../../data/new-card.mock';
 
 describe('NewCard', () => {
-  let component: NewCard;
-  let fixture: ComponentFixture<NewCard>;
-
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NewCard]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(NewCard);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      imports: [NewCard],
+    }).compileComponents();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('should create', async () => {
+    const fixture = TestBed.createComponent(NewCard);
+    fixture.componentRef.setInput('newCard', NEWS_MOCK[0]);
+    await fixture.whenStable();
+    expect(fixture.componentInstance).toBeTruthy();
   });
 });

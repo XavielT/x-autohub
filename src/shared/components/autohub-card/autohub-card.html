@@ -1,17 +1,17 @@
 <div class="autohub-card">
-    <a [routerLink]="['/auto-hub-details', autoHub.id]"><img class="autohub-card__img" [src]="autoHub.images[0]" /></a>
+    <a [routerLink]="['/auto-hub-details', autoHub().id]"><img class="autohub-card__img" [ngSrc]="autoHub().images[0]" width="500" height="350" /></a>
     <div class="autohub-card__info">
-        <a [routerLink]="['/auto-hub-details', autoHub.id]">
+        <a [routerLink]="['/auto-hub-details', autoHub().id]">
             <div class="autohub-card__info-header">
-                <h3>{{ autoHub.brand }} {{ autoHub.model }} {{ autoHub.year }}</h3>
-                <h5>RD$ {{ autoHub.price | number: '1.0-0' }}</h5>
+                <h3>{{ autoHub().brand }} {{ autoHub().model }} {{ autoHub().year }}</h3>
+                <h5>RD$ {{ autoHub().price | number: '1.0-0' }}</h5>
             </div>
         </a>
         <div class="autohub-card__info-content">
-            <p>{{ autoHub.description }}</p>
+            <p>{{ autoHub().description }}</p>
         </div>
         <div class="autohub-card__location">
-            <img src="assets/icons/location-icon.svg" /><span>{{ autoHub.location }}</span>
+            <img src="assets/icons/location-icon.svg" /><span>{{ autoHub().location }}</span>
         </div>
     </div>
 </div>

@@ -23,106 +23,71 @@
     --tertiary-ultra-dark:#a26c00;
 }
 
-//Global Fonts
-/*@font-face {
-    font-family: 'Poppins';
-    src: url('assets/fonts/Poppins-Regular.ttf');
-    font-weight: 400;
-    font-style: normal;
-}*/
-@font-face {
-    font-family: 'ROLNER';
-    src: url(/assets/fonts/ROLNER/ROLNER.woff2) format('woff2'),
-        url(/assets/fonts/ROLNER/ROLNER.woff) format('woff'),
-        url(/assets/fonts/ROLNER/ROLNER.otf) format('opentype');
-}
-
-@font-face {
-    font-family: 'Gefika';
-    src: url(/assets/fonts/Gefika/Gefika.woff2) format('woff2'),
-        url(/assets/fonts/Gefika/Gefika.woff) format('woff'),
-        url(/assets/fonts/Gefika/Gefika.otf) format('opentype');
-}
-
-@font-face {
-    font-family: 'Lemon-beach';
-    src: url(/assets/fonts/lemon-beach/Lemon-Beach.otf) format('opentype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Work-krow';
-    src: url(/assets/fonts/work-krow/Work-krow.otf) format('opentype'),
-        url(/assets/fonts/work-krow/Work-krow.ttf) format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Spoiler-script';
-    src: url(/assets/fonts/spoiler-script/Spoilers-Script.woff2) format('woff2'),
-        url(/assets/fonts/spoiler-script/Spoilers-Script.woff) format('woff'),
-        url(/assets/fonts/spoiler-script/Spoilers-Script.ttf) format('truetype');
-}
-
-@font-face {
-    font-family: 'Ducks-Fiesta';
-    src: url(/assets/fonts/Ducks-Fiesta/Ducks-Fiesta.ttf) format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Super-Wonder';
-    src: url(/assets/fonts/Super-Wonder/Super-Wonder.ttf) format('truetype');
-}
-
-@font-face {
-    font-family: 'Diary-Story';
-    src: url(/assets/fonts/Diary-Story/Diary-Story.otf) format('opentype');
-}
-
-
-@font-face {
-    font-family: 'Dimona';
-    src: url(/assets/fonts/Dimona/Dimona-En.ttf) format('truetype');
-}
-
-
-@font-face {
-    font-family: 'Biotrip-Serif-Italic';
-    src: url(/assets/fonts/Biotrip-Serif/Biotrip-Serif-Italic.ttf) format('truetype');
-}
-
-@font-face {
-    font-family: 'Biotrip-Serif';
-    src: url(/assets/fonts/Biotrip-Serif/Biotrip-Serif.ttf) format('truetype');
-}
-
-@font-face {
-    font-family: 'Grime-Slime-Regular';
-    src: url(/assets/fonts/Grime-Slime/Grime-Slime-Regular.ttf) format('truetype');
-}
-
-@font-face {
-    font-family: 'Designer';
-    src: url(/assets/fonts/Designer/Designer.otf) format('opentype');
-}
-
-@font-face {
-    font-family: 'Batman';
-    src: url(/assets/fonts/Batman/Batman.ttf) format('truetype');
-}
-
+// Global Fonts
+//
+// Solo woff2: es el formato con mejor compresión y lo soportan todos los
+// navegadores desde 2016. Las rutas van sin `/` inicial para que las resuelva
+// el bundler (así salen con hash y no se rompen si la app se sirve desde un
+// sub-path). Todas llevan `font-display: swap` para que el texto se pinte con
+// la fuente del sistema mientras carga la nuestra.
 @font-face {
     font-family: 'Space-Grotesk';
-    src: url(/assets/fonts/main-fonts/Space-Grotesk/SpaceGrotesk-VariableFont_wght.ttf) format('truetype');
+    src: url('assets/fonts/main-fonts/Space-Grotesk/SpaceGrotesk-VariableFont_wght.woff2') format('woff2');
+    font-weight: 300 700;
+    font-display: swap;
 }
 
 @font-face {
     font-family: 'Manrope';
-    src: url(/assets/fonts/main-fonts/Space-Grotesk/Manrope-VariableFont_wght.ttf) format('truetype');
+    src: url('assets/fonts/main-fonts/manrope/Manrope-VariableFont_wght.woff2') format('woff2');
+    font-weight: 200 800;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'ROLNER';
+    src: url('assets/fonts/ROLNER/ROLNER.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Designer';
+    src: url('assets/fonts/Designer/Designer.woff2') format('woff2');
+    font-display: swap;
+}
+
+// Usadas directamente por home-welcome.scss, no por un token --font-*.
+@font-face {
+    font-family: 'Batman';
+    src: url('assets/fonts/Batman/Batman.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Biotrip-Serif';
+    src: url('assets/fonts/Biotrip-Serif/Biotrip-Serif.woff2') format('woff2');
+    font-display: swap;
+}
+
+// Registradas y disponibles por token, pero hoy ningún componente las usa.
+// Se conservan como parte de la paleta tipográfica; ver BITACORA (fase 2).
+// OJO: Dimona es "personal use only" — hay que reemplazarla antes de usarla.
+@font-face {
+    font-family: 'Gefika';
+    src: url('assets/fonts/Gefika/Gefika.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Spoiler-script';
+    src: url('assets/fonts/spoiler-script/Spoilers-Script.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Dimona';
+    src: url('assets/fonts/Dimona/Dimona-En.woff2') format('woff2');
+    font-display: swap;
 }
 
 :root{
@@ -136,8 +101,8 @@
     --font-highlight: 'Spoiler-script', cursive;
     --font-highlight2: 'Designer', cursive;
     --font-highlight3: 'Dimona', cursive;
-    --font-card-title: 'Biotrip-Serif', serif;
     --font-btns: 'Space-Grotesk', sans-serif;
+    // Was declared twice; the Biotrip-Serif value was always overridden by this one.
     --font-card-title: 'Space-Grotesk', sans-serif;
     --font-date: 'Manrope', sans-serif;
     --font-price: 'Manrope', sans-serif;

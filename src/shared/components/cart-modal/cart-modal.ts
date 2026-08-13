@@ -1,16 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { CartService } from '../../services/cart';
+import { CartService } from '../../services/cart.service';
 
 @Component({
   selector: 'app-cart-modal',
   imports: [CommonModule],
   templateUrl: './cart-modal.html',
   styleUrl: './cart-modal.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CartModal {
-  cartService = inject(CartService);
+  readonly cartService = inject(CartService);
   private readonly router = inject(Router);
 
   removeItem(partId: number): void {

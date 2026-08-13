@@ -6,19 +6,23 @@
         </div>
         <div class="autohub__search">
             <search>
-                <input class="autohub__input" placeholder="Que estas buscando?" [(ngModel)]="searchQuery"
-                    (input)="onSearch()" />
+                <input class="autohub__input" placeholder="Que estas buscando?" [ngModel]="searchQuery()"
+                    (ngModelChange)="searchQuery.set($event)" />
             </search>
         </div>
     </div>
     <div class="autohub__content">
-        @for (auto of filteredAutos; track auto.id){
+        @for (auto of filteredAutos(); track auto.id){
         <app-autohub-card [autoHub]="auto"></app-autohub-card>
         }
         @empty {
             <div class="empty-state">
-                <h4>Upss, No hay articulos para mostrar</h4>
-                <img src="../../../assets/icons/not-found-hub-icon.svg"/>
+                @if (isLoading()) {
+                    <h4>Cargando vehiculos...</h4>
+                } @else {
+                    <h4>Upss, No hay articulos para mostrar</h4>
+                    <img src="assets/icons/not-found-hub-icon.svg"/>
+                }
             </div>
         }
     </div>

@@ -8,28 +8,29 @@
     <div class="hub-channel__inner">
       <input
         class="hub-channel__email-input"
-        [(ngModel)]="email"
+        [ngModel]="email()"
+        (ngModelChange)="email.set($event)"
         placeholder="tucorreo@gmail.com"
         type="email"
-        [disabled]="isLoading"
+        [disabled]="isLoading()"
       />
       <button
         class="hub-channel__button"
         (click)="onSubmit()"
-        [disabled]="isLoading"
+        [disabled]="isLoading()"
       >
-        {{ isLoading ? 'Registrando...' : 'Registrarme' }}
+        {{ isLoading() ? 'Registrando...' : 'Registrarme' }}
       </button>
     </div>
   
     <!-- Dynamic feedback -->
-    @if (feedbackMessage) {
+    @if (feedbackMessage()) {
       <span
         class="hub-channel__feedback"
-        [class.hub-channel__feedback--success]="feedbackType === 'success'"
-        [class.hub-channel__feedback--error]="feedbackType === 'error'"
+        [class.hub-channel__feedback--success]="feedbackType() === 'success'"
+        [class.hub-channel__feedback--error]="feedbackType() === 'error'"
       >
-        {{ feedbackMessage }}
+        {{ feedbackMessage() }}
       </span>
     }
   

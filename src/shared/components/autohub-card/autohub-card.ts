@@ -1,14 +1,15 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { AutoHubModel } from '../../models/auto-hub.model';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-autohub-card',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, NgOptimizedImage],
   templateUrl: './autohub-card.html',
   styleUrl: './autohub-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AutohubCard {
-  @Input ({required:true}) autoHub!: AutoHubModel;
+  readonly autoHub = input.required<AutoHubModel>();
 }

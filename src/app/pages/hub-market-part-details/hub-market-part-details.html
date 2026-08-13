@@ -1,5 +1,5 @@
 <div class="hub-market-part-details">
-    @if (part) {
+    @if (part(); as part) {
       <div class="hub-market-part-details__container">
         <div class="hub-market-part-details__container-left">
           <a class="hub-market-part-details__back-link" [routerLink]="['/hub-market']">
@@ -7,26 +7,26 @@
           </a>
 
           <div class="hub-market-part-details__carousel">
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--prev"
                       (click)="prevImage()">&#8249;</button>
             }
 
             <img class="hub-market-part-details__img"
-                 [src]="images[currentImageIndex]"
+                 [src]="images()[currentImageIndex()]"
                  [alt]="part.title" />
 
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--next"
                       (click)="nextImage()">&#8250;</button>
             }
 
             <!-- Dots -->
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <div class="hub-market-part-details__dots">
-                @for (img of images; track $index) {
+                @for (img of images(); track $index) {
                   <span class="hub-market-part-details__dot"
-                        [class.active]="$index === currentImageIndex"
+                        [class.active]="$index === currentImageIndex()"
                         (click)="selectImage($index)">
                   </span>
                 }
@@ -43,7 +43,7 @@
             <span class="hub-market-part-details__location">{{ part.location }}</span>
           </div>
           <p class="hub-market-part-details__description">{{ part.description }}</p>
-          <span class="hub-market-part-details__price">${{ part.price }}</span>
+          <span class="hub-market-part-details__price">RD$ {{ part.price | number:'1.0-0' }}</span>
           <div class="hub-market-part-details__actions">
             <a class="hub-market-part-details__contact-btn" href="mailto:?subject=Interesado en {{part.title}}">
               Contactar Vendedor
@@ -58,7 +58,7 @@
       <div class="hub-market-part-details__not-found">
         <h2 class="hub-market-part-details__not-found-title">Upss, Artículo no encontrado!</h2>
         <p class="hub-market-part-details__not-found-text">Abajo tienes opciones parecidas.</p>
-        <img class="hub-market-part-details__not-found-img" src="../../../assets/icons/not-found-hub-icon.svg"/>
+        <img class="hub-market-part-details__not-found-img" src="assets/icons/not-found-hub-icon.svg"/>
       </div>
     }
 
@@ -67,7 +67,7 @@
         <h3>Articulos Relacionados</h3>
       </div>
       <div class="hub-market-part-details__related-grid">
-        @for (item of relatedParts; track item.id) {
+        @for (item of relatedParts(); track item.id) {
           <app-hub-market-card [item]="item"></app-hub-market-card>
         }
       </div>

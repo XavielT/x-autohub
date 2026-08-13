@@ -12,28 +12,37 @@
       type="text"
       class="hub-market__search"
       placeholder="Buscar por titulo, descripcion o vendedor..."
-      [(ngModel)]="searchQuery"
-      (input)="onSearch()"
+      [ngModel]="searchQuery()"
+      (ngModelChange)="searchQuery.set($event)"
     />
 
     <div class="hub-market__chips">
-      <button
-        type="button"
-        class="hub-market__chip"
-        *ngFor="let category of categories"
-        [class.hub-market__chip--active]="selectedCategory === category.value"
-        (click)="onCategorySelect(category.value)"
-      >
-        {{ category.label }}
-      </button>
+      @for (category of categories; track category.value) {
+        <button
+          type="button"
+          class="hub-market__chip"
+          [class.hub-market__chip--active]="selectedCategory() === category.value"
+          (click)="onCategorySelect(category.value)"
+        >
+          {{ category.label }}
+        </button>
+      }
     </div>
   </div>
 
   <div class="hub-market__grid">
-    <app-hub-market-card *ngFor="let item of filteredItems" [item]="item"></app-hub-market-card>
+    @for (item of filteredItems(); track item.id) {
+      <app-hub-market-card [item]="item" />
+    }
   </div>
 
-  <p class="hub-market__empty" *ngIf="filteredItems.length === 0">
-    No encontramos resultados para tu busqueda.
-  </p>
+  @if (filteredItems().length === 0) {
+    <p class="hub-market__empty">
+      @if (isLoading()) {
+        Cargando publicaciones...
+      } @else {
+        No encontramos resultados para tu busqueda.
+      }
+    </p>
+  }
 </section>

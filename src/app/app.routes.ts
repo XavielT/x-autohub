@@ -1,34 +1,129 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './pages/home/home';
-import { CatalogoComponent } from './pages/catalogo/catalogo';
-import { HubMarketComponent } from './pages/hub-market/hub-market';
-import { SocialHubComponent } from './pages/social-hub/social-hub';
-import { CarDetails } from './pages/car-details/car-details';
-import { NewDetails } from './pages/new-details/new-details';
-import { TerminosCondiciones } from './pages/terminos-condiciones/terminos-condiciones';
-import { HubPartDetails } from './pages/hub-part-details/hub-part-details';
-import { AccessoryDetails } from './pages/accessory-details/accessory-details';
-import { PublicarComponent } from './pages/publicar/publicar';
-import { CheckoutComponent } from './pages/checkout/checkout';
-import { HubMarketPartDetails } from './pages/hub-market-part-details/hub-market-part-details';
-import { AutoHub } from './pages/auto-hub/auto-hub';
-import { Servicios } from './pages/servicios/servicios';
-import { AutoHubDetails } from './pages/auto-hub-details/auto-hub-details';
+import { authGuard, guestGuard } from '../core/guards/auth.guard';
 
+const BRAND = 'X AutoHub';
+
+/**
+ * Cada ruta se carga con `loadComponent` para que su código salga del bundle
+ * inicial: el usuario solo descarga la página que visita.
+ *
+ * `title` alimenta la etiqueta <title> del documento (Angular la aplica solo);
+ * es lo que se ve en la pestaña y lo que indexan los buscadores.
+ */
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { path: 'catalogo', component: CatalogoComponent },
-  { path: 'hub-part-details/:id', component: HubPartDetails},
-  { path: 'hub-market-part-details/:id', component: HubMarketPartDetails},
-  { path: 'accessory-details/:id', component: AccessoryDetails},
-  { path: 'publicar', component: PublicarComponent},
-  { path: 'hub-market', component: HubMarketComponent },
-  { path: 'social-hub', component: SocialHubComponent },
-  { path: 'car-details/:id', component: CarDetails },
-  { path: 'news/:id', component: NewDetails},
-  { path: 'terminos-condiciones', component: TerminosCondiciones},
-  { path: 'checkout', component: CheckoutComponent },
-  { path: 'auto-hub', component: AutoHub},
-  { path: 'auto-hub-details/:id', component: AutoHubDetails},
-  { path: 'servicios', component: Servicios},
+  {
+    path: '',
+    title: `${BRAND} — El hub central de los autos en RD`,
+    loadComponent: () => import('./pages/home/home').then((m) => m.Home),
+  },
+
+  // --- Auto Hub: inventario propio, verificado por X AutoHub ---
+  {
+    path: 'auto-hub',
+    title: `Auto Hub — Vehiculos verificados | ${BRAND}`,
+    loadComponent: () => import('./pages/auto-hub/auto-hub').then((m) => m.AutoHub),
+  },
+  {
+    path: 'auto-hub-details/:id',
+    title: `Detalle del vehiculo | ${BRAND}`,
+    loadComponent: () =>
+      import('./pages/auto-hub-details/auto-hub-details').then((m) => m.AutoHubDetails),
+  },
+
+  // --- Catalogo: tienda propia de piezas (carrito + checkout) ---
+  {
+    path: 'catalogo',
+    title: `Catalogo de piezas | ${BRAND}`,
+    loadComponent: () => import('./pages/catalogo/catalogo').then((m) => m.Catalogo),
+  },
+  {
+    path: 'hub-part-details/:id',
+    title: `Detalle de la pieza | ${BRAND}`,
+    loadComponent: () =>
+      import('./pages/hub-part-details/hub-part-details').then((m) => m.HubPartDetails),
+  },
+  {
+    path: 'checkout',
+    title: `Checkout | ${BRAND}`,
+    loadComponent: () => import('./pages/checkout/checkout').then((m) => m.Checkout),
+  },
+
+  // --- Hub Market: publicaciones de la comunidad ---
+  {
+    path: 'hub-market',
+    title: `Hub Market — Compra y vende | ${BRAND}`,
+    loadComponent: () => import('./pages/hub-market/hub-market').then((m) => m.HubMarket),
+  },
+  {
+    path: 'car-details/:id',
+    title: `Detalle del vehiculo | ${BRAND}`,
+    loadComponent: () => import('./pages/car-details/car-details').then((m) => m.CarDetails),
+  },
+  {
+    path: 'hub-market-part-details/:id',
+    title: `Detalle de la pieza | ${BRAND}`,
+    loadComponent: () =>
+      import('./pages/hub-market-part-details/hub-market-part-details').then(
+        (m) => m.HubMarketPartDetails,
+      ),
+  },
+  {
+    path: 'accessory-details/:id',
+    title: `Detalle del accesorio | ${BRAND}`,
+    loadComponent: () =>
+      import('./pages/accessory-details/accessory-details').then((m) => m.AccessoryDetails),
+  },
+  {
+    path: 'publicar',
+    title: `Publicar en Hub Market | ${BRAND}`,
+    // Publicar requiere sesion: la publicacion queda asociada a un vendedor.
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/publicar/publicar').then((m) => m.Publicar),
+  },
+
+  // --- Servicios y comunidad ---
+  {
+    path: 'servicios',
+    title: `Servicios de taller | ${BRAND}`,
+    loadComponent: () => import('./pages/servicios/servicios').then((m) => m.Servicios),
+  },
+  {
+    path: 'social-hub',
+    title: `Social Hub — Clubes y eventos | ${BRAND}`,
+    loadComponent: () => import('./pages/social-hub/social-hub').then((m) => m.SocialHub),
+  },
+  {
+    path: 'news/:id',
+    title: `Noticia | ${BRAND}`,
+    loadComponent: () => import('./pages/new-details/new-details').then((m) => m.NewDetails),
+  },
+
+  // --- Cuenta ---
+  {
+    path: 'login',
+    title: `Iniciar sesion | ${BRAND}`,
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+  },
+  {
+    path: 'registro',
+    title: `Crear cuenta | ${BRAND}`,
+    canActivate: [guestGuard],
+    loadComponent: () => import('./pages/registro/registro').then((m) => m.Registro),
+  },
+
+  // --- Legal ---
+  {
+    path: 'terminos-condiciones',
+    title: `Terminos y condiciones | ${BRAND}`,
+    loadComponent: () =>
+      import('./pages/terminos-condiciones/terminos-condiciones').then((m) => m.TerminosCondiciones),
+  },
+
+  // Debe quedar de ultimo: captura cualquier URL que no coincida arriba.
+  {
+    path: '**',
+    title: `Pagina no encontrada | ${BRAND}`,
+    loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound),
+  },
 ];

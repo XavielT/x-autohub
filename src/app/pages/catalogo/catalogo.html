@@ -6,9 +6,9 @@
         </div>
         <div class="catalogo__search">
             <search>
-                <input class="catalogo__input" placeholder="Que estas buscando?" [(ngModel)]="searchQuery"
-                    (input)="onSearch()" /><button (click)="openCart()" class="catalogo__cart-button"><img class="catalogo__cart-icon"
-                        src="../../../assets/icons/cart-b-icon.svg" /></button>
+                <input class="catalogo__input" placeholder="Que estas buscando?" [ngModel]="searchQuery()"
+                    (ngModelChange)="searchQuery.set($event)" /><button (click)="openCart()" class="catalogo__cart-button"><img class="catalogo__cart-icon"
+                        src="assets/icons/cart-b-icon.svg" /></button>
             </search>
         </div>
     </div>
@@ -25,7 +25,7 @@
                         @for (cat of categories; track cat.value) {
                             <li
                               class="catalogo__category-filter-list-item"
-                              [class.active]="selectedCategory === cat.value"
+                              [class.active]="selectedCategory() === cat.value"
                               (click)="onCategorySelect(cat.value)"
                             >
                               {{ cat.label }}
@@ -42,12 +42,16 @@
             </div>
         </div>
         <div class="catalogo__content-main">
-            @for (part of filteredParts; track part.id){
+            @for (part of filteredParts(); track part.id){
             <app-catalogo-card [hubPart]="part"></app-catalogo-card>
             }@empty {
                 <div class="empty-state">
-                    <h4>Upss, No hay articulos para mostrar</h4>
-                    <img src="../../../assets/icons/not-found-hub-icon.svg"/>
+                    @if (isLoading()) {
+                        <h4>Cargando articulos...</h4>
+                    } @else {
+                        <h4>Upss, No hay articulos para mostrar</h4>
+                        <img src="assets/icons/not-found-hub-icon.svg"/>
+                    }
                 </div>
             }
         </div>

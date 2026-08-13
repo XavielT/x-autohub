@@ -1,8 +1,10 @@
-<div class="accessory-details" *ngIf="accessory">
+@if (accessory(); as accessory) {
+<div class="accessory-details">
   <h1>{{accessory.title}}</h1>
-  <img [src]="accessory.images" [alt]="accessory.title" />
+  <img [src]="accessory.images[0]" [alt]="accessory.title" />
   <p>{{accessory.description}}</p>
-  <p>Precio: ${{accessory.price}}</p>
+  <p>Precio: RD$ {{accessory.price | number: '1.0-0'}}</p>
   <p>Vendedor: {{accessory.sellerName}}</p>
   <p>Ubicación: {{accessory.location}}</p>
 </div>
+}

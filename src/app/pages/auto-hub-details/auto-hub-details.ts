@@ -1,63 +1,62 @@
-import { Component, OnInit } from '@angular/core';
-import { AutoHubModel } from '../../../shared/models/auto-hub.model';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { DecimalPipe, SlicePipe } from '@angular/common';
+import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-auto-hub-details',
-  imports: [CommonModule],
+  imports: [DecimalPipe, SlicePipe],
   templateUrl: './auto-hub-details.html',
   styleUrl: './auto-hub-details.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AutoHubDetails implements OnInit{
+export class AutoHubDetails implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly autoHubService = inject(AutoHubService);
 
-  auto: AutoHubModel | undefined;
-  //relatedVehicles: AutoHubModel[] = [];
-  images: string[] = [];
-  currentImageIndex = 0;
-  isDescriptionExpanded = false;
-  maxDescriptionLength = 200;
+  readonly auto = signal<AutoHubModel | undefined>(undefined);
+  readonly images = signal<string[]>([]);
+  readonly currentImageIndex = signal(0);
+  readonly isLoading = signal(true);
 
-  constructor(
-    private route: ActivatedRoute,
-    private autoHubService: AutoHubService
-  ){}
+  readonly isDescriptionExpanded = signal(false);
+  readonly maxDescriptionLength = 200;
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
-      this.loadAuto(id);
-    });
-  }
-  
-  private loadAuto(id: number): void {
-    this.auto = this.autoHubService.getById(id);
-    //this.images = this.auto.images?.length ? this.auto.images : [this.auto.imgUrl];
-    if (!this.auto) {
-      this.images = [];
-      return;
-    }
+      this.isLoading.set(true);
+      this.currentImageIndex.set(0);
 
-    this.images = this.auto.images?.length ? this.auto.images : [];
-    this.currentImageIndex = 0;
+      this.autoHubService.getById(id).subscribe({
+        next: (auto) => {
+          this.auto.set(auto);
+          this.images.set(auto?.images ?? []);
+          this.isLoading.set(false);
+        },
+        error: () => this.isLoading.set(false),
+      });
+    });
   }
 
   selectImage(index: number): void {
-    this.currentImageIndex = index;
+    this.currentImageIndex.set(index);
   }
 
   prevImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex - 1 + this.images.length) % this.images.length;
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i - 1 + total) % total);
   }
 
   nextImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex + 1) % this.images.length;
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i + 1) % total);
   }
 
   toggleDescription(): void {
-    this.isDescriptionExpanded = !this.isDescriptionExpanded;
+    this.isDescriptionExpanded.update((expanded) => !expanded);
   }
 }

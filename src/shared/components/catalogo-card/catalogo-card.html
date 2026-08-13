@@ -1,25 +1,25 @@
 <div class="hub-part-card">
     <div class="hub-part-card__top">
-        <a class="hub-part-card__image-link" [routerLink]="['/hub-part-details', hubPart.id]"><img class="hub-part-card__img"
-                [src]="hubPart.imgUrl" /></a>
+        <a class="hub-part-card__image-link" [routerLink]="['/hub-part-details', hubPart().id]"><img class="hub-part-card__img"
+                [ngSrc]="hubPart().imgUrl" width="330" height="220" /></a>
     </div>
     <div class="hub-part-card__middle">
         <div class="hub-part-card__middle-header">
-            <span>{{hubPart.brand}}</span>
+            <span>{{hubPart().brand}}</span>
             <div class="hub-part-card__stars">
-                <img src="../../../assets/icons/star-icon.svg" /><span>{{hubPart.starsCalification}}</span>
+                <img src="assets/icons/star-icon.svg" /><span>{{hubPart().starsRating}}</span>
             </div>
         </div>
         <div class="hub-part-card__middle-content">
-            <a [routerLink]="['/hub-part-details', hubPart.id]">
-                <h3 class="hub-part-card__name">{{hubPart.name}}</h3>
+            <a [routerLink]="['/hub-part-details', hubPart().id]">
+                <h3 class="hub-part-card__name">{{hubPart().name}}</h3>
             </a>
         </div>
     </div>
     <div class="hub-part-card__bottom">
-        <h4 class="hub-part-card__price">${{hubPart.price | number:'1.0-0'}}</h4>
+        <h4 class="hub-part-card__price">RD$ {{hubPart().price | number:'1.0-0'}}</h4>
         <a class="hub-part-card__cart-button" (click)="addToCart()">
-            <img src="../../../assets/icons/cart-icon.svg"/>
+            <img src="assets/icons/cart-icon.svg"/>
         </a>
     </div>
 </div>

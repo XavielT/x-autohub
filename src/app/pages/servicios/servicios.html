@@ -11,7 +11,7 @@
             <h2><span>¿</span>En que te ayudamos hoy<span>?</span></h2>
         </div>
         <div class="servicios__content-grid">
-            @for (servicio of servicios; track servicio.id){
+            @for (servicio of servicios(); track servicio.id){
             <app-servicios-card [serviciosCard]="servicio"></app-servicios-card>
             }
         </div>

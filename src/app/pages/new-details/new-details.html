@@ -1,4 +1,4 @@
-@if (new) {
+@if (new(); as new) {
 <div class="new-details">
     <section
         class="new-details__carousel"
@@ -8,7 +8,7 @@
         (touchend)="onCarouselTouchEnd($event)"
     >
         <div class="new-details__carousel-viewport">
-            @if (gallerySlides.length > 1) {
+            @if (gallerySlides().length > 1) {
             <button
                 type="button"
                 class="new-details__carousel-btn new-details__carousel-btn--prev"
@@ -20,24 +20,24 @@
             }
             <div
                 class="new-details__carousel-track"
-                [style.width.%]="gallerySlides.length * 100"
-                [style.transform]="carouselTrackTransform"
+                [style.width.%]="gallerySlides().length * 100"
+                [style.transform]="carouselTrackTransform()"
             >
-                @for (src of gallerySlides; track $index; let i = $index) {
+                @for (src of gallerySlides(); track $index; let i = $index) {
                 <div
                     class="new-details__carousel-slide"
-                    [style.flexBasis.%]="slideBasisPercent"
+                    [style.flexBasis.%]="slideBasisPercent()"
                 >
                     <img
                         class="new-details__carousel-img"
                         [src]="src"
-                        [alt]="new.title + ' — foto ' + (i + 1) + ' de ' + gallerySlides.length"
+                        [alt]="new.title + ' — foto ' + (i + 1) + ' de ' + gallerySlides().length"
                         draggable="false"
                     />
                 </div>
                 }
             </div>
-            @if (gallerySlides.length > 1) {
+            @if (gallerySlides().length > 1) {
             <button
                 type="button"
                 class="new-details__carousel-btn new-details__carousel-btn--next"
@@ -48,15 +48,15 @@
             </button>
             }
         </div>
-        @if (gallerySlides.length > 1) {
+        @if (gallerySlides().length > 1) {
         <div class="new-details__carousel-dots" role="tablist" aria-label="Seleccionar imagen">
-            @for (src of gallerySlides; track $index; let i = $index) {
+            @for (src of gallerySlides(); track $index; let i = $index) {
             <button
                 type="button"
                 role="tab"
                 class="new-details__carousel-dot"
-                [class.new-details__carousel-dot--active]="slideIndex === i"
-                [attr.aria-selected]="slideIndex === i"
+                [class.new-details__carousel-dot--active]="slideIndex() === i"
+                [attr.aria-selected]="slideIndex() === i"
                 (click)="goToSlide(i)"
                 [attr.aria-label]="'Ir a la imagen ' + (i + 1)"
             ></button>

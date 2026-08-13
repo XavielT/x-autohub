@@ -5,7 +5,7 @@ export interface HubPartModel {
     images?: string[];
     name: string;
     brand: string;
-    starsCalification:string;
+    starsRating: number;
     price: number;
     description: string;
 }

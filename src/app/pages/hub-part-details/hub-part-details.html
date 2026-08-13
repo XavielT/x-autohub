@@ -1,5 +1,5 @@
 <div class="hub-part-details">
-    @if (part) {
+    @if (part(); as part) {
       <div class="hub-part-details__container">
         <div class="hub-part-details__container-left">
           <a class="hub-part-details__back-link" [routerLink]="['/catalogo']" [queryParams]="{ category: part.category }">
@@ -7,26 +7,26 @@
           </a>
 
           <div class="hub-part-details__carousel">
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <button class="hub-part-details__carousel-btn hub-part-details__carousel-btn--prev"
                       (click)="prevImage()">&#8249;</button>
             }
   
             <img class="hub-part-details__img"
-                 [src]="images[currentImageIndex]"
+                 [src]="images()[currentImageIndex()]"
                  [alt]="part.name" />
   
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <button class="hub-part-details__carousel-btn hub-part-details__carousel-btn--next"
                       (click)="nextImage()">&#8250;</button>
             }
   
             <!-- Dots -->
-            @if (images.length > 1) {
+            @if (images().length > 1) {
               <div class="hub-part-details__dots">
-                @for (img of images; track $index) {
+                @for (img of images(); track $index) {
                   <span class="hub-part-details__dot"
-                        [class.active]="$index === currentImageIndex"
+                        [class.active]="$index === currentImageIndex()"
                         (click)="selectImage($index)">
                   </span>
                 }
@@ -41,12 +41,12 @@
           <div class="hub-part-details__meta">
             <span class="hub-part-details__brand">{{ part.brand }}</span>
             <div class="hub-part-details__stars">
-              <img src="../../../assets/icons/star-icon.svg" alt="rating" />
-              <span>{{ part.starsCalification }}</span>
+              <img src="assets/icons/star-icon.svg" alt="rating" />
+              <span>{{ part.starsRating }}</span>
             </div>
           </div>
           <p class="hub-part-details__description">{{ part.description }}</p>
-          <span class="hub-part-details__price">${{ part.price | number:'1.0-0' }}</span>
+          <span class="hub-part-details__price">RD$ {{ part.price | number:'1.0-0' }}</span>
           <div class="hub-part-details__actions">
             <button class="hub-part-details__add-btn" type="button" (click)="addToCart()">
               Agregar al carrito
@@ -61,7 +61,7 @@
       <div class="hub-part-details__not-found">
         <h2 class="hub-part-details__not-found-title">Upss, Artículo no encontrado!</h2>
         <p class="hub-part-details__not-found-text">Abajo tienes opciones parecidas.</p>
-        <img class="hub-part-details__not-found-img" src="../../../assets/icons/not-found-hub-icon.svg"/>
+        <img class="hub-part-details__not-found-img" src="assets/icons/not-found-hub-icon.svg"/>
       </div>
     }
   
@@ -70,7 +70,7 @@
         <h3>Relacionados</h3>
       </div>
       <div class="hub-part-details__related-grid">
-        @for (item of relatedParts; track item.id) {
+        @for (item of relatedParts(); track item.id) {
           <app-catalogo-card [hubPart]="item"></app-catalogo-card>
         }
       </div>

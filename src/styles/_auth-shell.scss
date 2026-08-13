@@ -1,0 +1,267 @@
+// Estilos compartidos por /login y /registro.
+// Se usan con `@use '../../../styles/auth-shell' as *;` desde el SCSS del componente.
+
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Panel de marca: solo decorativo, se oculta cuando no hay espacio.
+.auth__aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  padding: 64px 56px;
+  overflow: hidden;
+  border-right: 1px solid #2e2e2e;
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+
+  // Resplandor ámbar de la marca detrás del texto.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto -20% -30% -20%;
+    height: 60%;
+    background: radial-gradient(ellipse at center, rgba(var(--Hub-rgb), 0.18), transparent 70%);
+    pointer-events: none;
+  }
+
+  &-logo {
+    width: 190px;
+    margin-bottom: 8px;
+  }
+
+  &-title {
+    position: relative;
+    margin: 0;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: clamp(28px, 3vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+
+    span {
+      color: var(--Hub);
+    }
+  }
+
+  &-text {
+    position: relative;
+    margin: 0;
+    max-width: 46ch;
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  &-perks {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &-perk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #e6e6e6;
+    font-family: var(--font-body);
+    font-size: 15px;
+
+    &::before {
+      content: '';
+      flex: 0 0 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--Hub);
+      box-shadow: 0 0 12px rgba(var(--Hub-rgb), 0.7);
+    }
+  }
+}
+
+.auth__main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px;
+  background-color: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(var(--Hub-rgb), 0.06),
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 32px 80px rgba(0, 0, 0, 0.4);
+
+  @media (max-width: 520px) {
+    padding: 28px 22px;
+  }
+}
+
+.auth__heading {
+  margin: 0 0 6px;
+  color: #fff;
+  font-family: var(--font-brand);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.auth__subheading {
+  margin: 0 0 28px;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 15px;
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth__field {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    margin-bottom: 8px;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  input {
+    padding: 14px 16px;
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 15px;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &::placeholder {
+      color: #888;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--Hub);
+      box-shadow: 0 0 0 2px rgba(var(--Hub-rgb), 0.2);
+    }
+
+    // Solo se marca en rojo después de que el usuario tocó el campo,
+    // no mientras escribe por primera vez.
+    &.is-invalid {
+      border-color: #e5484d;
+      box-shadow: 0 0 0 2px rgba(229, 72, 77, 0.18);
+    }
+  }
+}
+
+.auth__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth__error {
+  margin-top: 6px;
+  color: #ff8d8f;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.auth__alert {
+  padding: 12px 14px;
+  border: 1px solid rgba(229, 72, 77, 0.4);
+  border-radius: 8px;
+  background-color: rgba(229, 72, 77, 0.1);
+  color: #ff9b9d;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.auth__submit {
+  margin-top: 6px;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--Hub);
+  color: #1a1a1a;
+  font-family: var(--font-btns);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.auth__meta {
+  margin: 22px 0 0;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: center;
+
+  a {
+    color: var(--Hub);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.auth__hint {
+  margin: 18px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid #2a2a2a;
+  color: var(--main-light);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}

@@ -1,1 +1,145 @@
-<p>social-hub works!</p>
+<div class="social">
+  <!-- Encabezado -->
+  <div class="social__header">
+    <div class="social__title">
+      <h2>Social <span class="social__title-highlight">Hub</span></h2>
+      <span class="social__title-description">
+        La escena de los autos en RD: builds, clubes y eventos en un solo lugar.
+      </span>
+    </div>
+
+    @if (!isLoggedIn()) {
+      <a class="social__cta" routerLink="/login">Entrar para publicar</a>
+    }
+  </div>
+
+  <!-- Navegacion entre vistas -->
+  <div class="social__tabs" role="tablist" aria-label="Secciones del Social Hub">
+    @for (tab of tabs; track tab.value) {
+      <button
+        class="social__tab"
+        type="button"
+        role="tab"
+        [class.is-active]="activeTab() === tab.value"
+        [attr.aria-selected]="activeTab() === tab.value"
+        (click)="selectTab(tab.value)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Feed -->
+  @if (activeTab() === 'feed') {
+    <section class="social__feed">
+      @for (post of posts(); track post.id) {
+        <article class="post">
+          <header class="post__head">
+            <span class="post__avatar" aria-hidden="true">{{ post.authorName.charAt(0) }}</span>
+            <div class="post__identity">
+              <span class="post__author">
+                {{ post.authorName }}
+                @if (post.isVerified) {
+                  <span class="post__verified" title="Miembro verificado por X AutoHub">Verificado</span>
+                }
+              </span>
+              <span class="post__meta">
+                @if (post.authorClub) {
+                  {{ post.authorClub }} ·
+                }
+                {{ relativeTime(post.createdAt) }}
+              </span>
+            </div>
+          </header>
+
+          <p class="post__text">{{ post.text }}</p>
+
+          @if (post.imageUrl) {
+            <img class="post__img" [src]="post.imageUrl" [alt]="post.text.slice(0, 60)" loading="lazy" />
+          }
+
+          @if (post.tags.length) {
+            <ul class="post__tags">
+              @for (tag of post.tags; track tag) {
+                <li class="post__tag">#{{ tag }}</li>
+              }
+            </ul>
+          }
+
+          <footer class="post__actions">
+            <span class="post__stat">{{ post.likes | number }} me gusta</span>
+            <span class="post__stat">{{ post.comments }} comentarios</span>
+          </footer>
+        </article>
+      } @empty {
+        <div class="social__empty">
+          <h4>Todavia no hay publicaciones</h4>
+          <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Clubes -->
+  @if (activeTab() === 'clubes') {
+    <section class="social__grid">
+      @for (club of clubs(); track club.id) {
+        <article class="club">
+          @if (club.imageUrl) {
+            <img class="club__img" [src]="club.imageUrl" [alt]="club.name" loading="lazy" />
+          }
+          <div class="club__body">
+            <h3 class="club__name">
+              {{ club.name }}
+              @if (club.isOfficial) {
+                <span class="club__badge">Oficial</span>
+              }
+            </h3>
+            <span class="club__meta">{{ club.focus }} · {{ club.location }}</span>
+            <p class="club__description">{{ club.description }}</p>
+            <span class="club__members">{{ club.members | number }} miembros</span>
+          </div>
+        </article>
+      } @empty {
+        <div class="social__empty">
+          <h4>Aun no hay clubes registrados</h4>
+          <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Eventos -->
+  @if (activeTab() === 'eventos') {
+    <section class="social__grid">
+      @for (event of events(); track event.id) {
+        <article class="event">
+          @if (event.imageUrl) {
+            <img class="event__img" [src]="event.imageUrl" [alt]="event.title" loading="lazy" />
+          }
+          <div class="event__body">
+            <span class="event__date">{{ event.date | date: 'EEEE d MMMM, y' }}</span>
+            <h3 class="event__title">{{ event.title }}</h3>
+            <span class="event__meta">{{ event.location }} · por {{ event.organizer }}</span>
+            <p class="event__description">{{ event.description }}</p>
+            <div class="event__footer">
+              <span class="event__price">
+                @if (event.price === 0) {
+                  Entrada gratis
+                } @else {
+                  RD$ {{ event.price | number: '1.0-0' }}
+                }
+              </span>
+              <span class="event__attendees">{{ event.attendees | number }} confirmados</span>
+            </div>
+          </div>
+        </article>
+      } @empty {
+        <div class="social__empty">
+          <h4>No hay eventos programados</h4>
+          <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
+        </div>
+      }
+    </section>
+  }
+</div>

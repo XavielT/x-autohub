@@ -1,65 +1,69 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
-import { RouterLink } from '@angular/router';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 
 @Component({
   selector: 'app-hub-market-part-details',
-  imports: [CommonModule, RouterLink, HubMarketCard],
+  imports: [DecimalPipe, RouterLink, HubMarketCard],
   templateUrl: './hub-market-part-details.html',
   styleUrl: './hub-market-part-details.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HubMarketPartDetails implements OnInit {
-  part: HubMarketItemModel | undefined;
-  relatedParts: HubMarketItemModel[] = [];
+  private readonly route = inject(ActivatedRoute);
+  private readonly hubMarketService = inject(HubMarketService);
 
-  images: string[] = [];
-  currentImageIndex: number = 0;
-
-  constructor(
-    private route: ActivatedRoute,
-    private hubMarketService: HubMarketService
-  ) {}
+  readonly part = signal<HubMarketItemModel | undefined>(undefined);
+  readonly relatedParts = signal<HubMarketItemModel[]>([]);
+  readonly images = signal<string[]>([]);
+  readonly currentImageIndex = signal(0);
+  readonly isLoading = signal(true);
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
-      this.loadPart(id);
+      this.isLoading.set(true);
+      this.currentImageIndex.set(0);
+
+      this.hubMarketService
+        .getById(id)
+        .pipe(
+          switchMap((part) =>
+            forkJoin({
+              part: of(part),
+              related: this.hubMarketService.getByCategory(part?.category ?? 'piezas'),
+            }),
+          ),
+        )
+        .subscribe({
+          next: ({ part, related }) => {
+            this.part.set(part);
+            this.images.set(part?.images ?? []);
+            this.relatedParts.set(related.filter((item) => item.id !== id).slice(0, 4));
+            this.isLoading.set(false);
+          },
+          error: () => this.isLoading.set(false),
+        });
     });
   }
 
   selectImage(index: number): void {
-    this.currentImageIndex = index;
+    this.currentImageIndex.set(index);
   }
 
   prevImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex - 1 + this.images.length) % this.images.length;
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i - 1 + total) % total);
   }
 
   nextImage(): void {
-    if (this.images.length <= 1) return;
-    this.currentImageIndex = (this.currentImageIndex + 1) % this.images.length;
-  }
-
-  private loadPart(id: number): void {
-    this.part = this.hubMarketService.getById(id);
-    this.currentImageIndex = 0;
-
-    if (!this.part) {
-      this.images = [];
-      this.relatedParts = this.hubMarketService.getByCategory('piezas').slice(0, 4);
-      return;
-    }
-
-    //this.images = this.part.images?.length ? this.part.images : [this.part.images];
-    this.images = this.part.images;
-    this.relatedParts = this.hubMarketService
-      .getByCategory(this.part.category)
-      .filter((item) => item.id !== this.part?.id)
-      .slice(0, 4);
+    const total = this.images().length;
+    if (total <= 1) return;
+    this.currentImageIndex.update((i) => (i + 1) % total);
   }
 }

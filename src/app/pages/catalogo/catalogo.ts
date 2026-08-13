@@ -1,11 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
 import { HubPartModel } from '../../../shared/models/hub-part.model';
-//import { HUB_PART_MOCK } from '../../../shared/models/hub-part.mock';
-import { CartService } from '../../../shared/services/cart';
+import { CartService } from '../../../shared/services/cart.service';
 import { HubPartService } from '../../../shared/services/hub-part.service';
-import { ActivatedRoute } from '@angular/router';
 
 interface CategoryOption {
   value: string;
@@ -17,17 +16,20 @@ interface CategoryOption {
   imports: [FormsModule, CatalogoCard],
   templateUrl: './catalogo.html',
   styleUrl: './catalogo.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
+export class Catalogo implements OnInit {
+  private readonly cartService = inject(CartService);
+  private readonly hubPartService = inject(HubPartService);
+  private readonly route = inject(ActivatedRoute);
 
-export class CatalogoComponent implements OnInit{
-  allParts: HubPartModel[] = [];
+  private readonly allParts = signal<HubPartModel[]>([]);
 
-  filteredParts: HubPartModel[] = [];
-  searchQuery: string = '';
-  selectedCategory: string = '';
+  readonly isLoading = signal(true);
+  readonly searchQuery = signal('');
+  readonly selectedCategory = signal('');
 
-  //category filter
-  readonly categories: CategoryOption[] = [
+  readonly categories: readonly CategoryOption[] = [
     { value: 'frenos', label: 'Frenos' },
     { value: 'suspension', label: 'Suspensión y Chassis' },
     { value: 'motor', label: 'Motor' },
@@ -47,44 +49,41 @@ export class CatalogoComponent implements OnInit{
     { value: 'herramientas', label: 'Herramientas' },
   ];
 
-  onSearch(): void {
-    this.applyFilters();
-  }
+  /** Se recalcula solo cuando cambia el catálogo, la búsqueda o la categoría. */
+  readonly filteredParts = computed(() => {
+    const query = this.searchQuery().toLowerCase().trim();
+    const category = this.selectedCategory();
 
-  onCategorySelect(category: string): void {
-    this.selectedCategory = this.selectedCategory === category ? '' : category;
-    this.applyFilters();
-  }
+    return this.allParts().filter((part) => {
+      const matchesSearch =
+        query.length === 0 ||
+        part.name.toLowerCase().includes(query) ||
+        part.brand.toLowerCase().includes(query);
 
-  private applyFilters(): void {
-    this.filteredParts = this.allParts.filter((part: HubPartModel) => {
-      const matchesSearch = part.name.toLowerCase()
-        .includes(this.searchQuery.toLowerCase()) ||
-        part.brand.toLowerCase().includes(this.searchQuery.toLowerCase());
-
-      const matchesCategory = this.selectedCategory
-        ? part.category === this.selectedCategory
-        : true;
+      const matchesCategory = category ? part.category === category : true;
 
       return matchesSearch && matchesCategory;
     });
-  }
-
-  constructor(
-    private cartService: CartService,
-    private hubPartService: HubPartService,
-    private route: ActivatedRoute
-  ) {}
+  });
 
   ngOnInit(): void {
-    this.allParts = this.hubPartService.getAll();
-    this.filteredParts = [...this.allParts];
-
+    // La categoría puede venir del home (/catalogo?category=suspension).
     const categoryFromUrl = this.route.snapshot.queryParamMap.get('category');
-    if (categoryFromUrl && this.categories.some((category) => category.value === categoryFromUrl)) {
-      this.selectedCategory = categoryFromUrl;
-      this.applyFilters();
+    if (categoryFromUrl && this.categories.some((c) => c.value === categoryFromUrl)) {
+      this.selectedCategory.set(categoryFromUrl);
     }
+
+    this.hubPartService.getAll().subscribe({
+      next: (parts) => {
+        this.allParts.set(parts);
+        this.isLoading.set(false);
+      },
+      error: () => this.isLoading.set(false),
+    });
+  }
+
+  onCategorySelect(category: string): void {
+    this.selectedCategory.update((current) => (current === category ? '' : category));
   }
 
   openCart(): void {

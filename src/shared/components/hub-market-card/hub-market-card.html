@@ -1,21 +1,21 @@
 <div class="hub-market-card">
     <div class="hub-market-card__top">
-        <a class="hub-market-card__image-link" [routerLink]="itemLink"><img class="hub-market-card__img"
-                [src]="item.images[0]" /></a>
+        <a class="hub-market-card__image-link" [routerLink]="itemLink()"><img class="hub-market-card__img"
+                [ngSrc]="item().images[0]" width="330" height="220" /></a>
     </div>
     <div class="hub-market-card__middle">
         <div class="hub-market-card__middle-header">
-            <span>{{displayCategory}}</span>
+            <span>{{displayCategory()}}</span>
         </div>
         <div class="hub-market-card__middle-content">
-            <a [routerLink]="itemLink">
-                <h3 class="hub-market-card__name">{{item.title}}</h3>
+            <a [routerLink]="itemLink()">
+                <h3 class="hub-market-card__name">{{item().title}}</h3>
             </a>
-            <p class="hub-market-card__user">Por: {{item.sellerName}}</p>
-            <p class="hub-market-card__meta">{{item.location}}</p>
+            <p class="hub-market-card__user">Por: {{item().sellerName}}</p>
+            <p class="hub-market-card__meta">{{item().location}}</p>
         </div>
     </div>
     <div class="hub-market-card__bottom">
-        <h4 class="hub-market-card__price">RD$ {{item.price | number:'1.0-0'}}</h4>
+        <h4 class="hub-market-card__price">RD$ {{item().price | number:'1.0-0'}}</h4>
     </div>
 </div>

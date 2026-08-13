@@ -59,8 +59,11 @@
 
     &__content-grid{
         display: grid;
-        grid-template-columns: repeat(4, minmax(0,1fr));
+        // auto-fit en vez de repeat(4): con 4 columnas fijas cada tarjeta
+        // quedaba en ~70px de ancho en un telefono.
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 20px 50px;
+        width: 100%;
         flex: 1;
     }
 

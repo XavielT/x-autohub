@@ -1,25 +1,32 @@
-<div class="car-details" *ngIf="car">
+@if (car(); as car) {
+<div class="car-details">
   <div class="car-details__body">
     <div class="car-details__media">
       <div class="car-details__carousel">
-        <img [src]="images[currentImageIndex]" [alt]="car.title" class="car-details__main-image" />
+        <img [src]="images()[currentImageIndex()]" [alt]="car.title" class="car-details__main-image" />
 
-        <button *ngIf="images.length > 1" class="car-details__carousel-btn car-details__carousel-btn--prev" (click)="prevImage()">
-          &#8249;
-        </button>
-        <button *ngIf="images.length > 1" class="car-details__carousel-btn car-details__carousel-btn--next" (click)="nextImage()">
-          &#8250;
-        </button>
+        @if (images().length > 1) {
+          <button class="car-details__carousel-btn car-details__carousel-btn--prev" (click)="prevImage()">
+            &#8249;
+          </button>
+          <button class="car-details__carousel-btn car-details__carousel-btn--next" (click)="nextImage()">
+            &#8250;
+          </button>
+        }
       </div>
 
-      <div class="car-details__thumbs" *ngIf="images.length > 1">
-        <button *ngFor="let img of images; let idx = index"
-                class="car-details__thumb"
-                [class.active]="idx === currentImageIndex"
-                (click)="selectImage(idx)">
-          <img [src]="img" [alt]="car.title" />
-        </button>
-      </div>
+      @if (images().length > 1) {
+        <div class="car-details__thumbs">
+          @for (img of images(); track img; let idx = $index) {
+            <button
+              class="car-details__thumb"
+              [class.active]="idx === currentImageIndex()"
+              (click)="selectImage(idx)">
+              <img [src]="img" [alt]="car.title" />
+            </button>
+          }
+        </div>
+      }
     </div>
 
     <div class="car-details__info">
@@ -34,30 +41,32 @@
         </div>
       </div>
 
-      <div class="car-details__specs" *ngIf="car.vehicleSpecs">
-        <div class="car-details__specs-grid">
-          <div class="car-details__spec-item">
-            <span>Año</span>
-            <strong>{{car.vehicleSpecs.year}}</strong>
-          </div>
-          <div class="car-details__spec-item">
-            <span>Kilometraje</span>
-            <strong>{{car.vehicleSpecs.mileage}} KM</strong>
-          </div>
-          <div class="car-details__spec-item">
-            <span>HP</span>
-            <strong>{{car.vehicleSpecs.hp || 'N/A'}}</strong>
-          </div>
-          <div class="car-details__spec-item">
-            <span>0-100 km/h</span>
-            <strong>{{car.vehicleSpecs.zeroTo100 ? car.vehicleSpecs.zeroTo100 + 's' : 'N/A'}}</strong>
-          </div>
-          <div class="car-details__spec-item">
-            <span>Velocidad máxima</span>
-            <strong>{{car.vehicleSpecs.topSpeed ? car.vehicleSpecs.topSpeed + ' km/h' : 'N/A'}}</strong>
+      @if (car.vehicleSpecs; as specs) {
+        <div class="car-details__specs">
+          <div class="car-details__specs-grid">
+            <div class="car-details__spec-item">
+              <span>Año</span>
+              <strong>{{specs.year}}</strong>
+            </div>
+            <div class="car-details__spec-item">
+              <span>Kilometraje</span>
+              <strong>{{specs.mileage | number}} KM</strong>
+            </div>
+            <div class="car-details__spec-item">
+              <span>HP</span>
+              <strong>{{specs.hp || 'N/A'}}</strong>
+            </div>
+            <div class="car-details__spec-item">
+              <span>0-100 km/h</span>
+              <strong>{{specs.zeroTo100 ? specs.zeroTo100 + 's' : 'N/A'}}</strong>
+            </div>
+            <div class="car-details__spec-item">
+              <span>Velocidad máxima</span>
+              <strong>{{specs.topSpeed ? specs.topSpeed + ' km/h' : 'N/A'}}</strong>
+            </div>
           </div>
         </div>
-      </div>
+      }
 
       <div class="car-details__seller">
         <h3>Vendedor</h3>
@@ -66,18 +75,31 @@
 
       <div class="car-details__description">
         <h3>Descripción</h3>
-        <p>{{ isDescriptionExpanded ? car.description : (car.description | slice:0:maxDescriptionLength) + (car.description.length > maxDescriptionLength ? '...' : '') }}</p>
-        <button *ngIf="car.description.length > maxDescriptionLength" class="car-details__toggle-btn" (click)="toggleDescription()">
-          {{ isDescriptionExpanded ? 'Ver menos' : 'Ver más' }}
-        </button>
+        <p>{{ isDescriptionExpanded() ? car.description : (car.description | slice:0:maxDescriptionLength) + (car.description.length > maxDescriptionLength ? '...' : '') }}</p>
+        @if (car.description.length > maxDescriptionLength) {
+          <button class="car-details__toggle-btn" (click)="toggleDescription()">
+            {{ isDescriptionExpanded() ? 'Ver menos' : 'Ver más' }}
+          </button>
+        }
       </div>
     </div>
   </div>
 </div>
-
-<div class="related-vehicles" *ngIf="relatedVehicles.length > 0">
-  <h2 class="related-vehicles__title">Vehículos Relacionados</h2>
-  <div class="related-vehicles__grid">
-    <app-car-card *ngFor="let vehicle of relatedVehicles" [car]="vehicle"></app-car-card>
+} @else if (!isLoading()) {
+  <div class="car-details__not-found">
+    <h2>No encontramos este vehiculo</h2>
+    <p>Puede que la publicacion ya no este disponible.</p>
+    <a routerLink="/hub-market">Volver a Hub Market</a>
   </div>
-</div>
+}
+
+@if (relatedVehicles().length > 0) {
+  <div class="related-vehicles">
+    <h2 class="related-vehicles__title">Vehículos Relacionados</h2>
+    <div class="related-vehicles__grid">
+      @for (vehicle of relatedVehicles(); track vehicle.id) {
+        <app-car-card [car]="vehicle" />
+      }
+    </div>
+  </div>
+}

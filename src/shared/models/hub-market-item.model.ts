@@ -4,11 +4,12 @@ export interface HubMarketItemModel {
   id: number;
   title: string;
   description: string;
-  //image: string;
   images: string[];
   price: number;
   location: string;
   sellerName: string;
+  /** uuid del perfil que publicó. Ausente en el contenido sembrado. */
+  sellerId?: string;
   category: HubMarketCategory;
   isFeatured?: boolean;
   detailRoute?: string;

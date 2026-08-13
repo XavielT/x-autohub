@@ -13,7 +13,9 @@
     <!-- Home featured vehicles cards content -->
     <div class="hm-ft-vh-cards-container">
         <div class="hm-ft-vh-cards">
-            <app-car-card *ngFor="let car of cars" [car]="car"></app-car-card>
+            @for (car of cars(); track car.id) {
+                <app-car-card [car]="car" />
+            }
         </div>
     </div>
 </div>

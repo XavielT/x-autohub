@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ServiciosCardModel } from '../../models/servicios-card.model';
 
 @Component({
@@ -6,7 +6,8 @@ import { ServiciosCardModel } from '../../models/servicios-card.model';
   imports: [],
   templateUrl: './servicios-card.html',
   styleUrl: './servicios-card.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ServiciosCard {
-  @Input() serviciosCard!: ServiciosCardModel;
+  readonly serviciosCard = input.required<ServiciosCardModel>();
 }

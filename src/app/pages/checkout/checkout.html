@@ -23,43 +23,43 @@
           <div class="checkout__fields">
             <label class="checkout__label">
               <span>Correo electrónico</span>
-              <input class="checkout__input" type="email" name="email" [(ngModel)]="email" autocomplete="email" placeholder="correo@ejemplo.com" />
+              <input class="checkout__input" type="email" name="email" [ngModel]="email()" (ngModelChange)="email.set($event)" autocomplete="email" placeholder="correo@ejemplo.com" />
             </label>
             <label class="checkout__label">
               <span>Teléfono</span>
-              <input class="checkout__input" type="tel" name="phone" [(ngModel)]="phone" autocomplete="tel" placeholder="Ej: 809-000-1234" />
+              <input class="checkout__input" type="tel" name="phone" [ngModel]="phone()" (ngModelChange)="phone.set($event)" autocomplete="tel" placeholder="Ej: 809-000-1234" />
             </label>
             <label class="checkout__label checkout__label--full">
               <span>Nombre completo</span>
-              <input class="checkout__input" type="text" name="fullName" [(ngModel)]="fullName" autocomplete="name" placeholder="Nombre y apellidos" />
+              <input class="checkout__input" type="text" name="fullName" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" autocomplete="name" placeholder="Nombre y apellidos" />
             </label>
             <label class="checkout__label checkout__label--full">
               <span>Dirección</span>
-              <input class="checkout__input" type="text" name="addressLine1" [(ngModel)]="addressLine1" autocomplete="street-address" placeholder="Calle, número" />
+              <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()" (ngModelChange)="addressLine1.set($event)" autocomplete="street-address" placeholder="Calle, número" />
             </label>
             <label class="checkout__label">
               <span>Ciudad</span>
-              <input class="checkout__input" type="text" name="city" [(ngModel)]="city" autocomplete="address-level2" />
+              <input class="checkout__input" type="text" name="city" [ngModel]="city()" (ngModelChange)="city.set($event)" autocomplete="address-level2" />
             </label>
             <label class="checkout__label">
               <span>Código postal</span>
-              <input class="checkout__input" type="text" name="postalCode" [(ngModel)]="postalCode" autocomplete="postal-code" />
+              <input class="checkout__input" type="text" name="postalCode" [ngModel]="postalCode()" (ngModelChange)="postalCode.set($event)" autocomplete="postal-code" />
             </label>
           </div>
 
           <h3 class="checkout__subsection-title">Método de envío</h3>
           <ul class="checkout__options">
-            @for (opt of shippingOptions; track opt.id) {
+            @for (opt of shippingOptions(); track opt.id) {
               <li class="checkout__option">
                 <label class="checkout__option-label">
-                  <input type="radio" name="shipping" [value]="opt.id" [(ngModel)]="selectedShippingId" />
+                  <input type="radio" name="shipping" [value]="opt.id" [ngModel]="selectedShippingId()" (ngModelChange)="selectedShippingId.set($event)" />
                   <span class="checkout__option-body">
                     <span class="checkout__option-title">{{ opt.label }}</span>
                     <span class="checkout__option-desc">{{ opt.description }}</span>
                     <span class="checkout__option-meta">{{ opt.etaLabel }}</span>
                   </span>
                   <span class="checkout__option-price">
-                    @if (opt.price === 0) { Gratis } @else { ${{ opt.price | number }} }
+                    @if (opt.price === 0) { Gratis } @else { RD$ {{ opt.price | number:'1.0-0' }} }
                   </span>
                 </label>
               </li>
@@ -68,10 +68,10 @@
 
           <h3 class="checkout__subsection-title">Método de pago</h3>
           <ul class="checkout__options">
-            @for (pm of paymentOptions; track pm.id) {
+            @for (pm of paymentOptions(); track pm.id) {
               <li class="checkout__option">
                 <label class="checkout__option-label">
-                  <input type="radio" name="payment" [value]="pm.id" [(ngModel)]="selectedPaymentId" />
+                  <input type="radio" name="payment" [value]="pm.id" [ngModel]="selectedPaymentId()" (ngModelChange)="selectedPaymentId.set($event)" />
                   <span class="checkout__option-body">
                     <span class="checkout__option-title">{{ pm.label }}</span>
                     <span class="checkout__option-desc">{{ pm.description }}</span>
@@ -83,7 +83,7 @@
 
           <label class="checkout__label checkout__label--full">
             <span>Notas del pedido <span class="checkout__optional">(opcional)</span></span>
-            <textarea class="checkout__textarea" name="orderNotes" [(ngModel)]="orderNotes" rows="3" placeholder="Indicaciones de entrega, referencias…"></textarea>
+            <textarea class="checkout__textarea" name="orderNotes" [ngModel]="orderNotes()" (ngModelChange)="orderNotes.set($event)" rows="3" placeholder="Indicaciones de entrega, referencias…"></textarea>
           </label>
 
           <button type="button" class="checkout__submit" (click)="submitOrder()">Confirmar pedido (demo)</button>
@@ -101,7 +101,7 @@
                   <span class="checkout__line-brand">{{ item.part.brand }}</span>
                   <span class="checkout__line-qty">Cantidad: {{ item.quantity }}</span>
                 </div>
-                <span class="checkout__line-price">${{ item.part.price * item.quantity | number }}</span>
+                <span class="checkout__line-price">RD$ {{ item.part.price * item.quantity | number:'1.0-0' }}</span>
               </li>
             }
           </ul>
@@ -109,18 +109,18 @@
           <div class="checkout__totals">
             <div class="checkout__total-row">
               <span>Subtotal</span>
-              <span>${{ cartService.totalPrice() | number }}</span>
+              <span>RD$ {{ cartService.totalPrice() | number:'1.0-0' }}</span>
             </div>
             <div class="checkout__total-row">
               <span>Envío</span>
               <span>
-                @if (shippingPrice === 0) { Gratis } @else { ${{ shippingPrice | number }} }
+                @if (shippingPrice() === 0) { Gratis } @else { RD$ {{ shippingPrice() | number:'1.0-0' }} }
               </span>
             </div>
             <div class="checkout__divider"></div>
             <div class="checkout__total-row checkout__total-row--grand">
               <span>Total</span>
-              <span>${{ grandTotal | number }}</span>
+              <span>RD$ {{ grandTotal() | number:'1.0-0' }}</span>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { HomeWelcome } from '../../components/home-welcome/home-welcome';
 import { PageCounterOverview } from '../../components/page-counter-overview/page-counter-overview';
 import { RouterModule } from '@angular/router';
@@ -12,6 +12,7 @@ import { ClubChannel } from '../../../shared/components/club-channel/club-channe
   imports: [HomeWelcome, PageCounterOverview, RouterModule, HomeFeaturedVehicles, HomeFeaturedCatalog, HomeNews, ClubChannel,],
   templateUrl: './home.html',
   styleUrl: './home.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent {
+export class Home {
 }

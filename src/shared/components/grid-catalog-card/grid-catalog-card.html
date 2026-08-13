@@ -1,21 +1,23 @@
-<article class="catalog-card" [class.catalog-card--featured]="item.variant === 'featured'" [class.catalog-card--secondary]="item.variant === 'secondary'">
+<article class="catalog-card" [class.catalog-card--featured]="item().variant === 'featured'" [class.catalog-card--secondary]="item().variant === 'secondary'">
     <div class="catalog-card__image-wrapper">
-        <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams"><img
-        [src]="item.imageUrl"
-        [alt]="item.title"
+        <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams()"><img
+        [ngSrc]="item().imageUrl"
+        [alt]="item().title"
         class="catalog-card__image"
+        width="400"
+        height="300"
         /></a>
     </div>
 
     <div class="catalog-card__content">
-        <span class="catalog-card__category">{{ item.category }}</span>
+        <span class="catalog-card__category">{{ item().category }}</span>
         <h4 class="catalog-card__title">
-            <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams">{{ item.title }}</a>
+            <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams()">{{ item().title }}</a>
         </h4>
 
-        @if (item.variant === 'featured' && item.ctaLabel) {
-            <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams" class="catalog-card__cta">
-                {{ item.ctaLabel }}
+        @if (item().variant === 'featured' && item().ctaLabel) {
+            <a [routerLink]="catalogLink" [queryParams]="catalogQueryParams()" class="catalog-card__cta">
+                {{ item().ctaLabel }}
             </a>
         }
     </div>

@@ -89,10 +89,14 @@
 //actions buttons
 .navbar-actions{
     display: flex;
+    align-items: center;
     gap: 16px;
 }
 
 .navbar-actions-button{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 100px;
     height: 35px;
     font-family: var(--font-btns);
@@ -100,10 +104,12 @@
     font-weight: bold;
     border: none;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .nav-button-primary{
     background-color: var(--Hub);
+    color: var(--main);
 }
 
 .nav-button-secondary{
@@ -117,18 +123,45 @@
     transition: all 0.2s ease;
 }
 
-.navbar-act-btn-pri :hover{
+.nav-button-primary:hover{
     box-shadow: 0px 0px 6px 1px var(--HubShadow);
-    transform: scaleY(5px);
 }
 
-.navbar-act-btn-sec :hover{
+.nav-button-secondary:hover{
     color: var(--Hub);
 }
 
-/*.navbar-act-btn-pri :hover{
-    color: white;
-}*/
+//session chip, visible solo con sesion activa
+.navbar-user{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 160px;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 14px;
+}
+
+.navbar-user-initial{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--Hub);
+    color: var(--main);
+    font-family: var(--font-brand);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.navbar-user-name{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 //Responsive navbar
 @media (max-width: 900px){

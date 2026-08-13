@@ -1,18 +1,34 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, delay, from, map, of } from 'rxjs';
+import { SupabaseService } from '../../core/supabase/supabase.service';
+import { translateDbError } from '../../core/supabase/supabase-error';
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface SubscriptionResult {
+  ok: boolean;
+}
+
+/** Suscripciones al Club X AutoHub (formulario del home). */
+@Injectable({ providedIn: 'root' })
 export class EmailSubscriptionService {
-  
-  //TODO: Implement the real api
-  private apiUrl = 'https://tu-api.com/subscribe'; 
+  private readonly supabase = inject(SupabaseService);
 
-  constructor(private http: HttpClient) {}
+  subscribe(email: string): Observable<SubscriptionResult> {
+    if (this.supabase.shouldUseMockData()) {
+      // El delay hace visible el estado de carga del formulario.
+      return of({ ok: true }).pipe(delay(600));
+    }
 
-  subscribe(email: string): Observable<any> {
-    return this.http.post(this.apiUrl, { email });
+    return from(
+      this.supabase.db.from('club_subscriptions').insert({ email: email.trim().toLowerCase() }),
+    ).pipe(
+      map((res) => {
+        // 23505 = ya está suscrito. Para el usuario eso es un éxito, no un error.
+        if (res.error && res.error.code !== '23505') {
+          console.error('[supabase]', res.error);
+          throw new Error(translateDbError(res.error));
+        }
+        return { ok: true };
+      }),
+    );
   }
 }

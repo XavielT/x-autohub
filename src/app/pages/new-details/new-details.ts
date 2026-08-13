@@ -1,80 +1,84 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+
 import { NewCardModel } from '../../../shared/models/new-card.model';
-import { NEWS_MOCK } from '../../../shared/models/new-card.mock';
+import { NewsService } from '../../../shared/services/news.service';
 
 @Component({
   selector: 'app-new-details',
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   templateUrl: './new-details.html',
   styleUrl: './new-details.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewDetails implements OnInit {
-  new: NewCardModel | undefined;
-  slideIndex = 0;
-  private touchStartX = 0;
-  //TODO: implements a real Api inyection in this component
+  private readonly route = inject(ActivatedRoute);
+  private readonly newsService = inject(NewsService);
 
-  constructor(private route: ActivatedRoute) {}
+  readonly new = signal<NewCardModel | undefined>(undefined);
+  readonly isLoading = signal(true);
+
+  readonly slideIndex = signal(0);
+  private touchStartX = 0;
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.new = NEWS_MOCK.find(n => n.id === id);
-    this.slideIndex = 0;
+    this.route.paramMap.subscribe((params) => {
+      const id = Number(params.get('id'));
+      this.slideIndex.set(0);
+      this.isLoading.set(true);
+
+      this.newsService.getById(id).subscribe({
+        next: (item) => {
+          this.new.set(item);
+          this.isLoading.set(false);
+        },
+        error: () => this.isLoading.set(false),
+      });
+    });
   }
 
   /** Portada + imágenes extra, sin duplicar URLs. */
-  get gallerySlides(): string[] {
-    if (!this.new) {
-      return [];
-    }
-    const merged = [this.new.imageUrl, ...this.new.images];
+  readonly gallerySlides = computed<string[]>(() => {
+    const item = this.new();
+    if (!item) return [];
+
     const seen = new Set<string>();
     const out: string[] = [];
-    for (const u of merged) {
-      const s = u?.trim();
-      if (s && !seen.has(s)) {
-        seen.add(s);
-        out.push(s);
+    for (const url of [item.imageUrl, ...item.images]) {
+      const trimmed = url?.trim();
+      if (trimmed && !seen.has(trimmed)) {
+        seen.add(trimmed);
+        out.push(trimmed);
       }
     }
-    return out.length ? out : this.new.imageUrl ? [this.new.imageUrl] : [];
-  }
+    return out;
+  });
 
-  get carouselTrackTransform(): string {
-    const n = this.gallerySlides.length;
-    if (n === 0) {
-      return 'none';
-    }
-    return `translateX(-${(this.slideIndex * 100) / n}%)`;
-  }
+  readonly carouselTrackTransform = computed(() => {
+    const n = this.gallerySlides().length;
+    return n === 0 ? 'none' : `translateX(-${(this.slideIndex() * 100) / n}%)`;
+  });
 
-  get slideBasisPercent(): number {
-    const n = this.gallerySlides.length;
+  readonly slideBasisPercent = computed(() => {
+    const n = this.gallerySlides().length;
     return n > 0 ? 100 / n : 100;
-  }
+  });
 
   nextSlide(): void {
-    const slides = this.gallerySlides;
-    if (slides.length <= 1) {
-      return;
-    }
-    this.slideIndex = (this.slideIndex + 1) % slides.length;
+    const total = this.gallerySlides().length;
+    if (total <= 1) return;
+    this.slideIndex.update((i) => (i + 1) % total);
   }
 
   prevSlide(): void {
-    const slides = this.gallerySlides;
-    if (slides.length <= 1) {
-      return;
-    }
-    this.slideIndex = (this.slideIndex - 1 + slides.length) % slides.length;
+    const total = this.gallerySlides().length;
+    if (total <= 1) return;
+    this.slideIndex.update((i) => (i - 1 + total) % total);
   }
 
   goToSlide(i: number): void {
-    const slides = this.gallerySlides;
-    if (i >= 0 && i < slides.length) {
-      this.slideIndex = i;
+    if (i >= 0 && i < this.gallerySlides().length) {
+      this.slideIndex.set(i);
     }
   }
 
@@ -85,10 +89,7 @@ export class NewDetails implements OnInit {
   onCarouselTouchEnd(event: TouchEvent): void {
     const dx = event.changedTouches[0].clientX - this.touchStartX;
     const threshold = 48;
-    if (dx < -threshold) {
-      this.nextSlide();
-    } else if (dx > threshold) {
-      this.prevSlide();
-    }
+    if (dx < -threshold) this.nextSlide();
+    else if (dx > threshold) this.prevSlide();
   }
 }

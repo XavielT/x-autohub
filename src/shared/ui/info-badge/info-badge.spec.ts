@@ -14,6 +14,8 @@ describe('InfoBadge', () => {
 
     fixture = TestBed.createComponent(InfoBadge);
     component = fixture.componentInstance;
+    // `text` es un input requerido: sin valor la plantilla lanza NG0950.
+    fixture.componentRef.setInput('text', 'Santo Domingo');
     await fixture.whenStable();
   });
 
