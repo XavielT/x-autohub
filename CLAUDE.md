@@ -32,6 +32,43 @@ Además: no hagas `commit` ni `push` sin que Xaviel lo pida explícitamente.
 
 ---
 
+## ⛔ REGLA ABSOLUTA — Todo push a `main` es una versión
+
+**No se empuja a `main` sin cerrar la versión.** Un push sin versionar deja el
+historial sin un punto al que volver, y es justo lo que hay que poder hacer
+cuando algo sale mal en producción.
+
+Cada push a `main` lleva, en este orden:
+
+1. **Bump** de `version` en `package.json` **y en `package-lock.json`** (dos
+   lugares: `.version` y `.packages[""].version`). Semver: `minor` para una
+   función nueva, `patch` para un arreglo. Sigue en `0.x` hasta que el dominio
+   apunte a Vercel y el sitio esté de verdad en vivo.
+2. **Commit del bump** aparte, con el mensaje `Bump version to X.Y.Z`.
+3. **Tag anotado** `vX.Y.Z` (`git tag -a`), con las notas de la versión en el
+   mensaje: qué trae, y qué queda pendiente. En español, que es lo que se lee.
+4. **Push con los tags**: `git push origin main --follow-tags`.
+5. **Entrada en la tabla `releases`** de Supabase, que es el historial que se ve
+   en `/admin/versiones` y en el sitio. Misma versión y mismas notas que el tag.
+6. **Despliegue**: `vercel --prod`.
+
+Antes de empujar, **verifica que cada commit compile por su cuenta**, no solo el
+árbol de trabajo. Un commit parcial que no compila ya pasó una vez (`c9cb47f`):
+el árbol estaba en verde y el commit no. Se comprueba en un worktree aislado:
+
+```bash
+git worktree add -q /tmp/verify HEAD
+ln -s "$PWD/node_modules" /tmp/verify/node_modules
+for c in $(git log --format=%h --reverse <base>..HEAD); do
+  git -C /tmp/verify checkout -q $c
+  (cd /tmp/verify && npx ng build --configuration production) | grep -q complete \
+    && echo "$c OK" || echo "$c FALLA"
+done
+git worktree remove --force /tmp/verify
+```
+
+---
+
 ## Qué es X AutoHub
 
 Plataforma web para la comunidad automotriz de **República Dominicana**. No es un
