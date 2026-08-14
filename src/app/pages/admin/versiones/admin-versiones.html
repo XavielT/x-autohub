@@ -1,0 +1,121 @@
+<section class="adm-rel">
+  <header class="adm-rel__head">
+    <div>
+      <h2 class="adm-rel__title">Historial de versiones</h2>
+      <p class="adm-rel__lead">
+        Lo que se publica aqui es visible para cualquiera. Los borradores solo los ves tu.
+      </p>
+    </div>
+    @if (editingId() === null) {
+      <button type="button" class="adm-rel__new" (click)="startCreate()">+ Nueva version</button>
+    }
+  </header>
+
+  @if (editingId() !== null) {
+    <form class="adm-rel__form" (ngSubmit)="save()">
+      <h3 class="adm-rel__form-title">
+        {{ editingId() === 0 ? 'Nueva version' : 'Editar version' }}
+      </h3>
+
+      <div class="adm-rel__row">
+        <label class="adm-rel__field">
+          <span>Version</span>
+          <input type="text" name="version" placeholder="0.2.0" inputmode="decimal"
+                 [ngModel]="version()" (ngModelChange)="version.set($event)" />
+        </label>
+        <label class="adm-rel__field">
+          <span>Fecha</span>
+          <input type="date" name="releasedAt"
+                 [ngModel]="releasedAt()" (ngModelChange)="releasedAt.set($event)" />
+        </label>
+      </div>
+
+      <label class="adm-rel__field">
+        <span>Titulo</span>
+        <input type="text" name="title" placeholder="Que trae esta version, en una linea"
+               [ngModel]="title()" (ngModelChange)="title.set($event)" />
+      </label>
+
+      <label class="adm-rel__field">
+        <span>Resumen</span>
+        <textarea name="summary" rows="2" placeholder="Un parrafo corto explicando el cambio"
+                  [ngModel]="summary()" (ngModelChange)="summary.set($event)"></textarea>
+      </label>
+
+      <label class="adm-rel__field">
+        <span>Cambios <small>(una linea por punto)</small></span>
+        <textarea name="changes" rows="7"
+                  placeholder="Se agrego el panel de administracion&#10;Se corrigio el carrito al recargar"
+                  [ngModel]="changesText()" (ngModelChange)="changesText.set($event)"></textarea>
+      </label>
+
+      <label class="adm-rel__check">
+        <input type="checkbox" name="isPublished"
+               [ngModel]="isPublished()" (ngModelChange)="isPublished.set($event)" />
+        <span>Publicada (visible para todos)</span>
+      </label>
+
+      <div class="adm-rel__actions">
+        <button type="submit" class="adm-rel__save" [disabled]="isSaving()">
+          {{ isSaving() ? 'Guardando...' : 'Guardar' }}
+        </button>
+        <button type="button" class="adm-rel__cancel" (click)="cancel()">Cancelar</button>
+      </div>
+    </form>
+  }
+
+  @if (isLoading()) {
+    <p class="adm-rel__empty">Cargando versiones...</p>
+  } @else if (items().length === 0) {
+    <p class="adm-rel__empty">Todavia no hay ninguna version registrada.</p>
+  } @else {
+    <ol class="adm-rel__list">
+      @for (item of items(); track item.id) {
+        <li class="adm-rel__item" [class.adm-rel__item--draft]="!item.isPublished">
+          <div class="adm-rel__item-head">
+            <div class="adm-rel__item-id">
+              <span class="adm-rel__version">v{{ item.version }}</span>
+              <span class="adm-rel__date">{{ item.releasedAt | date:'d MMMM y' }}</span>
+              @if (!item.isPublished) {
+                <span class="adm-rel__badge">Borrador</span>
+              }
+            </div>
+            <div class="adm-rel__item-tools">
+              <button type="button" (click)="toggleDetail(item.id)">
+                {{ expandedId() === item.id ? 'Ocultar' : 'Ver detalle' }}
+              </button>
+              <button type="button" (click)="startEdit(item)">Editar</button>
+              @if (pendingDeleteId() === item.id) {
+                <button type="button" class="adm-rel__danger" (click)="confirmDelete(item)">
+                  Confirmar
+                </button>
+                <button type="button" (click)="askDelete(item.id)">No</button>
+              } @else {
+                <button type="button" class="adm-rel__danger-soft" (click)="askDelete(item.id)">
+                  Eliminar
+                </button>
+              }
+            </div>
+          </div>
+
+          <h3 class="adm-rel__item-title">{{ item.title }}</h3>
+          @if (item.summary) {
+            <p class="adm-rel__item-summary">{{ item.summary }}</p>
+          }
+
+          @if (expandedId() === item.id) {
+            @if (item.changes.length === 0) {
+              <p class="adm-rel__item-summary">Esta version no tiene puntos de cambio.</p>
+            } @else {
+              <ul class="adm-rel__changes">
+                @for (change of item.changes; track change) {
+                  <li>{{ change }}</li>
+                }
+              </ul>
+            }
+          }
+        </li>
+      }
+    </ol>
+  }
+</section>

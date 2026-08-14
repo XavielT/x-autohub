@@ -44,45 +44,23 @@ se encontró, porque son las trampas a no repetir (ver también `CLAUDE.md`):
 
 Verificado repitiendo cada ataque contra la base después del arreglo.
 
-Al terminar, márcate como admin para poder gestionar el inventario propio:
-
-```sql
-update public.profiles set is_admin = true, is_verified = true
-where email = 'tu@correo.com';
-```
-
-### 2. Fuentes: cuáles se quedan
-
-`src/assets/fonts` pesa **7.3 MB** y el build copia la carpeta completa a `dist/`.
-De 21 familias, la app **realmente aplica 4**:
-
-| Familia          | Token                          | Usos  |
-| ---------------- | ------------------------------ | ----- |
-| Space Grotesk    | `--font-brand`, `--font-btns`  | 71    |
-| Manrope          | `--font-body`, `--font-price`, `--font-date` | 71 |
-| ROLNER           | `--font-brand2` + 2 directos   | 4     |
-| Batman           | directo en el hero             | 1     |
-| Designer         | `--font-highlight2`            | 1     |
-
-Las otras **16 familias (~6.6 MB)** no se aplican en ningún estilo. Algunas están
-declaradas en `styles.scss` con `@font-face` pero ningún selector las usa
-(Gefika, Dimona, Spoiler-script, Ducks-Fiesta, Super-Wonder, Diary-Story,
-Grime-Slime, Lemon-beach, Work-krow, Biotrip-Serif) y otras ni eso (Denham,
-Summer, Space-Mono, Roboto, High-School, Quantro-Sans, baloba).
-
-**No las borré porque son decisiones tuyas de diseño.** Cuando decidas:
+Para gestionar el inventario propio necesitas ser admin. Regístrate y corre:
 
 ```bash
-du -sh src/assets/fonts/*/ | sort -rh   # ver el peso de cada una
+node scripts/make-admin.mjs tu@correo.com
 ```
 
-Borrar las 16 no usadas baja `dist/` de 15 MB a ~8.5 MB. Si quieres conservarlas
-como paleta para experimentar, muévelas a `brand/fonts-lab/` (fuera del build).
+### 3. Fuentes — **resuelto en la v0.1.0**
 
-### 3. Convertir a WOFF2
+Se retiraron las cuatro que no tenían licencia comercial (Batman, ROLNER,
+Designer, Dimona) y Biotrip-Serif, que decía `Personal use only`. Las reemplazan
+Chakra Petch y Orbitron, ambas SIL OFL 1.1 y distribuidas con su `OFL.txt`.
 
-Las fuentes que se quedan están en `.ttf`. WOFF2 pesa ~40% menos y lo soporta todo
-navegador vivo. Space Grotesk y Manrope juntas bajarían de 308 KB a ~120 KB.
+Todo está ya en WOFF2 y con subconjunto latino: `src/assets/fonts` pesa **336 KB**.
+
+Quedan dos sin usar y sin licencia documentada, **Gefika** (`--font-heading`) y
+**Spoiler-script** (`--font-highlight`). No se renderizan en ningún lado; hay que
+resolver sus derechos antes de darles uso. Ver `docs/CONVENTIONS.md`.
 
 ## P1 — Deuda que ya está costando
 
@@ -143,15 +121,16 @@ exactamente el mismo modelo (`HubMarketItemModel`).
 (`id`, `name`, `price`, `imageUrl`, `source: 'catalogo' | 'hub-market'`) y que los
 servicios mapeen hacia él. El checkout deja de conocer el modelo de piezas.
 
-### 7. Panel de administración
+### 7. Panel de administración — **hecho, con una parte pendiente**
 
-Auto Hub, el catálogo, las noticias y los eventos solo se pueden editar desde el
-Table Editor de Supabase. Funciona, pero no es algo que se le pida a alguien que
-no sea desarrollador.
+`/admin` existe desde la v0.2.0 con cuatro secciones: historial de versiones,
+pedidos, inventario y usuarios. Ver `docs/BACKEND.md`.
 
-Una ruta `/admin` protegida por `is_admin`, con formularios sobre las mismas
-tablas, cierra el ciclo. Es la diferencia entre "tengo un backend" y "puedo
-operar el negocio".
+**Lo que falta:** dar de alta artículos nuevos desde el panel. El inventario
+permite ajustar precio, existencias y visibilidad, que es el trabajo diario, pero
+crear una pieza, un vehículo o una noticia desde cero sigue haciéndose en el
+Table Editor de Supabase. Un vehículo tiene 17 campos obligatorios y su
+formulario, con subida de imágenes a Storage, es un trabajo aparte.
 
 ### 8. Enlaces del footer que no llevan a nada
 

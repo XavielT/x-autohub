@@ -32,6 +32,16 @@ export class AuthService {
   readonly isLoggedIn = computed(() => this._user() !== null);
 
   /**
+   * Acceso al panel de administración.
+   *
+   * Sirve para mostrar u ocultar la entrada del navbar y para el `adminGuard`,
+   * **no como medida de seguridad**: quien manipule el cliente puede poner esto
+   * en true y no conseguirá nada, porque RLS y las funciones del panel vuelven a
+   * comprobarlo dentro de Postgres.
+   */
+  readonly isAdmin = computed(() => this._user()?.isAdmin === true);
+
+  /**
    * Se resuelve cuando ya se intentó restaurar la sesión.
    *
    * Los guards **tienen** que esperarla: con Supabase la restauración es

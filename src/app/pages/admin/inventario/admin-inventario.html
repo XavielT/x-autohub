@@ -1,0 +1,149 @@
+<section class="adm-inv">
+  <header class="adm-inv__head">
+    <h2 class="adm-inv__title">Inventario propio</h2>
+    <p class="adm-inv__lead">
+      Catalogo, Auto Hub y noticias. Hub Market no se administra aqui: lo publica la comunidad.
+    </p>
+  </header>
+
+  <div class="adm-inv__tabs" role="tablist" aria-label="Tipo de inventario">
+    <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'piezas'"
+            [class.adm-inv__tab--active]="tab() === 'piezas'" (click)="setTab('piezas')">
+      Piezas <span>{{ parts().length }}</span>
+    </button>
+    <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'vehiculos'"
+            [class.adm-inv__tab--active]="tab() === 'vehiculos'" (click)="setTab('vehiculos')">
+      Vehiculos <span>{{ vehicles().length }}</span>
+    </button>
+    <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'noticias'"
+            [class.adm-inv__tab--active]="tab() === 'noticias'" (click)="setTab('noticias')">
+      Noticias <span>{{ news().length }}</span>
+    </button>
+  </div>
+
+  <p class="adm-inv__note">
+    Aqui se ajusta precio, existencias y visibilidad. Para dar de alta algo nuevo todavia hay que
+    usar el Table Editor de Supabase.
+  </p>
+
+  @if (isLoading()) {
+    <p class="adm-inv__empty">Cargando inventario...</p>
+  } @else {
+    @switch (tab()) {
+      @case ('piezas') {
+        @if (parts().length === 0) {
+          <p class="adm-inv__empty">No hay piezas en el catalogo.</p>
+        } @else {
+          <div class="adm-inv__table-wrap">
+            <table class="adm-inv__table">
+              <caption class="adm-inv__caption">Piezas del catalogo</caption>
+              <thead>
+                <tr><th scope="col">Pieza</th><th scope="col">Precio (RD$)</th>
+                    <th scope="col">Stock</th><th scope="col">Estado</th></tr>
+              </thead>
+              <tbody>
+                @for (part of parts(); track part.id) {
+                  <tr [class.adm-inv__row--off]="!part.isActive">
+                    <td>
+                      <span class="adm-inv__name">{{ part.name }}</span>
+                      <span class="adm-inv__sub">{{ part.brand }} · {{ part.category }}</span>
+                    </td>
+                    <td>
+                      <input type="number" min="0" step="50" class="adm-inv__input"
+                             [value]="part.price" [disabled]="savingId() === 'p' + part.id"
+                             (change)="savePartField(part, 'price', $event)"
+                             [attr.aria-label]="'Precio de ' + part.name" />
+                    </td>
+                    <td>
+                      <input type="number" min="0" step="1" class="adm-inv__input adm-inv__input--sm"
+                             [value]="part.stock" [disabled]="savingId() === 'p' + part.id"
+                             (change)="savePartField(part, 'stock', $event)"
+                             [attr.aria-label]="'Existencias de ' + part.name" />
+                      @if (part.stock === 0) { <span class="adm-inv__warn">agotado</span> }
+                    </td>
+                    <td>
+                      <button type="button" class="adm-inv__btn"
+                              [disabled]="savingId() === 'p' + part.id" (click)="togglePart(part)">
+                        {{ part.isActive ? 'Ocultar' : 'Mostrar' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      @case ('vehiculos') {
+        @if (vehicles().length === 0) {
+          <p class="adm-inv__empty">No hay vehiculos en Auto Hub.</p>
+        } @else {
+          <div class="adm-inv__table-wrap">
+            <table class="adm-inv__table">
+              <caption class="adm-inv__caption">Vehiculos oficiales</caption>
+              <thead>
+                <tr><th scope="col">Vehiculo</th><th scope="col">Precio (RD$)</th>
+                    <th scope="col">Kilometraje</th><th scope="col">Estado</th></tr>
+              </thead>
+              <tbody>
+                @for (v of vehicles(); track v.id) {
+                  <tr [class.adm-inv__row--off]="!v.isAvailable">
+                    <td>
+                      <span class="adm-inv__name">{{ v.brand }} {{ v.model }}</span>
+                      <span class="adm-inv__sub">{{ v.year }}</span>
+                    </td>
+                    <td>
+                      <input type="number" min="0" step="5000" class="adm-inv__input"
+                             [value]="v.price" [disabled]="savingId() === 'v' + v.id"
+                             (change)="saveVehiclePrice(v, $event)"
+                             [attr.aria-label]="'Precio de ' + v.brand + ' ' + v.model" />
+                    </td>
+                    <td>{{ v.mileage | number:'1.0-0' }} km</td>
+                    <td>
+                      <button type="button" class="adm-inv__btn"
+                              [disabled]="savingId() === 'v' + v.id" (click)="toggleVehicle(v)">
+                        {{ v.isAvailable ? 'Marcar vendido' : 'Marcar disponible' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
+      @case ('noticias') {
+        @if (news().length === 0) {
+          <p class="adm-inv__empty">No hay noticias.</p>
+        } @else {
+          <div class="adm-inv__table-wrap">
+            <table class="adm-inv__table">
+              <caption class="adm-inv__caption">Noticias</caption>
+              <thead>
+                <tr><th scope="col">Titulo</th><th scope="col">Alcance</th>
+                    <th scope="col">Fecha</th><th scope="col">Estado</th></tr>
+              </thead>
+              <tbody>
+                @for (n of news(); track n.id) {
+                  <tr [class.adm-inv__row--off]="!n.isPublished">
+                    <td><span class="adm-inv__name">{{ n.title }}</span></td>
+                    <td>{{ n.scope === 'local' ? 'Local' : 'Internacional' }}</td>
+                    <td>{{ n.publishedAt | date:'d MMM y' }}</td>
+                    <td>
+                      <button type="button" class="adm-inv__btn"
+                              [disabled]="savingId() === 'n' + n.id" (click)="toggleNews(n)">
+                        {{ n.isPublished ? 'Despublicar' : 'Publicar' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  }
+</section>

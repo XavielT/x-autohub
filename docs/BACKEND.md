@@ -29,7 +29,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 4     | `supabase/migrations/0004_rename_stars_rating.sql` | `stars_calification` → `stars_rating`      |
 | 5     | `supabase/migrations/0005_security_fixes.sql`  | Escalada de privilegios, precios y checkout    |
 | 6     | `supabase/migrations/0006_profile_privacy.sql` | El correo y el teléfono dejan de ser públicos  |
-| 7     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 7     | `supabase/migrations/0007_admin_module.sql`    | Panel de admin: versiones, usuarios y permisos |
+| 8     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating`, el nombre que deja la 0004.
 
@@ -139,6 +140,29 @@ La clave anon es pública. La seguridad real está en RLS:
 
 El `with check (seller_id = auth.uid())` de Hub Market es lo que impide publicar
 en nombre de otro, incluso desde un cliente manipulado.
+
+### El panel de administración (migración 0007)
+
+`/admin` es solo para `is_admin`. El `adminGuard` decide si se dibuja, pero **la
+seguridad está en la base**: RLS y dos funciones que vuelven a comprobar el
+permiso dentro de Postgres. Un usuario que fuerce la URL verá pantallas vacías.
+
+| Pieza | Para qué |
+| --- | --- |
+| Tabla `releases` | El historial de versiones. Lectura pública de lo publicado, escritura solo admin. |
+| `admin_list_users()` | Listar cuentas **con su correo**. Hace falta porque las políticas de columna de 0006 lo esconden a cualquier sesión del navegador, admin incluido: los permisos de columna son por rol, no por condición. |
+| `set_user_admin()` | Dar o quitar admin y verificado a otro usuario. Hace falta porque la política de `profiles` solo deja editar tu propia fila y el trigger de 0005 congela esas columnas. |
+
+Las dos funciones son `security definer` y **empiezan comprobando
+`public.is_admin()`**. Sin esa comprobación serían un agujero peor que el que
+cerró 0005, porque `security definer` se salta RLS por completo. Si añades otra,
+mantén ese patrón.
+
+`set_user_admin()` rechaza que un admin se quite el acceso a sí mismo: si es el
+único, dejaría el panel sin dueño.
+
+> Para el primer admin no hay panel todavía: regístrate y corre
+> `node scripts/make-admin.mjs tu@correo.com`.
 
 ### Datos privados del perfil (migración 0006)
 

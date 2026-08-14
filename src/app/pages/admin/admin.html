@@ -1,0 +1,30 @@
+<div class="admin">
+  <header class="admin__header">
+    <div class="admin__header-text">
+      <h1 class="admin__title">Panel de <span class="admin__title-highlight">administracion</span></h1>
+      <p class="admin__subtitle">
+        @if (adminName(); as user) {
+          Sesion de {{ user.displayName }}
+        }
+      </p>
+    </div>
+    <a routerLink="/" class="admin__exit">← Volver al sitio</a>
+  </header>
+
+  <nav class="admin__nav" aria-label="Secciones de administracion">
+    @for (section of sections; track section.path) {
+      <a
+        class="admin__nav-item"
+        routerLinkActive="admin__nav-item--active"
+        [routerLink]="section.path"
+        [attr.aria-label]="section.label + ': ' + section.description">
+        <span class="admin__nav-label">{{ section.label }}</span>
+        <span class="admin__nav-desc">{{ section.description }}</span>
+      </a>
+    }
+  </nav>
+
+  <main class="admin__content">
+    <router-outlet />
+  </main>
+</div>

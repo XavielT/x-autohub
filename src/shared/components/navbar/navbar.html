@@ -50,6 +50,12 @@
                 <span class="navbar-user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
                 <span class="navbar-user-name">{{ user()?.displayName }}</span>
             </span>
+            @if (isAdmin()) {
+                <a class="navbar-actions-button nav-button-secondary" routerLink="/admin"
+                   (click)="closeMobileMenu()">
+                    Panel
+                </a>
+            }
             <button class="navbar-actions-button nav-button-secondary" type="button" (click)="logout()">
                 Salir
             </button>

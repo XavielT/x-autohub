@@ -10,6 +10,14 @@ export interface UserModel {
   avatarUrl?: string;
   /** Cuenta verificada por el equipo de X AutoHub. */
   isVerified?: boolean;
+  /**
+   * Acceso al panel de administración.
+   *
+   * Solo se puede cambiar con la clave `service_role` o con la función
+   * `set_user_admin()` llamada por otro admin: el trigger de la migración 0005
+   * congela esta columna para cualquier sesión del navegador.
+   */
+  isAdmin?: boolean;
   createdAt: string;
 }
 

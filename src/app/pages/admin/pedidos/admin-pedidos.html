@@ -1,0 +1,106 @@
+<section class="adm-ord">
+  <header class="adm-ord__head">
+    <div>
+      <h2 class="adm-ord__title">Pedidos</h2>
+      <p class="adm-ord__lead">
+        {{ orders().length }} pedido(s) · {{ pendingCount() }} pendiente(s) ·
+        RD$ {{ revenue() | number:'1.0-0' }} sin contar cancelados
+      </p>
+    </div>
+  </header>
+
+  <div class="adm-ord__filters" role="group" aria-label="Filtrar por estado">
+    <button type="button" [class.adm-ord__chip--active]="statusFilter() === 'all'"
+            class="adm-ord__chip" (click)="setFilter('all')">Todos</button>
+    @for (s of statuses; track s.value) {
+      <button type="button" class="adm-ord__chip"
+              [class.adm-ord__chip--active]="statusFilter() === s.value"
+              (click)="setFilter(s.value)">{{ s.label }}</button>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <p class="adm-ord__empty">Cargando pedidos...</p>
+  } @else if (filtered().length === 0) {
+    <p class="adm-ord__empty">
+      @if (orders().length === 0) {
+        Todavia no hay pedidos.
+      } @else {
+        Ningun pedido con ese estado.
+      }
+    </p>
+  } @else {
+    <ul class="adm-ord__list">
+      @for (order of filtered(); track order.id) {
+        <li class="adm-ord__item">
+          <div class="adm-ord__item-head">
+            <div class="adm-ord__who">
+              <span class="adm-ord__ref">#{{ shortId(order.id) }}</span>
+              <span class="adm-ord__name">{{ order.fullName }}</span>
+              @if (order.isGuest) {
+                <span class="adm-ord__badge" title="Compra sin cuenta">Invitado</span>
+              }
+            </div>
+            <div class="adm-ord__meta">
+              <span class="adm-ord__total">RD$ {{ order.total | number:'1.0-0' }}</span>
+              <label class="adm-ord__status">
+                <span class="adm-ord__status-label">Estado</span>
+                <select [value]="order.status" (change)="changeStatus(order, $event)"
+                        [disabled]="savingId() === order.id"
+                        [attr.aria-label]="'Estado del pedido ' + shortId(order.id)">
+                  @for (s of statuses; track s.value) {
+                    <option [value]="s.value">{{ s.label }}</option>
+                  }
+                </select>
+              </label>
+              <button type="button" class="adm-ord__toggle" (click)="toggleDetail(order.id)">
+                {{ expandedId() === order.id ? 'Ocultar' : 'Detalle' }}
+              </button>
+            </div>
+          </div>
+
+          <p class="adm-ord__sub">
+            {{ order.createdAt | date:'d MMM y, h:mm a' }} · {{ order.contactEmail }}
+            @if (order.contactPhone) { · {{ order.contactPhone }} }
+          </p>
+
+          @if (expandedId() === order.id) {
+            <div class="adm-ord__detail">
+              <div class="adm-ord__block">
+                <h4>Entrega</h4>
+                <p>{{ order.addressLine1 }}@if (order.city) {, {{ order.city }}}</p>
+                <p class="adm-ord__muted">
+                  Envio: {{ order.shippingOptionId }} · Pago: {{ order.paymentMethodId }}
+                </p>
+                @if (order.orderNotes) {
+                  <p class="adm-ord__muted">Notas: {{ order.orderNotes }}</p>
+                }
+              </div>
+
+              <div class="adm-ord__block">
+                <h4>Articulos</h4>
+                <ul class="adm-ord__lines">
+                  @for (item of order.items; track item.id) {
+                    <li>
+                      <span>{{ item.quantity }}x {{ item.name }}</span>
+                      <span>RD$ {{ item.unitPrice * item.quantity | number:'1.0-0' }}</span>
+                    </li>
+                  }
+                </ul>
+                <div class="adm-ord__sums">
+                  <span>Subtotal</span><span>RD$ {{ order.subtotal | number:'1.0-0' }}</span>
+                  <span>Envio</span>
+                  <span>
+                    @if (order.shippingPrice === 0) { Gratis }
+                    @else { RD$ {{ order.shippingPrice | number:'1.0-0' }} }
+                  </span>
+                  <strong>Total</strong><strong>RD$ {{ order.total | number:'1.0-0' }}</strong>
+                </div>
+              </div>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

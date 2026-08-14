@@ -1,0 +1,161 @@
+.adm-inv {
+  font-family: var(--font-body);
+
+  &__head { margin-bottom: 18px; }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 24px;
+    margin: 0;
+  }
+
+  &__lead,
+  &__note {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__note {
+    margin: 0 0 16px;
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  &__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  &__tab {
+    font-family: var(--font-body);
+    font-size: 14px;
+    background: transparent;
+    color: var(--text-soft, #9a9a9a);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    span {
+      font-family: var(--font-brand2);
+      font-size: 12px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 2px 8px;
+    }
+
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+
+    &--active {
+      border-color: var(--Hub);
+      color: var(--Hub);
+      background-color: rgba(240, 175, 40, 0.08);
+    }
+  }
+
+  // La tabla desborda a lo ancho en telefono: scrollea dentro de su caja en vez
+  // de empujar la pagina entera.
+  &__table-wrap {
+    overflow-x: auto;
+    background-color: var(--main-light);
+    border-radius: 14px;
+  }
+
+  &__table {
+    width: 100%;
+    min-width: 620px;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    th,
+    td {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: middle;
+    }
+
+    th {
+      font-family: var(--font-brand);
+      font-size: 13px;
+      color: var(--Hub);
+      font-weight: 600;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+  }
+
+  &__caption {
+    text-align: left;
+    padding: 14px 16px 0;
+    font-family: var(--font-brand);
+    font-size: 15px;
+  }
+
+  &__row--off {
+    opacity: 0.5;
+  }
+
+  &__name {
+    display: block;
+    font-weight: 600;
+  }
+
+  &__sub {
+    display: block;
+    font-size: 12px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__input {
+    font-family: var(--font-body);
+    font-size: 14px;
+    width: 120px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: inherit;
+
+    &--sm { width: 76px; }
+    &:focus { outline: none; border-color: var(--Hub); }
+    &:disabled { opacity: 0.5; }
+  }
+
+  &__warn {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #ff6b6b;
+  }
+
+  &__btn {
+    font-family: var(--font-body);
+    font-size: 13px;
+    background: transparent;
+    color: var(--text-soft, #9a9a9a);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) { color: var(--Hub); border-color: var(--Hub); }
+    &:disabled { opacity: 0.5; cursor: default; }
+  }
+
+  &__empty {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    color: var(--text-soft, #9a9a9a);
+  }
+}

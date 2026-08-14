@@ -1,0 +1,89 @@
+.admin {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 34px;
+    margin: 0;
+  }
+
+  &__title-highlight {
+    color: var(--Hub);
+  }
+
+  &__subtitle {
+    font-family: var(--font-body);
+    color: var(--text-soft, #9a9a9a);
+    margin: 6px 0 0;
+    font-size: 15px;
+  }
+
+  &__exit {
+    font-family: var(--font-body);
+    color: var(--text-soft, #9a9a9a);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--Hub);
+    }
+  }
+
+  // auto-fit y no un numero fijo de columnas: con repeat(4, 1fr) las tarjetas
+  // quedan de 70px en un telefono.
+  &__nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  &__nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background-color: var(--main-light);
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--Hub);
+    }
+
+    &--active {
+      border-color: var(--Hub);
+      box-shadow: 0 0 8px 1px rgba(240, 175, 40, 0.25);
+    }
+  }
+
+  &__nav-label {
+    font-family: var(--font-brand);
+    font-size: 17px;
+    color: var(--Hub);
+  }
+
+  &__nav-desc {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__content {
+    min-height: 320px;
+  }
+}

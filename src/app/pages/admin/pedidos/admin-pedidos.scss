@@ -1,0 +1,205 @@
+.adm-ord {
+  font-family: var(--font-body);
+
+  &__head { margin-bottom: 18px; }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 24px;
+    margin: 0;
+  }
+
+  &__lead {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  &__chip {
+    font-family: var(--font-body);
+    font-size: 13px;
+    background: transparent;
+    color: var(--text-soft, #9a9a9a);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+
+    &--active {
+      background-color: var(--Hub);
+      border-color: var(--Hub);
+      color: #1a1a1a;
+      font-weight: 700;
+    }
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__item {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+
+  &__item-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__ref {
+    font-family: var(--font-brand2);
+    font-size: 14px;
+    color: var(--Hub);
+  }
+
+  &__name {
+    font-family: var(--font-brand);
+    font-size: 16px;
+  }
+
+  &__badge {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  &__total {
+    font-family: var(--font-price);
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+
+    select {
+      font-family: var(--font-body);
+      font-size: 13px;
+      background-color: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 6px 8px;
+      cursor: pointer;
+
+      &:disabled { opacity: 0.5; }
+      &:focus { outline: none; border-color: var(--Hub); }
+    }
+  }
+
+  &__status-label { color: var(--text-soft, #9a9a9a); }
+
+  &__toggle {
+    font-family: var(--font-body);
+    font-size: 13px;
+    background: transparent;
+    color: var(--text-soft, #9a9a9a);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+
+    &:hover { color: var(--Hub); border-color: var(--Hub); }
+  }
+
+  &__sub {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &__block {
+    h4 {
+      font-family: var(--font-brand);
+      font-size: 14px;
+      margin: 0 0 8px;
+      color: var(--Hub);
+    }
+
+    p { margin: 0 0 4px; font-size: 14px; }
+  }
+
+  &__muted { color: var(--text-soft, #9a9a9a); font-size: 13px !important; }
+
+  &__lines {
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 14px;
+
+    li { display: flex; justify-content: space-between; gap: 12px; }
+  }
+
+  &__sums {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    font-size: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+    span:nth-child(even) { text-align: right; }
+    strong:nth-child(even) { text-align: right; color: var(--Hub); }
+  }
+
+  &__empty {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    color: var(--text-soft, #9a9a9a);
+  }
+}

@@ -188,6 +188,31 @@ export type OrderRow = {
   total: number;
   status: OrderStatus;
   created_at: string;
+  /** Presente solo cuando el select incluye `order_items(...)`. */
+  order_items?: OrderItemRow[] | null;
+}
+
+export type ReleaseRow = {
+  id: number;
+  version: string;
+  released_at: string;
+  title: string;
+  summary: string;
+  changes: string[];
+  is_published: boolean;
+  created_at: string;
+}
+
+/** Fila que devuelve `admin_list_users()`, no un select sobre `profiles`. */
+export type AdminUserRow = {
+  id: string;
+  display_name: string;
+  email: string;
+  phone: string | null;
+  location: string | null;
+  is_admin: boolean;
+  is_verified: boolean;
+  created_at: string;
 }
 
 export type OrderItemRow = {
@@ -204,7 +229,7 @@ export type OrderItemRow = {
  * opcionales, y `profiles` (que solo aparece en los joins) se excluye siempre.
  */
 export type Insert<T, Required extends keyof T> = Pick<T, Required> &
-  Partial<Omit<T, Required | 'profiles'>>;
+  Partial<Omit<T, Required | 'profiles' | 'order_items'>>;
 
 /**
  * Claves foráneas. supabase-js las usa para validar los joins embebidos
@@ -217,6 +242,15 @@ type HubMarketRelationships = [
     columns: ['seller_id'];
     isOneToOne: false;
     referencedRelation: 'profiles';
+    referencedColumns: ['id'];
+  },
+];
+type OrderItemRelationships = [
+  {
+    foreignKeyName: 'order_items_order_id_fkey';
+    columns: ['order_id'];
+    isOneToOne: false;
+    referencedRelation: 'orders';
     referencedColumns: ['id'];
   },
 ];
@@ -312,6 +346,12 @@ export type Database = {
         Update: Partial<PaymentMethodRow>;
         Relationships: [];
       };
+      releases: {
+        Row: ReleaseRow;
+        Insert: Insert<ReleaseRow, 'version' | 'title'>;
+        Update: Partial<ReleaseRow>;
+        Relationships: [];
+      };
       orders: {
         Row: OrderRow;
         Insert: Insert<
@@ -326,7 +366,7 @@ export type Database = {
         Row: OrderItemRow;
         Insert: Insert<OrderItemRow, 'order_id' | 'name' | 'unit_price' | 'quantity'>;
         Update: Partial<OrderItemRow>;
-        Relationships: [];
+        Relationships: OrderItemRelationships;
       };
     };
     Views: Record<string, never>;
@@ -339,6 +379,22 @@ export type Database = {
        * envío los calcula Postgres contra el catálogo. Es también el único
        * camino por el que el navegador puede crear un pedido.
        */
+      /** Usuarios con su correo. Solo responde a un admin. Ver migración 0007. */
+      admin_list_users: {
+        Args: Record<string, never>;
+        Returns: AdminUserRow[];
+      };
+      /**
+       * Da o quita admin y verificado a otro usuario.
+       *
+       * Hace falta una función porque la política de `profiles` solo deja editar
+       * tu propia fila y el trigger de 0005 congela esas dos columnas. Comprueba
+       * que quien llama ya sea admin.
+       */
+      set_user_admin: {
+        Args: { p_user_id: string; p_is_admin: boolean; p_is_verified?: boolean | null };
+        Returns: { id: string; display_name: string; is_admin: boolean; is_verified: boolean }[];
+      };
       create_order: {
         Args: {
           p_contact_email: string;

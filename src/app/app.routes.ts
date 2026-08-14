@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from '../core/guards/auth.guard';
+import { adminGuard } from '../core/guards/admin.guard';
 
 const BRAND = 'X AutoHub';
 
@@ -110,6 +111,44 @@ export const routes: Routes = [
     title: `Crear cuenta | ${BRAND}`,
     canActivate: [guestGuard],
     loadComponent: () => import('./pages/registro/registro').then((m) => m.Registro),
+  },
+
+  // --- Administracion ---
+  // Solo para `is_admin`. El guard es comodidad de interfaz: la seguridad real
+  // esta en RLS y en las funciones de la migracion 0007, que vuelven a
+  // comprobarlo dentro de Postgres.
+  {
+    path: 'admin',
+    title: `Administracion | ${BRAND}`,
+    canActivate: [adminGuard],
+    loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'versiones' },
+      {
+        path: 'versiones',
+        title: `Versiones | ${BRAND}`,
+        loadComponent: () =>
+          import('./pages/admin/versiones/admin-versiones').then((m) => m.AdminVersiones),
+      },
+      {
+        path: 'pedidos',
+        title: `Pedidos | ${BRAND}`,
+        loadComponent: () =>
+          import('./pages/admin/pedidos/admin-pedidos').then((m) => m.AdminPedidos),
+      },
+      {
+        path: 'inventario',
+        title: `Inventario | ${BRAND}`,
+        loadComponent: () =>
+          import('./pages/admin/inventario/admin-inventario').then((m) => m.AdminInventario),
+      },
+      {
+        path: 'usuarios',
+        title: `Usuarios | ${BRAND}`,
+        loadComponent: () =>
+          import('./pages/admin/usuarios/admin-usuarios').then((m) => m.AdminUsuarios),
+      },
+    ],
   },
 
   // --- Legal ---

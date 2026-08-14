@@ -57,6 +57,7 @@ export function toUser(row: PublicProfileRow, email: string): UserModel {
     location: row.location ?? undefined,
     avatarUrl: row.avatar_url ?? undefined,
     isVerified: row.is_verified,
+    isAdmin: row.is_admin,
     createdAt: row.created_at,
   };
 }

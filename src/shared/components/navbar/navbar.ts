@@ -18,6 +18,8 @@ export class Navbar {
 
   readonly isLoggedIn = this.auth.isLoggedIn;
   readonly user = this.auth.user;
+  /** La entrada al panel solo se dibuja para un admin. Ver `adminGuard`. */
+  readonly isAdmin = this.auth.isAdmin;
 
   readonly isMobileMenuOpen = signal(false);
 
