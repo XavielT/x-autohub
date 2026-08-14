@@ -107,10 +107,12 @@
         <label for="location" class="form-label">
           Ubicación<span class="req" aria-hidden="true">*</span>
         </label>
-        <input type="text" id="location" formControlName="location" class="form-input" required
-               [class.is-invalid]="showError('location')">
+        <app-location-select
+          formControlName="location"
+          inputId="location"
+          [invalid]="showError('location')" />
         @if (showError('location')) {
-          <span class="field-error">Indica en que ciudad esta.</span>
+          <span class="field-error">Selecciona una ubicacion.</span>
         }
       </div>
 

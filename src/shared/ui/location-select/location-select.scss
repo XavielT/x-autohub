@@ -1,0 +1,193 @@
+// El control cerrado copia exactamente los valores de `.form-input` (publicar) y
+// de `.auth__field input` (registro/login): mismo relleno, mismo fondo, mismo
+// borde y mismo radio. No es un lenguaje visual nuevo — puesto al lado de los
+// demás campos tiene que ser indistinguible. Los grises van en crudo porque en
+// esos dos sitios también están en crudo; no hay token para ellos todavía.
+
+.loc {
+  position: relative;
+  display: block;
+}
+
+.loc__control {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--Hub);
+    box-shadow: 0 0 0 2px rgba(var(--Hub-rgb), 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  // El placeholder se ve como un placeholder, no como un valor elegido.
+  &--placeholder .loc__value {
+    color: var(--main-ultra-light);
+  }
+}
+
+.loc__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loc__caret {
+  color: var(--main-ultra-light);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.loc__note {
+  display: block;
+  margin-top: 6px;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 12px;
+
+  &--error {
+    color: #ff8d8f;
+  }
+}
+
+// El panel flota sobre el formulario: si empujara el contenido, cada apertura
+// movería de sitio los campos de abajo.
+.loc__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background-color: #232323;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+// En modo mapa el panel se ensancha por encima del ancho del campo. En registro
+// la ciudad va en media columna: el mapa quedaba en 206px, que no alcanza para
+// distinguir una provincia del pais entero. Se ancla a la derecha para crecer
+// hacia dentro de la tarjeta y no salirse por el borde de la pantalla.
+.loc__panel--map {
+  left: auto;
+  right: 0;
+  width: max(100%, min(420px, 88vw));
+}
+
+.loc__panel-head {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.loc__search {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--Hub);
+  }
+
+  &::placeholder {
+    color: var(--main-ultra-light);
+  }
+}
+
+.loc__map-toggle {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--Hub);
+    border-color: var(--Hub);
+  }
+}
+
+.loc__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  // 32 provincias no caben en pantalla: la lista scrollea dentro del panel.
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.loc__option {
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover,
+  &--active {
+    background-color: rgba(var(--Hub-rgb), 0.14);
+  }
+
+  &--selected {
+    color: var(--Hub);
+    font-weight: 600;
+  }
+}
+
+.loc__empty,
+.loc__loading {
+  margin: 0;
+  padding: 18px 12px;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: center;
+}
+
+.loc__map {
+  height: 300px;
+  width: 100%;
+  background-color: #2a2a2a;
+}
+
+.loc__hint {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid #3a3a3a;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 12px;
+  text-align: center;
+}

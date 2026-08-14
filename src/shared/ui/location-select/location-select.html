@@ -1,0 +1,74 @@
+<div class="loc">
+  <button
+    type="button"
+    class="loc__control"
+    [id]="inputId()"
+    [class.is-invalid]="invalid()"
+    [class.loc__control--placeholder]="!value()"
+    [disabled]="isDisabled()"
+    [attr.aria-expanded]="isOpen()"
+    aria-haspopup="listbox"
+    (click)="toggle()"
+    (keydown)="onControlKeydown($event)">
+    <span class="loc__value">{{ value() || placeholder() }}</span>
+    <span class="loc__caret" aria-hidden="true">▾</span>
+  </button>
+
+  @if (isOutsideList()) {
+    <span class="loc__note">
+      Guardado como "{{ value() }}", que no esta en la lista. Elige una para actualizarlo.
+    </span>
+  }
+
+  @if (mapError()) {
+    <span class="loc__note loc__note--error">{{ mapError() }}</span>
+  }
+
+  @if (isOpen()) {
+    <div class="loc__panel" [class.loc__panel--map]="showMap()">
+      <div class="loc__panel-head">
+        <input
+          type="text"
+          class="loc__search"
+          placeholder="Buscar provincia..."
+          autocomplete="off"
+          [value]="query()"
+          (input)="onQueryInput($event)"
+          (keydown)="onSearchKeydown($event)"
+          aria-label="Buscar ubicacion" />
+        <button type="button" class="loc__map-toggle" (click)="toggleMap()">
+          {{ showMap() ? 'Ver lista' : 'Ver mapa' }}
+        </button>
+      </div>
+
+      @if (showMap()) {
+        @if (isMapLoading()) {
+          <p class="loc__loading">Cargando el mapa...</p>
+        }
+        <!--
+          El contenedor solo existe mientras el mapa está abierto: el efecto del
+          componente crea el mapa en cuanto aparece, y lo destruye al cerrarlo.
+        -->
+        <div #mapHost class="loc__map"></div>
+        <p class="loc__hint">Toca un punto del mapa. Se guarda la provincia mas cercana.</p>
+      } @else {
+        <ul class="loc__list" role="listbox" [attr.aria-activedescendant]="'loc-opt-' + activeIndex()">
+          @for (option of options(); track option.name; let i = $index) {
+            <li
+              class="loc__option"
+              [id]="'loc-opt-' + i"
+              role="option"
+              [attr.aria-selected]="option.name === value()"
+              [class.loc__option--active]="i === activeIndex()"
+              [class.loc__option--selected]="option.name === value()"
+              (click)="select(option)">
+              {{ option.name }}
+            </li>
+          } @empty {
+            <li class="loc__empty">Ninguna provincia coincide.</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

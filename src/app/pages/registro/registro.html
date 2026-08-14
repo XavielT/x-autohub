@@ -72,13 +72,10 @@
 
           <div class="auth__field">
             <label for="reg-location">Ciudad <span aria-hidden="true">(opcional)</span></label>
-            <input
-              id="reg-location"
-              type="text"
+            <app-location-select
               formControlName="location"
-              autocomplete="address-level2"
-              placeholder="Santo Domingo"
-            />
+              inputId="reg-location"
+              placeholder="Elige tu provincia" />
           </div>
         </div>
 

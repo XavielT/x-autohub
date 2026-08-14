@@ -41,7 +41,7 @@ export class Checkout implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * Con Supabase conectado el pedido se registra de verdad, así que llamarlo

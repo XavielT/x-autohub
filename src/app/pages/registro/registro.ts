@@ -6,6 +6,7 @@ import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { RequiredField, focusFirstInvalid } from '../../../shared/forms/required-fields';
+import { LocationSelect } from '../../../shared/ui/location-select/location-select';
 
 /** Valida a nivel de grupo que las dos contrasenas coincidan. */
 function passwordsMatch(group: AbstractControl) {
@@ -18,7 +19,7 @@ type RegistroField = 'displayName' | 'email' | 'phone' | 'location' | 'password'
 
 @Component({
   selector: 'app-registro',
-  imports: [ReactiveFormsModule, RouterLink, LogoHub],
+  imports: [ReactiveFormsModule, RouterLink, LogoHub, LocationSelect],
   templateUrl: './registro.html',
   styleUrl: './registro.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,7 +29,7 @@ export class Registro {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /**
    * Con Supabase conectado la cuenta se crea de verdad, así que el aviso de que

@@ -206,8 +206,11 @@
             </label>
             <label class="adm-inv__field">
               <span>Ubicacion</span>
-              <input type="text" formControlName="location" placeholder="Santo Domingo" />
-              @if (showError('vehicle', 'location')) { <small class="adm-inv__err">Obligatorio.</small> }
+              <app-location-select formControlName="location"
+                                   [invalid]="showError('vehicle', 'location')" />
+              @if (showError('vehicle', 'location')) {
+                <small class="adm-inv__err">Selecciona una ubicacion.</small>
+              }
             </label>
             <label class="adm-inv__field">
               <span>Contacto</span>

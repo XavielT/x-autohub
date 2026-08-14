@@ -16,6 +16,7 @@ import {
   TRACTION_OPTIONS,
 } from '../../../../shared/models/admin-inventory.model';
 import { ChasisType, FuelType, NewsScope, TractionType } from '../../../../core/supabase/database.types';
+import { LocationSelect } from '../../../../shared/ui/location-select/location-select';
 
 type Tab = 'piezas' | 'vehiculos' | 'noticias';
 
@@ -39,7 +40,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
  */
 @Component({
   selector: 'app-admin-inventario',
-  imports: [DecimalPipe, DatePipe, ReactiveFormsModule],
+  imports: [DecimalPipe, DatePipe, ReactiveFormsModule, LocationSelect],
   templateUrl: './admin-inventario.html',
   styleUrl: './admin-inventario.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

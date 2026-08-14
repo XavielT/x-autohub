@@ -8,6 +8,7 @@ import { StorageService } from '../../../shared/services/storage.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import { LocationSelect } from '../../../shared/ui/location-select/location-select';
 import {
   RequiredField,
   focusFirstInvalid,
@@ -16,7 +17,7 @@ import {
 
 @Component({
   selector: 'app-publicar',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, LocationSelect],
   templateUrl: './publicar.html',
   styleUrl: './publicar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,7 +29,7 @@ export class Publicar {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Archivos originales: son los que se suben a Storage. */
   readonly selectedFiles = signal<File[]>([]);
