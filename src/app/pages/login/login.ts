@@ -5,6 +5,24 @@ import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
+/**
+ * Acota `returnUrl` a una ruta interna.
+ *
+ * Viene de la barra de direcciones, así que es entrada del usuario: sin filtrar,
+ * un enlace como `/login?returnUrl=//sitio-falso.com` convierte el login en un
+ * trampolín hacia otro dominio (redirección abierta), que es justo lo que se
+ * usa para montar una pantalla de login falsa creíble.
+ *
+ * Solo se acepta una ruta que empiece con una sola `/`. Eso descarta
+ * `//host`, `https://host` y `javascript:`.
+ */
+export function safeReturnUrl(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return '/';
+  }
+  return value;
+}
+
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink, LogoHub],
@@ -47,7 +65,7 @@ export class Login {
         this.toast.show(`Bienvenido de vuelta, ${user.displayName}`);
         // Vuelve a donde el usuario quería ir antes de que el guard lo desviara.
         const returnUrl = new URLSearchParams(window.location.search).get('returnUrl');
-        void this.router.navigateByUrl(returnUrl ?? '/');
+        void this.router.navigateByUrl(safeReturnUrl(returnUrl));
       },
       error: (error: Error) => {
         this.isSubmitting.set(false);
