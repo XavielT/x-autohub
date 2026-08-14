@@ -31,13 +31,25 @@ export class AuthService {
   readonly isRestoring = this._isRestoring.asReadonly();
   readonly isLoggedIn = computed(() => this._user() !== null);
 
+  /**
+   * Se resuelve cuando ya se intentó restaurar la sesión.
+   *
+   * Los guards **tienen** que esperarla: con Supabase la restauración es
+   * asíncrona, así que en la primera carga de la página `isLoggedIn()` todavía
+   * es `false` aunque haya sesión guardada. Sin esperar, un refresh (F5) sobre
+   * una ruta protegida rebotaba a /login mientras el navbar ya mostraba al
+   * usuario. Con mocks nunca se notó, porque ahí la sesión se lee sincrónicamente.
+   */
+  private readonly ready: Promise<void>;
+
   constructor() {
     if (this.supabase.shouldUseMockData()) {
       this._user.set(this.readMockSession());
+      this.ready = Promise.resolve();
       return;
     }
 
-    void this.restoreSupabaseSession();
+    this.ready = this.restoreSupabaseSession();
 
     // Mantiene la señal sincronizada con el cliente: cubre el refresh del token,
     // el cierre de sesión desde otra pestaña y el enlace de confirmación.
@@ -51,6 +63,14 @@ export class AuthService {
   }
 
   // --- API pública ---------------------------------------------------------
+
+  /**
+   * Espera a que la sesión termine de restaurarse. Pensada para los guards,
+   * que deciden en la primera navegación de la app.
+   */
+  whenReady(): Promise<void> {
+    return this.ready;
+  }
 
   login(credentials: LoginCredentials): Observable<UserModel> {
     if (this.supabase.shouldUseMockData()) {
