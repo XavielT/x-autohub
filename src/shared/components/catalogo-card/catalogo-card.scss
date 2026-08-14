@@ -71,7 +71,12 @@
     &__stars span{
         color: var(--Hub);
         font-size: 18px;
-        font-family: var(--font-brand2);
+        // Manrope y no Orbitron: el cero de Orbitron va cruzado por diseño, y a
+        // este tamano "4.0" se lee como un cuadrito. La regla: Orbitron para
+        // rotulos e identificadores (navbar, 404, referencia de pedido, numero
+        // de version), donde el cero cruzado incluso ayuda a no confundirlo con
+        // una O; Manrope para valores que la gente compara de un vistazo.
+        font-family: var(--font-price);
         letter-spacing: 1px;
     }
 

@@ -121,16 +121,19 @@ exactamente el mismo modelo (`HubMarketItemModel`).
 (`id`, `name`, `price`, `imageUrl`, `source: 'catalogo' | 'hub-market'`) y que los
 servicios mapeen hacia él. El checkout deja de conocer el modelo de piezas.
 
-### 7. Panel de administración — **hecho, con una parte pendiente**
+### 7. Panel de administración — **hecho**
 
-`/admin` existe desde la v0.2.0 con cuatro secciones: historial de versiones,
-pedidos, inventario y usuarios. Ver `docs/BACKEND.md`.
+`/admin` con cuatro secciones: historial de versiones, pedidos, inventario y
+usuarios. Ver `docs/BACKEND.md`.
 
-**Lo que falta:** dar de alta artículos nuevos desde el panel. El inventario
-permite ajustar precio, existencias y visibilidad, que es el trabajo diario, pero
-crear una pieza, un vehículo o una noticia desde cero sigue haciéndose en el
-Table Editor de Supabase. Un vehículo tiene 17 campos obligatorios y su
-formulario, con subida de imágenes a Storage, es un trabajo aparte.
+Desde la v0.3.0 el inventario también da de alta artículos nuevos: piezas,
+vehículos y noticias, con subida de imágenes al bucket `inventory` (escritura
+solo de admin, migración 0008). Ya no hace falta el Table Editor para el trabajo
+normal.
+
+Lo que sigue faltando es **editar** un artículo existente más allá de precio,
+existencias y visibilidad: cambiar la descripción o las fotos de una pieza ya
+publicada todavía se hace en Supabase.
 
 ### 8. Enlaces del footer que no llevan a nada
 

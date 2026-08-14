@@ -144,7 +144,8 @@
     align-items: center;
     gap: 4px;
     color: var(--Hub);
-    font-family: var(--font-brand2);
+    // Ver catalogo-card.scss: el cero de Orbitron va cruzado y esto es un dato.
+    font-family: var(--font-price);
     font-size: 17px;
     letter-spacing: 1px;
   }

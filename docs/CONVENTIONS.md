@@ -196,6 +196,15 @@ font-family: 'Space-Grotesk', sans-serif;
 Chakra Petch también rotula el título del home, en cursiva, desde
 `home-welcome.scss` (no por token).
 
+> **El cero de Orbitron va cruzado** (`0`), y no hay forma de quitarle la barra:
+> la fuente no trae la feature `zero` ni un conjunto estilístico que lo cambie
+> (verificado en su tabla GSUB). A 12–18px un "4.0" se lee como un cuadrito.
+>
+> La regla: **Orbitron para rótulos e identificadores** — navbar, contadores, el
+> 404, la referencia de un pedido, el número de versión — donde el cero cruzado
+> incluso ayuda a no confundirlo con una O. **Manrope para valores que se
+> comparan de un vistazo**, como una calificación.
+
 **Toda fuente nueva tiene que traer licencia comercial.** X AutoHub es una
 plataforma comercial. En agosto de 2026 se retiraron cuatro que no la tenían:
 Batman (`Shareware`), ROLNER (`All Rights Reserved`, de Storytype Studio),

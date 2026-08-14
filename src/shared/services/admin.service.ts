@@ -9,6 +9,9 @@ import {
   AdminNewsModel,
   AdminPartModel,
   AdminVehicleModel,
+  NewNewsDraft,
+  NewPartDraft,
+  NewVehicleDraft,
 } from '../models/admin-inventory.model';
 import {
   ADMIN_NEWS_MOCK,
@@ -280,6 +283,156 @@ export class AdminService {
     ).pipe(
       map((res) => {
         unwrap(res);
+      }),
+    );
+  }
+
+  // --- Altas del inventario ------------------------------------------------
+  //
+  // Los tres insert dependen de que RLS deje escribir solo a `is_admin`, así que
+  // un cliente manipulado no puede meter una pieza al catálogo. Las columnas con
+  // default (`stars_rating`, `created_at`) no se envían: las pone Postgres.
+
+  createPart(draft: NewPartDraft): Observable<AdminPartModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const created: AdminPartModel = {
+        id: Math.max(0, ...this.mockParts.map((p) => p.id)) + 1,
+        name: draft.name,
+        brand: draft.brand,
+        category: draft.category,
+        price: draft.price,
+        stock: draft.stock,
+        isActive: draft.isActive,
+      };
+      this.mockParts = [created, ...this.mockParts];
+      return of(created);
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .insert({
+          category: draft.category.trim(),
+          name: draft.name.trim(),
+          brand: draft.brand.trim(),
+          img_url: draft.imgUrl,
+          images: draft.images,
+          price: draft.price,
+          description: draft.description.trim(),
+          stock: draft.stock,
+          is_active: draft.isActive,
+        })
+        .select('id, name, brand, category, price, stock, is_active')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          name: r.name,
+          brand: r.brand,
+          category: r.category,
+          price: Number(r.price),
+          stock: r.stock,
+          isActive: r.is_active,
+        };
+      }),
+    );
+  }
+
+  createVehicle(draft: NewVehicleDraft): Observable<AdminVehicleModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const created: AdminVehicleModel = {
+        id: Math.max(0, ...this.mockVehicles.map((v) => v.id)) + 1,
+        brand: draft.brand,
+        model: draft.model,
+        year: draft.year,
+        price: draft.price,
+        mileage: draft.mileage,
+        isAvailable: draft.isAvailable,
+      };
+      this.mockVehicles = [created, ...this.mockVehicles];
+      return of(created);
+    }
+
+    return from(
+      this.supabase.db
+        .from('auto_hub_vehicles')
+        .insert({
+          brand: draft.brand.trim(),
+          model: draft.model.trim(),
+          year: draft.year,
+          price: draft.price,
+          color: draft.color.trim(),
+          mileage: draft.mileage,
+          chasis_type: draft.chasisType,
+          doors: draft.doors,
+          traction: draft.traction,
+          fuel: draft.fuel,
+          cylinders: draft.cylinders,
+          images: draft.images,
+          description: draft.description.trim(),
+          location: draft.location.trim(),
+          contact: draft.contact.trim(),
+          is_available: draft.isAvailable,
+        })
+        .select('id, brand, model, year, price, mileage, is_available')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          brand: r.brand,
+          model: r.model,
+          year: r.year,
+          price: Number(r.price),
+          mileage: r.mileage,
+          isAvailable: r.is_available,
+        };
+      }),
+    );
+  }
+
+  createNews(draft: NewNewsDraft): Observable<AdminNewsModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const created: AdminNewsModel = {
+        id: Math.max(0, ...this.mockNews.map((n) => n.id)) + 1,
+        title: draft.title,
+        scope: draft.scope,
+        publishedAt: new Date(`${draft.publishedAt}T12:00:00Z`),
+        isPublished: draft.isPublished,
+      };
+      this.mockNews = [created, ...this.mockNews];
+      return of(created);
+    }
+
+    return from(
+      this.supabase.db
+        .from('news')
+        .insert({
+          title: draft.title.trim(),
+          text: draft.text.trim(),
+          text_large: draft.textLarge.trim(),
+          image_url: draft.imageUrl,
+          images: draft.images,
+          scope: draft.scope,
+          author: draft.author?.trim() || null,
+          published_at: draft.publishedAt,
+          is_published: draft.isPublished,
+        })
+        .select('id, title, scope, published_at, is_published')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          title: r.title,
+          scope: r.scope,
+          publishedAt: new Date(`${r.published_at}T12:00:00Z`),
+          isPublished: r.is_published,
+        };
       }),
     );
   }

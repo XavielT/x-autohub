@@ -1,9 +1,20 @@
 <section class="adm-inv">
   <header class="adm-inv__head">
-    <h2 class="adm-inv__title">Inventario propio</h2>
-    <p class="adm-inv__lead">
-      Catalogo, Auto Hub y noticias. Hub Market no se administra aqui: lo publica la comunidad.
-    </p>
+    <div>
+      <h2 class="adm-inv__title">Inventario propio</h2>
+      <p class="adm-inv__lead">
+        Catalogo, Auto Hub y noticias. Hub Market no se administra aqui: lo publica la comunidad.
+      </p>
+    </div>
+    @if (!isCreating()) {
+      <button type="button" class="adm-inv__new" (click)="startCreate()">
+        @switch (tab()) {
+          @case ('piezas') { + Nueva pieza }
+          @case ('vehiculos') { + Nuevo vehiculo }
+          @case ('noticias') { + Nueva noticia }
+        }
+      </button>
+    }
   </header>
 
   <div class="adm-inv__tabs" role="tablist" aria-label="Tipo de inventario">
@@ -21,10 +32,231 @@
     </button>
   </div>
 
-  <p class="adm-inv__note">
-    Aqui se ajusta precio, existencias y visibilidad. Para dar de alta algo nuevo todavia hay que
-    usar el Table Editor de Supabase.
-  </p>
+  <!-- Selector de imagenes: comun a los tres formularios -->
+  @if (isCreating()) {
+    <div class="adm-inv__form">
+      <h3 class="adm-inv__form-title">
+        @switch (tab()) {
+          @case ('piezas') { Nueva pieza del catalogo }
+          @case ('vehiculos') { Nuevo vehiculo de Auto Hub }
+          @case ('noticias') { Nueva noticia }
+        }
+      </h3>
+
+      <div class="adm-inv__images">
+        <span class="adm-inv__images-label">
+          Imagenes <small>(la primera es la portada)</small>
+        </span>
+        <div class="adm-inv__thumbs">
+          @for (src of previews(); track $index) {
+            <div class="adm-inv__thumb" [class.adm-inv__thumb--cover]="$first">
+              <img [src]="src" [alt]="'Imagen ' + ($index + 1)" />
+              <button type="button" class="adm-inv__thumb-x"
+                      [attr.aria-label]="'Quitar imagen ' + ($index + 1)"
+                      (click)="removeImage($index)">×</button>
+              @if ($first) { <span class="adm-inv__thumb-tag">Portada</span> }
+            </div>
+          }
+          <label class="adm-inv__picker">
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple
+                   (change)="onFilesSelected($event)" />
+            <span>+ Agregar</span>
+          </label>
+        </div>
+        <span class="adm-inv__hint">JPG, PNG o WebP. Maximo 5 MB por imagen.</span>
+      </div>
+
+      @switch (tab()) {
+        @case ('piezas') {
+          <form [formGroup]="partForm" (ngSubmit)="submitPart()" class="adm-inv__fields">
+            <label class="adm-inv__field adm-inv__field--wide">
+              <span>Nombre</span>
+              <input type="text" formControlName="name" placeholder="Disco ventilado GTR 355mm" />
+              @if (showError('part', 'name')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Marca</span>
+              <input type="text" formControlName="brand" placeholder="Brembo" />
+              @if (showError('part', 'brand')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Categoria</span>
+              <input type="text" formControlName="category" list="categorias-piezas" />
+              <datalist id="categorias-piezas">
+                @for (c of categories; track c) { <option [value]="c"></option> }
+              </datalist>
+            </label>
+            <label class="adm-inv__field">
+              <span>Precio (RD$)</span>
+              <input type="number" formControlName="price" min="0" step="50" />
+              @if (showError('part', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Existencias</span>
+              <input type="number" formControlName="stock" min="0" step="1" />
+              @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+            </label>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Descripcion</span>
+              <textarea formControlName="description" rows="3"
+                        placeholder="Para que sirve, con que vehiculos es compatible…"></textarea>
+            </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isActive" />
+              <span>Visible en el catalogo</span>
+            </label>
+            <div class="adm-inv__actions">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Guardando...' : 'Agregar al catalogo' }}
+              </button>
+              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+            </div>
+          </form>
+        }
+
+        @case ('vehiculos') {
+          <form [formGroup]="vehicleForm" (ngSubmit)="submitVehicle()" class="adm-inv__fields">
+            <label class="adm-inv__field">
+              <span>Marca</span>
+              <input type="text" formControlName="brand" placeholder="Toyota" />
+              @if (showError('vehicle', 'brand')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Modelo</span>
+              <input type="text" formControlName="model" placeholder="Corolla" />
+              @if (showError('vehicle', 'model')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Ano</span>
+              <input type="number" formControlName="year" min="1900" [max]="maxYear" step="1" />
+              @if (showError('vehicle', 'year')) { <small class="adm-inv__err">Entre 1900 y 2100.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Precio (RD$)</span>
+              <input type="number" formControlName="price" min="0" step="5000" />
+              @if (showError('vehicle', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Color</span>
+              <input type="text" formControlName="color" placeholder="Negro" />
+              @if (showError('vehicle', 'color')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Kilometraje</span>
+              <input type="number" formControlName="mileage" min="0" step="1000" />
+              @if (showError('vehicle', 'mileage')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Chasis</span>
+              <select formControlName="chasisType">
+                @for (o of chasisOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="adm-inv__field">
+              <span>Puertas</span>
+              <input type="number" formControlName="doors" min="1" max="8" step="1" />
+              @if (showError('vehicle', 'doors')) { <small class="adm-inv__err">Entre 1 y 8.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Traccion</span>
+              <select formControlName="traction">
+                @for (o of tractionOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="adm-inv__field">
+              <span>Combustible</span>
+              <select formControlName="fuel">
+                @for (o of fuelOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="adm-inv__field">
+              <span>Cilindros</span>
+              <input type="number" formControlName="cylinders" min="0" max="16" step="1" />
+              @if (showError('vehicle', 'cylinders')) { <small class="adm-inv__err">Entre 0 y 16.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Ubicacion</span>
+              <input type="text" formControlName="location" placeholder="Santo Domingo" />
+              @if (showError('vehicle', 'location')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Contacto</span>
+              <input type="tel" formControlName="contact" placeholder="809-000-0000" />
+              @if (showError('vehicle', 'contact')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Descripcion</span>
+              <textarea formControlName="description" rows="3"
+                        placeholder="Estado, mantenimientos, extras…"></textarea>
+            </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isAvailable" />
+              <span>Disponible (visible en Auto Hub)</span>
+            </label>
+            <div class="adm-inv__actions">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Guardando...' : 'Agregar a Auto Hub' }}
+              </button>
+              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+            </div>
+          </form>
+        }
+
+        @case ('noticias') {
+          <form [formGroup]="newsForm" (ngSubmit)="submitNews()" class="adm-inv__fields">
+            <label class="adm-inv__field adm-inv__field--wide">
+              <span>Titulo</span>
+              <input type="text" formControlName="title" placeholder="809 Expo por primera vez en RD" />
+              @if (showError('news', 'title')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Alcance</span>
+              <select formControlName="scope">
+                @for (o of scopeOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            <label class="adm-inv__field">
+              <span>Fecha</span>
+              <input type="date" formControlName="publishedAt" />
+            </label>
+            <label class="adm-inv__field">
+              <span>Autor <small>(opcional)</small></span>
+              <input type="text" formControlName="author" placeholder="Equipo X AutoHub" />
+            </label>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Entradilla <small>(lo que se ve en la tarjeta)</small></span>
+              <textarea formControlName="text" rows="2"
+                        placeholder="Un parrafo corto que invite a leer"></textarea>
+              @if (showError('news', 'text')) { <small class="adm-inv__err">Obligatorio.</small> }
+            </label>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Cuerpo completo</span>
+              <textarea formControlName="textLarge" rows="8"
+                        placeholder="La noticia completa"></textarea>
+            </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isPublished" />
+              <span>Publicada</span>
+            </label>
+            <div class="adm-inv__actions">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Guardando...' : 'Publicar noticia' }}
+              </button>
+              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+            </div>
+          </form>
+        }
+      }
+    </div>
+  }
 
   @if (isLoading()) {
     <p class="adm-inv__empty">Cargando inventario...</p>

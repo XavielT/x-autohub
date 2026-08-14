@@ -9,9 +9,12 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 /**
  * Subida de imágenes a Supabase Storage.
  *
- * La ruta siempre empieza con el uid del dueño (`<uid>/<archivo>`) porque las
- * políticas del bucket comparan esa primera carpeta contra `auth.uid()`. Si
- * cambias el formato de la ruta, se rompe la seguridad del bucket.
+ * **En `listings` y `avatars` la ruta empieza con el uid del dueño**
+ * (`<uid>/<archivo>`), porque las políticas de esos buckets comparan esa primera
+ * carpeta contra `auth.uid()`. Si cambias ese formato, se rompe su seguridad.
+ *
+ * `inventory` funciona distinto: el permiso lo decide `is_admin()`, no la ruta,
+ * así que ahí la primera carpeta es el tipo de contenido. Ver migración 0008.
  *
  * En modo mock devuelve data URLs, que es lo que el formulario de publicar ya
  * usaba: así la vista previa y el flujo funcionan sin backend.
@@ -53,8 +56,38 @@ export class StorageService {
     return this.uploadOne(file, userId, 'avatars');
   }
 
-  private uploadOne(file: File, userId: string, bucket: 'listings' | 'avatars'): Observable<string> {
-    const path = `${userId}/${this.uniqueName(file.name)}`;
+  /**
+   * Sube imágenes del inventario propio (catálogo, Auto Hub, noticias).
+   *
+   * Va al bucket `inventory`, no a `listings`: ese es para los clasificados de la
+   * comunidad y su política exige que la ruta empiece por el uid de quien sube.
+   * El inventario oficial no pertenece a una persona, así que aquí la carpeta es
+   * el tipo de contenido y el permiso lo decide `is_admin()`. Ver migración 0008.
+   */
+  uploadInventoryImages(
+    files: File[],
+    kind: 'piezas' | 'vehiculos' | 'noticias',
+  ): Observable<string[]> {
+    if (files.length === 0) return of([]);
+
+    if (this.supabase.shouldUseMockData()) {
+      return forkJoin(files.map((file) => this.toDataUrl(file)));
+    }
+
+    return forkJoin(files.map((file) => this.uploadOne(file, kind, 'inventory')));
+  }
+
+  /**
+   * @param folder Primera carpeta de la ruta. En `listings` y `avatars` **tiene
+   *   que ser el uid**, porque las políticas lo comparan contra `auth.uid()`; en
+   *   `inventory` es el tipo de contenido.
+   */
+  private uploadOne(
+    file: File,
+    folder: string,
+    bucket: 'listings' | 'avatars' | 'inventory',
+  ): Observable<string> {
+    const path = `${folder}/${this.uniqueName(file.name)}`;
 
     return from(
       this.supabase.db.storage.from(bucket).upload(path, file, {

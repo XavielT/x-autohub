@@ -30,7 +30,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 5     | `supabase/migrations/0005_security_fixes.sql`  | Escalada de privilegios, precios y checkout    |
 | 6     | `supabase/migrations/0006_profile_privacy.sql` | El correo y el teléfono dejan de ser públicos  |
 | 7     | `supabase/migrations/0007_admin_module.sql`    | Panel de admin: versiones, usuarios y permisos |
-| 8     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 8     | `supabase/migrations/0008_inventory_storage.sql` | Bucket de imágenes del inventario propio     |
+| 9     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating`, el nombre que deja la 0004.
 
@@ -160,6 +161,13 @@ mantén ese patrón.
 
 `set_user_admin()` rechaza que un admin se quite el acceso a sí mismo: si es el
 único, dejaría el panel sin dueño.
+
+**Las imágenes del inventario propio van al bucket `inventory`** (migración
+0008), no a `listings`. La diferencia importa: en `listings` y `avatars` la
+política exige que la primera carpeta de la ruta sea el uid de quien sube, y un
+vehículo oficial no pertenece a una persona. En `inventory` el permiso lo decide
+`is_admin()`, así que la ruta se organiza por tipo: `piezas/`, `vehiculos/`,
+`noticias/`.
 
 > Para el primer admin no hay panel todavía: regístrate y corre
 > `node scripts/make-admin.mjs tu@correo.com`.
