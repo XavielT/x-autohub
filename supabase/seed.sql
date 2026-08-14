@@ -30,7 +30,7 @@ select setval(pg_get_serial_sequence('public.auto_hub_vehicles', 'id'), (select 
 -- Catálogo: piezas de la tienda propia
 
 -- 35 registro(s)
-insert into public.hub_parts (id, category, name, brand, img_url, images, stars_calification, price, description, stock) values
+insert into public.hub_parts (id, category, name, brand, img_url, images, stars_rating, price, description, stock) values
   (1, 'frenos', 'Disco ventilado GTR 355mm', 'Brembo', 'assets/imgs/hub-parts/disco-brembo-gtr.jpg', array['assets/imgs/hub-parts/disco-brembo-gtr.jpg', 'assets/imgs/hub-parts/disco-brembo-gtr-2.jpg', 'assets/imgs/hub-parts/disco-brembo-gtr-3.jpg'], 4.9, 12950, 'Disco de alto rendimiento con excelente disipacion de calor para uso diario y track day.', 25),
   (2, 'filtros', 'Filtro de aire de alto flujo', 'K&N', 'assets/imgs/hub-parts/filtro-kyn-universal.jpg', '{}', 4.7, 2850, 'Filtro reusable que mejora la respiracion del motor y la respuesta de aceleracion.', 25),
   (3, 'suspension', 'Kit Coilover Street Pro', 'BC Racing', 'assets/imgs/hub-parts/coilover-street-pro.jpg', '{}', 4.8, 32500, 'Suspension ajustable en altura y dureza para mayor control y mejor estabilidad.', 25),

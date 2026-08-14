@@ -90,7 +90,7 @@ export function toHubPart(row: HubPartRow): HubPartModel {
     images: row.images?.length ? row.images : undefined,
     name: row.name,
     brand: row.brand,
-    starsRating: Number(row.stars_calification),
+    starsRating: Number(row.stars_rating),
     price: Number(row.price),
     description: row.description,
   };

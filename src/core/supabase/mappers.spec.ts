@@ -124,7 +124,7 @@ describe('mappers', () => {
       brand: 'Brembo',
       img_url: 'disco.jpg',
       images: [],
-      stars_calification: 4.9,
+      stars_rating: 4.9,
       price: 12950,
       description: 'Alto rendimiento',
       stock: 25,

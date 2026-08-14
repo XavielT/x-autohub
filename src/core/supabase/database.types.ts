@@ -58,7 +58,7 @@ export type HubPartRow = {
   brand: string;
   img_url: string;
   images: string[];
-  stars_calification: number;
+  stars_rating: number;
   price: number;
   description: string;
   stock: number;
