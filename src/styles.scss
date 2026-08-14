@@ -1,3 +1,7 @@
+// Realimentación de formularios: `.req`, `.form-legend`, `.is-invalid`,
+// `.field-error`. Global a propósito — ver el comentario del partial.
+@use 'styles/forms';
+
 //Global Palette colors
 :root{
     --Hub: #ffb300;

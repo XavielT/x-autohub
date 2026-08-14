@@ -1,0 +1,61 @@
+// =============================================================================
+// Realimentación de formularios — patrón compartido
+// =============================================================================
+//
+// Estas clases van en la hoja global (`styles.scss`) a propósito, no en un
+// partial que cada componente tenga que importar: son cuatro utilidades planas
+// que se usan en `publicar`, `checkout`, `registro` y `login`, y los estilos
+// globales de Angular sí alcanzan los elementos de un componente. Importarlas
+// cuatro veces daría el mismo CSS repetido en cuatro bundles.
+//
+// El rojo es el mismo que ya usaba `_auth-shell.scss` para `.is-invalid` y
+// `.auth__error`, ahora en variables para que no se separen: si se cambia el
+// color de error, se cambia en un solo lugar.
+//
+// No se usa `var(--primary)` (el naranja de marca) porque ese naranja es de
+// acento y aparece en botones y enlaces; un borde de error tiene que leerse como
+// problema y no como algo en lo que hacer clic.
+
+$form-error: #e5484d; // borde e indicador
+$form-error-text: #ff8d8f; // texto sobre fondo oscuro
+$form-error-glow: rgba(229, 72, 77, 0.18);
+
+/// El asterisco junto a la etiqueta de un campo obligatorio.
+///
+/// Va con `aria-hidden` en la plantilla: para un lector de pantalla lo que marca
+/// la obligatoriedad es el `required` del control, no un carácter decorativo, y
+/// oírlo como "asterisco" en cada campo es ruido.
+.req {
+  margin-left: 2px;
+  color: $form-error-text;
+  font-weight: 700;
+}
+
+/// La línea que explica el asterisco. Una por formulario, arriba de los campos.
+.form-legend {
+  margin: 0 0 18px;
+  color: var(--main-ultra-light);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+/// Marca de campo inválido. Se aplica al control, no al contenedor.
+///
+/// `!important` es deliberado y acotado: los inputs de cada página traen su
+/// propio `border` con más especificidad (`.publicar .form-input`), y sin esto
+/// el borde de error no se vería. La alternativa era repetir el selector de cada
+/// página aquí, que se rompe en cuanto alguien renombra una clase.
+.is-invalid {
+  border-color: $form-error !important;
+  box-shadow: 0 0 0 2px $form-error-glow;
+}
+
+/// El mensaje debajo del control. Equivale a `.auth__error`, que se conserva
+/// porque login y registro ya lo usan en su propio partial.
+.field-error {
+  display: block;
+  margin-top: 6px;
+  color: $form-error-text;
+  font-family: var(--font-body);
+  font-size: 13px;
+}

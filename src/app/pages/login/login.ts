@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { RequiredField, focusFirstInvalid } from '../../../shared/forms/required-fields';
 
 /**
  * Acota `returnUrl` a una ruta interna.
@@ -36,6 +37,7 @@ export class Login {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal('');
@@ -57,9 +59,19 @@ export class Login {
     return control.invalid && (control.touched || control.dirty);
   }
 
+  /** Los dos obligatorios, para llevar el foco al primero que falte. */
+  private requiredFields(): RequiredField[] {
+    const c = this.form.controls;
+    return [
+      { key: 'email', label: 'Correo', invalid: c.email.invalid },
+      { key: 'password', label: 'Contrasena', invalid: c.password.invalid },
+    ];
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement, this.requiredFields());
       return;
     }
 

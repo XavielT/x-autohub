@@ -19,23 +19,36 @@
       <div class="checkout__grid">
         <section class="checkout__sheet checkout__sheet--form" aria-labelledby="checkout-form-heading">
           <h2 id="checkout-form-heading" class="checkout__section-title">Datos de contacto y envío</h2>
+          <p class="form-legend">Los campos marcados con * son obligatorios.</p>
 
           <div class="checkout__fields">
             <label class="checkout__label">
-              <span>Correo electrónico</span>
-              <input class="checkout__input" type="email" name="email" [ngModel]="email()" (ngModelChange)="email.set($event)" autocomplete="email" placeholder="correo@ejemplo.com" />
+              <span>Correo electrónico<span class="req" aria-hidden="true">*</span></span>
+              <input class="checkout__input" type="email" name="email" [ngModel]="email()" (ngModelChange)="email.set($event)" autocomplete="email" placeholder="correo@ejemplo.com" required
+                     [class.is-invalid]="showError('email')" />
+              @if (showError('email')) {
+                <span class="field-error">Escribe tu correo electronico.</span>
+              }
             </label>
             <label class="checkout__label">
               <span>Teléfono</span>
               <input class="checkout__input" type="tel" name="phone" [ngModel]="phone()" (ngModelChange)="phone.set($event)" autocomplete="tel" placeholder="Ej: 809-000-1234" />
             </label>
             <label class="checkout__label checkout__label--full">
-              <span>Nombre completo</span>
-              <input class="checkout__input" type="text" name="fullName" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" autocomplete="name" placeholder="Nombre y apellidos" />
+              <span>Nombre completo<span class="req" aria-hidden="true">*</span></span>
+              <input class="checkout__input" type="text" name="fullName" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" autocomplete="name" placeholder="Nombre y apellidos" required
+                     [class.is-invalid]="showError('fullName')" />
+              @if (showError('fullName')) {
+                <span class="field-error">Escribe tu nombre completo.</span>
+              }
             </label>
             <label class="checkout__label checkout__label--full">
-              <span>Dirección</span>
-              <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()" (ngModelChange)="addressLine1.set($event)" autocomplete="street-address" placeholder="Calle, número" />
+              <span>Dirección<span class="req" aria-hidden="true">*</span></span>
+              <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()" (ngModelChange)="addressLine1.set($event)" autocomplete="street-address" placeholder="Calle, número" required
+                     [class.is-invalid]="showError('addressLine1')" />
+              @if (showError('addressLine1')) {
+                <span class="field-error">Escribe la direccion de entrega.</span>
+              }
             </label>
             <label class="checkout__label">
               <span>Ciudad</span>

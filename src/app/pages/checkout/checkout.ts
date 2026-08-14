@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +16,11 @@ import { OrderService } from '../../../shared/services/order.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import {
+  RequiredField,
+  focusFirstInvalid,
+  missingFieldsMessage,
+} from '../../../shared/forms/required-fields';
 import {
   CheckoutPaymentMethodOption,
   CheckoutShippingOption,
@@ -28,6 +41,7 @@ export class Checkout implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   /**
    * Con Supabase conectado el pedido se registra de verdad, así que llamarlo
@@ -39,6 +53,13 @@ export class Checkout implements OnInit {
   readonly shippingOptions = signal<CheckoutShippingOption[]>([]);
   readonly paymentOptions = signal<CheckoutPaymentMethodOption[]>([]);
   readonly isSubmitting = signal(false);
+
+  /**
+   * Este formulario es de señales con `ngModel`, no reactivo, así que no hay un
+   * `touched` por control del que colgar los mensajes. Se marca al primer envío:
+   * los errores no aparecen mientras el usuario todavía está llenando.
+   */
+  readonly submitted = signal(false);
 
   readonly selectedShippingId = signal('standard');
   readonly selectedPaymentId = signal('card');
@@ -83,6 +104,24 @@ export class Checkout implements OnInit {
     }
   }
 
+  /**
+   * Los obligatorios, en el orden en que se ven en la pantalla. Son los mismos
+   * tres que este formulario ya exigía; lo que cambia es que ahora se dicen por
+   * su nombre y se marcan en su sitio.
+   */
+  requiredFields(): RequiredField[] {
+    return [
+      { key: 'email', label: 'Correo electronico', invalid: !this.email().trim() },
+      { key: 'fullName', label: 'Nombre completo', invalid: !this.fullName().trim() },
+      { key: 'addressLine1', label: 'Direccion', invalid: !this.addressLine1().trim() },
+    ];
+  }
+
+  /** true cuando hay que pintar el error de un campo, ya intentado el envío. */
+  showError(key: string): boolean {
+    return this.submitted() && (this.requiredFields().find((f) => f.key === key)?.invalid ?? false);
+  }
+
   submitOrder(): void {
     const items = this.cartService.items();
 
@@ -90,8 +129,13 @@ export class Checkout implements OnInit {
       this.toast.show('Tu carrito está vacío.', 'error');
       return;
     }
-    if (!this.email().trim() || !this.fullName().trim() || !this.addressLine1().trim()) {
-      this.toast.show('Completa correo, nombre y dirección.', 'error');
+
+    this.submitted.set(true);
+
+    const missing = missingFieldsMessage(this.requiredFields());
+    if (missing) {
+      this.toast.show(missing, 'error');
+      focusFirstInvalid(this.host.nativeElement, this.requiredFields());
       return;
     }
 

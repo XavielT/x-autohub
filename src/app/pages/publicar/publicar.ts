@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs';
@@ -7,6 +8,11 @@ import { StorageService } from '../../../shared/services/storage.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import {
+  RequiredField,
+  focusFirstInvalid,
+  missingFieldsMessage,
+} from '../../../shared/forms/required-fields';
 
 @Component({
   selector: 'app-publicar',
@@ -22,6 +28,7 @@ export class Publicar {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Archivos originales: son los que se suben a Storage. */
   readonly selectedFiles = signal<File[]>([]);
@@ -30,6 +37,13 @@ export class Publicar {
 
   readonly isDragOver = signal(false);
   readonly isSubmitting = signal(false);
+
+  /**
+   * La caja de imágenes no es un control, así que no tiene `touched` propio: sin
+   * esto mostraría el error en rojo desde que se abre la página, antes de que el
+   * usuario intente nada.
+   */
+  readonly imagesTouched = signal(false);
 
   readonly categories = [
     { value: 'vehiculos', label: 'Vehículos' },
@@ -51,12 +65,78 @@ export class Publicar {
     condition: [''],
   });
 
+  constructor() {
+    // Año y kilometraje solo son obligatorios cuando la ficha de vehículo está a
+    // la vista. Antes se rellenaban en silencio al guardar (`?? new Date()...`,
+    // `?? 0`), así que una publicación podía salir con el año equivocado sin que
+    // nadie lo notara. Ahora se piden, y al cambiar de categoría se limpian para
+    // no bloquear un envío por un campo que ya no se muestra.
+    this.publishForm.controls.category.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.syncVehicleValidators());
+  }
+
+  private syncVehicleValidators(): void {
+    const { year, mileage } = this.publishForm.controls;
+
+    for (const control of [year, mileage]) {
+      if (this.isVehicle) {
+        control.addValidators(Validators.required);
+      } else {
+        control.removeValidators(Validators.required);
+        control.setValue(null);
+      }
+      control.updateValueAndValidity({ emitEvent: false });
+    }
+  }
+
   get isVehicle(): boolean {
     return this.publishForm.controls.category.value === 'vehiculos';
   }
 
   get isPartOrAccessory(): boolean {
     return ['piezas', 'accesorios'].includes(this.publishForm.controls.category.value);
+  }
+
+  // --- Realimentación de campos obligatorios -------------------------------
+
+  /**
+   * Los campos obligatorios en el orden en que aparecen en la pantalla.
+   *
+   * Es la única fuente de la que salen el aviso que los nombra, el foco al
+   * primero que falta y el orden de ambos. `images` va primero porque la caja de
+   * imágenes está arriba del formulario.
+   */
+  requiredFields(): RequiredField[] {
+    const c = this.publishForm.controls;
+    const fields: RequiredField[] = [
+      { key: 'images', label: 'Imagenes', invalid: this.selectedFiles().length === 0 },
+      { key: 'category', label: 'Categoria', invalid: c.category.invalid },
+      { key: 'title', label: 'Titulo', invalid: c.title.invalid },
+      { key: 'description', label: 'Descripcion', invalid: c.description.invalid },
+      { key: 'price', label: 'Precio', invalid: c.price.invalid },
+      { key: 'location', label: 'Ubicacion', invalid: c.location.invalid },
+    ];
+
+    if (this.isVehicle) {
+      fields.push(
+        { key: 'year', label: 'Ano', invalid: c.year.invalid },
+        { key: 'mileage', label: 'Kilometraje', invalid: c.mileage.invalid },
+      );
+    }
+
+    return fields;
+  }
+
+  /** true cuando hay que pintar el error de un control ya tocado. */
+  showError(field: keyof typeof this.publishForm.controls): boolean {
+    const control = this.publishForm.controls[field];
+    return control.invalid && (control.touched || control.dirty);
+  }
+
+  /** La caja de imágenes en rojo: solo tras el primer intento de envío. */
+  get showImagesError(): boolean {
+    return this.imagesTouched() && this.selectedFiles().length === 0;
   }
 
   onFileSelected(event: Event): void {
@@ -100,13 +180,15 @@ export class Publicar {
   }
 
   onSubmit(): void {
-    if (this.publishForm.invalid) {
-      this.publishForm.markAllAsTouched();
-      this.toast.show('Completa los campos obligatorios.', 'error');
-      return;
-    }
-    if (this.selectedFiles().length === 0) {
-      this.toast.show('Agrega al menos una imagen.', 'error');
+    // Se marca todo tocado antes de mirar qué falta, para que los mensajes por
+    // campo aparezcan a la vez que el aviso que los nombra.
+    this.publishForm.markAllAsTouched();
+    this.imagesTouched.set(true);
+
+    const missing = missingFieldsMessage(this.requiredFields());
+    if (missing) {
+      this.toast.show(missing, 'error');
+      focusFirstInvalid(this.host.nativeElement, this.requiredFields());
       return;
     }
 

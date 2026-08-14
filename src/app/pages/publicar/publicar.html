@@ -2,13 +2,24 @@
   <div class="publicar__container">
     <h1 class="publicar__title">Publicar en Hub Market</h1>
 
-    <form [formGroup]="publishForm" (ngSubmit)="onSubmit()" class="publicar-form">
+    <form [formGroup]="publishForm" (ngSubmit)="onSubmit()" class="publicar-form" novalidate>
+      <p class="form-legend">Los campos marcados con * son obligatorios.</p>
 
       <!-- Image Upload Section -->
       <div class="form-group">
-        <label class="form-label">Imagen del Artículo</label>
+        <label class="form-label">
+          Imagen del Artículo<span class="req" aria-hidden="true">*</span>
+        </label>
+        <!--
+          `data-field` es lo que usa el helper de foco para llegar aquí, y
+          `tabindex="-1"` lo hace enfocable: no es un control, así que sin eso
+          `focus()` no haría nada.
+        -->
         <div class="image-upload"
+             data-field="images"
+             tabindex="-1"
              [class.drag-over]="isDragOver()"
+             [class.is-invalid]="showImagesError"
              (dragover)="onDragOver($event)"
              (dragleave)="onDragLeave($event)"
              (drop)="onDrop($event)">
@@ -22,6 +33,9 @@
             <input type="file" accept="image/*" (change)="onFileSelected($event)" class="image-upload__input" multiple>
           </div>
         </div>
+        @if (showImagesError) {
+          <span class="field-error">Agrega al menos una imagen.</span>
+        }
 
         @if (imagePreviews().length > 0) {
           <div class="image-preview-grid">
@@ -40,44 +54,87 @@
 
       <!-- Form Fields -->
       <div class="form-group">
-        <label for="category" class="form-label">Categoría</label>
-        <select id="category" formControlName="category" class="form-input">
+        <label for="category" class="form-label">
+          Categoría<span class="req" aria-hidden="true">*</span>
+        </label>
+        <select id="category" formControlName="category" class="form-input" required
+                [class.is-invalid]="showError('category')">
           <option value="">Seleccionar categoría</option>
           @for (cat of categories; track cat.value) {
             <option [value]="cat.value">{{cat.label}}</option>
           }
         </select>
+        @if (showError('category')) {
+          <span class="field-error">Selecciona una categoria.</span>
+        }
       </div>
 
       <div class="form-group">
-        <label for="title" class="form-label">Título</label>
-        <input type="text" id="title" formControlName="title" class="form-input">
+        <label for="title" class="form-label">
+          Título<span class="req" aria-hidden="true">*</span>
+        </label>
+        <input type="text" id="title" formControlName="title" class="form-input" required
+               [class.is-invalid]="showError('title')">
+        @if (showError('title')) {
+          <span class="field-error">Escribe un titulo.</span>
+        }
       </div>
 
       <div class="form-group">
-        <label for="description" class="form-label">Descripción</label>
-        <textarea id="description" formControlName="description" class="form-input form-textarea"></textarea>
+        <label for="description" class="form-label">
+          Descripción<span class="req" aria-hidden="true">*</span>
+        </label>
+        <textarea id="description" formControlName="description" class="form-input form-textarea"
+                  required [class.is-invalid]="showError('description')"></textarea>
+        @if (showError('description')) {
+          <span class="field-error">Describe lo que estas publicando.</span>
+        }
       </div>
 
       <div class="form-group">
-        <label for="price" class="form-label">Precio (RD$)</label>
-        <input type="text" id="price" formControlName="price" class="form-input" (input)="formatPriceDisplay($event)" placeholder="0">
+        <label for="price" class="form-label">
+          Precio (RD$)<span class="req" aria-hidden="true">*</span>
+        </label>
+        <input type="text" id="price" formControlName="price" class="form-input" required
+               (input)="formatPriceDisplay($event)" placeholder="0"
+               [class.is-invalid]="showError('price')">
+        @if (showError('price')) {
+          <span class="field-error">El precio debe ser mayor que 0.</span>
+        }
       </div>
 
       <div class="form-group">
-        <label for="location" class="form-label">Ubicación</label>
-        <input type="text" id="location" formControlName="location" class="form-input">
+        <label for="location" class="form-label">
+          Ubicación<span class="req" aria-hidden="true">*</span>
+        </label>
+        <input type="text" id="location" formControlName="location" class="form-input" required
+               [class.is-invalid]="showError('location')">
+        @if (showError('location')) {
+          <span class="field-error">Indica en que ciudad esta.</span>
+        }
       </div>
 
       @if (isVehicle) {
         <div class="form-row">
           <div class="form-group">
-            <label for="year" class="form-label">Año</label>
-            <input type="number" id="year" formControlName="year" class="form-input">
+            <label for="year" class="form-label">
+              Año<span class="req" aria-hidden="true">*</span>
+            </label>
+            <input type="number" id="year" formControlName="year" class="form-input" required
+                   [class.is-invalid]="showError('year')">
+            @if (showError('year')) {
+              <span class="field-error">Indica el ano del vehiculo.</span>
+            }
           </div>
           <div class="form-group">
-            <label for="mileage" class="form-label">Kilometraje</label>
-            <input type="number" id="mileage" formControlName="mileage" class="form-input">
+            <label for="mileage" class="form-label">
+              Kilometraje<span class="req" aria-hidden="true">*</span>
+            </label>
+            <input type="number" id="mileage" formControlName="mileage" class="form-input" required
+                   [class.is-invalid]="showError('mileage')">
+            @if (showError('mileage')) {
+              <span class="field-error">Indica el kilometraje.</span>
+            }
           </div>
         </div>
       }
@@ -110,7 +167,12 @@
         </div>
       }
 
-      <button type="submit" [disabled]="isSubmitting() || imagePreviews().length === 0" class="publicar-submit">
+      <!--
+        Solo se deshabilita mientras se publica. Antes también se deshabilitaba
+        sin imágenes, lo que hacía imposible enviar para enterarse de qué faltaba:
+        el usuario se quedaba mirando un botón muerto sin explicación.
+      -->
+      <button type="submit" [disabled]="isSubmitting()" class="publicar-submit">
         {{ isSubmitting() ? 'Publicando...' : 'Publicar Artículo' }}
       </button>
     </form>

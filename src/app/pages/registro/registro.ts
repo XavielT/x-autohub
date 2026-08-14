@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { RequiredField, focusFirstInvalid } from '../../../shared/forms/required-fields';
 
 /** Valida a nivel de grupo que las dos contrasenas coincidan. */
 function passwordsMatch(group: AbstractControl) {
@@ -27,6 +28,7 @@ export class Registro {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   /**
    * Con Supabase conectado la cuenta se crea de verdad, así que el aviso de que
@@ -59,9 +61,31 @@ export class Registro {
     return this.form.hasError('passwordMismatch') && (confirm.touched || confirm.dirty);
   }
 
+  /**
+   * Los obligatorios en el orden de la pantalla, para llevar el foco al primero
+   * que falte. Telefono y ciudad quedan fuera: son opcionales.
+   *
+   * No cambia ningún validador ni ningún mensaje: los errores por campo ya
+   * existían aquí, esto solo decide a cuál saltar.
+   */
+  private requiredFields(): RequiredField[] {
+    const c = this.form.controls;
+    return [
+      { key: 'displayName', label: 'Nombre', invalid: c.displayName.invalid },
+      { key: 'email', label: 'Correo', invalid: c.email.invalid },
+      { key: 'password', label: 'Contrasena', invalid: c.password.invalid },
+      {
+        key: 'confirmPassword',
+        label: 'Confirmar contrasena',
+        invalid: c.confirmPassword.invalid || this.form.hasError('passwordMismatch'),
+      },
+    ];
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement, this.requiredFields());
       return;
     }
 

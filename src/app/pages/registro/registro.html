@@ -26,8 +26,10 @@
           <p class="auth__alert" role="alert">{{ errorMessage() }}</p>
         }
 
+        <p class="form-legend">Los campos marcados con * son obligatorios.</p>
+
         <div class="auth__field">
-          <label for="reg-name">Nombre</label>
+          <label for="reg-name">Nombre<span class="req" aria-hidden="true">*</span></label>
           <input
             id="reg-name"
             type="text"
@@ -42,7 +44,7 @@
         </div>
 
         <div class="auth__field">
-          <label for="reg-email">Correo</label>
+          <label for="reg-email">Correo<span class="req" aria-hidden="true">*</span></label>
           <input
             id="reg-email"
             type="email"
@@ -81,7 +83,7 @@
         </div>
 
         <div class="auth__field">
-          <label for="reg-password">Contrasena</label>
+          <label for="reg-password">Contrasena<span class="req" aria-hidden="true">*</span></label>
           <input
             id="reg-password"
             type="password"
@@ -96,7 +98,7 @@
         </div>
 
         <div class="auth__field">
-          <label for="reg-confirm">Confirmar contrasena</label>
+          <label for="reg-confirm">Confirmar contrasena<span class="req" aria-hidden="true">*</span></label>
           <input
             id="reg-confirm"
             type="password"
