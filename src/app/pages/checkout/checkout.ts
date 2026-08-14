@@ -7,6 +7,7 @@ import { CheckoutOptionsService } from '../../../shared/services/checkout-option
 import { OrderService } from '../../../shared/services/order.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
 import {
   CheckoutPaymentMethodOption,
   CheckoutShippingOption,
@@ -27,6 +28,13 @@ export class Checkout implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+
+  /**
+   * Con Supabase conectado el pedido se registra de verdad, así que llamarlo
+   * "demo" mentiría. Lo que sigue siendo cierto en los dos modos es que no hay
+   * cobro en línea: los métodos de pago son informativos.
+   */
+  readonly isDemoMode = inject(SupabaseService).shouldUseMockData();
 
   readonly shippingOptions = signal<CheckoutShippingOption[]>([]);
   readonly paymentOptions = signal<CheckoutPaymentMethodOption[]>([]);

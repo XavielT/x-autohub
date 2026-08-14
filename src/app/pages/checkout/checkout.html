@@ -86,7 +86,9 @@
             <textarea class="checkout__textarea" name="orderNotes" [ngModel]="orderNotes()" (ngModelChange)="orderNotes.set($event)" rows="3" placeholder="Indicaciones de entrega, referencias…"></textarea>
           </label>
 
-          <button type="button" class="checkout__submit" (click)="submitOrder()">Confirmar pedido (demo)</button>
+          <button type="button" class="checkout__submit" (click)="submitOrder()">
+            {{ isDemoMode ? 'Confirmar pedido (demo)' : 'Confirmar pedido' }}
+          </button>
         </section>
 
         <aside class="checkout__sheet checkout__sheet--summary" aria-labelledby="checkout-summary-heading">
@@ -125,7 +127,13 @@
           </div>
 
           <p class="checkout__disclaimer">
-            Los métodos de pago mostrados son de demostración. Aquí se integrará la pasarela real y la confirmación con el backend.
+            @if (isDemoMode) {
+              Los métodos de pago mostrados son de demostración. Aquí se integrará la pasarela real
+              y la confirmación con el backend.
+            } @else {
+              Tu pedido queda registrado, pero todavía no cobramos en línea: te contactamos para
+              coordinar el pago y la entrega.
+            }
           </p>
         </aside>
       </div>

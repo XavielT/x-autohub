@@ -119,8 +119,10 @@
 
       <p class="auth__hint">
         Al crear tu cuenta aceptas los
-        <a routerLink="/terminos-condiciones">terminos y condiciones</a>. Registro de demostracion:
-        los datos se guardan solo en este navegador.
+        <a routerLink="/terminos-condiciones">terminos y condiciones</a>.
+        @if (isDemoMode) {
+          Registro de demostracion: los datos se guardan solo en este navegador.
+        }
       </p>
     </div>
   </main>

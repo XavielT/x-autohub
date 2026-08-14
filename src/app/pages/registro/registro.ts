@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
 
 /** Valida a nivel de grupo que las dos contrasenas coincidan. */
 function passwordsMatch(group: AbstractControl) {
@@ -26,6 +27,12 @@ export class Registro {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+
+  /**
+   * Con Supabase conectado la cuenta se crea de verdad, así que el aviso de que
+   * "los datos se guardan solo en este navegador" sería falso.
+   */
+  readonly isDemoMode = inject(SupabaseService).shouldUseMockData();
 
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal('');

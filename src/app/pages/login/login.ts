@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
 
 /**
  * Acota `returnUrl` a una ruta interna.
@@ -38,6 +39,12 @@ export class Login {
 
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal('');
+
+  /**
+   * Con Supabase conectado el login es real, así que el aviso de "autenticacion
+   * de demostracion" mentiría. Solo se muestra cuando la app corre con mocks.
+   */
+  readonly isDemoMode = inject(SupabaseService).shouldUseMockData();
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

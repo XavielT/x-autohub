@@ -65,10 +65,12 @@
         No tienes cuenta? <a routerLink="/registro">Registrate gratis</a>
       </p>
 
-      <p class="auth__hint">
-        Autenticacion de demostracion: cualquier correo valido con una contrasena de 6+ caracteres
-        inicia sesion. El backend real se conecta despues.
-      </p>
+      @if (isDemoMode) {
+        <p class="auth__hint">
+          Autenticacion de demostracion: cualquier correo valido con una contrasena de 6+ caracteres
+          inicia sesion. El backend real se conecta despues.
+        </p>
+      }
     </div>
   </main>
 </div>
