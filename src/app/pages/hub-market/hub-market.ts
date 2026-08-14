@@ -63,16 +63,4 @@ export class HubMarket implements OnInit {
   onCategorySelect(category: HubMarketCategoryOption['value']): void {
     this.selectedCategory.set(category);
   }
-
-  getItemMeta(item: HubMarketItemModel): string {
-    if (item.category === 'vehiculos' && item.vehicleSpecs) {
-      return `${item.vehicleSpecs.year} • ${item.vehicleSpecs.mileage} KM`;
-    }
-
-    return `${item.location} • ${this.formatCategory(item.category)}`;
-  }
-
-  formatCategory(category: HubMarketCategory): string {
-    return category.charAt(0).toUpperCase() + category.slice(1);
-  }
 }
