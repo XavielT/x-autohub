@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { AdminUserRow, OrderStatus } from '../../core/supabase/database.types';
@@ -9,6 +9,9 @@ import {
   AdminNewsModel,
   AdminPartModel,
   AdminVehicleModel,
+  EditableNews,
+  EditablePart,
+  EditableVehicle,
   NewNewsDraft,
   NewPartDraft,
   NewVehicleDraft,
@@ -421,6 +424,282 @@ export class AdminService {
           published_at: draft.publishedAt,
           is_published: draft.isPublished,
         })
+        .select('id, title, scope, published_at, is_published')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          title: r.title,
+          scope: r.scope,
+          publishedAt: new Date(`${r.published_at}T12:00:00Z`),
+          isPublished: r.is_published,
+        };
+      }),
+    );
+  }
+
+  // --- Edicion completa ----------------------------------------------------
+  //
+  // Los listados del panel traen una vista reducida (lo justo para la tabla).
+  // Para editar hace falta la fila entera, así que se pide aparte al abrir el
+  // formulario: es una sola fila y evita cargar descripciones y arreglos de
+  // imágenes de decenas de artículos que nadie va a editar.
+
+  getPart(id: number): Observable<EditablePart> {
+    if (this.supabase.shouldUseMockData()) {
+      const p = this.mockParts.find((x) => x.id === id);
+      if (!p) return throwError(() => new Error('No encontramos esa pieza.'));
+      return of({
+        ...p,
+        imgUrl: '',
+        images: [],
+        description: '',
+        isActive: p.isActive,
+      });
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .select('id, category, name, brand, img_url, images, price, description, stock, is_active')
+        .eq('id', id)
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          category: r.category,
+          name: r.name,
+          brand: r.brand,
+          imgUrl: r.img_url,
+          images: r.images ?? [],
+          price: Number(r.price),
+          description: r.description,
+          stock: r.stock,
+          isActive: r.is_active,
+        };
+      }),
+    );
+  }
+
+  updatePartFull(id: number, draft: NewPartDraft): Observable<AdminPartModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const updated: AdminPartModel = {
+        id,
+        name: draft.name,
+        brand: draft.brand,
+        category: draft.category,
+        price: draft.price,
+        stock: draft.stock,
+        isActive: draft.isActive,
+      };
+      this.mockParts = this.mockParts.map((p) => (p.id === id ? updated : p));
+      return of(updated);
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .update({
+          category: draft.category.trim(),
+          name: draft.name.trim(),
+          brand: draft.brand.trim(),
+          img_url: draft.imgUrl,
+          images: draft.images,
+          price: draft.price,
+          description: draft.description.trim(),
+          stock: draft.stock,
+          is_active: draft.isActive,
+        })
+        .eq('id', id)
+        .select('id, name, brand, category, price, stock, is_active')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          name: r.name,
+          brand: r.brand,
+          category: r.category,
+          price: Number(r.price),
+          stock: r.stock,
+          isActive: r.is_active,
+        };
+      }),
+    );
+  }
+
+  getVehicle(id: number): Observable<EditableVehicle> {
+    if (this.supabase.shouldUseMockData()) {
+      const v = this.mockVehicles.find((x) => x.id === id);
+      if (!v) return throwError(() => new Error('No encontramos ese vehiculo.'));
+      return of({
+        ...v,
+        color: '',
+        chasisType: 'sedan',
+        doors: 4,
+        traction: 'fwd',
+        fuel: 'gasoline',
+        cylinders: 4,
+        images: [],
+        description: '',
+        location: '',
+        contact: '',
+      });
+    }
+
+    return from(
+      this.supabase.db.from('auto_hub_vehicles').select('*').eq('id', id).single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          brand: r.brand,
+          model: r.model,
+          year: r.year,
+          price: Number(r.price),
+          color: r.color,
+          mileage: r.mileage,
+          chasisType: r.chasis_type,
+          doors: r.doors,
+          traction: r.traction,
+          fuel: r.fuel,
+          cylinders: r.cylinders,
+          images: r.images ?? [],
+          description: r.description,
+          location: r.location,
+          contact: r.contact,
+          isAvailable: r.is_available,
+        };
+      }),
+    );
+  }
+
+  updateVehicleFull(id: number, draft: NewVehicleDraft): Observable<AdminVehicleModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const updated: AdminVehicleModel = {
+        id,
+        brand: draft.brand,
+        model: draft.model,
+        year: draft.year,
+        price: draft.price,
+        mileage: draft.mileage,
+        isAvailable: draft.isAvailable,
+      };
+      this.mockVehicles = this.mockVehicles.map((v) => (v.id === id ? updated : v));
+      return of(updated);
+    }
+
+    return from(
+      this.supabase.db
+        .from('auto_hub_vehicles')
+        .update({
+          brand: draft.brand.trim(),
+          model: draft.model.trim(),
+          year: draft.year,
+          price: draft.price,
+          color: draft.color.trim(),
+          mileage: draft.mileage,
+          chasis_type: draft.chasisType,
+          doors: draft.doors,
+          traction: draft.traction,
+          fuel: draft.fuel,
+          cylinders: draft.cylinders,
+          images: draft.images,
+          description: draft.description.trim(),
+          location: draft.location.trim(),
+          contact: draft.contact.trim(),
+          is_available: draft.isAvailable,
+        })
+        .eq('id', id)
+        .select('id, brand, model, year, price, mileage, is_available')
+        .single(),
+    ).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          brand: r.brand,
+          model: r.model,
+          year: r.year,
+          price: Number(r.price),
+          mileage: r.mileage,
+          isAvailable: r.is_available,
+        };
+      }),
+    );
+  }
+
+  getNews(id: number): Observable<EditableNews> {
+    if (this.supabase.shouldUseMockData()) {
+      const n = this.mockNews.find((x) => x.id === id);
+      if (!n) return throwError(() => new Error('No encontramos esa noticia.'));
+      return of({
+        id: n.id,
+        title: n.title,
+        text: '',
+        textLarge: '',
+        imageUrl: '',
+        images: [],
+        scope: n.scope,
+        author: undefined,
+        publishedAt: n.publishedAt.toISOString().slice(0, 10),
+        isPublished: n.isPublished,
+      });
+    }
+
+    return from(this.supabase.db.from('news').select('*').eq('id', id).single()).pipe(
+      map((res) => {
+        const r = unwrap(res);
+        return {
+          id: r.id,
+          title: r.title,
+          text: r.text,
+          textLarge: r.text_large,
+          imageUrl: r.image_url,
+          images: r.images ?? [],
+          scope: r.scope,
+          author: r.author ?? undefined,
+          publishedAt: r.published_at,
+          isPublished: r.is_published,
+        };
+      }),
+    );
+  }
+
+  updateNewsFull(id: number, draft: NewNewsDraft): Observable<AdminNewsModel> {
+    if (this.supabase.shouldUseMockData()) {
+      const updated: AdminNewsModel = {
+        id,
+        title: draft.title,
+        scope: draft.scope,
+        publishedAt: new Date(`${draft.publishedAt}T12:00:00Z`),
+        isPublished: draft.isPublished,
+      };
+      this.mockNews = this.mockNews.map((n) => (n.id === id ? updated : n));
+      return of(updated);
+    }
+
+    return from(
+      this.supabase.db
+        .from('news')
+        .update({
+          title: draft.title.trim(),
+          text: draft.text.trim(),
+          text_large: draft.textLarge.trim(),
+          image_url: draft.imageUrl,
+          images: draft.images,
+          scope: draft.scope,
+          author: draft.author?.trim() || null,
+          published_at: draft.publishedAt,
+          is_published: draft.isPublished,
+        })
+        .eq('id', id)
         .select('id, title, scope, published_at, is_published')
         .single(),
     ).pipe(

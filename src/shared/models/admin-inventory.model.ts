@@ -99,6 +99,20 @@ export interface NewNewsDraft {
   isPublished: boolean;
 }
 
+// --- Ediciones --------------------------------------------------------------
+//
+// El mismo contenido del borrador más el `id`. Se reusa la forma en vez de
+// declarar tipos aparte porque los campos editables son exactamente los mismos
+// que los del alta: cualquier campo nuevo entra en los dos lados a la vez y no
+// se puede olvidar uno.
+//
+// `images` llega con las URLs que la fila ya tiene. El formulario decide cuáles
+// conservar, y el componente sube las nuevas antes de guardar.
+
+export type EditablePart = NewPartDraft & { id: number };
+export type EditableVehicle = NewVehicleDraft & { id: number };
+export type EditableNews = NewNewsDraft & { id: number };
+
 /** Opciones de los enums, con etiqueta en español para los selectores. */
 export const CHASIS_OPTIONS: readonly { value: ChasisType; label: string }[] = [
   { value: 'sedan', label: 'Sedan' },

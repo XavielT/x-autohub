@@ -126,14 +126,19 @@ servicios mapeen hacia él. El checkout deja de conocer el modelo de piezas.
 `/admin` con cuatro secciones: historial de versiones, pedidos, inventario y
 usuarios. Ver `docs/BACKEND.md`.
 
-Desde la v0.3.0 el inventario también da de alta artículos nuevos: piezas,
-vehículos y noticias, con subida de imágenes al bucket `inventory` (escritura
-solo de admin, migración 0008). Ya no hace falta el Table Editor para el trabajo
-normal.
+El inventario da de alta y edita por completo piezas, vehículos y noticias:
+todos los campos, incluidas las imágenes, que se suben al bucket `inventory`
+(escritura solo de admin, migración 0008). Ya no hace falta el Table Editor de
+Supabase para el trabajo del día a día.
 
-Lo que sigue faltando es **editar** un artículo existente más allá de precio,
-existencias y visibilidad: cambiar la descripción o las fotos de una pieza ya
-publicada todavía se hace en Supabase.
+Al editar, quitar una foto que vivía en Storage la borra del bucket después de
+guardar, para no dejar objetos que nada referencia. Las fotos sembradas apuntan a
+`assets/imgs/...`, archivos del repo, y se ignoran en esa limpieza.
+
+Lo que no tiene el panel es **borrar** un artículo. A propósito: un pedido con
+líneas apunta a `hub_parts` y borrar una pieza vendida dejaría el histórico
+señalando a nada. Ocultarla (`is_active = false`) hace el mismo trabajo sin ese
+riesgo, y ya está.
 
 ### 8. Enlaces del footer que no llevan a nada
 

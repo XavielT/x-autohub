@@ -78,6 +78,44 @@ export class StorageService {
   }
 
   /**
+   * Borra imágenes del bucket `inventory` a partir de sus URLs públicas.
+   *
+   * Se usa al editar un artículo: si se le quita una foto, el objeto quedaría en
+   * Storage para siempre sin que nada lo referencie, ocupando espacio que nadie
+   * puede encontrar ni liberar desde la interfaz.
+   *
+   * **Ignora cualquier URL que no sea de este bucket.** Las filas sembradas
+   * apuntan a `assets/imgs/...`, que son archivos del repo: intentar borrarlos
+   * como si fueran objetos de Storage no haría nada, pero pedirlo sería un error
+   * de razonamiento que conviene cortar aquí.
+   *
+   * Un fallo al borrar no interrumpe nada: el artículo ya se guardó bien y una
+   * imagen huérfana es un problema de limpieza, no de datos.
+   */
+  removeInventoryImages(urls: string[]): Observable<void> {
+    const paths = urls
+      .map((url) => this.inventoryPath(url))
+      .filter((path): path is string => path !== null);
+
+    if (paths.length === 0 || this.supabase.shouldUseMockData()) {
+      return of(undefined);
+    }
+
+    return from(this.supabase.db.storage.from('inventory').remove(paths)).pipe(
+      map((res) => {
+        if (res.error) console.error('[storage] limpieza de imagenes', res.error);
+      }),
+    );
+  }
+
+  /** Ruta dentro del bucket `inventory`, o null si la URL no es de ahí. */
+  private inventoryPath(url: string): string | null {
+    const marker = '/storage/v1/object/public/inventory/';
+    const at = url.indexOf(marker);
+    return at === -1 ? null : decodeURIComponent(url.slice(at + marker.length));
+  }
+
+  /**
    * @param folder Primera carpeta de la ruta. En `listings` y `avatars` **tiene
    *   que ser el uid**, porque las políticas lo comparan contra `auth.uid()`; en
    *   `inventory` es el tipo de contenido.

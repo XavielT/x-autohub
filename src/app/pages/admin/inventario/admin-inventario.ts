@@ -66,6 +66,26 @@ export class AdminInventario implements OnInit {
   readonly previews = signal<string[]>([]);
   private selectedFiles: File[] = [];
 
+  /** id del artículo que se está editando; null cuando se está creando uno. */
+  readonly editingId = signal<number | null>(null);
+  /** true mientras se pide la fila completa al abrir el formulario de edición. */
+  readonly isLoadingOne = signal(false);
+
+  /**
+   * Imágenes que la fila **ya tenía**. Van aparte de `previews`, que son las
+   * nuevas: estas ya viven en Storage y no hay que volver a subirlas.
+   */
+  readonly existingImages = signal<string[]>([]);
+
+  /**
+   * Las que se quitaron durante la edición.
+   *
+   * No se borran en el momento: si se borraran al quitarlas y luego se cancelara
+   * el formulario, la foto ya no existiría pero la fila seguiría apuntando a
+   * ella. Se limpian de Storage **después** de que el guardado salga bien.
+   */
+  private removedImages: string[] = [];
+
   readonly categories = PART_CATEGORIES;
   readonly chasisOptions = CHASIS_OPTIONS;
   readonly tractionOptions = TRACTION_OPTIONS;
@@ -154,12 +174,103 @@ export class AdminInventario implements OnInit {
   }
 
   startCreate(): void {
+    this.editingId.set(null);
     this.isCreating.set(true);
     this.clearImages();
+    this.partForm.reset();
+    this.vehicleForm.reset();
+    this.newsForm.reset();
+  }
+
+  /**
+   * Abre el formulario con los datos de un artículo existente.
+   *
+   * Pide la fila completa: el listado solo trae lo que la tabla muestra, no la
+   * descripción ni las imágenes.
+   */
+  startEdit(id: number): void {
+    this.isCreating.set(true);
+    this.editingId.set(id);
+    this.clearImages();
+    this.isLoadingOne.set(true);
+
+    const fail = (error: Error) => {
+      this.isLoadingOne.set(false);
+      this.cancelCreate();
+      this.toast.show(error.message, 'error');
+    };
+
+    switch (this.tab()) {
+      case 'piezas':
+        this.admin.getPart(id).subscribe({
+          next: (p) => {
+            this.partForm.setValue({
+              name: p.name,
+              brand: p.brand,
+              category: p.category,
+              price: p.price,
+              stock: p.stock,
+              description: p.description,
+              isActive: p.isActive,
+            });
+            this.existingImages.set(p.images.length ? p.images : [p.imgUrl].filter(Boolean));
+            this.isLoadingOne.set(false);
+          },
+          error: fail,
+        });
+        break;
+
+      case 'vehiculos':
+        this.admin.getVehicle(id).subscribe({
+          next: (v) => {
+            this.vehicleForm.setValue({
+              brand: v.brand,
+              model: v.model,
+              year: v.year,
+              price: v.price,
+              color: v.color,
+              mileage: v.mileage,
+              chasisType: v.chasisType,
+              doors: v.doors,
+              traction: v.traction,
+              fuel: v.fuel,
+              cylinders: v.cylinders,
+              location: v.location,
+              contact: v.contact,
+              description: v.description,
+              isAvailable: v.isAvailable,
+            });
+            this.existingImages.set(v.images);
+            this.isLoadingOne.set(false);
+          },
+          error: fail,
+        });
+        break;
+
+      case 'noticias':
+        this.admin.getNews(id).subscribe({
+          next: (n) => {
+            this.newsForm.setValue({
+              title: n.title,
+              text: n.text,
+              textLarge: n.textLarge,
+              scope: n.scope,
+              author: n.author ?? '',
+              publishedAt: n.publishedAt,
+              isPublished: n.isPublished,
+            });
+            this.existingImages.set(n.images.length ? n.images : [n.imageUrl].filter(Boolean));
+            this.isLoadingOne.set(false);
+          },
+          error: fail,
+        });
+        break;
+    }
   }
 
   cancelCreate(): void {
     this.isCreating.set(false);
+    this.editingId.set(null);
     this.clearImages();
     this.partForm.reset();
     this.vehicleForm.reset();
@@ -208,14 +319,37 @@ export class AdminInventario implements OnInit {
     input.value = '';
   }
 
+  /** Quita una imagen nueva (todavía no subida). */
   removeImage(index: number): void {
     this.selectedFiles = this.selectedFiles.filter((_, i) => i !== index);
     this.previews.update((list) => list.filter((_, i) => i !== index));
   }
 
+  /** Quita una imagen que la fila ya tenía. Se borra de Storage al guardar. */
+  removeExistingImage(index: number): void {
+    const url = this.existingImages()[index];
+    if (url) this.removedImages = [...this.removedImages, url];
+    this.existingImages.update((list) => list.filter((_, i) => i !== index));
+  }
+
   private clearImages(): void {
     this.selectedFiles = [];
     this.previews.set([]);
+    this.existingImages.set([]);
+    this.removedImages = [];
+  }
+
+  /**
+   * Limpia de Storage las imágenes que se quitaron.
+   *
+   * Se llama solo después de un guardado correcto, y su resultado no se espera:
+   * el artículo ya quedó bien y una imagen huérfana no justifica mostrarle un
+   * error al usuario.
+   */
+  private cleanUpRemovedImages(): void {
+    if (this.removedImages.length === 0) return;
+    this.storage.removeInventoryImages(this.removedImages).subscribe();
+    this.removedImages = [];
   }
 
   // --- Guardar -------------------------------------------------------------
@@ -223,32 +357,43 @@ export class AdminInventario implements OnInit {
   submitPart(): void {
     if (!this.readyToSubmit(this.partForm)) return;
     const form = this.partForm.getRawValue();
+    const id = this.editingId();
 
     this.isSubmitting.set(true);
     this.storage
       .uploadInventoryImages(this.selectedFiles, 'piezas')
       .pipe(
-        switchMap((urls) =>
-          this.admin.createPart({
+        switchMap((nuevas) => {
+          // Las que se conservan van primero, y la primera de todas es la
+          // portada: así reordenar es cuestión de quitar y volver a subir.
+          const images = [...this.existingImages(), ...nuevas];
+          const draft = {
             category: form.category,
             name: form.name,
             brand: form.brand,
-            // La primera imagen es la portada del catálogo.
-            imgUrl: urls[0],
-            images: urls,
+            imgUrl: images[0],
+            images,
             price: form.price,
             description: form.description,
             stock: form.stock,
             isActive: form.isActive,
-          }),
-        ),
+          };
+          return id === null
+            ? this.admin.createPart(draft)
+            : this.admin.updatePartFull(id, draft);
+        }),
       )
       .subscribe({
-        next: (created) => {
+        next: (saved) => {
           this.isSubmitting.set(false);
-          this.parts.update((l) => [created, ...l]);
+          this.parts.update((l) =>
+            id === null ? [saved, ...l] : l.map((p) => (p.id === id ? saved : p)),
+          );
+          this.cleanUpRemovedImages();
           this.cancelCreate();
-          this.toast.show(`"${created.name}" agregada al catalogo.`);
+          this.toast.show(
+            id === null ? `"${saved.name}" agregada al catalogo.` : `"${saved.name}" actualizada.`,
+          );
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);
@@ -260,17 +405,32 @@ export class AdminInventario implements OnInit {
   submitVehicle(): void {
     if (!this.readyToSubmit(this.vehicleForm)) return;
     const form = this.vehicleForm.getRawValue();
+    const id = this.editingId();
 
     this.isSubmitting.set(true);
     this.storage
       .uploadInventoryImages(this.selectedFiles, 'vehiculos')
-      .pipe(switchMap((urls) => this.admin.createVehicle({ ...form, images: urls })))
+      .pipe(
+        switchMap((nuevas) => {
+          const draft = { ...form, images: [...this.existingImages(), ...nuevas] };
+          return id === null
+            ? this.admin.createVehicle(draft)
+            : this.admin.updateVehicleFull(id, draft);
+        }),
+      )
       .subscribe({
-        next: (created) => {
+        next: (saved) => {
           this.isSubmitting.set(false);
-          this.vehicles.update((l) => [created, ...l]);
+          this.vehicles.update((l) =>
+            id === null ? [saved, ...l] : l.map((v) => (v.id === id ? saved : v)),
+          );
+          this.cleanUpRemovedImages();
           this.cancelCreate();
-          this.toast.show(`${created.brand} ${created.model} agregado a Auto Hub.`);
+          this.toast.show(
+            id === null
+              ? `${saved.brand} ${saved.model} agregado a Auto Hub.`
+              : `${saved.brand} ${saved.model} actualizado.`,
+          );
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);
@@ -282,31 +442,41 @@ export class AdminInventario implements OnInit {
   submitNews(): void {
     if (!this.readyToSubmit(this.newsForm)) return;
     const form = this.newsForm.getRawValue();
+    const id = this.editingId();
 
     this.isSubmitting.set(true);
     this.storage
       .uploadInventoryImages(this.selectedFiles, 'noticias')
       .pipe(
-        switchMap((urls) =>
-          this.admin.createNews({
+        switchMap((nuevas) => {
+          const images = [...this.existingImages(), ...nuevas];
+          const draft = {
             title: form.title,
             text: form.text,
             textLarge: form.textLarge,
-            imageUrl: urls[0],
-            images: urls,
+            imageUrl: images[0],
+            images,
             scope: form.scope,
             author: form.author,
             publishedAt: form.publishedAt,
             isPublished: form.isPublished,
-          }),
-        ),
+          };
+          return id === null
+            ? this.admin.createNews(draft)
+            : this.admin.updateNewsFull(id, draft);
+        }),
       )
       .subscribe({
-        next: (created) => {
+        next: (saved) => {
           this.isSubmitting.set(false);
-          this.news.update((l) => [created, ...l]);
+          this.news.update((l) =>
+            id === null ? [saved, ...l] : l.map((n) => (n.id === id ? saved : n)),
+          );
+          this.cleanUpRemovedImages();
           this.cancelCreate();
-          this.toast.show(`"${created.title}" publicada.`);
+          this.toast.show(
+            id === null ? `"${saved.title}" publicada.` : `"${saved.title}" actualizada.`,
+          );
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);
@@ -322,6 +492,10 @@ export class AdminInventario implements OnInit {
    * `not null` en el esquema, así que sin foto el insert fallaría con un error de
    * base de datos en vez de un mensaje entendible. Para un vehículo no lo exige
    * la base, pero un vehículo sin foto no se vende.
+   *
+   * Cuentan las dos clases: las que la fila ya tenía y las nuevas. Al editar sin
+   * tocar las fotos no hay archivos nuevos, y exigirlos obligaría a volver a
+   * subir todo para cambiar un precio.
    */
   private readyToSubmit(form: { invalid: boolean; markAllAsTouched: () => void }): boolean {
     if (form.invalid) {
@@ -329,7 +503,7 @@ export class AdminInventario implements OnInit {
       this.toast.show('Revisa los campos marcados.', 'error');
       return false;
     }
-    if (this.selectedFiles.length === 0) {
+    if (this.existingImages().length + this.selectedFiles.length === 0) {
       this.toast.show('Agrega al menos una imagen.', 'error');
       return false;
     }

@@ -36,25 +36,49 @@
   @if (isCreating()) {
     <div class="adm-inv__form">
       <h3 class="adm-inv__form-title">
-        @switch (tab()) {
-          @case ('piezas') { Nueva pieza del catalogo }
-          @case ('vehiculos') { Nuevo vehiculo de Auto Hub }
-          @case ('noticias') { Nueva noticia }
+        @if (editingId() === null) {
+          @switch (tab()) {
+            @case ('piezas') { Nueva pieza del catalogo }
+            @case ('vehiculos') { Nuevo vehiculo de Auto Hub }
+            @case ('noticias') { Nueva noticia }
+          }
+        } @else {
+          @switch (tab()) {
+            @case ('piezas') { Editar pieza }
+            @case ('vehiculos') { Editar vehiculo }
+            @case ('noticias') { Editar noticia }
+          }
         }
       </h3>
+
+      @if (isLoadingOne()) {
+        <p class="adm-inv__loading-one">Cargando el articulo...</p>
+      }
 
       <div class="adm-inv__images">
         <span class="adm-inv__images-label">
           Imagenes <small>(la primera es la portada)</small>
         </span>
         <div class="adm-inv__thumbs">
-          @for (src of previews(); track $index) {
+          @for (src of existingImages(); track src) {
             <div class="adm-inv__thumb" [class.adm-inv__thumb--cover]="$first">
-              <img [src]="src" [alt]="'Imagen ' + ($index + 1)" />
+              <img [src]="src" [alt]="'Imagen actual ' + ($index + 1)" />
               <button type="button" class="adm-inv__thumb-x"
-                      [attr.aria-label]="'Quitar imagen ' + ($index + 1)"
-                      (click)="removeImage($index)">×</button>
+                      [attr.aria-label]="'Quitar imagen actual ' + ($index + 1)"
+                      (click)="removeExistingImage($index)">×</button>
               @if ($first) { <span class="adm-inv__thumb-tag">Portada</span> }
+            </div>
+          }
+          @for (src of previews(); track $index) {
+            <div class="adm-inv__thumb"
+                 [class.adm-inv__thumb--cover]="$first && existingImages().length === 0">
+              <img [src]="src" [alt]="'Imagen nueva ' + ($index + 1)" />
+              <button type="button" class="adm-inv__thumb-x"
+                      [attr.aria-label]="'Quitar imagen nueva ' + ($index + 1)"
+                      (click)="removeImage($index)">×</button>
+              @if ($first && existingImages().length === 0) {
+                <span class="adm-inv__thumb-tag">Portada</span>
+              }
             </div>
           }
           <label class="adm-inv__picker">
@@ -107,7 +131,7 @@
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
-                {{ isSubmitting() ? 'Guardando...' : 'Agregar al catalogo' }}
+                {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar al catalogo' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
             </div>
@@ -201,7 +225,7 @@
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
-                {{ isSubmitting() ? 'Guardando...' : 'Agregar a Auto Hub' }}
+                {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a Auto Hub' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
             </div>
@@ -248,7 +272,7 @@
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
-                {{ isSubmitting() ? 'Guardando...' : 'Publicar noticia' }}
+                {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Publicar noticia' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
             </div>
@@ -294,10 +318,15 @@
                       @if (part.stock === 0) { <span class="adm-inv__warn">agotado</span> }
                     </td>
                     <td>
-                      <button type="button" class="adm-inv__btn"
-                              [disabled]="savingId() === 'p' + part.id" (click)="togglePart(part)">
-                        {{ part.isActive ? 'Ocultar' : 'Mostrar' }}
-                      </button>
+                      <div class="adm-inv__row-tools">
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'p' + part.id" (click)="togglePart(part)">
+                          {{ part.isActive ? 'Ocultar' : 'Mostrar' }}
+                        </button>
+                        <button type="button" class="adm-inv__btn"
+                                [attr.aria-label]="'Editar ' + part.name"
+                                (click)="startEdit(part.id)">Editar</button>
+                      </div>
                     </td>
                   </tr>
                 }
@@ -333,10 +362,15 @@
                     </td>
                     <td>{{ v.mileage | number:'1.0-0' }} km</td>
                     <td>
-                      <button type="button" class="adm-inv__btn"
-                              [disabled]="savingId() === 'v' + v.id" (click)="toggleVehicle(v)">
-                        {{ v.isAvailable ? 'Marcar vendido' : 'Marcar disponible' }}
-                      </button>
+                      <div class="adm-inv__row-tools">
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'v' + v.id" (click)="toggleVehicle(v)">
+                          {{ v.isAvailable ? 'Marcar vendido' : 'Marcar disponible' }}
+                        </button>
+                        <button type="button" class="adm-inv__btn"
+                                [attr.aria-label]="'Editar ' + v.brand + ' ' + v.model"
+                                (click)="startEdit(v.id)">Editar</button>
+                      </div>
                     </td>
                   </tr>
                 }
@@ -364,10 +398,15 @@
                     <td>{{ n.scope === 'local' ? 'Local' : 'Internacional' }}</td>
                     <td>{{ n.publishedAt | date:'d MMM y' }}</td>
                     <td>
-                      <button type="button" class="adm-inv__btn"
-                              [disabled]="savingId() === 'n' + n.id" (click)="toggleNews(n)">
-                        {{ n.isPublished ? 'Despublicar' : 'Publicar' }}
-                      </button>
+                      <div class="adm-inv__row-tools">
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'n' + n.id" (click)="toggleNews(n)">
+                          {{ n.isPublished ? 'Despublicar' : 'Publicar' }}
+                        </button>
+                        <button type="button" class="adm-inv__btn"
+                                [attr.aria-label]="'Editar ' + n.title"
+                                (click)="startEdit(n.id)">Editar</button>
+                      </div>
                     </td>
                   </tr>
                 }

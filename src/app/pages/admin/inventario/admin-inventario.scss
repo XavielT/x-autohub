@@ -352,3 +352,19 @@
 @media (max-width: 560px) {
   .adm-inv__field--wide { grid-column: 1 / -1; }
 }
+
+.adm-inv {
+  // Los dos botones de una fila, uno al lado del otro sin que se peguen ni
+  // desborden la celda en pantallas estrechas.
+  &__row-tools {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__loading-one {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--text-soft, #9a9a9a);
+  }
+}
