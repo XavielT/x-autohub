@@ -7,7 +7,8 @@
         <div class="catalogo__search">
             <search>
                 <input class="catalogo__input" placeholder="Que estas buscando?" [ngModel]="searchQuery()"
-                    (ngModelChange)="searchQuery.set($event)" /><button (click)="openCart()" class="catalogo__cart-button"><img class="catalogo__cart-icon"
+                    (ngModelChange)="searchQuery.set($event)" /><button (click)="openCart()" class="catalogo__cart-button" type="button"
+                        aria-label="Abrir el carrito"><img class="catalogo__cart-icon" alt=""
                         src="assets/icons/cart-b-icon.svg" /></button>
             </search>
         </div>

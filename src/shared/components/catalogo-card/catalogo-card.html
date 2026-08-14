@@ -18,8 +18,12 @@
     </div>
     <div class="hub-part-card__bottom">
         <h4 class="hub-part-card__price">RD$ {{hubPart().price | number:'1.0-0'}}</h4>
-        <a class="hub-part-card__cart-button" (click)="addToCart()">
-            <img src="assets/icons/cart-icon.svg"/>
-        </a>
+        <button
+            type="button"
+            class="hub-part-card__cart-button"
+            [attr.aria-label]="'Agregar ' + hubPart().name + ' al carrito'"
+            (click)="addToCart()">
+            <img src="assets/icons/cart-icon.svg" alt="" />
+        </button>
     </div>
 </div>

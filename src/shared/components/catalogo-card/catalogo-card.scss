@@ -119,15 +119,19 @@
         text-decoration: none;
     }
 
+    // Es un <button> y no un <a>: dispara una acción, no navega. Como <a> sin
+    // href no recibía foco con el teclado ni se anunciaba como control.
     &__cart-button{
         background-color: var(--main-light);
         //border: 1px solid var(--Hub);
+        border: none;
         border-radius: 10px;
         padding: 5px;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s ease;
+        cursor: pointer;
     }
 
     &__cart-button:hover{
