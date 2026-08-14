@@ -332,6 +332,28 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      /**
+       * Crea un pedido con sus líneas en una sola transacción (migración 0005).
+       *
+       * El cliente solo dice qué pieza y cuántas: el precio, el subtotal y el
+       * envío los calcula Postgres contra el catálogo. Es también el único
+       * camino por el que el navegador puede crear un pedido.
+       */
+      create_order: {
+        Args: {
+          p_contact_email: string;
+          p_full_name: string;
+          p_address_line1: string;
+          p_shipping_option_id: string;
+          p_payment_method_id: string;
+          p_items: { part_id: number; quantity: number }[];
+          p_contact_phone?: string | null;
+          p_city?: string | null;
+          p_postal_code?: string | null;
+          p_order_notes?: string | null;
+        };
+        Returns: { id: string; total: number }[];
+      };
     };
     Enums: {
       chasis_type: ChasisType;

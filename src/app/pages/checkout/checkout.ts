@@ -101,9 +101,11 @@ export class Checkout implements OnInit {
 
     this.isSubmitting.set(true);
 
-    // Se permite comprar sin cuenta: userId puede ser null.
+    // Se permite comprar sin cuenta. Ya no se pasa el userId: lo resuelve
+    // Postgres con `auth.uid()` dentro de create_order, así que el navegador no
+    // puede decir que un pedido es de otra persona.
     this.orderService
-      .submit(payload, items, this.shippingPrice(), this.auth.currentUserId())
+      .submit(payload, items, this.shippingPrice())
       .subscribe({
         next: () => {
           this.isSubmitting.set(false);

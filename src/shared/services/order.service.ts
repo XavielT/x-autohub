@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of, switchMap } from 'rxjs';
+import { Observable, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { CheckoutSubmitPayload } from '../models/checkout.model';
@@ -13,12 +13,25 @@ export interface OrderResult {
 /**
  * Pedidos del catálogo.
  *
- * Se permite comprar sin cuenta (`user_id` nulo): pedir registro antes de pagar
- * es una barrera innecesaria. La política RLS acepta el insert cuando el
- * `user_id` es nulo o coincide con el usuario en sesión.
+ * Se permite comprar sin cuenta: pedir registro antes de pagar es una barrera
+ * innecesaria. Ver docs/ROADMAP.md.
  *
- * `order_items` guarda copia del nombre y el precio: si la pieza sube de precio
- * mañana, el pedido histórico no cambia.
+ * Todo pasa por la función `create_order` de Postgres (migración 0005), no por
+ * inserts directos. Dos razones, las dos verificadas contra la base real:
+ *
+ * 1. **El precio lo pone el servidor.** Antes el navegador enviaba `subtotal`,
+ *    `total` y el `unit_price` de cada línea, y nada los contrastaba con el
+ *    catálogo: un cliente manipulado podía comprar a RD$ 1. Ahora solo manda qué
+ *    pieza y cuántas.
+ *
+ * 2. **El checkout de invitado funciona.** Un pedido con `user_id` nulo no lo
+ *    puede leer nadie (RLS pide `user_id = auth.uid()`, y `NULL = NULL` no es
+ *    verdadero). Eso hacía fallar tanto el `.select()` posterior al insert como
+ *    el insert de `order_items`, cuyo `with check` consulta `orders`. El pedido
+ *    se creaba igual, así que un reintento generaba duplicados.
+ *
+ * Además el pedido y sus líneas entran en una sola transacción: ya no existe el
+ * estado a medias de "pedido sin líneas".
  */
 @Injectable({ providedIn: 'root' })
 export class OrderService {
@@ -28,58 +41,35 @@ export class OrderService {
     payload: CheckoutSubmitPayload,
     items: CartItem[],
     shippingPrice: number,
-    userId: string | null,
   ): Observable<OrderResult> {
-    const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
-    const total = subtotal + shippingPrice;
-
     if (this.supabase.shouldUseMockData()) {
-      return of({ id: `demo-${Date.now()}`, total });
+      const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
+      return of({ id: `demo-${Date.now()}`, total: subtotal + shippingPrice });
     }
 
     return from(
-      this.supabase.db
-        .from('orders')
-        .insert({
-          user_id: userId,
-          contact_email: payload.contactEmail,
-          contact_phone: payload.contactPhone || null,
-          full_name: payload.fullName,
-          address_line1: payload.addressLine1,
-          city: payload.city || null,
-          postal_code: payload.postalCode || null,
-          shipping_option_id: payload.shippingOptionId,
-          payment_method_id: payload.paymentMethodId,
-          order_notes: payload.orderNotes ?? null,
-          subtotal,
-          shipping_price: shippingPrice,
-          total,
-        })
-        .select('id, total')
-        .single(),
+      this.supabase.db.rpc('create_order', {
+        p_contact_email: payload.contactEmail,
+        p_full_name: payload.fullName,
+        p_address_line1: payload.addressLine1,
+        p_shipping_option_id: payload.shippingOptionId,
+        p_payment_method_id: payload.paymentMethodId,
+        p_items: items.map((i) => ({ part_id: i.part.id, quantity: i.quantity })),
+        p_contact_phone: payload.contactPhone || null,
+        p_city: payload.city || null,
+        p_postal_code: payload.postalCode || null,
+        p_order_notes: payload.orderNotes ?? null,
+      }),
     ).pipe(
       map((res) => unwrap(res)),
-      switchMap((order) =>
-        from(
-          this.supabase.db.from('order_items').insert(
-            items.map((i) => ({
-              order_id: order.id,
-              part_id: i.part.id,
-              name: i.part.name,
-              unit_price: i.part.price,
-              quantity: i.quantity,
-            })),
-          ),
-        ).pipe(
-          map((res) => {
-            if (res.error) {
-              console.error('[supabase] order_items', res.error);
-              throw new Error('Registramos el pedido pero fallaron sus lineas. Contactanos.');
-            }
-            return { id: order.id, total: Number(order.total) };
-          }),
-        ),
-      ),
+      map((rows) => {
+        // La función devuelve una tabla de una sola fila.
+        const order = Array.isArray(rows) ? rows[0] : rows;
+        if (!order) {
+          throw new Error('No pudimos registrar tu pedido. Intenta de nuevo.');
+        }
+        return { id: order.id, total: Number(order.total) };
+      }),
     );
   }
 }

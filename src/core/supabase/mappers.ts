@@ -39,12 +39,21 @@ import {
   SocialPostRow,
 } from './database.types';
 
-export function toUser(row: ProfileRow): UserModel {
+/**
+ * Columnas públicas del perfil.
+ *
+ * `email` y `phone` quedaron fuera del alcance de las claves anon y
+ * authenticated en la migración 0006 (eran legibles por cualquiera). El correo
+ * del usuario en sesión sale de Supabase Auth, que es su fuente autoritativa;
+ * por eso `toUser` lo recibe aparte en vez de leerlo de la fila.
+ */
+export type PublicProfileRow = Omit<ProfileRow, 'email' | 'phone'>;
+
+export function toUser(row: PublicProfileRow, email: string): UserModel {
   return {
     id: row.id,
     displayName: row.display_name,
-    email: row.email,
-    phone: row.phone ?? undefined,
+    email,
     location: row.location ?? undefined,
     avatarUrl: row.avatar_url ?? undefined,
     isVerified: row.is_verified,

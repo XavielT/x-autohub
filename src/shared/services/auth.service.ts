@@ -158,11 +158,21 @@ export class AuthService {
     );
   }
 
+  /**
+   * Columnas públicas de `profiles`.
+   *
+   * No se puede pedir `*`: la migración 0006 le quitó `email` y `phone` a las
+   * claves anon y authenticated, porque eran legibles por cualquiera. Pedir `*`
+   * fallaría con "permission denied for column".
+   */
+  private static readonly PROFILE_COLUMNS =
+    'id, display_name, avatar_url, is_verified, location, created_at, is_admin';
+
   /** Carga el perfil y actualiza la señal. */
   private async loadProfile(userId: string): Promise<UserModel | null> {
     const { data, error } = await this.supabase.db
       .from('profiles')
-      .select('*')
+      .select(AuthService.PROFILE_COLUMNS)
       .eq('id', userId)
       .single();
 
@@ -171,7 +181,10 @@ export class AuthService {
       return null;
     }
 
-    const user = toUser(data);
+    // El correo sale de Supabase Auth, no de la tabla: es su fuente
+    // autoritativa y sigue disponible para el usuario en sesión.
+    const { data: authData } = await this.supabase.db.auth.getUser();
+    const user = toUser(data, authData.user?.email ?? '');
     this._user.set(user);
     return user;
   }
