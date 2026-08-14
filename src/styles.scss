@@ -44,34 +44,44 @@
     font-display: swap;
 }
 
+// Reemplazan a ROLNER, Batman y Designer, que se renderizaban sin licencia
+// comercial (ver docs/CONVENTIONS.md). Ambas son SIL OFL 1.1; el texto de la
+// licencia va junto a los archivos, como la propia OFL exige.
+//
+// Orbitron toma el lugar de ROLNER (navbar y contadores). ROLNER además nunca
+// llegó a renderizar: el navegador rechazaba el archivo y caía a Trebuchet MS.
 @font-face {
-    font-family: 'ROLNER';
-    src: url('assets/fonts/ROLNER/ROLNER.woff2') format('woff2');
+    font-family: 'Orbitron';
+    src: url('assets/fonts/Orbitron/Orbitron-Variable.woff2') format('woff2');
+    font-weight: 400 900;
+    font-display: swap;
+}
+
+// Chakra Petch toma el lugar de Batman (título del home, en cursiva) y de
+// Designer (los signos de interrogación destacados de /servicios).
+@font-face {
+    font-family: 'Chakra-Petch';
+    src: url('assets/fonts/Chakra-Petch/ChakraPetch-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Designer';
-    src: url('assets/fonts/Designer/Designer.woff2') format('woff2');
+    font-family: 'Chakra-Petch';
+    src: url('assets/fonts/Chakra-Petch/ChakraPetch-BoldItalic.woff2') format('woff2');
+    font-weight: 700;
+    font-style: italic;
     font-display: swap;
 }
 
-// Usadas directamente por home-welcome.scss, no por un token --font-*.
-@font-face {
-    font-family: 'Batman';
-    src: url('assets/fonts/Batman/Batman.woff2') format('woff2');
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Biotrip-Serif';
-    src: url('assets/fonts/Biotrip-Serif/Biotrip-Serif.woff2') format('woff2');
-    font-display: swap;
-}
 
 // Registradas y disponibles por token, pero hoy ningún componente las usa.
-// Se conservan como parte de la paleta tipográfica; ver BITACORA (fase 2).
-// OJO: Dimona es "personal use only" — hay que reemplazarla antes de usarla.
+// Se conservan como parte de la paleta tipográfica.
+//
+// ⚠️ Antes de usar cualquiera de estas dos hay que resolver su licencia: no
+// traen documentación, y Biotrip-Serif (declarada más arriba) dice "Personal
+// use only" en su propia tabla de nombres. Dimona se eliminó por esa razón.
 @font-face {
     font-family: 'Gefika';
     src: url('assets/fonts/Gefika/Gefika.woff2') format('woff2');
@@ -84,23 +94,16 @@
     font-display: swap;
 }
 
-@font-face {
-    font-family: 'Dimona';
-    src: url('assets/fonts/Dimona/Dimona-En.woff2') format('woff2');
-    font-display: swap;
-}
-
 :root{
     // Main Fonts
     --font-brand: 'Space-Grotesk', sans-serif;
-    //--font-brand: 'ROLNER', sans-serif;
-    --font-brand2: 'ROLNER', sans-serif;
+    //--font-brand: 'Orbitron', sans-serif;
+    --font-brand2: 'Orbitron', sans-serif;
     --font-heading: 'Gefika', sans-serif;
     --font-body: 'Manrope', sans-serif;
     --font-body2: 'Trebuchet MS', sans-serif;
     --font-highlight: 'Spoiler-script', cursive;
-    --font-highlight2: 'Designer', cursive;
-    --font-highlight3: 'Dimona', cursive;
+    --font-highlight2: 'Chakra-Petch', sans-serif;
     --font-btns: 'Space-Grotesk', sans-serif;
     // Was declared twice; the Biotrip-Serif value was always overridden by this one.
     --font-card-title: 'Space-Grotesk', sans-serif;

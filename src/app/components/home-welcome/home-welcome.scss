@@ -41,8 +41,11 @@
     margin-left: 20px;
 }
 
+// Chakra Petch sustituye a Batman, que era shareware sin licencia comercial.
+// La cursiva la aplica el h1 (abajo), no este contenedor: el <p> también vive
+// aquí dentro y heredaría la inclinación.
 .home-welcome-info{
-    font-family: 'Batman', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-family: 'Chakra-Petch', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     //font-family: var(--font-brand);
 }
 

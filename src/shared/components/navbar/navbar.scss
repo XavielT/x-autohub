@@ -47,7 +47,9 @@
 }
 
 .navbar-menu-list-item a{
-    font-family: 'ROLNER', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    // Orbitron sustituye a ROLNER (sin licencia comercial, y que además el
+    // navegador rechazaba: esto caía a Trebuchet MS sin que se notara).
+    font-family: 'Orbitron', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     display: flex;
     justify-content: start;
     align-items: center;

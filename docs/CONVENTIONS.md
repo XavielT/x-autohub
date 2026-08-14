@@ -183,18 +183,53 @@ font-family: 'Space-Grotesk', sans-serif;
 
 **Fuentes**
 
-| Token             | Familia        | Uso                          |
-| ----------------- | -------------- | ---------------------------- |
-| `--font-brand`    | Space Grotesk  | Títulos, nombres, labels     |
-| `--font-body`     | Manrope        | Párrafos, descripciones      |
-| `--font-btns`     | Space Grotesk  | Botones                      |
-| `--font-price`    | Manrope        | Precios                      |
-| `--font-date`     | Manrope        | Fechas                       |
-| `--font-brand2`   | ROLNER         | Acento de marca              |
+| Token              | Familia        | Licencia | Uso                        |
+| ------------------ | -------------- | -------- | -------------------------- |
+| `--font-brand`     | Space Grotesk  | OFL 1.1  | Títulos, nombres, labels   |
+| `--font-body`      | Manrope        | OFL 1.1  | Párrafos, descripciones    |
+| `--font-btns`      | Space Grotesk  | OFL 1.1  | Botones                    |
+| `--font-price`     | Manrope        | OFL 1.1  | Precios                    |
+| `--font-date`      | Manrope        | OFL 1.1  | Fechas                     |
+| `--font-brand2`    | Orbitron       | OFL 1.1  | Navbar y contadores        |
+| `--font-highlight2`| Chakra Petch   | OFL 1.1  | Acentos (`/servicios`)     |
 
-Antes de usar un `@font-face` nuevo, **verifica que el archivo exista**. Un
-`--font-body` roto pasó desapercibido en 59 lugares porque el navegador cae
-silenciosamente al sans-serif del sistema.
+Chakra Petch también rotula el título del home, en cursiva, desde
+`home-welcome.scss` (no por token).
+
+**Toda fuente nueva tiene que traer licencia comercial.** X AutoHub es una
+plataforma comercial. En agosto de 2026 se retiraron cuatro que no la tenían:
+Batman (`Shareware`), ROLNER (`All Rights Reserved`, de Storytype Studio),
+Designer (sin documentación) y Dimona (`Freeware, Non-Commercial`). La licencia
+suele estar **dentro del propio archivo**, en la tabla `name` (IDs 7, 13 y 14):
+
+```bash
+python3 -c "
+from fontTools.ttLib import TTFont
+t = TTFont('src/assets/fonts/RUTA.woff2')
+print({n.nameID: str(n) for n in t['name'].names if n.nameID in (7,13,14)})"
+```
+
+Cuando la fuente sea OFL, guarda su `OFL.txt` junto al archivo: la propia
+licencia obliga a distribuirlo.
+
+> ⚠️ Quedan dos sin resolver, cargadas pero sin usar: **Gefika** (`--font-heading`,
+> sin documentación) y **Spoiler-script** (`--font-highlight`, sin documentación).
+> **Biotrip-Serif** dice `Personal use only` en su tabla de nombres. Ninguna se
+> renderiza hoy; hay que resolver su licencia antes de darles uso.
+
+Antes de usar un `@font-face` nuevo, **verifica que el archivo exista y que el
+navegador lo acepte**. Dos formas distintas de fallar, las dos silenciosas:
+
+- `--font-body` apuntaba a una carpeta equivocada y pasó desapercibido en 59
+  lugares.
+- ROLNER **sí descargaba** (HTTP 200, 19 KB) pero Chrome rechazaba el archivo:
+  el navbar y los contadores llevaban meses cayendo a Trebuchet MS. Un 200 no
+  basta. Compruébalo en la consola del navegador:
+
+```js
+[...document.fonts].map(f => `${f.family}: ${f.status}`)
+// "loaded" está bien; "error" es una fuente que descargó pero no sirve.
+```
 
 ### Nombres — BEM con el anidamiento de SCSS
 
