@@ -133,6 +133,7 @@ export function toHubMarketItem(row: HubMarketItemRow): HubMarketItemModel {
     // Si hay vendedor real, manda el nombre de su perfil; si no, el sembrado.
     sellerName: row.profiles?.display_name ?? row.seller_name,
     sellerId: row.seller_id ?? undefined,
+    contactPhone: row.contact_phone ?? undefined,
     category: row.category,
     isFeatured: row.is_featured,
     detailRoute: detailRouteFor(row),
@@ -169,6 +170,9 @@ export function fromHubMarketItem(
     images: item.images,
     price: item.price,
     location: item.location,
+    // Ya normalizado por quien llama (`publicar`): el check de la 0010 exige
+    // solo dígitos, así que un formato con guiones sería un error del servidor.
+    contact_phone: item.contactPhone ?? null,
     category: item.category,
     condition: item.condition ?? null,
     spec_year: item.vehicleSpecs?.year ?? null,

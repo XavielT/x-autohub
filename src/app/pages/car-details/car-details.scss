@@ -184,12 +184,20 @@
     display: flex;
     gap: 5px;
     align-items: center;
+    // El botón de WhatsApp se va al extremo derecho del bloque, y el `wrap` lo
+    // baja a su propia línea cuando el nombre del vendedor es largo o la
+    // pantalla es angosta, en vez de apretar los dos.
+    flex-wrap: wrap;
 
     h3{
       margin: 0;
     }
     p{
       margin: 0;
+    }
+
+    .whatsapp-btn {
+      margin-left: auto;
     }
   }
 

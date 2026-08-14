@@ -1,0 +1,60 @@
+// =============================================================================
+// Botón "Contactar por WhatsApp" — patrón compartido
+// =============================================================================
+//
+// Va en la hoja global por la misma razón que `_forms.scss`: el mismo botón sale
+// en `car-details`, `hub-market-part-details`, `accessory-details` y
+// `auto-hub-details`. Repetirlo en los cuatro SCSS sería el mismo CSS en cuatro
+// bundles y cuatro lugares donde olvidarse de un cambio.
+//
+// La geometría es la de los CTA que ya tienen las páginas de detalle —radio 8px,
+// `--font-btns`, 700— para que no se lea como un botón traído de otra parte. Lo
+// único propio es el verde, que es con lo que WhatsApp se reconoce sin leer la
+// etiqueta; no compite con el ámbar de marca porque no hay otro botón verde en
+// el sitio.
+//
+// El verde es el **teal** de WhatsApp (#128C7E) y no el verde claro (#25D366)
+// por dos razones que van juntas: `whatsapp-w-icon.svg` viene con `fill="#fff"`
+// y necesita fondo oscuro para verse, y el texto blanco sobre el verde claro se
+// queda en 2.4:1 de contraste — por debajo del 4.5:1 de WCAG AA. Sobre el teal
+// da 4.6:1, así que el ícono se usa tal cual está, sin filtros que recolorear.
+
+$whatsapp: #128c7e; // Teal green de la marca.
+$whatsapp-hover: #15a08f;
+$whatsapp-glow: rgba(37, 211, 102, 0.45); // El verde claro, solo como brillo.
+
+.whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: $whatsapp;
+  color: #fff;
+  font-family: var(--font-btns);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  img {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background-color: $whatsapp-hover;
+    box-shadow: 0 0 10px $whatsapp-glow;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}

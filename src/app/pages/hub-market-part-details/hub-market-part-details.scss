@@ -163,7 +163,11 @@
     flex-wrap: wrap;
   }
 
-  &__contact-btn,
+  // `&__contact-btn` era el `mailto:` sin destinatario que había aquí: abría el
+  // cliente de correo con el "Para" vacío, así que no contactaba a nadie. Lo
+  // reemplaza `.whatsapp-btn`, que sí lleva al vendedor y vive en la hoja global
+  // porque es el mismo botón en las cuatro páginas de detalle.
+
   &__market-btn {
     border-radius: 8px;
     padding: 12px 16px;
@@ -172,20 +176,6 @@
     text-decoration: none;
     transition: all 0.2s ease;
     cursor: pointer;
-  }
-
-  &__contact-btn {
-    border: none;
-    background-color: var(--Hub);
-    color: #1a1a1a;
-    font-weight: 700;
-  }
-
-  &__contact-btn:hover {
-    box-shadow: 0 0 10px rgba(var(--Hub-rgb), 0.45);
-  }
-
-  &__market-btn {
     border: 1px solid #3a3a3a;
     background: transparent;
     color: #fff;

@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe, SlicePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { CarCard } from '../../../shared/components/car-card/car-card';
+import { buildWaLink } from '../../../shared/utils/whatsapp';
 
 @Component({
   selector: 'app-car-details',
@@ -25,6 +26,21 @@ export class CarDetails implements OnInit {
 
   readonly isDescriptionExpanded = signal(false);
   readonly maxDescriptionLength = 200;
+
+  /**
+   * Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono.
+   *
+   * La plantilla usa la cadena vacía como condición: sin teléfono no hay botón,
+   * y el bloque del vendedor queda solo con su nombre.
+   */
+  readonly waLink = computed(() => {
+    const car = this.car();
+    if (!car?.contactPhone) return '';
+    return buildWaLink(
+      car.contactPhone,
+      `Hola! Vi tu publicacion "${car.title}" en X AutoHub y me interesa.`,
+    );
+  });
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {

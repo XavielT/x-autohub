@@ -19,6 +19,7 @@ describe('mappers', () => {
       images: ['a.jpg', 'b.jpg'],
       price: 130000,
       location: 'Santo Domingo',
+      contact_phone: '8095550134',
       category: 'vehiculos',
       condition: null,
       is_featured: true,
@@ -78,6 +79,14 @@ describe('mappers', () => {
       expect(toHubMarketItem(base).sellerName).toBe('Juan M.');
     });
 
+    it('trae el telefono de contacto de la publicacion', () => {
+      expect(toHubMarketItem(base).contactPhone).toBe('8095550134');
+    });
+
+    it('deja contactPhone indefinido cuando la publicacion no trae telefono', () => {
+      expect(toHubMarketItem({ ...base, contact_phone: null }).contactPhone).toBeUndefined();
+    });
+
     it('deriva la ruta de detalle segun la categoria', () => {
       expect(toHubMarketItem(base).detailRoute).toBe('/car-details/101');
       expect(toHubMarketItem({ ...base, category: 'piezas' }).detailRoute).toBe(
@@ -113,6 +122,26 @@ describe('mappers', () => {
       expect(row.spec_hp).toBe(325);
       // Los opcionales ausentes viajan como null, no undefined.
       expect(row.spec_top_speed).toBeNull();
+      expect(row.contact_phone).toBeNull();
+    });
+
+    it('lleva el telefono de contacto tal como se lo dieron, ya normalizado', () => {
+      const row = fromHubMarketItem(
+        {
+          title: 'Discos Brembo',
+          description: 'Poco uso',
+          images: ['d.jpg'],
+          price: 600,
+          location: 'Santo Domingo',
+          sellerName: 'Racing Parts RD',
+          category: 'piezas',
+          contactPhone: '8295550187',
+        },
+        'uuid-3',
+        'Racing Parts RD',
+      );
+
+      expect(row.contact_phone).toBe('8295550187');
     });
   });
 

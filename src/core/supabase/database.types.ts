@@ -75,6 +75,8 @@ export type HubMarketItemRow = {
   images: string[];
   price: number;
   location: string;
+  /** Solo dígitos, sin código de país. Migración 0010. */
+  contact_phone: string | null;
   category: HubMarketCategoryDb;
   condition: ItemCondition | null;
   is_featured: boolean;

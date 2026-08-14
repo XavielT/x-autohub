@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { forkJoin, of, switchMap } from 'rxjs';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
+import { buildWaLink } from '../../../shared/utils/whatsapp';
 
 @Component({
   selector: 'app-hub-market-part-details',
@@ -22,6 +23,16 @@ export class HubMarketPartDetails implements OnInit {
   readonly images = signal<string[]>([]);
   readonly currentImageIndex = signal(0);
   readonly isLoading = signal(true);
+
+  /** Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono. */
+  readonly waLink = computed(() => {
+    const part = this.part();
+    if (!part?.contactPhone) return '';
+    return buildWaLink(
+      part.contactPhone,
+      `Hola! Vi tu publicacion "${part.title}" en X AutoHub y me interesa.`,
+    );
+  });
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {

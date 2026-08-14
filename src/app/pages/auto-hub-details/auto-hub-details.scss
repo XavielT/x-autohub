@@ -165,6 +165,25 @@
         }
     }
 
+    /// El contacto deja de ser una celda más de la ficha: ahora lleva el botón
+    /// de WhatsApp, que con "Contactar por WhatsApp" no cabe en una columna de
+    /// 150px. Ocupa la fila completa y se acomoda en horizontal — etiqueta y
+    /// número a la izquierda, botón a la derecha — con una línea arriba que lo
+    /// separa de las especificaciones, porque ya no es una de ellas.
+    &__spec-item--contact {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        padding-top: 16px;
+        border-top: 1px solid #2d2d2d;
+
+        .whatsapp-btn {
+            margin-left: auto;
+        }
+    }
+
     &__description {
         background: #161616;
         border: 1px solid #2d2d2d;

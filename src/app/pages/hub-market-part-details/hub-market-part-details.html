@@ -45,9 +45,12 @@
           <p class="hub-market-part-details__description">{{ part.description }}</p>
           <span class="hub-market-part-details__price">RD$ {{ part.price | number:'1.0-0' }}</span>
           <div class="hub-market-part-details__actions">
-            <a class="hub-market-part-details__contact-btn" href="mailto:?subject=Interesado en {{part.title}}">
-              Contactar Vendedor
-            </a>
+            @if (waLink(); as link) {
+              <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
+                <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+                Contactar por WhatsApp
+              </a>
+            }
             <a class="hub-market-part-details__market-btn" [routerLink]="['/hub-market']">
               Ver más en Hub Market
             </a>

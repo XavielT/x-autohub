@@ -6,5 +6,11 @@
   <p>Precio: RD$ {{accessory.price | number: '1.0-0'}}</p>
   <p>Vendedor: {{accessory.sellerName}}</p>
   <p>Ubicación: {{accessory.location}}</p>
+  @if (waLink(); as link) {
+    <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
+      <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+      Contactar por WhatsApp
+    </a>
+  }
 </div>
 }

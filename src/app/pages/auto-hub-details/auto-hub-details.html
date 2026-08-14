@@ -69,9 +69,15 @@
                 <span>Ubicacion</span>
                 <strong>{{ auto.location }}</strong>
               </div>
-              <div class="auto-hub-details__spec-item">
+              <div class="auto-hub-details__spec-item auto-hub-details__spec-item--contact">
                 <span>Contacto</span>
-                <strong>{{ auto.contact }}</strong>
+                <strong>{{ contactDisplay() }}</strong>
+                @if (waLink(); as link) {
+                  <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
+                    <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+                    Contactar por WhatsApp
+                  </a>
+                }
               </div>
             </div>
           </div>

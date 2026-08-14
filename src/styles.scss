@@ -1,6 +1,8 @@
 // Realimentación de formularios: `.req`, `.form-legend`, `.is-invalid`,
 // `.field-error`. Global a propósito — ver el comentario del partial.
 @use 'styles/forms';
+// `.whatsapp-btn`, el mismo botón en las cuatro páginas de detalle.
+@use 'styles/whatsapp-btn';
 
 //Global Palette colors
 :root{

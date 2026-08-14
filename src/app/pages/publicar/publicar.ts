@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -14,6 +14,7 @@ import {
   focusFirstInvalid,
   missingFieldsMessage,
 } from '../../../shared/forms/required-fields';
+import { drPhoneValidator, normalizeDrPhone } from '../../../shared/utils/phone';
 
 @Component({
   selector: 'app-publicar',
@@ -58,6 +59,9 @@ export class Publicar {
     description: ['', Validators.required],
     price: [0, [Validators.required, Validators.min(1)]],
     location: ['', Validators.required],
+    // Opcional: sin él la publicación sale igual, solo que sin botón de
+    // WhatsApp. Por eso no entra en `requiredFields()`.
+    contactPhone: ['', drPhoneValidator],
     year: [null as number | null],
     mileage: [null as number | null],
     hp: [null as number | null],
@@ -75,6 +79,22 @@ export class Publicar {
     this.publishForm.controls.category.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.syncVehicleValidators());
+
+    // El teléfono del perfil, como punto de partida. Va en un `effect` y no en
+    // el valor inicial del control porque con Supabase la sesión se restaura de
+    // forma asíncrona: al construirse el componente `auth.user()` todavía puede
+    // ser `null` aunque haya sesión (la misma razón por la que los guards
+    // esperan `whenReady()`). Con mocks llega en la primera pasada.
+    //
+    // `pristine` es lo que impide que sobreescriba lo que el usuario ya escribió
+    // si el perfil termina de cargar tarde.
+    effect(() => {
+      const phone = this.auth.user()?.phone;
+      const control = this.publishForm.controls.contactPhone;
+      if (phone && control.pristine && !control.value) {
+        control.setValue(phone);
+      }
+    });
   }
 
   private syncVehicleValidators(): void {
@@ -193,6 +213,18 @@ export class Publicar {
       return;
     }
 
+    // El teléfono no falta —es opcional— pero puede estar mal escrito, y eso no
+    // lo cubre `requiredFields()`. Sin esta comprobación el número inválido se
+    // normalizaría a `undefined` en silencio y la publicación saldría sin botón
+    // de WhatsApp, que es justo lo que el usuario quiso poner.
+    if (this.publishForm.controls.contactPhone.invalid) {
+      this.toast.show('Escribe un telefono valido, ej. 809 555 0134.', 'error');
+      focusFirstInvalid(this.host.nativeElement, [
+        { key: 'contactPhone', label: 'Telefono de contacto', invalid: true },
+      ]);
+      return;
+    }
+
     const user = this.auth.user();
     if (!user) {
       // El authGuard ya protege esta ruta; esto cubre que la sesión expire
@@ -218,6 +250,9 @@ export class Publicar {
             images: imageUrls,
             location: form.location,
             sellerName: user.displayName,
+            // Se guarda normalizado (solo dígitos): es lo que exige el check de
+            // la migración 0010 y lo que `buildWaLink` espera recibir.
+            contactPhone: normalizeDrPhone(form.contactPhone) ?? undefined,
             condition: form.condition === 'new' || form.condition === 'used' ? form.condition : undefined,
             ...(form.category === 'vehiculos' && {
               vehicleSpecs: {

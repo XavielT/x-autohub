@@ -9,6 +9,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
     price: 130000,
     location: 'Santo Domingo',
     sellerName: 'Juan M.',
+    contactPhone: '8095550134',
     category: 'vehiculos',
     isFeatured: true,
     detailRoute: '/car-details/101',
@@ -75,6 +76,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
     price: 600,
     location: 'Santo Domingo',
     sellerName: 'Racing Parts RD',
+    contactPhone: '8295550187',
     category: 'piezas',
     detailRoute: '/hub-part-details/9',
     createdAt: '2026-04-18'
@@ -99,6 +101,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
     price: 120,
     location: 'San Cristobal',
     sellerName: 'Accesorios Hub',
+    contactPhone: '8495550142',
     category: 'accesorios',
     createdAt: '2026-03-29'
   },

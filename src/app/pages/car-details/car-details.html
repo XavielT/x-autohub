@@ -71,6 +71,12 @@
       <div class="car-details__seller">
         <h3>Vendedor</h3>
         <p>{{car.sellerName}}</p>
+        @if (waLink(); as link) {
+          <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
+            <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+            Contactar por WhatsApp
+          </a>
+        }
       </div>
 
       <div class="car-details__description">
