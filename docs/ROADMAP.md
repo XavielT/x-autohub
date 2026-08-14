@@ -10,14 +10,39 @@ Cada punto dice **por qué** importa, no solo qué hacer.
 
 ## P0 — Lo que sigue
 
-### 1. Conectar el proyecto de Supabase  ⬅️ **empieza por aquí**
+### 1. Apuntar `xautohubrd.com` a Vercel  ⬅️ **lo único que falta para salir**
 
-El código está listo; falta crear el proyecto, correr las cuatro migraciones y
-pegar dos valores en `src/environments/`. **15 minutos**, paso a paso en
-`docs/BACKEND.md`.
+El dominio **nunca apuntó a Vercel**: apunta a Squarespace, que sirve una página
+"Próximamente" con `noindex`. El proyecto de Vercel está bien configurado y
+desplegado; falta solo el DNS.
 
-Mientras no lo hagas, la app sigue funcionando con los mocks: `shouldUseMockData()`
-devuelve true cuando no hay credenciales.
+En el proveedor de DNS (los nameservers son `ns-cloud-a*.googledomains.com`):
+
+```
+A      xautohubrd.com    76.76.21.21
+CNAME  www               cname.vercel-dns.com
+```
+
+Cuidado al medir esto: mientras el DNS apunte a Squarespace, **cualquier ruta
+devuelve HTTP 200** aunque la app no esté sirviéndose. Un 200 no prueba nada;
+comprueba la cabecera `server:` o busca el contenido real.
+
+Después, en Supabase → Authentication → URL Configuration, cambia **Site URL** de
+`http://localhost:4200` al dominio real y deja las dos en Redirect URLs.
+
+### 2. Seguridad del backend — **ya corregida y verificada**
+
+Las migraciones 0004, 0005 y 0006 están ejecutadas. Se deja constancia de lo que
+se encontró, porque son las trampas a no repetir (ver también `CLAUDE.md`):
+
+| | Problema | Cómo se cerró |
+| --- | --- | --- |
+| 1 | **Escalada de privilegios.** Cualquier usuario registrado podía ponerse `is_admin = true` editando su propio perfil. Reproducido: una cuenta nueva cambió el precio de una pieza a RD$ 1 y pudo leer todos los pedidos. | Trigger `freeze_profile_privileges` (0005). Solo la `service_role` mueve `is_admin` / `is_verified`. |
+| 2 | **El precio lo ponía el navegador.** `subtotal`, `total` y `unit_price` viajaban desde el cliente sin contrastarse con el catálogo. | La función `create_order` los calcula en Postgres; el cliente solo manda pieza y cantidad (0005). |
+| 3 | **Checkout de invitado roto.** El pedido se creaba pero la app fallaba después, así que un reintento generaba duplicados. | Todo en una transacción dentro de `create_order` (0005). |
+| 4 | **Correos y teléfonos públicos.** `profiles` era legible por cualquiera con la clave anon. | Permisos de columna (0006). Ver `docs/BACKEND.md`. |
+
+Verificado repitiendo cada ataque contra la base después del arreglo.
 
 Al terminar, márcate como admin para poder gestionar el inventario propio:
 
@@ -60,6 +85,16 @@ Las fuentes que se quedan están en `.ttf`. WOFF2 pesa ~40% menos y lo soporta t
 navegador vivo. Space Grotesk y Manrope juntas bajarían de 308 KB a ~120 KB.
 
 ## P1 — Deuda que ya está costando
+
+### 3.5. El carrito no sobrevive una recarga
+
+`cart.service.ts` guarda el carrito solo en memoria: no hay `localStorage` ni
+`sessionStorage`. Verificado en el navegador — agregar dos piezas, refrescar
+(F5), y el carrito queda vacío.
+
+Para una tienda eso es pérdida de ventas directa: cualquier recarga, un enlace
+compartido o volver desde otra pestaña borra la compra a medias. Persistirlo en
+`localStorage` es un cambio pequeño y contenido en ese servicio.
 
 ### 4. Unificar las cinco páginas de detalle
 

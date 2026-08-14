@@ -21,12 +21,17 @@ clonar el repo y hacer `npm start` sin configurar nada.
 En el **SQL Editor** del dashboard, ejecuta estos archivos **en orden**. Cada uno
 en una consulta aparte, y revisa que termine sin error antes de seguir:
 
-| Orden | Archivo                                | Qué hace                                    |
-| ----- | -------------------------------------- | ------------------------------------------- |
-| 1     | `supabase/migrations/0001_schema.sql`  | Tablas, tipos enum y el trigger de perfiles |
-| 2     | `supabase/migrations/0002_rls.sql`     | Row Level Security — **no lo saltes**       |
-| 3     | `supabase/migrations/0003_storage.sql` | Buckets de imágenes y sus políticas         |
-| 4     | `supabase/seed.sql`                    | Los mismos datos que ves hoy con los mocks  |
+| Orden | Archivo                                        | Qué hace                                       |
+| ----- | ---------------------------------------------- | ---------------------------------------------- |
+| 1     | `supabase/migrations/0001_schema.sql`          | Tablas, tipos enum y el trigger de perfiles    |
+| 2     | `supabase/migrations/0002_rls.sql`             | Row Level Security — **no lo saltes**          |
+| 3     | `supabase/migrations/0003_storage.sql`         | Buckets de imágenes y sus políticas            |
+| 4     | `supabase/migrations/0004_rename_stars_rating.sql` | `stars_calification` → `stars_rating`      |
+| 5     | `supabase/migrations/0005_security_fixes.sql`  | Escalada de privilegios, precios y checkout    |
+| 6     | `supabase/migrations/0006_profile_privacy.sql` | El correo y el teléfono dejan de ser públicos  |
+| 7     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+
+> El seed va **al final**: usa `stars_rating`, el nombre que deja la 0004.
 
 > ⚠️ Sin el paso 2 tu base queda abierta: la clave anon es pública y va en el
 > bundle del navegador. Lo único que impide que cualquiera borre tus datos son
@@ -49,8 +54,19 @@ export const environment: AppEnvironment = {
 Repite en `environment.production.ts` con el proyecto de producción (o el mismo,
 si por ahora hay uno solo).
 
-**La clave `service_role` NUNCA va en estos archivos.** Se salta todo RLS. Si
-alguna vez la pegas por error, rótala de inmediato desde el dashboard.
+**La clave `service_role` NUNCA va en estos archivos.** Se salta todo RLS, y
+Angular compila `environment.ts` dentro del bundle del navegador: pegarla ahí la
+publica. Si alguna vez la pones por error, rótala de inmediato desde el
+dashboard.
+
+Para las tareas de administración desde la línea de comandos va en `.env.local`,
+que está en `.gitignore` y no se compila dentro de la app:
+
+```bash
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOi...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
+```
 
 ### 4. Configurar Auth
 
@@ -124,10 +140,48 @@ La clave anon es pública. La seguridad real está en RLS:
 El `with check (seller_id = auth.uid())` de Hub Market es lo que impide publicar
 en nombre de otro, incluso desde un cliente manipulado.
 
+### Datos privados del perfil (migración 0006)
+
+`email` y `phone` de `profiles` **no** son legibles con la clave anon ni con una
+sesión normal: antes cualquiera podía descargar el correo y el teléfono de todos
+los usuarios. Solo la `service_role` los ve.
+
+Dos consecuencias prácticas:
+
+- **No pidas `select('*')` sobre `profiles`.** Falla con
+  `permission denied for table profiles`. Pide las columnas públicas:
+  `id, display_name, avatar_url, is_verified, location, created_at, is_admin`.
+  Así lo hace ya `auth.service.ts`.
+- **El correo del usuario en sesión sale de Supabase Auth**
+  (`db.auth.getUser()`), que es su fuente autoritativa.
+
+Cuando construyas la pantalla de editar perfil, el `update` funciona, pero **no
+puede devolver la fila completa** (traería `email` y `phone`). Cualquiera de las
+dos formas sirve:
+
+```ts
+// Pidiendo de vuelta solo lo permitido
+await db.from('profiles').update({ display_name: nombre })
+  .eq('id', uid).select('id, display_name, location');
+
+// O sin devolver nada
+await db.from('profiles').update({ display_name: nombre }).eq('id', uid);
+```
+
+`is_admin` e `is_verified` se pueden enviar y la petición responde 204, pero el
+trigger de 0005 los deja como estaban. Solo la `service_role` los mueve — es
+decir, `scripts/make-admin.mjs`.
+
 ### Hacerte admin
 
-Para poder gestionar Auto Hub, el catálogo y las noticias, marca tu perfil desde
-el SQL Editor después de registrarte:
+Para poder gestionar Auto Hub, el catálogo y las noticias, **regístrate primero**
+en `/registro` (el perfil lo crea el trigger, no el comando) y después:
+
+```bash
+node scripts/make-admin.mjs tu@correo.com
+```
+
+Lee la `service_role` de `.env.local`. Equivale a hacerlo desde el SQL Editor:
 
 ```sql
 update public.profiles set is_admin = true, is_verified = true

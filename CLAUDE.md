@@ -141,6 +141,32 @@ Cosas que ya causaron un bug. No las repitas:
 - **`@font-face` sin verificar el archivo.** `--font-body` (Manrope, usado 59
   veces) apuntaba a una carpeta equivocada y todo el sitio caía al sans-serif del
   sistema sin que nadie lo notara. Si tocas fuentes, confirma que el archivo existe.
+- **Una fuente puede descargar bien y aun así no servir.** ROLNER respondía 200
+  con sus 19 KB completos, pero Chrome rechazaba el archivo y el navbar llevaba
+  meses en Trebuchet MS. Un 200 no prueba nada: revisa
+  `[...document.fonts].map(f => f.family + ':' + f.status)` y exige `loaded`,
+  no `error`.
+- **Licencia de fuentes: está dentro del archivo.** La tabla `name` (IDs 7, 13,
+  14) trae el copyright y la licencia aunque no haya ningún `.txt` al lado. Así
+  se descubrió que Batman era `Shareware` y ROLNER `All Rights Reserved`. Ver
+  `docs/CONVENTIONS.md`.
+- **Los guards no pueden leer la sesión de forma sincrónica.** Con Supabase la
+  restauración es asíncrona: en la primera carga `isLoggedIn()` es `false`
+  aunque haya sesión. Un F5 sobre `/publicar` rebotaba a `/login` mientras el
+  navbar ya mostraba al usuario. Los guards esperan `auth.whenReady()`. Con
+  mocks no se ve, porque ahí la sesión se lee en el constructor.
+- **`select('*')` sobre `profiles` falla.** La migración 0006 le quitó `email` y
+  `phone` a las claves anon y authenticated (cualquiera podía descargar los
+  correos de todos). Pide las columnas públicas, y para un `update` no devuelvas
+  la fila completa. Ver `docs/BACKEND.md`.
+- **RLS no filtra por columna.** Que la política diga "solo tu propia fila" no
+  impide que esa fila traiga `is_admin = true`: así se pudo escalar a admin y
+  cambiar el precio del catálogo. Para proteger columnas hacen falta permisos de
+  columna o un trigger (migración 0005).
+- **Las pruebas no ven a Supabase.** `provideHttpClientTesting` no lo intercepta
+  (usa fetch), así que en cuanto `environment.ts` tuvo credenciales reales seis
+  pruebas empezaron a pegarle a la base en vivo. `src/test-providers.ts` inyecta
+  `TestSupabaseService` para forzar el modo mock; no lo quites.
 - **`LOCALE_ID` es `es-DO`.** Los pipes `date` y `number` ya formatean en español
   dominicano. No pongas `toLocaleString('en-US')` a mano.
 - **Precios siempre `RD$`** con `| number:'1.0-0'`. Nunca `$` solo.
