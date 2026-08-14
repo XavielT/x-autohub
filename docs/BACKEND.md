@@ -31,7 +31,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 6     | `supabase/migrations/0006_profile_privacy.sql` | El correo y el teléfono dejan de ser públicos  |
 | 7     | `supabase/migrations/0007_admin_module.sql`    | Panel de admin: versiones, usuarios y permisos |
 | 8     | `supabase/migrations/0008_inventory_storage.sql` | Bucket de imágenes del inventario propio     |
-| 9     | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 9     | `supabase/migrations/0009_own_profile.sql`     | Leer el propio perfil, con su correo y teléfono |
+| 10    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating`, el nombre que deja la 0004.
 
@@ -203,6 +204,21 @@ await db.from('profiles').update({ display_name: nombre }).eq('id', uid);
 `is_admin` e `is_verified` se pueden enviar y la petición responde 204, pero el
 trigger de 0005 los deja como estaban. Solo la `service_role` los mueve — es
 decir, `scripts/make-admin.mjs`.
+
+#### El propio perfil se lee con `get_my_profile()` (migración 0009)
+
+0006 dejó un hueco: **un usuario tampoco podía leer su propio teléfono**, porque
+los permisos de columna son por rol y no por fila. `UserModel.phone` era siempre
+`undefined` en modo Supabase, así que el checkout nunca precargaba el teléfono y
+la página de perfil habría dicho "Sin telefono" con uno guardado.
+
+`get_my_profile()` lo resuelve: `security definer`, **sin parámetros**, así que
+solo puede devolver la fila de `auth.uid()` — no hay id que falsear. Es la que usa
+`AuthService.loadProfile()`.
+
+Al guardar el perfil, el `update` no pide la fila de vuelta (traería `email` y
+`phone`) y después se relee con `loadProfile()`. Se prefiere releer a quedarse con
+lo enviado, para que la señal refleje lo que la base guardó de verdad.
 
 ### Hacerte admin
 

@@ -134,6 +134,9 @@
 }
 
 //session chip, visible solo con sesion activa
+// Pasó de <span> a <a> hacia /perfil. Se conserva el aspecto: solo se quita el
+// subrayado que trae un enlace por defecto y se añade una señal de que ahora
+// lleva a algún lado.
 .navbar-user{
     display: inline-flex;
     align-items: center;
@@ -142,6 +145,12 @@
     color: #fff;
     font-family: var(--font-body);
     font-size: 14px;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover .navbar-user-name{
+        color: var(--Hub);
+    }
 }
 
 .navbar-user-initial{

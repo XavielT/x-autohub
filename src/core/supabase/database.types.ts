@@ -203,6 +203,25 @@ export type ReleaseRow = {
   created_at: string;
 }
 
+/**
+ * Fila que devuelve `get_my_profile()`, no un select sobre `profiles`.
+ *
+ * Es la única forma de que un usuario lea su propio `phone`: la migración 0006
+ * quitó esa columna a las claves anon y authenticated, y los permisos de columna
+ * son por rol y no por fila. Ver la migración 0009.
+ */
+export type MyProfileRow = {
+  id: string;
+  display_name: string;
+  email: string;
+  phone: string | null;
+  location: string | null;
+  avatar_url: string | null;
+  is_verified: boolean;
+  is_admin: boolean;
+  created_at: string;
+}
+
 /** Fila que devuelve `admin_list_users()`, no un select sobre `profiles`. */
 export type AdminUserRow = {
   id: string;
@@ -380,6 +399,14 @@ export type Database = {
        * camino por el que el navegador puede crear un pedido.
        */
       /** Usuarios con su correo. Solo responde a un admin. Ver migración 0007. */
+      /**
+       * El perfil de quien llama, con su `email` y su `phone`. No recibe ningún
+       * id: usa `auth.uid()`, así que no puede devolver el de otra persona.
+       */
+      get_my_profile: {
+        Args: Record<string, never>;
+        Returns: MyProfileRow[];
+      };
       admin_list_users: {
         Args: Record<string, never>;
         Returns: AdminUserRow[];

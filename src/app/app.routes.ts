@@ -113,6 +113,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/registro/registro').then((m) => m.Registro),
   },
 
+  {
+    path: 'perfil',
+    title: `Mi perfil | ${BRAND}`,
+    canActivate: [authGuard],
+    loadComponent: () => import('./pages/perfil/perfil').then((m) => m.Perfil),
+  },
+
   // --- Administracion ---
   // Solo para `is_admin`. El guard es comodidad de interfaz: la seguridad real
   // esta en RLS y en las funciones de la migracion 0007, que vuelven a

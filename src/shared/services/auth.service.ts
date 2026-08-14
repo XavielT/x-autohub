@@ -169,24 +169,23 @@ export class AuthService {
   }
 
   /**
-   * Columnas públicas de `profiles`.
+   * Carga el perfil y actualiza la señal.
    *
-   * No se puede pedir `*`: la migración 0006 le quitó `email` y `phone` a las
-   * claves anon y authenticated, porque eran legibles por cualquiera. Pedir `*`
-   * fallaría con "permission denied for column".
+   * Va por `get_my_profile()` (migración 0009) y no por un select sobre
+   * `profiles`, porque es la única forma de leer el propio `phone`: 0006 le quitó
+   * esa columna a las claves anon y authenticated, y los permisos de columna son
+   * por rol, no por fila. Con el select normal `user().phone` era siempre
+   * `undefined`, así que el checkout nunca precargaba el teléfono.
+   *
+   * La función no recibe ningún id — usa `auth.uid()` — así que `userId` solo
+   * sirve para el camino simulado.
    */
-  private static readonly PROFILE_COLUMNS =
-    'id, display_name, avatar_url, is_verified, location, created_at, is_admin';
-
-  /** Carga el perfil y actualiza la señal. */
   private async loadProfile(userId: string): Promise<UserModel | null> {
-    const { data, error } = await this.supabase.db
-      .from('profiles')
-      .select(AuthService.PROFILE_COLUMNS)
-      .eq('id', userId)
-      .single();
+    const { data, error } = await this.supabase.db.rpc('get_my_profile');
+    const row = data?.[0];
 
-    if (error || !data) {
+    if (error || !row) {
+      if (error) console.error('[supabase] get_my_profile', error);
       this._user.set(null);
       return null;
     }
@@ -194,9 +193,66 @@ export class AuthService {
     // El correo sale de Supabase Auth, no de la tabla: es su fuente
     // autoritativa y sigue disponible para el usuario en sesión.
     const { data: authData } = await this.supabase.db.auth.getUser();
-    const user = toUser(data, authData.user?.email ?? '');
+    const user = toUser(row, authData.user?.email ?? row.email, row.phone);
     this._user.set(user);
     return user;
+  }
+
+  /**
+   * Guarda los cambios del propio perfil y refresca la señal.
+   *
+   * Solo estos tres campos: son los que la política de `profiles` permite
+   * cambiar a su dueño. `is_admin` e `is_verified` se pueden enviar y la petición
+   * responde 204, pero el trigger de 0005 los deja como estaban — así que no se
+   * envían, para no dar la impresión de que se guardaron.
+   *
+   * El `update` **no pide la fila de vuelta**: traería `email` y `phone`, que no
+   * son legibles con un select. Después se relee con `loadProfile()`, que sí los
+   * obtiene por la función de 0009. Se prefiere releer a quedarse con lo enviado
+   * porque así la señal refleja lo que la base guardó de verdad, incluido
+   * cualquier recorte o normalización que haga Postgres.
+   */
+  updateProfile(changes: {
+    displayName: string;
+    phone?: string;
+    location?: string;
+  }): Observable<UserModel> {
+    const current = this._user();
+    if (!current) {
+      return throwError(() => new Error('Necesitas una sesion para editar tu perfil.'));
+    }
+
+    const next: UserModel = {
+      ...current,
+      displayName: changes.displayName.trim(),
+      phone: changes.phone?.trim() || undefined,
+      location: changes.location?.trim() || undefined,
+    };
+
+    if (this.supabase.shouldUseMockData()) {
+      this.persistMockSession(next);
+      return of(next);
+    }
+
+    return from(
+      this.supabase.db
+        .from('profiles')
+        .update({
+          display_name: next.displayName,
+          phone: next.phone ?? null,
+          location: next.location ?? null,
+        })
+        .eq('id', current.id),
+    ).pipe(
+      switchMap((res) => {
+        if (res.error) {
+          console.error('[supabase] updateProfile', res.error);
+          throw new Error('No pudimos guardar tu perfil. Intenta de nuevo.');
+        }
+        return from(this.loadProfile(current.id));
+      }),
+      map((user) => user ?? next),
+    );
   }
 
   private async restoreSupabaseSession(): Promise<void> {

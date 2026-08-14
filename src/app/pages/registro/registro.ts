@@ -107,7 +107,9 @@ export class Registro {
         next: (user) => {
           this.isSubmitting.set(false);
           this.toast.show(`Cuenta creada. Bienvenido, ${user.displayName}`);
-          void this.router.navigateByUrl('/');
+          // Al perfil y no a la portada: recién creada la cuenta, lo útil es ver
+          // y completar los propios datos. El `returnUrl` del login no se toca.
+          void this.router.navigateByUrl('/perfil');
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);

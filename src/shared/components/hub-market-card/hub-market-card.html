@@ -1,7 +1,16 @@
 <div class="hub-market-card">
     <div class="hub-market-card__top">
-        <a class="hub-market-card__image-link" [routerLink]="itemLink()"><img class="hub-market-card__img"
-                [ngSrc]="item().images[0]" width="330" height="220" /></a>
+        <a class="hub-market-card__image-link" [routerLink]="itemLink()">
+            @if (isDataUrl()) {
+                <!-- src plano: NgOptimizedImage lanza con data URLs y se lleva la
+                     tarjeta entera por delante. Ver `isDataUrl` en el componente. -->
+                <img class="hub-market-card__img" [src]="item().images[0]"
+                     [alt]="item().title" width="330" height="220" />
+            } @else {
+                <img class="hub-market-card__img" [ngSrc]="item().images[0]"
+                     [alt]="item().title" width="330" height="220" />
+            }
+        </a>
     </div>
     <div class="hub-market-card__middle">
         <div class="hub-market-card__middle-header">

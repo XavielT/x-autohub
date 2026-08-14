@@ -46,10 +46,11 @@
     </div>
     <div class="navbar-actions">
         @if (isLoggedIn()) {
-            <span class="navbar-user" [title]="user()?.email">
+            <a class="navbar-user" routerLink="/perfil" [title]="'Ver mi perfil'"
+               (click)="closeMobileMenu()">
                 <span class="navbar-user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
                 <span class="navbar-user-name">{{ user()?.displayName }}</span>
-            </span>
+            </a>
             @if (isAdmin()) {
                 <a class="navbar-actions-button nav-button-secondary" routerLink="/admin"
                    (click)="closeMobileMenu()">

@@ -49,11 +49,24 @@ import {
  */
 export type PublicProfileRow = Omit<ProfileRow, 'email' | 'phone'>;
 
-export function toUser(row: PublicProfileRow, email: string): UserModel {
+/**
+ * @param email Siempre desde Supabase Auth, que es su fuente autoritativa:
+ *   `profiles.email` lo escribe el trigger al registrarse y podría quedar
+ *   desactualizado si alguien cambia su correo de acceso.
+ * @param phone Solo llega cuando la fila viene de `get_my_profile()` (migración
+ *   0009). Con un select normal la columna no es legible, así que queda
+ *   `undefined` — y eso es lo correcto: nadie más que el dueño debe verlo.
+ */
+export function toUser(
+  row: PublicProfileRow,
+  email: string,
+  phone?: string | null,
+): UserModel {
   return {
     id: row.id,
     displayName: row.display_name,
     email,
+    phone: phone ?? undefined,
     location: row.location ?? undefined,
     avatarUrl: row.avatar_url ?? undefined,
     isVerified: row.is_verified,

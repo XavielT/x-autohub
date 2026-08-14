@@ -110,6 +110,31 @@ export class HubMarketService {
    * Publica un artículo. Devuelve el artículo ya creado, con el id que asignó
    * la base de datos.
    */
+  /**
+   * Las publicaciones de un vendedor, de la mas nueva a la mas vieja.
+   *
+   * Trae **todas**, no solo las activas: es su propia lista, y a su dueño le
+   * sirve ver también lo que dio de baja. RLS lo permite —
+   * `using (is_active or seller_id = auth.uid() or is_admin())`.
+   */
+  getBySellerId(sellerId: string): Observable<HubMarketItemModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        this.mockItems
+          .filter((item) => item.sellerId === sellerId)
+          .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_market_items')
+        .select(SELECT_WITH_SELLER)
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false }),
+    ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
+  }
+
   publish(
     item: Omit<HubMarketItemModel, 'id'>,
     sellerId: string,

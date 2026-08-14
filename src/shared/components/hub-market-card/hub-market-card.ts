@@ -27,6 +27,17 @@ export class HubMarketCard {
     }
   });
 
+  /**
+   * true cuando la imagen es una data URL.
+   *
+   * `NgOptimizedImage` las rechaza y **lanza** (NG02952), lo que abortaba el
+   * render de la tarjeta completa: quedaba una caja vacía sin título ni precio.
+   * Pasa en modo simulado, donde `StorageService` devuelve data URLs en vez de
+   * subir a Storage, así que cualquier publicación recién hecha se veía en blanco
+   * tanto aquí como en Hub Market.
+   */
+  readonly isDataUrl = computed(() => this.item().images[0]?.startsWith('data:') ?? false);
+
   readonly displayCategory = computed(() => {
     switch (this.item().category) {
       case 'vehiculos':
