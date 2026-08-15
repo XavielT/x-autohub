@@ -223,6 +223,15 @@ Cosas que ya causaron un bug. No las repitas:
 - **Supabase no pasa por `HttpClient`** (usa fetch por dentro), así que los
   interceptores de Angular no lo ven. Sus errores se traducen en
   `core/supabase/supabase-error.ts`.
+- **Dos claves foráneas a la misma tabla rompen el embed de PostgREST.** La
+  migración 0012 agregó `hub_market_items.reviewed_by → profiles`, y como
+  `seller_id` ya apuntaba ahí, `select('*, profiles(display_name)')` pasó a
+  responder `PGRST201` y **Hub Market se quedó vacío en producción**. Se nombra
+  la clave: `profiles!hub_market_items_seller_id_fkey(display_name)`. No lo ve
+  ningún modo de desarrollo —con mocks no hay PostgREST, y corriendo el SQL a
+  mano tampoco, porque la ambigüedad la resuelve PostgREST y no Postgres— así
+  que si agregas una columna que referencie una tabla ya referenciada, revisa
+  todos los `select` con embed de esa tabla.
 
 ---
 

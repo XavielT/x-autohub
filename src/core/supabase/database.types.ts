@@ -129,7 +129,13 @@ export type HubMarketItemRow = {
   spec_brand: string | null;
   spec_model: string | null;
   created_at: string;
-  /** Presente solo cuando el select incluye `profiles(display_name)`. */
+  /**
+   * Presente solo cuando el select pide el perfil del vendedor.
+   *
+   * El embed **tiene** que nombrar la clave foránea
+   * (`profiles!hub_market_items_seller_id_fkey(display_name)`): desde 0012 hay dos
+   * caminos a `profiles` y PostgREST rechaza el ambiguo con `PGRST201`.
+   */
   profiles?: { display_name: string } | null;
 }
 
@@ -300,13 +306,23 @@ export type Insert<T, Required extends keyof T> = Pick<T, Required> &
 
 /**
  * Claves foráneas. supabase-js las usa para validar los joins embebidos
- * (`select('*, profiles(display_name)')`); sin ellas el tipo del select no
- * resuelve.
+ * (`select('*, profiles!hub_market_items_seller_id_fkey(display_name)')`); sin
+ * ellas el tipo del select no resuelve.
  */
 type HubMarketRelationships = [
   {
     foreignKeyName: 'hub_market_items_seller_id_fkey';
     columns: ['seller_id'];
+    isOneToOne: false;
+    referencedRelation: 'profiles';
+    referencedColumns: ['id'];
+  },
+  // El segundo camino a `profiles`, de la migración 0012. Se declara aunque nadie
+  // lo consulte: es lo que hace ambiguo el embed `profiles(...)`, y tenerlo aquí
+  // es lo que permite que el tipado exija nombrar la clave.
+  {
+    foreignKeyName: 'hub_market_items_reviewed_by_fkey';
+    columns: ['reviewed_by'];
     isOneToOne: false;
     referencedRelation: 'profiles';
     referencedColumns: ['id'];

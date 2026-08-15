@@ -19,10 +19,27 @@ import { visibleTo } from '../utils/test-visibility';
  * política RLS obliga a que `seller_id = auth.uid()`, así que ni siquiera un
  * cliente manipulado puede publicar en nombre de otro.
  *
- * El `select` incluye `profiles(display_name)` para que el nombre del vendedor
- * salga siempre del perfil actual y no de una copia vieja.
+ * El `select` incluye el perfil del vendedor para que el nombre salga siempre del
+ * perfil actual y no de una copia vieja.
+ *
+ * **El nombre de la clave foránea es obligatorio, no decoración.** Desde la
+ * migración 0012 esta tabla apunta a `profiles` **dos veces** —`seller_id` y
+ * `reviewed_by`— y con dos caminos PostgREST no adivina cuál se quiere: responde
+ * `PGRST201` y la consulta entera falla. Sin el `!hub_market_items_seller_id_fkey`
+ * no se ve **nada** en Hub Market.
+ *
+ * Es un fallo que ningún modo de desarrollo enseña: con mocks no hay PostgREST, y
+ * corriendo el SQL a mano tampoco, porque la ambigüedad la resuelve PostgREST y no
+ * Postgres. Solo aparece contra la base real. Si algún día se agrega otra columna
+ * que referencie `profiles`, esto sigue funcionando — por eso se nombra la clave
+ * en vez de confiar en que solo haya una.
  */
-const SELECT_WITH_SELLER = '*, profiles(display_name)';
+/**
+ * Se exporta **solo para que una prueba pueda vigilarlo**. Es la unica defensa
+ * automatica posible: el fallo que cubre no se reproduce ni con mocks ni
+ * corriendo el SQL a mano, porque lo decide PostgREST.
+ */
+export const SELECT_WITH_SELLER = '*, profiles!hub_market_items_seller_id_fkey(display_name)';
 
 /**
  * Estado de una publicación, tratando la ausencia como aprobada.
