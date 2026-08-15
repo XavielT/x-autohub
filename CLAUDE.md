@@ -42,8 +42,10 @@ Cada push a `main` lleva, en este orden:
 
 1. **Bump** de `version` en `package.json` **y en `package-lock.json`** (dos
    lugares: `.version` y `.packages[""].version`). Semver: `minor` para una
-   función nueva, `patch` para un arreglo. Sigue en `0.x` hasta que el dominio
-   apunte a Vercel y el sitio esté de verdad en vivo.
+   función nueva, `patch` para un arreglo. **La `1.0.0` ya se cerró**: el
+   15/08/2026 `xautohubrd.com` pasó a apuntar a Vercel y el sitio quedó en vivo,
+   que era justo la condición que mantenía el proyecto en `0.x`. A partir de
+   ahí, un cambio que rompa algo publicado es `major`.
 2. **Commit del bump** aparte, con el mensaje `Bump version to X.Y.Z`.
 3. **Tag anotado** `vX.Y.Z` (`git tag -a`), con las notas de la versión en el
    mensaje: qué trae, y qué queda pendiente. En español, que es lo que se lee.
