@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { InfoBadge } from '../../ui/info-badge/info-badge';
+import { TestBadge } from '../../ui/test-badge/test-badge';
 import { NewCardModel } from '../../models/new-card.model';
 import { DatePipe, NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-new-card',
-  imports: [InfoBadge, DatePipe, RouterLink, NgOptimizedImage],
+  imports: [InfoBadge, TestBadge, DatePipe, RouterLink, NgOptimizedImage],
   templateUrl: './new-card.html',
   styleUrl: './new-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

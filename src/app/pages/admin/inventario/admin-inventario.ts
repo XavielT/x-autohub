@@ -102,6 +102,7 @@ export class AdminInventario implements OnInit {
     stock: [0, [Validators.required, Validators.min(0)]],
     description: [''],
     isActive: [true],
+    isTest: [false],
   });
 
   readonly vehicleForm = this.fb.nonNullable.group({
@@ -120,6 +121,7 @@ export class AdminInventario implements OnInit {
     contact: ['', Validators.required],
     description: [''],
     isAvailable: [true],
+    isTest: [false],
   });
 
   readonly newsForm = this.fb.nonNullable.group({
@@ -130,6 +132,7 @@ export class AdminInventario implements OnInit {
     author: [''],
     publishedAt: [new Date().toISOString().slice(0, 10), Validators.required],
     isPublished: [true],
+    isTest: [false],
   });
 
   ngOnInit(): void {
@@ -213,6 +216,7 @@ export class AdminInventario implements OnInit {
               stock: p.stock,
               description: p.description,
               isActive: p.isActive,
+              isTest: p.isTest,
             });
             this.existingImages.set(p.images.length ? p.images : [p.imgUrl].filter(Boolean));
             this.isLoadingOne.set(false);
@@ -240,6 +244,7 @@ export class AdminInventario implements OnInit {
               contact: v.contact,
               description: v.description,
               isAvailable: v.isAvailable,
+              isTest: v.isTest,
             });
             this.existingImages.set(v.images);
             this.isLoadingOne.set(false);
@@ -259,6 +264,7 @@ export class AdminInventario implements OnInit {
               author: n.author ?? '',
               publishedAt: n.publishedAt,
               isPublished: n.isPublished,
+              isTest: n.isTest,
             });
             this.existingImages.set(n.images.length ? n.images : [n.imageUrl].filter(Boolean));
             this.isLoadingOne.set(false);
@@ -378,6 +384,7 @@ export class AdminInventario implements OnInit {
             description: form.description,
             stock: form.stock,
             isActive: form.isActive,
+            isTest: form.isTest,
           };
           return id === null
             ? this.admin.createPart(draft)
@@ -461,6 +468,7 @@ export class AdminInventario implements OnInit {
             author: form.author,
             publishedAt: form.publishedAt,
             isPublished: form.isPublished,
+            isTest: form.isTest,
           };
           return id === null
             ? this.admin.createNews(draft)
@@ -562,6 +570,57 @@ export class AdminInventario implements OnInit {
     });
   }
 
+  /**
+   * Marca o desmarca desde la tabla, sin abrir el formulario.
+   *
+   * Es la acción que de verdad se usa: marcar algo como prueba es una decisión
+   * de un segundo, y obligar a abrir el editor completo para un checkbox haría
+   * que nadie lo usara. El formulario también lo trae, para el alta.
+   */
+  togglePartTest(part: AdminPartModel): void {
+    this.savingId.set(`p${part.id}`);
+    this.admin.updatePart(part.id, { isTest: !part.isTest }).subscribe({
+      next: () => {
+        this.savingId.set(null);
+        this.parts.update((l) =>
+          l.map((p) => (p.id === part.id ? { ...p, isTest: !part.isTest } : p)),
+        );
+        this.toast.show(
+          part.isTest ? 'Ya no es un articulo de prueba.' : 'Marcada como articulo de prueba.',
+        );
+      },
+      error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
+    });
+  }
+
+  toggleVehicleTest(v: AdminVehicleModel): void {
+    this.savingId.set(`v${v.id}`);
+    this.admin.updateVehicle(v.id, { isTest: !v.isTest }).subscribe({
+      next: () => {
+        this.savingId.set(null);
+        this.vehicles.update((l) => l.map((x) => (x.id === v.id ? { ...x, isTest: !v.isTest } : x)));
+        this.toast.show(
+          v.isTest ? 'Ya no es un vehiculo de prueba.' : 'Marcado como vehiculo de prueba.',
+        );
+      },
+      error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
+    });
+  }
+
+  toggleNewsTest(n: AdminNewsModel): void {
+    this.savingId.set(`n${n.id}`);
+    this.admin.updateNews(n.id, { isTest: !n.isTest }).subscribe({
+      next: () => {
+        this.savingId.set(null);
+        this.news.update((l) => l.map((x) => (x.id === n.id ? { ...x, isTest: !n.isTest } : x)));
+        this.toast.show(
+          n.isTest ? 'Ya no es una noticia de prueba.' : 'Marcada como noticia de prueba.',
+        );
+      },
+      error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
+    });
+  }
+
   saveVehiclePrice(v: AdminVehicleModel, event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
     if (!Number.isFinite(value) || value < 0) {
@@ -583,7 +642,7 @@ export class AdminInventario implements OnInit {
 
   toggleNews(n: AdminNewsModel): void {
     this.savingId.set(`n${n.id}`);
-    this.admin.updateNews(n.id, !n.isPublished).subscribe({
+    this.admin.updateNews(n.id, { isPublished: !n.isPublished }).subscribe({
       next: () => {
         this.savingId.set(null);
         this.news.update((l) =>

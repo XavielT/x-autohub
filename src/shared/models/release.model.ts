@@ -37,5 +37,7 @@ export interface AdminUserModel {
   /** Atajo de `role === 'admin'`, derivado. */
   isAdmin: boolean;
   isVerified: boolean;
+  /** Ve el contenido de prueba. No es un rol. Ver `UserModel.isTestUser`. */
+  isTestUser: boolean;
   createdAt: Date;
 }

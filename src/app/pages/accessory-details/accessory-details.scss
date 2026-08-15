@@ -1,3 +1,27 @@
 .accessory-details {
   padding: 20px;
+
+  &__not-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  &__not-found-title {
+    font-family: var(--font-title, inherit);
+    margin: 0;
+  }
+
+  &__not-found-img {
+    width: 90px;
+    max-width: 40vw;
+  }
+
+  &__not-found-link {
+    color: var(--Hub);
+    text-decoration: underline;
+  }
 }

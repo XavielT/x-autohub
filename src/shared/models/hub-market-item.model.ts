@@ -42,6 +42,14 @@ export interface HubMarketItemModel {
   /** Por qué se rechazó. Solo lo ve su dueño, en /perfil. */
   rejectionReason?: string;
   category: HubMarketCategory;
+  /**
+   * Artículo de prueba (migración 0013). Solo lo reciben las sesiones de admin,
+   * moderador y usuario de prueba; para el resto no existe, en los dos modos.
+   *
+   * Opcional porque el contenido anterior a la fase 6 no lo trae: leerlo como
+   * ausente equivale a `false`, que es lo correcto.
+   */
+  isTest?: boolean;
   isFeatured?: boolean;
   detailRoute?: string;
   createdAt?: string;

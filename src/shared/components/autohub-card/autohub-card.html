@@ -7,6 +7,7 @@
                 <h5>RD$ {{ autoHub().price | number: '1.0-0' }}</h5>
             </div>
         </a>
+        @if (autoHub().isTest) { <app-test-badge /> }
         <div class="autohub-card__info-content">
             <p>{{ autoHub().description }}</p>
         </div>

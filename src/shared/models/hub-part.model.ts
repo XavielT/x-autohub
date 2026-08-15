@@ -8,4 +8,6 @@ export interface HubPartModel {
     starsRating: number;
     price: number;
     description: string;
+    /** Artículo de prueba. Ver `shared/utils/test-visibility.ts`. */
+    isTest?: boolean;
 }

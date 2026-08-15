@@ -9,6 +9,8 @@ import {
   PublicationStatus,
 } from '../models/hub-market-item.model';
 import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
+import { AuthService } from './auth.service';
+import { visibleTo } from '../utils/test-visibility';
 
 /**
  * Hub Market: los clasificados que publica la comunidad.
@@ -36,6 +38,7 @@ function statusOf(item: HubMarketItemModel): PublicationStatus {
 @Injectable({ providedIn: 'root' })
 export class HubMarketService {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthService);
 
   /**
    * Copia propia del mock. Sin esto, `publish()` y `deactivate()` mutarían la
@@ -53,7 +56,20 @@ export class HubMarketService {
    * las aprobadas, y no sabría que está viendo algo que nadie más ve.
    */
   private approvedOnly(items: HubMarketItemModel[]): HubMarketItemModel[] {
-    return items.filter((item) => statusOf(item) === 'aprobado');
+    return this.visible(items).filter((item) => statusOf(item) === 'aprobado');
+  }
+
+  /**
+   * Quita lo que esta sesión no puede ver por estar marcado como de prueba.
+   *
+   * **Solo para el modo simulado**, igual que en los otros servicios: en modo
+   * real lo hace RLS (0013) antes de que la fila salga de Postgres. Se aplica
+   * también a `getBySellerId` y a `getPending` a propósito, para que el modo
+   * simulado se comporte exactamente como la política —que mete el filtro de
+   * prueba bajo un `and` sobre sus tres ramas, la del dueño incluida.
+   */
+  private visible(items: HubMarketItemModel[]): HubMarketItemModel[] {
+    return items.filter(visibleTo<HubMarketItemModel>(this.auth.user()));
   }
 
   getAll(): Observable<HubMarketItemModel[]> {
@@ -81,7 +97,7 @@ export class HubMarketService {
    */
   getById(id: number): Observable<HubMarketItemModel | undefined> {
     if (this.supabase.shouldUseMockData()) {
-      return of(this.mockItems.find((item) => item.id === id));
+      return of(this.visible(this.mockItems).find((item) => item.id === id));
     }
 
     return from(
@@ -132,7 +148,7 @@ export class HubMarketService {
   /** Publicaciones del usuario indicado, incluidas las despublicadas. */
   getBySeller(sellerId: string): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of(this.mockItems.filter((item) => item.sellerId === sellerId));
+      return of(this.visible(this.mockItems).filter((item) => item.sellerId === sellerId));
     }
 
     return from(
@@ -159,7 +175,7 @@ export class HubMarketService {
   getBySellerId(sellerId: string): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
       return of(
-        this.mockItems
+        this.visible(this.mockItems)
           .filter((item) => item.sellerId === sellerId)
           .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
       );
@@ -230,7 +246,7 @@ export class HubMarketService {
   getPending(): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
       return of(
-        this.mockItems
+        this.visible(this.mockItems)
           .filter((item) => statusOf(item) === 'pendiente')
           .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? '')),
       );
@@ -294,6 +310,34 @@ export class HubMarketService {
     ).pipe(
       map((res) => {
         unwrap(res);
+      }),
+    );
+  }
+
+  /**
+   * Marca o desmarca una publicación como de prueba.
+   *
+   * Va por un `update` normal y **no** por una función, al revés que
+   * `moderate()`: aquí no hay transición que dejar consistente —ni motivo, ni
+   * quién revisó, ni cuándo— así que una `security definer` sería ceremonia sin
+   * contenido. La barrera está donde tiene que estar: el trigger
+   * `freeze_publication_moderation` (0013) devuelve la columna a su valor
+   * anterior si quien escribe no modera, porque RLS no sabe filtrar columnas.
+   */
+  setTestFlag(id: number, isTest: boolean): Observable<void> {
+    if (this.supabase.shouldUseMockData()) {
+      this.mockItems = this.mockItems.map((item) =>
+        item.id === id ? { ...item, isTest } : item,
+      );
+      return of(undefined);
+    }
+
+    return from(
+      this.supabase.db.from('hub_market_items').update({ is_test: isTest }).eq('id', id),
+    ).pipe(
+      map((res) => {
+        if (res.error) unwrap(res as { data: null; error: typeof res.error });
+        return undefined;
       }),
     );
   }

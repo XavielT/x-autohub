@@ -6,6 +6,7 @@
     <div class="hub-part-card__middle">
         <div class="hub-part-card__middle-header">
             <span>{{hubPart().brand}}</span>
+            @if (hubPart().isTest) { <app-test-badge /> }
             <div class="hub-part-card__stars">
                 <img src="assets/icons/star-icon.svg" /><span>{{hubPart().starsRating}}</span>
             </div>

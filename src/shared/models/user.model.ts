@@ -39,6 +39,17 @@ export interface UserModel {
    * aparte.
    */
   isAdmin?: boolean;
+  /**
+   * Puede ver el contenido marcado como de prueba.
+   *
+   * **No es un rol**: quien lo tiene sigue siendo `user` y no modera ni
+   * administra nada. Solo lo cambia `set_user_test()` llamada por un admin; el
+   * trigger de 0005 —extendido en 0013— congela la columna para el navegador.
+   *
+   * Un admin o un moderador ven lo de prueba por su rol, sin necesidad de esto.
+   * Ver `shared/utils/test-visibility.ts`.
+   */
+  isTestUser?: boolean;
   createdAt: string;
 }
 

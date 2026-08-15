@@ -5,19 +5,31 @@ import { toHubPart } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { HubPartModel } from '../models/hub-part.model';
 import { HUB_PART_MOCK } from '../data/hub-part.mock';
+import { AuthService } from './auth.service';
+import { visibleTo } from '../utils/test-visibility';
 
 /**
  * Catálogo: la tienda propia de piezas, la que tiene carrito y checkout.
  *
  * Lectura pública; escritura solo admin.
+ *
+ * En modo real las piezas de prueba las esconde RLS (migración 0013) y aquí no
+ * se vuelve a filtrar. En modo simulado no hay RLS, así que el filtro lo aplica
+ * este servicio con el mismo predicado que usan los demás.
  */
 @Injectable({ providedIn: 'root' })
 export class HubPartService {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthService);
+
+  /** El predicado de visibilidad de prueba para la sesión actual. */
+  private get visible() {
+    return visibleTo<HubPartModel>(this.auth.user());
+  }
 
   getAll(): Observable<HubPartModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of(HUB_PART_MOCK);
+      return of(HUB_PART_MOCK.filter(this.visible));
     }
 
     return from(
@@ -31,7 +43,7 @@ export class HubPartService {
 
   getById(id: number): Observable<HubPartModel | undefined> {
     if (this.supabase.shouldUseMockData()) {
-      return of(HUB_PART_MOCK.find((p) => p.id === id));
+      return of(HUB_PART_MOCK.filter(this.visible).find((p) => p.id === id));
     }
 
     return from(
@@ -41,7 +53,7 @@ export class HubPartService {
 
   getByCategory(category: string): Observable<HubPartModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of(HUB_PART_MOCK.filter((p) => p.category === category));
+      return of(HUB_PART_MOCK.filter(this.visible).filter((p) => p.category === category));
     }
 
     return from(

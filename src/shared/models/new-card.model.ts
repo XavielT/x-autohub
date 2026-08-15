@@ -12,4 +12,6 @@ export interface NewCardModel {
     images: string[];
     textLarge: string;
     author?: string;
+    /** Noticia de prueba. Ver `shared/utils/test-visibility.ts`. */
+    isTest?: boolean;
 }

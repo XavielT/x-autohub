@@ -21,6 +21,14 @@ export interface AdminPartModel {
   price: number;
   stock: number;
   isActive: boolean;
+  /**
+   * Artículo de prueba (migración 0013).
+   *
+   * En el panel **no** es opcional, al revés que en los modelos públicos: aquí
+   * siempre se lee de la fila, y un `undefined` significaría "no se sabe" en la
+   * única pantalla donde el dato tiene que estar claro.
+   */
+  isTest: boolean;
 }
 
 export interface AdminVehicleModel {
@@ -31,6 +39,7 @@ export interface AdminVehicleModel {
   price: number;
   mileage: number;
   isAvailable: boolean;
+  isTest: boolean;
 }
 
 export interface AdminNewsModel {
@@ -39,6 +48,7 @@ export interface AdminNewsModel {
   scope: NewsScope;
   publishedAt: Date;
   isPublished: boolean;
+  isTest: boolean;
 }
 
 // --- Altas -----------------------------------------------------------------
@@ -63,6 +73,7 @@ export interface NewPartDraft {
   description: string;
   stock: number;
   isActive: boolean;
+  isTest: boolean;
 }
 
 export interface NewVehicleDraft {
@@ -83,6 +94,7 @@ export interface NewVehicleDraft {
   /** Teléfono de contacto, como texto: un 809 con formato no es un número. */
   contact: string;
   isAvailable: boolean;
+  isTest: boolean;
 }
 
 export interface NewNewsDraft {
@@ -97,6 +109,7 @@ export interface NewNewsDraft {
   author?: string;
   publishedAt: string;
   isPublished: boolean;
+  isTest: boolean;
 }
 
 // --- Ediciones --------------------------------------------------------------

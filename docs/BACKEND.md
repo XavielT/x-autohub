@@ -35,11 +35,15 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 10    | `supabase/migrations/0010_listing_contact_phone.sql` | Teléfono de contacto en la publicación   |
 | 11    | `supabase/migrations/0011_user_roles.sql`      | Roles: admin > moderador > user                |
 | 12    | `supabase/migrations/0012_publication_moderation.sql` | Aprobación de publicaciones de Hub Market |
-| 13    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 13    | `supabase/migrations/0013_test_items.sql`      | Artículos de prueba y usuarios de prueba       |
+| 14    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
-> El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010) y
-> `status` (0012). Y la **0012 depende de la 0011**: usa
-> `is_moderator_or_admin()`, que crea la anterior. El orden no es decorativo.
+> El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
+> `status` (0012) e `is_test` (0013). Y las dependencias entre migraciones son
+> reales: la **0012 usa `is_moderator_or_admin()`**, que crea la 0011, y la
+> **0013 rehace las políticas de select de 0002 y 0012** — aplicarla antes
+> dejaría a esas políticas sin el filtro de prueba, o directamente sin existir.
+> El orden no es decorativo.
 
 > ⚠️ Sin el paso 2 tu base queda abierta: la clave anon es pública y va en el
 > bundle del navegador. Lo único que impide que cualquiera borre tus datos son
@@ -138,8 +142,9 @@ La clave anon es pública. La seguridad real está en RLS:
 
 | Tabla                           | Leer                | Escribir                            |
 | ------------------------------- | ------------------- | ----------------------------------- |
-| `auto_hub_vehicles`, `hub_parts`, `news`, `services`, `social_clubs`, `social_events` | Todos | Solo admin (`is_admin()`) |
-| `hub_market_items`              | Todos (activos **y aprobados**); su dueño ve lo suyo en cualquier estado; moderador+ ve todo | Solo el dueño (`seller_id = auth.uid()`). Las columnas de moderación, solo `moderate_publication()` |
+| `services`, `social_clubs`, `social_events` | Todos | Solo admin (`is_admin()`) |
+| `auto_hub_vehicles`, `hub_parts`, `news` | Todos, **salvo las filas `is_test`**, que solo ve `can_see_test_items()` | Solo admin (`is_admin()`) |
+| `hub_market_items`              | Todos (activos **y aprobados**); su dueño ve lo suyo en cualquier estado; moderador+ ve todo — y todo ello **solo si no es `is_test`**, o si `can_see_test_items()` | Solo el dueño (`seller_id = auth.uid()`). Las columnas de moderación, solo `moderate_publication()`; `is_test`, solo moderador+ |
 | `social_posts`                  | Todos               | Solo el autor                        |
 | `profiles`                      | Todos               | Solo el propio                       |
 | `club_subscriptions`            | Solo admin          | Cualquiera puede insertar            |
@@ -184,6 +189,7 @@ Quien fuerce la URL verá pantallas vacías y errores.
 | `admin_list_users()` | Listar cuentas **con su correo**. Hace falta porque las políticas de columna de 0006 lo esconden a cualquier sesión del navegador, admin incluido: los permisos de columna son por rol, no por condición. Sigue exigiendo **admin**: un moderador no tiene por qué ver los correos de todos. |
 | `set_user_role()` | Cambiar el rol y la verificación de otro usuario. Hace falta porque la política de `profiles` solo deja editar tu propia fila y el trigger congela esas columnas. **Exige admin**: un moderador no nombra a nadie, ni siquiera a otro moderador. |
 | `set_user_admin()` | **Obsoleta.** Envoltorio de `set_user_role()` para clientes viejos; degrada a `user`, no a `moderador`. |
+| `set_user_test()` | Marcar una cuenta como usuario de prueba (migración 0013). Función aparte y no un parámetro de `set_user_role()` porque **no es un rol**: quien la tiene sigue siendo `user`. **Exige admin.** |
 
 Todas son `security definer` y **empiezan comprobando el rol**. Sin esa
 comprobación serían un agujero peor que el que cerró 0005, porque
@@ -211,7 +217,50 @@ Es el mismo reparto que usan los privilegios de perfil (trigger 0005 +
 `set_user_role` 0011). Se repite a propósito.
 
 La política de select tiene tres ramas: cualquiera ve lo activo y aprobado, el
-dueño ve lo suyo en cualquier estado, y quien modera ve todo.
+dueño ve lo suyo en cualquier estado, y quien modera ve todo. La migración 0013
+la reescribe para meter las tres bajo un `and` con el filtro de prueba.
+
+### Artículos de prueba y usuarios de prueba (migración 0013)
+
+Sirve para meter contenido falso en el sitio **en vivo** —una pieza, un vehículo,
+una publicación, una noticia— y probar el flujo completo sin montar un entorno
+aparte y sin que ningún visitante se lo encuentre.
+
+- `is_test` en `auto_hub_vehicles`, `hub_parts`, `hub_market_items` y `news`.
+- `is_test_user` en `profiles`.
+- `can_see_test_items()` → `is_moderator_or_admin()` **o** `is_test_user`.
+
+**El filtro va dentro de cada política de select, unido con `and`.** Una política
+aparte no habría servido: varias políticas de select sobre la misma tabla se
+combinan con `or`, así que la vieja habría seguido dejando pasar las filas de
+prueba. Por eso 0013 reemplaza las cuatro políticas enteras — si algún día
+cambias una condición de 0002 o 0012, cámbiala **ahí**, que es la que queda viva.
+
+Consecuencia a tener presente: en `hub_market_items` la rama del dueño también
+queda bajo el `and`. Si se marca como prueba la publicación de un usuario normal,
+**ese usuario deja de verla en su propio perfil**. Es lo correcto para lo que la
+marca significa, pero marcar contenido ajeno no es inocuo.
+
+Las dos columnas están congeladas, por lo de siempre —RLS no filtra por columna:
+
+- `is_test_user` se suma al trigger de perfiles (0005 → 0007 → 0011 → 0013). Sin
+  eso cualquiera se auto-marcaría y tendría acceso de lectura a todo lo oculto.
+- `is_test` de `hub_market_items` se suma al trigger de 0012, pero con su propia
+  condición: aquí **sí** basta con dejar pasar a quien modera, con un `update`
+  normal. No hay transición de estado que dejar consistente, así que no hay
+  función que valga la pena. En las otras tres tablas no hace falta congelar
+  nada: sus políticas de update ya son solo admin.
+
+`create_order()` se redefine con `and (not h.is_test or can_see_test_items())`
+en el join del subtotal. Un usuario de prueba **tiene** que poder comprar una
+pieza de prueba —es para lo que existe— pero la función es `security definer` y
+se salta RLS, así que sin esa condición le vendería la pieza a cualquiera que
+adivinara el id. Quien no deba verla recibe el mismo mensaje que si estuviera
+descatalogada.
+
+En modo simulado no hay RLS y el filtro lo hace la app, con un único predicado en
+`src/shared/utils/test-visibility.ts`. Ahí la sesión de prueba se finge por
+correo, como el rol: `prueba@…` o `test@…`.
 
 **Las imágenes del inventario propio van al bucket `inventory`** (migración
 0008), no a `listings`. La diferencia importa: en `listings` y `avatars` la
@@ -234,9 +283,10 @@ Dos consecuencias prácticas:
 - **No pidas `select('*')` sobre `profiles`.** Falla con
   `permission denied for table profiles`. Pide las columnas públicas:
   `id, display_name, avatar_url, is_verified, location, created_at, is_admin`.
-  Así lo hace ya `auth.service.ts`. **`role` no está en esa lista** y es a
-  propósito: el rol propio llega por `get_my_profile()` y el de los demás por
-  `admin_list_users()`, así que ningún select del navegador lo necesita.
+  Así lo hace ya `auth.service.ts`. **`role` e `is_test_user` no están en esa
+  lista** y es a propósito: los propios llegan por `get_my_profile()` y los de
+  los demás por `admin_list_users()`, así que ningún select del navegador los
+  necesita — y dejarlos fuera evita publicar quién modera y quién prueba.
 - **El correo del usuario en sesión sale de Supabase Auth**
   (`db.auth.getUser()`), que es su fuente autoritativa.
 
@@ -325,6 +375,13 @@ Si cambias un mock y quieres que la base refleje lo mismo:
 ```bash
 node scripts/generate-seed.mjs
 ```
+
+> El generador se había quedado atrás: no emitía `contact_phone` (fase 4),
+> `status` (fase 5) ni el nombre nuevo de `stars_rating` (0004), y `seed.sql`
+> traía esas tres cosas por edición a mano. Regenerarlo habría revertido el
+> seed en silencio. Se puso al día en la fase 6. **Si añades una columna al
+> esquema y al mock, añádela también aquí**: es lo único que evita que el
+> archivo generado y su generador se separen otra vez.
 
 ### Regenerar los tipos con el CLI (opcional)
 

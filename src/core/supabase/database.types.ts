@@ -41,6 +41,14 @@ export type ProfileRow = {
    * cambia es `set_user_role()`.
    */
   is_admin: boolean;
+  /**
+   * Puede ver las filas `is_test`. Migración 0013.
+   *
+   * **No es un rol**: un usuario de prueba sigue siendo `user`. Solo lo cambia
+   * `set_user_test()`, y el trigger de 0005 —extendido en 0013— congela la
+   * columna para cualquier sesión del navegador.
+   */
+  is_test_user: boolean;
   created_at: string;
 }
 
@@ -62,6 +70,8 @@ export type AutoHubVehicleRow = {
   location: string;
   contact: string;
   is_available: boolean;
+  /** Contenido de prueba: solo lo ven admin, moderador y usuarios de prueba. Migración 0013. */
+  is_test: boolean;
   created_at: string;
 }
 
@@ -77,6 +87,8 @@ export type HubPartRow = {
   description: string;
   stock: number;
   is_active: boolean;
+  /** Contenido de prueba: solo lo ven admin, moderador y usuarios de prueba. Migración 0013. */
+  is_test: boolean;
   created_at: string;
 }
 
@@ -104,6 +116,11 @@ export type HubMarketItemRow = {
   reviewed_at: string | null;
   is_featured: boolean;
   is_active: boolean;
+  /**
+   * Contenido de prueba (migración 0013). Lo escribe moderador o admin con un
+   * update normal; para el dueño de la publicación el trigger lo congela.
+   */
+  is_test: boolean;
   spec_year: number | null;
   spec_mileage: number | null;
   spec_hp: number | null;
@@ -136,6 +153,8 @@ export type NewsRow = {
   author: string | null;
   published_at: string;
   is_published: boolean;
+  /** Contenido de prueba: solo lo ven admin, moderador y usuarios de prueba. Migración 0013. */
+  is_test: boolean;
 }
 
 export type SocialClubRow = {
@@ -245,6 +264,7 @@ export type MyProfileRow = {
   role: UserRoleDb;
   is_verified: boolean;
   is_admin: boolean;
+  is_test_user: boolean;
   created_at: string;
 }
 
@@ -258,6 +278,7 @@ export type AdminUserRow = {
   role: UserRoleDb;
   is_admin: boolean;
   is_verified: boolean;
+  is_test_user: boolean;
   created_at: string;
 }
 
@@ -421,6 +442,13 @@ export type Database = {
       /** true para moderador y para admin (migración 0011). */
       is_moderator_or_admin: { Args: Record<string, never>; Returns: boolean };
       /**
+       * true para admin, moderador y usuarios de prueba (migración 0013).
+       *
+       * El cliente no la llama: existe para las políticas de select y para
+       * `create_order()`. Se declara para que el tipo del esquema no mienta.
+       */
+      can_see_test_items: { Args: Record<string, never>; Returns: boolean };
+      /**
        * Crea un pedido con sus líneas en una sola transacción (migración 0005).
        *
        * El cliente solo dice qué pieza y cuántas: el precio, el subtotal y el
@@ -464,6 +492,17 @@ export type Database = {
           is_admin: boolean;
           is_verified: boolean;
         }[];
+      };
+      /**
+       * Marca (o desmarca) una cuenta como usuario de prueba. **Solo un admin**:
+       * dar acceso al contenido oculto es repartir acceso. Ver migración 0013.
+       *
+       * Es una función aparte y no un parámetro de `set_user_role()` porque ser
+       * usuario de prueba no es un rol: quien lo tiene sigue siendo `user`.
+       */
+      set_user_test: {
+        Args: { p_user_id: string; p_is_test: boolean };
+        Returns: { id: string; display_name: string; is_test_user: boolean }[];
       };
       /**
        * Aprueba o rechaza una publicación en una sola transacción (estado,

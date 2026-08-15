@@ -111,6 +111,15 @@
       color: #1a1a1a;
       font-weight: 700;
     }
+
+    // Usuario de prueba: rojo, el mismo de `app-test-badge`. No comparte el
+    // ambar de los roles a proposito — no es un rol, es lo que puede ver.
+    &--test {
+      border: 1px solid #c62828;
+      background-color: #c6282824;
+      color: #c62828;
+      font-weight: 700;
+    }
   }
 
   &__mail { font-size: 14px; }

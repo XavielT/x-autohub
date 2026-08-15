@@ -6,10 +6,11 @@ import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-market-part-details',
-  imports: [DecimalPipe, RouterLink, HubMarketCard],
+  imports: [DecimalPipe, RouterLink, HubMarketCard, TestBadge],
   templateUrl: './hub-market-part-details.html',
   styleUrl: './hub-market-part-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

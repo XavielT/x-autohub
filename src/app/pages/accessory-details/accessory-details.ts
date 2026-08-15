@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-accessory-details',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TestBadge, RouterLink],
   templateUrl: './accessory-details.html',
   styleUrl: './accessory-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

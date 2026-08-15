@@ -75,6 +75,7 @@ export function toUser(
     // columna es un espejo de compatibilidad (0011) y `role` es la fuente de
     // verdad. Si algún día discreparan, manda el rol.
     isAdmin: row.role === 'admin',
+    isTestUser: row.is_test_user,
     createdAt: row.created_at,
   };
 }
@@ -97,6 +98,7 @@ export function toAutoHubVehicle(row: AutoHubVehicleRow): AutoHubModel {
     description: row.description,
     location: row.location,
     contact: row.contact,
+    isTest: row.is_test,
   };
 }
 
@@ -111,6 +113,7 @@ export function toHubPart(row: HubPartRow): HubPartModel {
     starsRating: Number(row.stars_rating),
     price: Number(row.price),
     description: row.description,
+    isTest: row.is_test,
   };
 }
 
@@ -141,6 +144,7 @@ export function toHubMarketItem(row: HubMarketItemRow): HubMarketItemModel {
     status: row.status,
     rejectionReason: row.rejection_reason ?? undefined,
     category: row.category,
+    isTest: row.is_test,
     isFeatured: row.is_featured,
     detailRoute: detailRouteFor(row),
     createdAt: row.created_at,
@@ -191,6 +195,9 @@ export function fromHubMarketItem(
     // `status` **no** viaja en el insert a propósito: lo decide el trigger
     // `hub_market_force_status` (0012) según quién publique. Mandarlo desde el
     // cliente daría la falsa impresión de que el navegador elige el estado.
+    //
+    // `is_test` tampoco: una publicación nace normal y solo un moderador la
+    // marca después, desde la cola de revisión (0013).
   };
 }
 
@@ -216,6 +223,7 @@ export function toNews(row: NewsRow): NewCardModel {
     images: row.images ?? [],
     textLarge: row.text_large,
     author: row.author ?? undefined,
+    isTest: row.is_test,
   };
 }
 

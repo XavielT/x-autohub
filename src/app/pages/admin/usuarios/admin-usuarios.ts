@@ -66,6 +66,8 @@ export class AdminUsuarios implements OnInit {
     );
   });
 
+  readonly testUserCount = computed(() => this.users().filter((u) => u.isTestUser).length);
+
   readonly adminCount = computed(() => this.users().filter((u) => u.role === 'admin').length);
   readonly moderatorCount = computed(
     () => this.users().filter((u) => u.role === 'moderador').length,
@@ -123,6 +125,41 @@ export class AdminUsuarios implements OnInit {
 
   toggleVerified(user: AdminUserModel): void {
     this.apply(user, { role: user.role, isVerified: !user.isVerified });
+  }
+
+  /**
+   * Marca o desmarca la cuenta como usuario de prueba.
+   *
+   * Va por `setUserTest()` y no por `apply()` porque **no es un rol**: quien lo
+   * recibe sigue siendo `user` y no gana ningún permiso de escritura. Lo único
+   * que cambia es qué ve.
+   *
+   * No pide confirmación, al revés que dar admin: lo que reparte es lectura de
+   * contenido que el equipo escondió, y quitarlo es inmediato. Tampoco se oculta
+   * para uno mismo — un admin ya ve lo de prueba por su rol, así que marcarse o
+   * desmarcarse no le cambia nada.
+   */
+  toggleTestUser(user: AdminUserModel): void {
+    const next = !user.isTestUser;
+    this.savingId.set(user.id);
+
+    this.admin.setUserTest(user.id, next).subscribe({
+      next: () => {
+        this.savingId.set(null);
+        this.users.update((list) =>
+          list.map((u) => (u.id === user.id ? { ...u, isTestUser: next } : u)),
+        );
+        this.toast.show(
+          next
+            ? `${user.displayName} ahora ve el contenido de prueba.`
+            : `${user.displayName} ya no ve el contenido de prueba.`,
+        );
+      },
+      error: (error: Error) => {
+        this.savingId.set(null);
+        this.toast.show(error.message, 'error');
+      },
+    });
   }
 
   private apply(

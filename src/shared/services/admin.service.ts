@@ -36,6 +36,7 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
     // Derivado del rol, no leído de la columna espejo. Ver `toUser`.
     isAdmin: row.role === 'admin',
     isVerified: row.is_verified,
+    isTestUser: row.is_test_user,
     createdAt: new Date(row.created_at),
   };
 }
@@ -118,6 +119,31 @@ export class AdminService {
     );
   }
 
+  /**
+   * Marca o desmarca una cuenta como usuario de prueba.
+   *
+   * Pasa por `set_user_test()` por lo mismo que el rol: la política de
+   * `profiles` solo deja editar tu propia fila y el trigger de 0005 —extendido
+   * en 0013— congela la columna. La función vuelve a comprobar que quien llama
+   * sea **admin**; un moderador no reparte acceso al contenido oculto.
+   */
+  setUserTest(userId: string, isTestUser: boolean): Observable<void> {
+    if (this.supabase.shouldUseMockData()) {
+      this.mockUsers = this.mockUsers.map((u) =>
+        u.id === userId ? { ...u, isTestUser } : u,
+      );
+      return of(undefined);
+    }
+
+    return from(
+      this.supabase.db.rpc('set_user_test', { p_user_id: userId, p_is_test: isTestUser }),
+    ).pipe(
+      map((res) => {
+        unwrap(res);
+      }),
+    );
+  }
+
   // --- Pedidos -------------------------------------------------------------
 
   /**
@@ -177,7 +203,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('hub_parts')
-        .select('id, name, brand, category, price, stock, is_active')
+        .select('id, name, brand, category, price, stock, is_active, is_test')
         .order('name'),
     ).pipe(
       map((res) =>
@@ -189,12 +215,16 @@ export class AdminService {
           price: Number(r.price),
           stock: r.stock,
           isActive: r.is_active,
+          isTest: r.is_test,
         })),
       ),
     );
   }
 
-  updatePart(id: number, change: Partial<Pick<AdminPartModel, 'price' | 'stock' | 'isActive'>>): Observable<void> {
+  updatePart(
+    id: number,
+    change: Partial<Pick<AdminPartModel, 'price' | 'stock' | 'isActive' | 'isTest'>>,
+  ): Observable<void> {
     if (this.supabase.shouldUseMockData()) {
       this.mockParts = this.mockParts.map((p) => (p.id === id ? { ...p, ...change } : p));
       return of(undefined);
@@ -207,6 +237,7 @@ export class AdminService {
           ...(change.price !== undefined && { price: change.price }),
           ...(change.stock !== undefined && { stock: change.stock }),
           ...(change.isActive !== undefined && { is_active: change.isActive }),
+          ...(change.isTest !== undefined && { is_test: change.isTest }),
         })
         .eq('id', id),
     ).pipe(
@@ -224,7 +255,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('auto_hub_vehicles')
-        .select('id, brand, model, year, price, mileage, is_available')
+        .select('id, brand, model, year, price, mileage, is_available, is_test')
         .order('created_at', { ascending: false }),
     ).pipe(
       map((res) =>
@@ -236,6 +267,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          isTest: r.is_test,
         })),
       ),
     );
@@ -243,7 +275,7 @@ export class AdminService {
 
   updateVehicle(
     id: number,
-    change: Partial<Pick<AdminVehicleModel, 'price' | 'isAvailable'>>,
+    change: Partial<Pick<AdminVehicleModel, 'price' | 'isAvailable' | 'isTest'>>,
   ): Observable<void> {
     if (this.supabase.shouldUseMockData()) {
       this.mockVehicles = this.mockVehicles.map((v) => (v.id === id ? { ...v, ...change } : v));
@@ -256,6 +288,7 @@ export class AdminService {
         .update({
           ...(change.price !== undefined && { price: change.price }),
           ...(change.isAvailable !== undefined && { is_available: change.isAvailable }),
+          ...(change.isTest !== undefined && { is_test: change.isTest }),
         })
         .eq('id', id),
     ).pipe(
@@ -273,7 +306,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('news')
-        .select('id, title, scope, published_at, is_published')
+        .select('id, title, scope, published_at, is_published, is_test')
         .order('published_at', { ascending: false }),
     ).pipe(
       map((res) =>
@@ -283,19 +316,29 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          isTest: r.is_test,
         })),
       ),
     );
   }
 
-  updateNews(id: number, isPublished: boolean): Observable<void> {
+  updateNews(
+    id: number,
+    change: Partial<Pick<AdminNewsModel, 'isPublished' | 'isTest'>>,
+  ): Observable<void> {
     if (this.supabase.shouldUseMockData()) {
-      this.mockNews = this.mockNews.map((n) => (n.id === id ? { ...n, isPublished } : n));
+      this.mockNews = this.mockNews.map((n) => (n.id === id ? { ...n, ...change } : n));
       return of(undefined);
     }
 
     return from(
-      this.supabase.db.from('news').update({ is_published: isPublished }).eq('id', id),
+      this.supabase.db
+        .from('news')
+        .update({
+          ...(change.isPublished !== undefined && { is_published: change.isPublished }),
+          ...(change.isTest !== undefined && { is_test: change.isTest }),
+        })
+        .eq('id', id),
     ).pipe(
       map((res) => {
         unwrap(res);
@@ -319,6 +362,7 @@ export class AdminService {
         price: draft.price,
         stock: draft.stock,
         isActive: draft.isActive,
+        isTest: draft.isTest,
       };
       this.mockParts = [created, ...this.mockParts];
       return of(created);
@@ -337,8 +381,9 @@ export class AdminService {
           description: draft.description.trim(),
           stock: draft.stock,
           is_active: draft.isActive,
+          is_test: draft.isTest,
         })
-        .select('id, name, brand, category, price, stock, is_active')
+        .select('id, name, brand, category, price, stock, is_active, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -351,6 +396,7 @@ export class AdminService {
           price: Number(r.price),
           stock: r.stock,
           isActive: r.is_active,
+          isTest: r.is_test,
         };
       }),
     );
@@ -366,6 +412,7 @@ export class AdminService {
         price: draft.price,
         mileage: draft.mileage,
         isAvailable: draft.isAvailable,
+        isTest: draft.isTest,
       };
       this.mockVehicles = [created, ...this.mockVehicles];
       return of(created);
@@ -391,8 +438,9 @@ export class AdminService {
           location: draft.location.trim(),
           contact: draft.contact.trim(),
           is_available: draft.isAvailable,
+          is_test: draft.isTest,
         })
-        .select('id, brand, model, year, price, mileage, is_available')
+        .select('id, brand, model, year, price, mileage, is_available, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -405,6 +453,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          isTest: r.is_test,
         };
       }),
     );
@@ -418,6 +467,7 @@ export class AdminService {
         scope: draft.scope,
         publishedAt: new Date(`${draft.publishedAt}T12:00:00Z`),
         isPublished: draft.isPublished,
+        isTest: draft.isTest,
       };
       this.mockNews = [created, ...this.mockNews];
       return of(created);
@@ -436,8 +486,9 @@ export class AdminService {
           author: draft.author?.trim() || null,
           published_at: draft.publishedAt,
           is_published: draft.isPublished,
+          is_test: draft.isTest,
         })
-        .select('id, title, scope, published_at, is_published')
+        .select('id, title, scope, published_at, is_published, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -448,6 +499,7 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          isTest: r.is_test,
         };
       }),
     );
@@ -476,7 +528,9 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('hub_parts')
-        .select('id, category, name, brand, img_url, images, price, description, stock, is_active')
+        .select(
+          'id, category, name, brand, img_url, images, price, description, stock, is_active, is_test',
+        )
         .eq('id', id)
         .single(),
     ).pipe(
@@ -493,6 +547,7 @@ export class AdminService {
           description: r.description,
           stock: r.stock,
           isActive: r.is_active,
+          isTest: r.is_test,
         };
       }),
     );
@@ -508,6 +563,7 @@ export class AdminService {
         price: draft.price,
         stock: draft.stock,
         isActive: draft.isActive,
+        isTest: draft.isTest,
       };
       this.mockParts = this.mockParts.map((p) => (p.id === id ? updated : p));
       return of(updated);
@@ -526,9 +582,10 @@ export class AdminService {
           description: draft.description.trim(),
           stock: draft.stock,
           is_active: draft.isActive,
+          is_test: draft.isTest,
         })
         .eq('id', id)
-        .select('id, name, brand, category, price, stock, is_active')
+        .select('id, name, brand, category, price, stock, is_active, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -541,6 +598,7 @@ export class AdminService {
           price: Number(r.price),
           stock: r.stock,
           isActive: r.is_active,
+          isTest: r.is_test,
         };
       }),
     );
@@ -588,6 +646,7 @@ export class AdminService {
           location: r.location,
           contact: r.contact,
           isAvailable: r.is_available,
+          isTest: r.is_test,
         };
       }),
     );
@@ -603,6 +662,7 @@ export class AdminService {
         price: draft.price,
         mileage: draft.mileage,
         isAvailable: draft.isAvailable,
+        isTest: draft.isTest,
       };
       this.mockVehicles = this.mockVehicles.map((v) => (v.id === id ? updated : v));
       return of(updated);
@@ -628,9 +688,10 @@ export class AdminService {
           location: draft.location.trim(),
           contact: draft.contact.trim(),
           is_available: draft.isAvailable,
+          is_test: draft.isTest,
         })
         .eq('id', id)
-        .select('id, brand, model, year, price, mileage, is_available')
+        .select('id, brand, model, year, price, mileage, is_available, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -643,6 +704,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          isTest: r.is_test,
         };
       }),
     );
@@ -663,6 +725,7 @@ export class AdminService {
         author: undefined,
         publishedAt: n.publishedAt.toISOString().slice(0, 10),
         isPublished: n.isPublished,
+        isTest: n.isTest,
       });
     }
 
@@ -680,6 +743,7 @@ export class AdminService {
           author: r.author ?? undefined,
           publishedAt: r.published_at,
           isPublished: r.is_published,
+          isTest: r.is_test,
         };
       }),
     );
@@ -693,6 +757,7 @@ export class AdminService {
         scope: draft.scope,
         publishedAt: new Date(`${draft.publishedAt}T12:00:00Z`),
         isPublished: draft.isPublished,
+        isTest: draft.isTest,
       };
       this.mockNews = this.mockNews.map((n) => (n.id === id ? updated : n));
       return of(updated);
@@ -711,9 +776,10 @@ export class AdminService {
           author: draft.author?.trim() || null,
           published_at: draft.publishedAt,
           is_published: draft.isPublished,
+          is_test: draft.isTest,
         })
         .eq('id', id)
-        .select('id, title, scope, published_at, is_published')
+        .select('id, title, scope, published_at, is_published, is_test')
         .single(),
     ).pipe(
       map((res) => {
@@ -724,6 +790,7 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          isTest: r.is_test,
         };
       }),
     );

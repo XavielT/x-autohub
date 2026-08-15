@@ -129,6 +129,10 @@
               <input type="checkbox" formControlName="isActive" />
               <span>Visible en el catalogo</span>
             </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isTest" />
+              <span>Articulo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
+            </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar al catalogo' : 'Guardar cambios') }}
@@ -226,6 +230,10 @@
               <input type="checkbox" formControlName="isAvailable" />
               <span>Disponible (visible en Auto Hub)</span>
             </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isTest" />
+              <span>Vehiculo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
+            </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a Auto Hub' : 'Guardar cambios') }}
@@ -273,6 +281,10 @@
               <input type="checkbox" formControlName="isPublished" />
               <span>Publicada</span>
             </label>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isTest" />
+              <span>Noticia de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
+            </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Publicar noticia' : 'Guardar cambios') }}
@@ -305,6 +317,7 @@
                   <tr [class.adm-inv__row--off]="!part.isActive">
                     <td>
                       <span class="adm-inv__name">{{ part.name }}</span>
+                      @if (part.isTest) { <span class="adm-inv__test">PRUEBA</span> }
                       <span class="adm-inv__sub">{{ part.brand }} · {{ part.category }}</span>
                     </td>
                     <td>
@@ -329,6 +342,13 @@
                         <button type="button" class="adm-inv__btn"
                                 [attr.aria-label]="'Editar ' + part.name"
                                 (click)="startEdit(part.id)">Editar</button>
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'p' + part.id"
+                                [attr.aria-pressed]="part.isTest"
+                                [attr.aria-label]="(part.isTest ? 'Quitar prueba de ' : 'Marcar como prueba ') + part.name"
+                                (click)="togglePartTest(part)">
+                          {{ part.isTest ? 'Quitar prueba' : 'Marcar prueba' }}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -355,6 +375,7 @@
                   <tr [class.adm-inv__row--off]="!v.isAvailable">
                     <td>
                       <span class="adm-inv__name">{{ v.brand }} {{ v.model }}</span>
+                      @if (v.isTest) { <span class="adm-inv__test">PRUEBA</span> }
                       <span class="adm-inv__sub">{{ v.year }}</span>
                     </td>
                     <td>
@@ -373,6 +394,13 @@
                         <button type="button" class="adm-inv__btn"
                                 [attr.aria-label]="'Editar ' + v.brand + ' ' + v.model"
                                 (click)="startEdit(v.id)">Editar</button>
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'v' + v.id"
+                                [attr.aria-pressed]="v.isTest"
+                                [attr.aria-label]="(v.isTest ? 'Quitar prueba de ' : 'Marcar como prueba ') + v.brand + ' ' + v.model"
+                                (click)="toggleVehicleTest(v)">
+                          {{ v.isTest ? 'Quitar prueba' : 'Marcar prueba' }}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -397,7 +425,10 @@
               <tbody>
                 @for (n of news(); track n.id) {
                   <tr [class.adm-inv__row--off]="!n.isPublished">
-                    <td><span class="adm-inv__name">{{ n.title }}</span></td>
+                    <td>
+                      <span class="adm-inv__name">{{ n.title }}</span>
+                      @if (n.isTest) { <span class="adm-inv__test">PRUEBA</span> }
+                    </td>
                     <td>{{ n.scope === 'local' ? 'Local' : 'Internacional' }}</td>
                     <td>{{ n.publishedAt | date:'d MMM y' }}</td>
                     <td>
@@ -409,6 +440,13 @@
                         <button type="button" class="adm-inv__btn"
                                 [attr.aria-label]="'Editar ' + n.title"
                                 (click)="startEdit(n.id)">Editar</button>
+                        <button type="button" class="adm-inv__btn"
+                                [disabled]="savingId() === 'n' + n.id"
+                                [attr.aria-pressed]="n.isTest"
+                                [attr.aria-label]="(n.isTest ? 'Quitar prueba de ' : 'Marcar como prueba ') + n.title"
+                                (click)="toggleNewsTest(n)">
+                          {{ n.isTest ? 'Quitar prueba' : 'Marcar prueba' }}
+                        </button>
                       </div>
                     </td>
                   </tr>

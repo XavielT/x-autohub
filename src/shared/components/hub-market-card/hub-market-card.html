@@ -15,6 +15,7 @@
     <div class="hub-market-card__middle">
         <div class="hub-market-card__middle-header">
             <span>{{displayCategory()}}</span>
+            @if (item().isTest) { <app-test-badge /> }
         </div>
         <div class="hub-market-card__middle-content">
             <a [routerLink]="itemLink()">

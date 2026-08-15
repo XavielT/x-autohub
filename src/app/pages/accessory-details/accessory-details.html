@@ -1,5 +1,6 @@
 @if (accessory(); as accessory) {
 <div class="accessory-details">
+  @if (accessory.isTest) { <app-test-badge /> }
   <h1>{{accessory.title}}</h1>
   <img [src]="accessory.images[0]" [alt]="accessory.title" />
   <p>{{accessory.description}}</p>
@@ -13,4 +14,17 @@
     </a>
   }
 </div>
+} @else if (!isLoading()) {
+  <!--
+    Sin este bloque la pagina quedaba **en blanco** para cualquier id que no
+    existiera, y desde la fase 6 eso incluye los articulos de prueba abiertos
+    por un visitante: la pantalla vacia parecia un error de la app en vez de un
+    "esto no existe". Las otras paginas de detalle ya tenian su estado; esta no.
+  -->
+  <div class="accessory-details__not-found">
+    <h2 class="accessory-details__not-found-title">Upss, Articulo no encontrado!</h2>
+    <p>Este articulo es inexistente o fue borrado.</p>
+    <img class="accessory-details__not-found-img" src="assets/icons/not-found-hub-icon.svg" alt="" />
+    <a class="accessory-details__not-found-link" routerLink="/hub-market">Volver a Hub Market</a>
+  </div>
 }

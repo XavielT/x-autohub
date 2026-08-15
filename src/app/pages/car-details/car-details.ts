@@ -6,10 +6,11 @@ import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-car-details',
-  imports: [CarCard, RouterLink, DecimalPipe, SlicePipe],
+  imports: [CarCard, RouterLink, DecimalPipe, SlicePipe, TestBadge],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -351,5 +351,20 @@ export const HUB_PART_MOCK: HubPartModel[] = [
         starsRating: 4.5,
         price: 2450,
         description: "Lectura y borrado de codigos de falla desde el celular."
+    },
+    // Artículo de prueba (fase 6). Solo lo ven admin, moderador y usuarios de
+    // prueba; para el resto no existe, ni en el catálogo ni por URL directa.
+    // Sirve para probar el carrito y el checkout contra el sitio real sin que
+    // ningún cliente se tropiece con él. Ver shared/utils/test-visibility.ts.
+    {
+        id: 36,
+        category: "herramientas",
+        imgUrl: "assets/imgs/hub-parts/scanner-obd2-bluetooth.jpg",
+        name: "PRUEBA - Pieza de prueba",
+        brand: "X AutoHub",
+        starsRating: 5,
+        price: 100,
+        description: "Articulo de prueba del equipo. No esta a la venta.",
+        isTest: true
     }
 ];

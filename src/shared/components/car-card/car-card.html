@@ -11,6 +11,7 @@
                     <h4>{{car().vehicleSpecs?.brand}} {{car().vehicleSpecs?.model}}</h4>
                 </a>
                 <span>{{car().vehicleSpecs?.year}} &bull; {{car().vehicleSpecs?.mileage}} KM</span>
+                @if (car().isTest) { <app-test-badge /> }
             </div>
             <div class="car-card-info-up-right">
                 <h5>RD$ {{car().price | number:'1.0-0'}}</h5>

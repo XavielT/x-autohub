@@ -27,19 +27,21 @@ const OTRO: AdminUserModel = {
   role: 'user',
   isAdmin: false,
   isVerified: false,
+  isTestUser: false,
   createdAt: new Date('2026-08-10T09:15:00Z'),
 };
 
 describe('AdminUsuarios', () => {
   function montar(usuarios: AdminUserModel[] = [OTRO]) {
     const setUserRole = vi.fn(() => of(undefined));
+    const setUserTest = vi.fn(() => of(undefined));
     const show = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: AdminService,
-          useValue: { getUsers: vi.fn(() => of(usuarios)), setUserRole },
+          useValue: { getUsers: vi.fn(() => of(usuarios)), setUserRole, setUserTest },
         },
         { provide: AuthService, useValue: { user: signal<UserModel | null>(YO) } },
         { provide: ToastService, useValue: { show } },
@@ -47,7 +49,7 @@ describe('AdminUsuarios', () => {
     });
 
     const fixture = TestBed.createComponent(AdminUsuarios);
-    return { fixture, componente: fixture.componentInstance, setUserRole, show };
+    return { fixture, componente: fixture.componentInstance, setUserRole, setUserTest, show };
   }
 
   it('cuenta admins y moderadores por separado', async () => {
@@ -59,7 +61,7 @@ describe('AdminUsuarios', () => {
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      '3 cuenta(s) · 1 admin · 1 moderador(es)',
+      '3 cuenta(s) · 1 admin · 1 moderador(es) · 0 de prueba',
     );
   });
 
@@ -131,6 +133,33 @@ describe('AdminUsuarios', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'No puedes cambiar tu propio rol',
     );
+  });
+
+  it('marcar usuario de prueba no toca el rol: no es un rol', async () => {
+    const { fixture, componente, setUserTest, setUserRole } = montar();
+    await fixture.whenStable();
+
+    componente.toggleTestUser(OTRO);
+    await fixture.whenStable();
+
+    expect(setUserTest).toHaveBeenCalledWith('u-9', true);
+    expect(setUserRole).not.toHaveBeenCalled();
+    expect(componente.users()[0].isTestUser).toBe(true);
+    expect(componente.users()[0].role).toBe('user');
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.adm-usr__tag--test'),
+    ).not.toBeNull();
+  });
+
+  it('desmarcar usuario de prueba manda false', async () => {
+    const { fixture, componente, setUserTest } = montar([{ ...OTRO, isTestUser: true }]);
+    await fixture.whenStable();
+
+    componente.toggleTestUser(componente.users()[0]);
+    await fixture.whenStable();
+
+    expect(setUserTest).toHaveBeenCalledWith('u-9', false);
+    expect(componente.users()[0].isTestUser).toBe(false);
   });
 
   it('distingue el moderador del admin en la lista', async () => {

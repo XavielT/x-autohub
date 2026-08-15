@@ -22,6 +22,7 @@ export const ADMIN_USERS_MOCK: AdminUserModel[] = [
     role: 'admin',
     isAdmin: true,
     isVerified: true,
+    isTestUser: false,
     createdAt: new Date('2026-07-06T10:00:00Z'),
   },
   {
@@ -33,6 +34,7 @@ export const ADMIN_USERS_MOCK: AdminUserModel[] = [
     role: 'moderador',
     isAdmin: false,
     isVerified: true,
+    isTestUser: false,
     createdAt: new Date('2026-08-01T14:30:00Z'),
   },
   {
@@ -44,6 +46,10 @@ export const ADMIN_USERS_MOCK: AdminUserModel[] = [
     role: 'user',
     isAdmin: false,
     isVerified: false,
+    // Cuenta de prueba: ve el contenido marcado como `isTest`. No es un rol —
+    // sigue siendo `user`. En modo simulado la sesion equivalente se abre con
+    // prueba@… o test@… (ver AuthService).
+    isTestUser: true,
     createdAt: new Date('2026-08-10T09:15:00Z'),
   },
 ];
@@ -88,18 +94,23 @@ export const ADMIN_ORDERS_MOCK: AdminOrderModel[] = [
 ];
 
 export const ADMIN_PARTS_MOCK: AdminPartModel[] = [
-  { id: 1, name: 'Disco ventilado GTR 355mm', brand: 'Brembo', category: 'Frenos', price: 12950, stock: 8, isActive: true },
-  { id: 2, name: 'Filtro de aire de alto flujo', brand: 'K&N', category: 'Filtros', price: 2850, stock: 24, isActive: true },
-  { id: 3, name: 'Kit Coilover Street Pro', brand: 'BC Racing', category: 'Suspension y Chassis', price: 32500, stock: 3, isActive: true },
-  { id: 4, name: 'Aceite sintetico 5W-30 5L', brand: 'Motul', category: 'Aceites', price: 2250, stock: 0, isActive: false },
+  { id: 1, name: 'Disco ventilado GTR 355mm', brand: 'Brembo', category: 'Frenos', price: 12950, stock: 8, isActive: true, isTest: false },
+  { id: 2, name: 'Filtro de aire de alto flujo', brand: 'K&N', category: 'Filtros', price: 2850, stock: 24, isActive: true, isTest: false },
+  { id: 3, name: 'Kit Coilover Street Pro', brand: 'BC Racing', category: 'Suspension y Chassis', price: 32500, stock: 3, isActive: true, isTest: false },
+  { id: 4, name: 'Aceite sintetico 5W-30 5L', brand: 'Motul', category: 'Aceites', price: 2250, stock: 0, isActive: false, isTest: false },
+  // Mismo id que la pieza de prueba de HUB_PART_MOCK, para que marcar y
+  // desmarcar desde el panel se corresponda con lo que se ve en el catalogo.
+  { id: 36, name: 'PRUEBA - Pieza de prueba', brand: 'X AutoHub', category: 'Herramientas', price: 100, stock: 5, isActive: true, isTest: true },
 ];
 
 export const ADMIN_VEHICLES_MOCK: AdminVehicleModel[] = [
-  { id: 1, brand: 'Toyota', model: 'Corolla', year: 2020, price: 985000, mileage: 42000, isAvailable: true },
-  { id: 2, brand: 'Honda', model: 'CR-V', year: 2019, price: 1290000, mileage: 58000, isAvailable: true },
+  { id: 1, brand: 'Toyota', model: 'Corolla', year: 2020, price: 985000, mileage: 42000, isAvailable: true, isTest: false },
+  { id: 2, brand: 'Honda', model: 'CR-V', year: 2019, price: 1290000, mileage: 58000, isAvailable: true, isTest: false },
+  { id: 6, brand: 'PRUEBA', model: 'Vehiculo de prueba', year: 2020, price: 100, mileage: 1000, isAvailable: true, isTest: true },
 ];
 
 export const ADMIN_NEWS_MOCK: AdminNewsModel[] = [
-  { id: 1, title: '809 Expo por primera vez en RD', scope: 'local', publishedAt: new Date('2026-08-01T12:00:00Z'), isPublished: true },
-  { id: 2, title: 'Primer Mercedes Benz completamente electrico', scope: 'internacional', publishedAt: new Date('2026-07-20T12:00:00Z'), isPublished: true },
+  { id: 1, title: '809 Expo por primera vez en RD', scope: 'local', publishedAt: new Date('2026-08-01T12:00:00Z'), isPublished: true, isTest: false },
+  { id: 2, title: 'Primer Mercedes Benz completamente electrico', scope: 'internacional', publishedAt: new Date('2026-07-20T12:00:00Z'), isPublished: true, isTest: false },
+  { id: 3, title: 'PRUEBA - Noticia de prueba', scope: 'local', publishedAt: new Date('2026-08-15T12:00:00Z'), isPublished: true, isTest: true },
 ];

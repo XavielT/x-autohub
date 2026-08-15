@@ -28,6 +28,7 @@
   
         <div class="auto-hub-details__info">
           <div class="auto-hub-details__info-top">
+            @if (auto.isTest) { <app-test-badge /> }
             <h1 class="auto-hub-details__title">{{ auto.brand }} {{ auto.model }}</h1>
             <div class="auto-hub-details__price">
               <span>Precio</span>

@@ -9,6 +9,7 @@
     </div>
     <div class="new-card__down">
         <span class="new-card__date">{{ newCard().date | date: 'd MMMM y' }}</span>
+        @if (newCard().isTest) { <app-test-badge /> }
         <a class="new-card__titleLink" [routerLink]="['/news', newCard().id]">
             <h4 class="new-card__title">{{ newCard().title }}</h4>
         </a>

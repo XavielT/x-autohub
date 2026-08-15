@@ -28,6 +28,7 @@ describe('mappers', () => {
       reviewed_at: null,
       is_featured: true,
       is_active: true,
+      is_test: false,
       spec_year: 1994,
       spec_mileage: 180000,
       spec_hp: 873,
@@ -162,6 +163,7 @@ describe('mappers', () => {
       description: 'Alto rendimiento',
       stock: 25,
       is_active: true,
+      is_test: false,
       created_at: '2026-01-01T00:00:00Z',
     };
 
@@ -195,6 +197,7 @@ describe('mappers', () => {
         location: 'Santo Domingo Este',
         contact: '8099539782',
         is_available: true,
+        is_test: false,
         created_at: '2026-01-01T00:00:00Z',
       };
 
@@ -217,6 +220,7 @@ describe('mappers', () => {
         author: null,
         published_at: '2026-04-15',
         is_published: true,
+        is_test: false,
       };
 
       // RD es UTC-4: a mediodía UTC siguen siendo las 8am del mismo día.

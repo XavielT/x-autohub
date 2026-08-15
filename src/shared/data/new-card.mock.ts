@@ -23,4 +23,17 @@ export const NEWS_MOCK: NewCardModel[] = [
         images: ['assets/imgs/news/electric-mercedes.png'],
         textLarge: 'Así que, ¡que empiece el juego! Después de que BMW nos impresionara a todos con su revolucionario iX3, elegido Coche del Año por TG, y lo complementara con el magnífico sedán i3, Mercedes ha contraatacado: tras el GLC Electric llega este, el primer Mercedes-Benz Clase C totalmente eléctrico. Y el dato más destacado para muchos será su autonomía, porque… aún se queda corta en comparación con BMW. Mercedes anuncia hasta 760 kilómetros (473 millas) con una sola carga de su batería de 94 kWh, que, como bien saben los entusiastas de los coches eléctricos, es más pequeña que la batería que Múnich ha instalado en el i3. ¿Y para el resto de ustedes? Su aspecto. Este Clase C eléctrico incorpora la última versión del lenguaje de diseño de Mercedes, y la marca afirma que su "silueta de coupé" y su "expresivo diseño trasero GT" dan como resultado una "elegancia con un carisma impresionante".',
     },
+    // Noticia de prueba (fase 6). Solo la ven admin, moderador y usuarios de
+    // prueba; para el resto no existe, ni en el home ni por URL directa.
+    {
+        id: 3,
+        imageUrl: 'assets/imgs/news/expo-809.jpg',
+        location: 'local',
+        date: new Date('2026-08-15'),
+        title: 'PRUEBA - Noticia de prueba',
+        text: 'Noticia de prueba del equipo de X AutoHub. No es contenido real.',
+        images: ['assets/imgs/news/expo-809.jpg'],
+        textLarge: 'Noticia de prueba del equipo de X AutoHub. Sirve para verificar la portada, la galeria y la pagina de detalle sin publicar nada al publico. No es contenido real.',
+        isTest: true,
+    },
 ]

@@ -136,6 +136,21 @@
     color: #ff6b6b;
   }
 
+  // Distintivo de fila de prueba. Mismo rojo que `app-test-badge`, para que sea
+  // el mismo lenguaje visual dentro y fuera del panel.
+  &__test {
+    display: inline-block;
+    margin: 2px 0;
+    padding: 1px 6px;
+    border: 1px solid #c62828;
+    border-radius: 3px;
+    background-color: #c6282824;
+    color: #c62828;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+  }
+
   &__btn {
     font-family: var(--font-body);
     font-size: 13px;

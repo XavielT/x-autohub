@@ -37,6 +37,7 @@
 
         <div class="hub-part-details__container-right">
           <span class="hub-part-details__category">{{ part.category }}</span>
+          @if (part.isTest) { <app-test-badge /> }
           <h1 class="hub-part-details__name">{{ part.name }}</h1>
           <div class="hub-part-details__meta">
             <span class="hub-part-details__brand">{{ part.brand }}</span>

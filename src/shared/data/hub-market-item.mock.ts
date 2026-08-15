@@ -127,4 +127,22 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
       model: 'Amarok',
     }
   },
+  // Publicacion de prueba (fase 6). Aprobada y activa: si no fuera de prueba se
+  // veria en Hub Market como cualquier otra. Solo la ven admin, moderador y
+  // usuarios de prueba. Ver shared/utils/test-visibility.ts.
+  {
+    id: 105,
+    title: 'PRUEBA - Publicacion de prueba',
+    description: 'Publicacion de prueba del equipo de X AutoHub. No esta a la venta.',
+    images: ['assets/imgs/catalog/accesorios.jpg'],
+    price: 100,
+    location: 'Santo Domingo',
+    sellerName: 'X AutoHub',
+    contactPhone: '8099539782',
+    category: 'accesorios',
+    status: 'aprobado',
+    isTest: true,
+    detailRoute: '/accessory-details/105',
+    createdAt: '2026-08-15',
+  },
 ];

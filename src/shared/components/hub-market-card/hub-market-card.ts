@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HubMarketItemModel } from '../../models/hub-market-item.model';
+import { TestBadge } from '../../ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-market-card',
-  imports: [RouterLink, CommonModule, NgOptimizedImage],
+  imports: [RouterLink, CommonModule, NgOptimizedImage, TestBadge],
   templateUrl: './hub-market-card.html',
   styleUrls: ['./hub-market-card.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

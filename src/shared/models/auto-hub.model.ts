@@ -16,4 +16,6 @@ export interface AutoHubModel{
     location: string;
     /** Teléfono de contacto. string, no number: un 809 con formato no es un número. */
     contact: string;
+    /** Vehículo de prueba. Ver `shared/utils/test-visibility.ts`. */
+    isTest?: boolean;
 }

@@ -4,10 +4,11 @@ import { HubPartModel } from '../../models/hub-part.model';
 import { CartService } from '../../services/cart.service';
 import { ToastService } from '../../services/toast.service';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { TestBadge } from '../../ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-catalogo-card',
-  imports: [RouterLink, CommonModule, NgOptimizedImage],
+  imports: [RouterLink, CommonModule, NgOptimizedImage, TestBadge],
   templateUrl: './catalogo-card.html',
   styleUrl: './catalogo-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

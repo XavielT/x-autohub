@@ -77,6 +77,39 @@ export class AdminModeracion implements OnInit {
     this.apply(item, 'aprobado');
   }
 
+  /**
+   * Marca o desmarca la publicación como de prueba, **sin sacarla de la cola**.
+   *
+   * Es lo contrario de aprobar o rechazar: aquellas son decisiones que cierran
+   * la revisión, esta es una etiqueta. Si la quitara de la lista, quien la marcó
+   * para probar el flujo perdería de vista justo lo que quería seguir.
+   *
+   * Un moderador puede hacerlo con un `update` normal; a cualquier otro el
+   * trigger de 0013 le devuelve la columna a su valor anterior.
+   */
+  toggleTest(item: HubMarketItemModel): void {
+    const next = !item.isTest;
+    this.savingId.set(item.id);
+
+    this.hubMarket.setTestFlag(item.id, next).subscribe({
+      next: () => {
+        this.savingId.set(null);
+        this.items.update((list) =>
+          list.map((i) => (i.id === item.id ? { ...i, isTest: next } : i)),
+        );
+        this.toast.show(
+          next
+            ? `"${item.title}" quedo marcada como publicacion de prueba.`
+            : `"${item.title}" ya no es una publicacion de prueba.`,
+        );
+      },
+      error: (error: Error) => {
+        this.savingId.set(null);
+        this.toast.show(error.message, 'error');
+      },
+    });
+  }
+
   /** Abre (o cierra) el formulario de rechazo de una publicación. */
   askReject(item: HubMarketItemModel): void {
     const open = this.rejectingId() === item.id;

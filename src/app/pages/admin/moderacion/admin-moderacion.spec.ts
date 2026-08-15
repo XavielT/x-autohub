@@ -24,20 +24,21 @@ const PENDIENTE: HubMarketItemModel = {
 describe('AdminModeracion', () => {
   function montar(pendientes: HubMarketItemModel[] = [PENDIENTE]) {
     const moderate = vi.fn(() => of(undefined));
+    const setTestFlag = vi.fn(() => of(undefined));
     const show = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: HubMarketService,
-          useValue: { getPending: vi.fn(() => of(pendientes)), moderate },
+          useValue: { getPending: vi.fn(() => of(pendientes)), moderate, setTestFlag },
         },
         { provide: ToastService, useValue: { show } },
       ],
     });
 
     const fixture = TestBed.createComponent(AdminModeracion);
-    return { fixture, componente: fixture.componentInstance, moderate, show };
+    return { fixture, componente: fixture.componentInstance, moderate, setTestFlag, show };
   }
 
   const texto = (fixture: { nativeElement: unknown }) =>
@@ -168,5 +169,48 @@ describe('AdminModeracion', () => {
       'Solo un moderador o un administrador puede revisar publicaciones.',
       'error',
     );
+  });
+
+  describe('marcar como prueba', () => {
+    it('marca la publicacion y la deja en la cola', async () => {
+      const { fixture, componente, setTestFlag, moderate } = montar();
+      await fixture.whenStable();
+
+      componente.toggleTest(PENDIENTE);
+      await fixture.whenStable();
+
+      expect(setTestFlag).toHaveBeenCalledWith(501, true);
+      // Marcar no es decidir: la publicacion sigue esperando revision.
+      expect(moderate).not.toHaveBeenCalled();
+      expect(componente.items()).toHaveLength(1);
+      expect(componente.items()[0].isTest).toBe(true);
+      expect(texto(fixture)).toContain('PRUEBA');
+    });
+
+    it('desmarcar manda false', async () => {
+      const { fixture, componente, setTestFlag } = montar([{ ...PENDIENTE, isTest: true }]);
+      await fixture.whenStable();
+
+      componente.toggleTest(componente.items()[0]);
+      await fixture.whenStable();
+
+      expect(setTestFlag).toHaveBeenCalledWith(501, false);
+      expect(componente.items()[0].isTest).toBe(false);
+    });
+
+    it('si la base falla, la publicacion se queda como estaba', async () => {
+      const { fixture, componente, show } = montar();
+      const service = TestBed.inject(HubMarketService) as unknown as {
+        setTestFlag: ReturnType<typeof vi.fn>;
+      };
+      service.setTestFlag.mockReturnValueOnce(throwError(() => new Error('Sin permiso.')));
+      await fixture.whenStable();
+
+      componente.toggleTest(PENDIENTE);
+      await fixture.whenStable();
+
+      expect(componente.items()[0].isTest).toBeUndefined();
+      expect(show).toHaveBeenCalledWith('Sin permiso.', 'error');
+    });
   });
 });

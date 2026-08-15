@@ -131,6 +131,15 @@
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.07);
     color: var(--text-soft, #9a9a9a);
+
+    // Mismo rojo que `app-test-badge`: el contenido de prueba se ve igual
+    // dentro y fuera del panel.
+    &--test {
+      border: 1px solid #c62828;
+      background: #c6282824;
+      color: #c62828;
+      font-weight: bold;
+    }
   }
 
   &__price {

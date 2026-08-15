@@ -7,10 +7,11 @@ import { HubPartService } from '../../../shared/services/hub-part.service';
 import { CartService } from '../../../shared/services/cart.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
+import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-part-details',
-  imports: [DecimalPipe, RouterLink, CatalogoCard],
+  imports: [DecimalPipe, RouterLink, CatalogoCard, TestBadge],
   templateUrl: './hub-part-details.html',
   styleUrl: './hub-part-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

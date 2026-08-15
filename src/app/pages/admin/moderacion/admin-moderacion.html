@@ -39,6 +39,9 @@
                   {{ item.title }}
                 </a>
                 <span class="adm-mod__tag">{{ item.category }}</span>
+                @if (item.isTest) {
+                  <span class="adm-mod__tag adm-mod__tag--test">PRUEBA</span>
+                }
                 @if (item.images.length > 1) {
                   <span class="adm-mod__tag">{{ item.images.length }} fotos</span>
                 }
@@ -71,6 +74,13 @@
                       [disabled]="savingId() === item.id"
                       (click)="askReject(item)">
                 {{ rejectingId() === item.id ? 'Cancelar' : 'Rechazar' }}
+              </button>
+              <button type="button" class="adm-mod__btn"
+                      [disabled]="savingId() === item.id"
+                      [attr.aria-pressed]="item.isTest"
+                      [attr.aria-label]="(item.isTest ? 'Quitar prueba de ' : 'Marcar como prueba ') + item.title"
+                      (click)="toggleTest(item)">
+                {{ item.isTest ? 'Quitar prueba' : 'Marcar prueba' }}
               </button>
             </div>
           </div>

@@ -5,10 +5,11 @@ import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
 import { formatDrPhone } from '../../../shared/utils/phone';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-auto-hub-details',
-  imports: [DecimalPipe, SlicePipe],
+  imports: [DecimalPipe, SlicePipe, TestBadge],
   templateUrl: './auto-hub-details.html',
   styleUrl: './auto-hub-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

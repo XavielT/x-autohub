@@ -32,6 +32,7 @@
     <div class="car-details__info">
       <div class="car-details__info-top">
         <div>
+          @if (car.isTest) { <app-test-badge /> }
           <h1 class="car-details__title">{{car.title}}</h1>
           <p class="car-details__location">{{car.location}}</p>
         </div>

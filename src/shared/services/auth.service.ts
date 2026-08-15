@@ -30,6 +30,25 @@ function mockRoleFor(email: string): UserRole {
 }
 
 /**
+ * Y cómo se finge un **usuario de prueba**: `prueba@` o `test@`.
+ *
+ * Sigue la convención que estableció la fase 5 —el handle completo, no un
+ * prefijo— y hace falta por la misma razón: en modo simulado no hay base donde
+ * marcar a nadie, así que sin una convención no habría forma de abrir el sitio
+ * como usuario de prueba y comprobar que el contenido marcado se ve.
+ *
+ * No es un rol: quien entra así sigue siendo `user`. Lo único que gana es ver lo
+ * marcado como de prueba, exactamente como en modo real.
+ *
+ * Marcar a alguien desde `/admin/usuarios` **no** cambia la sesión abierta, ni
+ * aquí ni en modo real: cambia su fila, y ese usuario lo nota cuando entra.
+ */
+function mockIsTestUser(email: string): boolean {
+  const handle = email.split('@')[0]?.trim().toLowerCase();
+  return handle === 'prueba' || handle === 'test';
+}
+
+/**
  * Sesión del usuario.
  *
  * Con Supabase configurado usa Supabase Auth (correo + contraseña) y el perfil
@@ -372,6 +391,7 @@ export class AuthService {
       isVerified: false,
       role,
       isAdmin: role === 'admin',
+      isTestUser: mockIsTestUser(email),
       createdAt: new Date().toISOString(),
     };
   }
@@ -405,7 +425,10 @@ export class AuthService {
       // correo con la misma convención, para que quien tenga el navegador
       // abierto desde ayer no se quede con un rol indefinido.
       const role = parsed.role ?? mockRoleFor(parsed.email);
-      return { ...parsed, role, isAdmin: role === 'admin' };
+      // `isTestUser` se deriva igual que el rol para las sesiones guardadas
+      // antes de la fase 6, que no lo traen.
+      const isTestUser = parsed.isTestUser ?? mockIsTestUser(parsed.email);
+      return { ...parsed, role, isAdmin: role === 'admin', isTestUser };
     } catch {
       return null;
     }

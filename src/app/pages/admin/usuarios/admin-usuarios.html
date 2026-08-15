@@ -4,7 +4,7 @@
       <h2 class="adm-usr__title">Usuarios</h2>
       <p class="adm-usr__lead">
         {{ users().length }} cuenta(s) · {{ adminCount() }} admin ·
-        {{ moderatorCount() }} moderador(es)
+        {{ moderatorCount() }} moderador(es) · {{ testUserCount() }} de prueba
       </p>
     </div>
     <label class="adm-usr__search">
@@ -37,6 +37,9 @@
                 <span class="adm-usr__tag adm-usr__tag--mod">Moderador</span>
               }
               @if (user.isVerified) { <span class="adm-usr__tag">Verificado</span> }
+              @if (user.isTestUser) {
+                <span class="adm-usr__tag adm-usr__tag--test">Prueba</span>
+              }
               @if (user.id === currentUserId()) { <span class="adm-usr__tag">Tu</span> }
             </div>
             <span class="adm-usr__mail">{{ user.email }}</span>
@@ -52,6 +55,18 @@
                     [disabled]="savingId() === user.id"
                     (click)="toggleVerified(user)">
               {{ user.isVerified ? 'Quitar verificacion' : 'Verificar' }}
+            </button>
+
+            <!--
+              Ve el contenido de prueba. No es un rol y por eso no vive en el
+              selector de abajo: quien lo tiene sigue siendo lo que ya era.
+            -->
+            <button type="button" class="adm-usr__btn"
+                    [disabled]="savingId() === user.id"
+                    [attr.aria-pressed]="user.isTestUser"
+                    title="Ve los articulos marcados como de prueba en todo el sitio"
+                    (click)="toggleTestUser(user)">
+              {{ user.isTestUser ? 'Quitar usuario de prueba' : 'Usuario de prueba' }}
             </button>
 
             @if (user.id === currentUserId()) {
