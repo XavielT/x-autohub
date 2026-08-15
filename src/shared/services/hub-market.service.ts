@@ -1,9 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { fromHubMarketItem, toHubMarketItem } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
-import { HubMarketCategory, HubMarketItemModel } from '../models/hub-market-item.model';
+import {
+  HubMarketCategory,
+  HubMarketItemModel,
+  PublicationStatus,
+} from '../models/hub-market-item.model';
 import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
 
 /**
@@ -18,6 +22,17 @@ import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
  */
 const SELECT_WITH_SELLER = '*, profiles(display_name)';
 
+/**
+ * Estado de una publicación, tratando la ausencia como aprobada.
+ *
+ * El contenido sembrado y los mocks anteriores a la fase 5 no traen `status`.
+ * Sin este default, un `item.status === 'aprobado'` los escondería a todos y
+ * Hub Market se vería vacío en modo simulado.
+ */
+function statusOf(item: HubMarketItemModel): PublicationStatus {
+  return item.status ?? 'aprobado';
+}
+
 @Injectable({ providedIn: 'root' })
 export class HubMarketService {
   private readonly supabase = inject(SupabaseService);
@@ -29,9 +44,21 @@ export class HubMarketService {
    */
   private mockItems: HubMarketItemModel[] = [...HUB_MARKET_ITEMS_MOCK];
 
+  /**
+   * Los listados públicos filtran por `aprobado` **en los dos modos**.
+   *
+   * En modo real RLS ya lo hace para un usuario normal, pero no para quien
+   * modera: su política le deja ver todo, así que sin este filtro un moderador
+   * navegando el sitio público vería las publicaciones pendientes mezcladas con
+   * las aprobadas, y no sabría que está viendo algo que nadie más ve.
+   */
+  private approvedOnly(items: HubMarketItemModel[]): HubMarketItemModel[] {
+    return items.filter((item) => statusOf(item) === 'aprobado');
+  }
+
   getAll(): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of([...this.mockItems]);
+      return of(this.approvedOnly(this.mockItems));
     }
 
     return from(
@@ -39,10 +66,19 @@ export class HubMarketService {
         .from('hub_market_items')
         .select(SELECT_WITH_SELLER)
         .eq('is_active', true)
+        .eq('status', 'aprobado')
         .order('created_at', { ascending: false }),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
 
+  /**
+   * Una publicación por id.
+   *
+   * **No filtra por estado**: de esto viven las páginas de detalle, y su dueño
+   * tiene que poder abrir la suya mientras está pendiente (llega ahí desde
+   * /perfil). Quien no sea el dueño ni modere no la recibe de todos modos —
+   * la política de select de 0012 se la esconde.
+   */
   getById(id: number): Observable<HubMarketItemModel | undefined> {
     if (this.supabase.shouldUseMockData()) {
       return of(this.mockItems.find((item) => item.id === id));
@@ -55,7 +91,7 @@ export class HubMarketService {
 
   getByCategory(category: HubMarketCategory): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of(this.mockItems.filter((item) => item.category === category));
+      return of(this.approvedOnly(this.mockItems.filter((item) => item.category === category)));
     }
 
     return from(
@@ -64,6 +100,7 @@ export class HubMarketService {
         .select(SELECT_WITH_SELLER)
         .eq('category', category)
         .eq('is_active', true)
+        .eq('status', 'aprobado')
         .order('created_at', { ascending: false }),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
@@ -76,7 +113,7 @@ export class HubMarketService {
    */
   getFeaturedVehicles(limit = 3): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
-      return of(this.pickFeatured(this.mockItems, limit));
+      return of(this.pickFeatured(this.approvedOnly(this.mockItems), limit));
     }
 
     return from(
@@ -85,6 +122,7 @@ export class HubMarketService {
         .select(SELECT_WITH_SELLER)
         .eq('category', 'vehiculos')
         .eq('is_active', true)
+        .eq('status', 'aprobado')
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit),
@@ -113,9 +151,10 @@ export class HubMarketService {
   /**
    * Las publicaciones de un vendedor, de la mas nueva a la mas vieja.
    *
-   * Trae **todas**, no solo las activas: es su propia lista, y a su dueño le
-   * sirve ver también lo que dio de baja. RLS lo permite —
-   * `using (is_active or seller_id = auth.uid() or is_admin())`.
+   * Trae **todas**, en cualquier estado: es su propia lista, y a su dueño le
+   * sirve ver también lo que dio de baja, lo que espera revisión y lo que le
+   * rechazaron con su motivo. La política de select de 0012 lo permite —
+   * `seller_id = auth.uid()` es una de sus tres ramas.
    */
   getBySellerId(sellerId: string): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {
@@ -135,10 +174,23 @@ export class HubMarketService {
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
 
+  /**
+   * Publica un artículo.
+   *
+   * @param canModerate Si quien publica es moderador o admin, en cuyo caso la
+   *   publicación sale aprobada: no tiene sentido que se aprueben a sí mismos
+   *   pasando por la cola.
+   *
+   *   **En modo real este valor no decide nada.** El estado lo pone el trigger
+   *   `hub_market_force_status` (0012) preguntándole a Postgres quién está
+   *   publicando; aquí solo sirve para el modo simulado, que no tiene triggers.
+   *   Un cliente manipulado que mande `true` no consigue nada.
+   */
   publish(
     item: Omit<HubMarketItemModel, 'id'>,
     sellerId: string,
     sellerName: string,
+    canModerate = false,
   ): Observable<HubMarketItemModel> {
     if (this.supabase.shouldUseMockData()) {
       const created: HubMarketItemModel = {
@@ -146,6 +198,8 @@ export class HubMarketService {
         id: Math.max(0, ...this.mockItems.map((i) => i.id)) + 1,
         sellerId,
         sellerName,
+        status: canModerate ? 'aprobado' : 'pendiente',
+        rejectionReason: undefined,
         createdAt: new Date().toISOString(),
       };
       this.mockItems = [created, ...this.mockItems];
@@ -159,6 +213,89 @@ export class HubMarketService {
         .select(SELECT_WITH_SELLER)
         .single(),
     ).pipe(map((res) => toHubMarketItem(unwrap(res))));
+  }
+
+  // --- Moderación ----------------------------------------------------------
+
+  /**
+   * La cola de revisión: lo que espera decisión, de lo más viejo a lo más nuevo.
+   *
+   * El orden es ascendente a propósito, al revés que el resto de los listados:
+   * una cola se atiende por antigüedad, y quien publicó primero es quien lleva
+   * más tiempo esperando.
+   *
+   * En modo real la política de select solo le devuelve esto a quien modera; a
+   * un usuario normal le llega una lista vacía, no un error.
+   */
+  getPending(): Observable<HubMarketItemModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        this.mockItems
+          .filter((item) => statusOf(item) === 'pendiente')
+          .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? '')),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_market_items')
+        .select(SELECT_WITH_SELLER)
+        .eq('status', 'pendiente')
+        .order('created_at', { ascending: true }),
+    ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
+  }
+
+  /**
+   * Aprueba o rechaza una publicación.
+   *
+   * Va por la función `moderate_publication()` y no por un `update`: el trigger
+   * de 0012 congela `status` y compañía en cualquier update normal, así que la
+   * función es el único camino — y además deja la fila entera consistente
+   * (estado, motivo, quién revisó y cuándo) en una sola transacción.
+   *
+   * @param reason Obligatorio al rechazar. Postgres lo vuelve a exigir y pide un
+   *   mínimo de 10 caracteres, así que la validación del formulario es
+   *   comodidad, no la barrera.
+   */
+  moderate(
+    id: number,
+    decision: 'aprobado' | 'rechazado',
+    reason?: string,
+  ): Observable<void> {
+    const cleanReason = reason?.trim() || undefined;
+
+    if (this.supabase.shouldUseMockData()) {
+      if (decision === 'rechazado' && (cleanReason?.length ?? 0) < 10) {
+        return throwError(
+          () => new Error('Explica en al menos 10 caracteres por que se rechaza.'),
+        );
+      }
+
+      this.mockItems = this.mockItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: decision,
+              // Al aprobar se limpia: si no, el motivo de un rechazo anterior
+              // se quedaría colgando de una publicación ya aprobada.
+              rejectionReason: decision === 'rechazado' ? cleanReason : undefined,
+            }
+          : item,
+      );
+      return of(undefined);
+    }
+
+    return from(
+      this.supabase.db.rpc('moderate_publication', {
+        p_id: id,
+        p_decision: decision,
+        p_reason: cleanReason ?? null,
+      }),
+    ).pipe(
+      map((res) => {
+        unwrap(res);
+      }),
+    );
   }
 
   /** Despublica sin borrar, para conservar el historial. */

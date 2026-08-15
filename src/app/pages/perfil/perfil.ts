@@ -16,7 +16,10 @@ import { OrderService } from '../../../shared/services/order.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { LocationSelect } from '../../../shared/ui/location-select/location-select';
-import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import {
+  HubMarketItemModel,
+  PublicationStatus,
+} from '../../../shared/models/hub-market-item.model';
 import { ORDER_STATUS_LABELS, UserOrderModel } from '../../../shared/models/user-order.model';
 import { OrderStatus } from '../../../core/supabase/database.types';
 import {
@@ -160,6 +163,30 @@ export class Perfil implements OnInit {
         this.toast.show(error.message, 'error');
       },
     });
+  }
+
+  // --- Mis publicaciones ---------------------------------------------------
+
+  /**
+   * Estado de una publicación, tratando la ausencia como aprobada.
+   *
+   * Lo sembrado y lo publicado antes de la fase 5 no trae `status`. Mostrarlo
+   * como "Pendiente" asustaría a quien tiene publicaciones que llevan meses
+   * visibles en el sitio.
+   */
+  statusOf(item: HubMarketItemModel): PublicationStatus {
+    return item.status ?? 'aprobado';
+  }
+
+  publicationStatusLabel(status: PublicationStatus): string {
+    switch (status) {
+      case 'pendiente':
+        return 'Pendiente';
+      case 'aprobado':
+        return 'Aprobado';
+      case 'rechazado':
+        return 'Rechazado';
+    }
   }
 
   // --- Actividad -----------------------------------------------------------

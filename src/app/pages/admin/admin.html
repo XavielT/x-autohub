@@ -4,7 +4,7 @@
       <h1 class="admin__title">Panel de <span class="admin__title-highlight">administracion</span></h1>
       <p class="admin__subtitle">
         @if (adminName(); as user) {
-          Sesion de {{ user.displayName }}
+          Sesion de {{ user.displayName }} · {{ roleLabel() }}
         }
       </p>
     </div>
@@ -12,7 +12,7 @@
   </header>
 
   <nav class="admin__nav" aria-label="Secciones de administracion">
-    @for (section of sections; track section.path) {
+    @for (section of sections(); track section.path) {
       <a
         class="admin__nav-item"
         routerLinkActive="admin__nav-item--active"

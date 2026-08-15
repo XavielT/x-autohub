@@ -18,8 +18,14 @@ export class Navbar {
 
   readonly isLoggedIn = this.auth.isLoggedIn;
   readonly user = this.auth.user;
-  /** La entrada al panel solo se dibuja para un admin. Ver `adminGuard`. */
-  readonly isAdmin = this.auth.isAdmin;
+  /**
+   * La entrada al panel se dibuja para quien pueda moderar — moderador o admin.
+   *
+   * Apunta a `/admin`, cuyo redirect lleva a `moderacion`: es la única sección
+   * que abren los dos roles, así que ninguno cae en una pantalla que su guard
+   * vaya a rebotar. Ver `moderatorGuard`.
+   */
+  readonly canModerate = this.auth.canModerate;
 
   readonly isMobileMenuOpen = signal(false);
 

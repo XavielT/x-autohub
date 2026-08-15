@@ -1,3 +1,5 @@
+import { UserRole } from './user.model';
+
 /** Una versión publicada del sitio, como se ve en el historial. */
 export interface ReleaseModel {
   id: number;
@@ -30,6 +32,9 @@ export interface AdminUserModel {
   email: string;
   phone?: string;
   location?: string;
+  /** Fuente de verdad de los permisos. Ver `UserRole`. */
+  role: UserRole;
+  /** Atajo de `role === 'admin'`, derivado. */
   isAdmin: boolean;
   isVerified: boolean;
   createdAt: Date;

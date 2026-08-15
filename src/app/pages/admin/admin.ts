@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../shared/services/auth.service';
 
@@ -6,6 +6,8 @@ interface AdminSection {
   path: string;
   label: string;
   description: string;
+  /** true si un moderador también puede abrirla. Ver `sections`. */
+  forModerators?: boolean;
 }
 
 /**
@@ -15,9 +17,10 @@ interface AdminSection {
  * ruta hija con `loadComponent`, así que entrar al panel no descarga el código
  * de las cuatro secciones.
  *
- * El acceso lo decide `adminGuard`. Ese guard es comodidad de interfaz: la
- * seguridad real está en RLS y en las funciones de la migración 0007, que
- * vuelven a comprobar `is_admin` dentro de Postgres.
+ * La entrada la decide `moderatorGuard`; cada sección de admin se protege
+ * además con `adminGuard` en su propia ruta. Los guards son comodidad de
+ * interfaz: la seguridad real está en RLS y en las funciones de las migraciones
+ * 0007, 0011 y 0012, que vuelven a comprobar el rol dentro de Postgres.
  */
 @Component({
   selector: 'app-admin',
@@ -30,8 +33,18 @@ export class Admin {
   private readonly auth = inject(AuthService);
 
   readonly adminName = this.auth.user;
+  readonly isAdmin = this.auth.isAdmin;
 
-  readonly sections: readonly AdminSection[] = [
+  /** Etiqueta del rol para el encabezado: dice a quién pertenece la sesión. */
+  readonly roleLabel = computed(() => (this.auth.isAdmin() ? 'Administrador' : 'Moderador'));
+
+  private readonly allSections: readonly AdminSection[] = [
+    {
+      path: 'moderacion',
+      label: 'Moderacion',
+      description: 'Publicaciones que esperan revision',
+      forModerators: true,
+    },
     {
       path: 'versiones',
       label: 'Versiones',
@@ -41,4 +54,15 @@ export class Admin {
     { path: 'inventario', label: 'Inventario', description: 'Catalogo, Auto Hub y noticias' },
     { path: 'usuarios', label: 'Usuarios', description: 'Cuentas, verificacion y permisos' },
   ];
+
+  /**
+   * Las pestañas que el rol puede abrir de verdad.
+   *
+   * No es solo cosmética: dibujarle a un moderador una pestaña que su
+   * `adminGuard` va a rebotar lo manda a la raíz con un mensaje de error por
+   * hacer clic donde le ofrecimos. Se esconde lo que no puede abrir.
+   */
+  readonly sections = computed(() =>
+    this.allSections.filter((section) => this.auth.isAdmin() || section.forModerators),
+  );
 }

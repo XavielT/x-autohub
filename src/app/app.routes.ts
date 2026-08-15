@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from '../core/guards/auth.guard';
 import { adminGuard } from '../core/guards/admin.guard';
+import { moderatorGuard } from '../core/guards/moderator.guard';
 
 const BRAND = 'X AutoHub';
 
@@ -121,37 +122,60 @@ export const routes: Routes = [
   },
 
   // --- Administracion ---
-  // Solo para `is_admin`. El guard es comodidad de interfaz: la seguridad real
-  // esta en RLS y en las funciones de la migracion 0007, que vuelven a
-  // comprobarlo dentro de Postgres.
+  //
+  // El padre usa `moderatorGuard` y **cada seccion de admin se protege por su
+  // cuenta** con `adminGuard`. Se afloja arriba para que el moderador entre al
+  // marco del panel, y se cierra abajo para que solo abra `moderacion`.
+  //
+  // Si agregas una seccion nueva, ponle su `canActivate`: sin el, el guard del
+  // padre la deja abierta a los moderadores. Es el error que cubre la prueba de
+  // `app.routes.spec.ts`.
+  //
+  // Los guards son comodidad de interfaz: la seguridad real esta en RLS y en las
+  // funciones de las migraciones 0007, 0011 y 0012, que vuelven a comprobar el
+  // rol dentro de Postgres.
   {
     path: 'admin',
     title: `Administracion | ${BRAND}`,
-    canActivate: [adminGuard],
+    canActivate: [moderatorGuard],
     loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'versiones' },
+      // Antes caia en 'versiones', que un moderador no puede abrir: al entrar a
+      // /admin lo habria rebotado a la raiz con un error. 'moderacion' la abren
+      // los dos roles, asi que sirve de aterrizaje comun.
+      { path: '', pathMatch: 'full', redirectTo: 'moderacion' },
+      {
+        path: 'moderacion',
+        title: `Moderacion | ${BRAND}`,
+        canActivate: [moderatorGuard],
+        loadComponent: () =>
+          import('./pages/admin/moderacion/admin-moderacion').then((m) => m.AdminModeracion),
+      },
       {
         path: 'versiones',
         title: `Versiones | ${BRAND}`,
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/versiones/admin-versiones').then((m) => m.AdminVersiones),
       },
       {
         path: 'pedidos',
         title: `Pedidos | ${BRAND}`,
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/pedidos/admin-pedidos').then((m) => m.AdminPedidos),
       },
       {
         path: 'inventario',
         title: `Inventario | ${BRAND}`,
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/inventario/admin-inventario').then((m) => m.AdminInventario),
       },
       {
         path: 'usuarios',
         title: `Usuarios | ${BRAND}`,
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/usuarios/admin-usuarios').then((m) => m.AdminUsuarios),
       },

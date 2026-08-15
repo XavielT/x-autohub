@@ -61,7 +61,11 @@ const response = await fetch(
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
-    body: JSON.stringify({ is_admin: true, is_verified: true }),
+    // Se escribe `role`, **no** `is_admin`. Desde la migración 0011 `role` es la
+    // fuente de verdad e `is_admin` es un espejo que el trigger deriva de él, así
+    // que un PATCH de `is_admin` se recalcula a false y el script no promovía a
+    // nadie — sin fallar, que es la peor forma de no funcionar.
+    body: JSON.stringify({ role: 'admin', is_verified: true }),
   },
 );
 
@@ -80,8 +84,11 @@ if (rows.length === 0) {
   process.exit(1);
 }
 
-const { id, display_name, is_admin, is_verified } = rows[0];
+const { id, display_name, role, is_admin, is_verified } = rows[0];
 console.log(`Listo: ${display_name || email} ya es admin.`);
 console.log(`  id          ${id}`);
+console.log(`  role        ${role}`);
+// Se imprime el espejo tambien: si alguna vez sale algo distinto de `role`, el
+// trigger de sincronizacion dejo de hacer su trabajo.
 console.log(`  is_admin    ${is_admin}`);
 console.log(`  is_verified ${is_verified}`);

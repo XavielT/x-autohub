@@ -32,9 +32,14 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 7     | `supabase/migrations/0007_admin_module.sql`    | Panel de admin: versiones, usuarios y permisos |
 | 8     | `supabase/migrations/0008_inventory_storage.sql` | Bucket de imágenes del inventario propio     |
 | 9     | `supabase/migrations/0009_own_profile.sql`     | Leer el propio perfil, con su correo y teléfono |
-| 10    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 10    | `supabase/migrations/0010_listing_contact_phone.sql` | Teléfono de contacto en la publicación   |
+| 11    | `supabase/migrations/0011_user_roles.sql`      | Roles: admin > moderador > user                |
+| 12    | `supabase/migrations/0012_publication_moderation.sql` | Aprobación de publicaciones de Hub Market |
+| 13    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
-> El seed va **al final**: usa `stars_rating`, el nombre que deja la 0004.
+> El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010) y
+> `status` (0012). Y la **0012 depende de la 0011**: usa
+> `is_moderator_or_admin()`, que crea la anterior. El orden no es decorativo.
 
 > ⚠️ Sin el paso 2 tu base queda abierta: la clave anon es pública y va en el
 > bundle del navegador. Lo único que impide que cualquiera borre tus datos son
@@ -133,8 +138,8 @@ La clave anon es pública. La seguridad real está en RLS:
 
 | Tabla                           | Leer                | Escribir                            |
 | ------------------------------- | ------------------- | ----------------------------------- |
-| `auto_hub_vehicles`, `hub_parts`, `news`, `services`, `social_clubs`, `social_events` | Todos | Solo `is_admin` |
-| `hub_market_items`              | Todos (activos)     | Solo el dueño (`seller_id = auth.uid()`) |
+| `auto_hub_vehicles`, `hub_parts`, `news`, `services`, `social_clubs`, `social_events` | Todos | Solo admin (`is_admin()`) |
+| `hub_market_items`              | Todos (activos **y aprobados**); su dueño ve lo suyo en cualquier estado; moderador+ ve todo | Solo el dueño (`seller_id = auth.uid()`). Las columnas de moderación, solo `moderate_publication()` |
 | `social_posts`                  | Todos               | Solo el autor                        |
 | `profiles`                      | Todos               | Solo el propio                       |
 | `club_subscriptions`            | Solo admin          | Cualquiera puede insertar            |
@@ -143,25 +148,70 @@ La clave anon es pública. La seguridad real está en RLS:
 El `with check (seller_id = auth.uid())` de Hub Market es lo que impide publicar
 en nombre de otro, incluso desde un cliente manipulado.
 
-### El panel de administración (migración 0007)
+### Roles (migración 0011)
 
-`/admin` es solo para `is_admin`. El `adminGuard` decide si se dibuja, pero **la
-seguridad está en la base**: RLS y dos funciones que vuelven a comprobar el
-permiso dentro de Postgres. Un usuario que fuerce la URL verá pantallas vacías.
+Tres niveles, en `profiles.role`:
+
+| Rol | Puede |
+| --- | --- |
+| `admin` | Todo. Es **el único** que reparte roles. |
+| `moderador` | Aprobar y rechazar publicaciones de Hub Market. Nada más. |
+| `user` | El valor por defecto de cualquier cuenta nueva. |
+
+**`role` es la fuente de verdad; `is_admin` es un espejo** que un trigger deriva
+de él y que se conserva solo por compatibilidad — de la columna dependían el
+grant de 0006, dos funciones y el bundle ya desplegado. **No escribas `is_admin`
+directamente**: el trigger lo recalcula desde `role` y tu cambio se pierde sin
+dar error. Fue exactamente lo que le pasó a `scripts/make-admin.mjs`.
+
+`role` está congelado por el mismo trigger que `is_admin` e `is_verified`, y por
+la misma razón que documenta 0005: RLS no filtra por columna, así que "solo tu
+propia fila" no impide que esa fila traiga `role = 'admin'`.
+
+Dos helpers para las políticas: `is_admin()` (ahora lee `role`) y
+`is_moderator_or_admin()`. La jerarquía vive ahí y no repetida en cada política.
+
+### El panel de administración (migraciones 0007 y 0011)
+
+`/admin` lo abre quien pueda moderar; **cada sección de admin lleva además su
+propio `adminGuard`**. Los guards deciden qué se dibuja, pero **la seguridad está
+en la base**: RLS y funciones que vuelven a comprobar el rol dentro de Postgres.
+Quien fuerce la URL verá pantallas vacías y errores.
 
 | Pieza | Para qué |
 | --- | --- |
 | Tabla `releases` | El historial de versiones. Lectura pública de lo publicado, escritura solo admin. |
-| `admin_list_users()` | Listar cuentas **con su correo**. Hace falta porque las políticas de columna de 0006 lo esconden a cualquier sesión del navegador, admin incluido: los permisos de columna son por rol, no por condición. |
-| `set_user_admin()` | Dar o quitar admin y verificado a otro usuario. Hace falta porque la política de `profiles` solo deja editar tu propia fila y el trigger de 0005 congela esas columnas. |
+| `admin_list_users()` | Listar cuentas **con su correo**. Hace falta porque las políticas de columna de 0006 lo esconden a cualquier sesión del navegador, admin incluido: los permisos de columna son por rol, no por condición. Sigue exigiendo **admin**: un moderador no tiene por qué ver los correos de todos. |
+| `set_user_role()` | Cambiar el rol y la verificación de otro usuario. Hace falta porque la política de `profiles` solo deja editar tu propia fila y el trigger congela esas columnas. **Exige admin**: un moderador no nombra a nadie, ni siquiera a otro moderador. |
+| `set_user_admin()` | **Obsoleta.** Envoltorio de `set_user_role()` para clientes viejos; degrada a `user`, no a `moderador`. |
 
-Las dos funciones son `security definer` y **empiezan comprobando
-`public.is_admin()`**. Sin esa comprobación serían un agujero peor que el que
-cerró 0005, porque `security definer` se salta RLS por completo. Si añades otra,
-mantén ese patrón.
+Todas son `security definer` y **empiezan comprobando el rol**. Sin esa
+comprobación serían un agujero peor que el que cerró 0005, porque
+`security definer` se salta RLS por completo. Si añades otra, mantén ese patrón.
 
-`set_user_admin()` rechaza que un admin se quite el acceso a sí mismo: si es el
-único, dejaría el panel sin dueño.
+`set_user_role()` rechaza que un admin se degrade a sí mismo: si es el único,
+dejaría el panel sin dueño y sin forma de volver a entrar salvo con la
+`service_role`.
+
+### Moderación de publicaciones (migración 0012)
+
+Lo que publica la comunidad nace en `status = 'pendiente'` y no se ve en el sitio
+hasta que alguien lo aprueba. Quien modera publica directo en `aprobado`.
+
+Dos piezas, y hacen cosas distintas:
+
+- **El trigger de congelado** es lo que cierra la puerta. Sin él, el dueño de una
+  publicación se aprueba solo mandando `status` en un update normal — RLS no
+  puede impedirlo, porque no filtra por columna.
+- **`moderate_publication(id, decision, motivo)`** es la puerta, no la barrera:
+  deja estado, motivo, quién revisó y cuándo en una sola transacción. Exige
+  moderador o admin, y un motivo de 10+ caracteres al rechazar.
+
+Es el mismo reparto que usan los privilegios de perfil (trigger 0005 +
+`set_user_role` 0011). Se repite a propósito.
+
+La política de select tiene tres ramas: cualquiera ve lo activo y aprobado, el
+dueño ve lo suyo en cualquier estado, y quien modera ve todo.
 
 **Las imágenes del inventario propio van al bucket `inventory`** (migración
 0008), no a `listings`. La diferencia importa: en `listings` y `avatars` la
@@ -184,7 +234,9 @@ Dos consecuencias prácticas:
 - **No pidas `select('*')` sobre `profiles`.** Falla con
   `permission denied for table profiles`. Pide las columnas públicas:
   `id, display_name, avatar_url, is_verified, location, created_at, is_admin`.
-  Así lo hace ya `auth.service.ts`.
+  Así lo hace ya `auth.service.ts`. **`role` no está en esa lista** y es a
+  propósito: el rol propio llega por `get_my_profile()` y el de los demás por
+  `admin_list_users()`, así que ningún select del navegador lo necesita.
 - **El correo del usuario en sesión sale de Supabase Auth**
   (`db.auth.getUser()`), que es su fuente autoritativa.
 
@@ -201,9 +253,10 @@ await db.from('profiles').update({ display_name: nombre })
 await db.from('profiles').update({ display_name: nombre }).eq('id', uid);
 ```
 
-`is_admin` e `is_verified` se pueden enviar y la petición responde 204, pero el
-trigger de 0005 los deja como estaban. Solo la `service_role` los mueve — es
-decir, `scripts/make-admin.mjs`.
+`role`, `is_admin` e `is_verified` se pueden enviar y la petición responde 204,
+pero el trigger de 0005 —extendido en 0011— los deja como estaban. Solo los
+mueven la `service_role` (es decir, `scripts/make-admin.mjs`) y `set_user_role()`
+llamada por un admin.
 
 #### El propio perfil se lee con `get_my_profile()` (migración 0009)
 
@@ -232,8 +285,25 @@ node scripts/make-admin.mjs tu@correo.com
 Lee la `service_role` de `.env.local`. Equivale a hacerlo desde el SQL Editor:
 
 ```sql
-update public.profiles set is_admin = true, is_verified = true
+update public.profiles set role = 'admin', is_verified = true
 where email = 'tu@correo.com';
+```
+
+> **Se escribe `role`, no `is_admin`.** Desde la 0011 `is_admin` es un espejo que
+> el trigger deriva de `role`: un `update` sobre la columna espejo se recalcula y
+> no promueve a nadie, sin dar error.
+
+### Nombrar un moderador
+
+El primero lo nombra un admin desde `/admin/usuarios`. Desde el SQL Editor es lo
+mismo que arriba con otro valor, aunque lo correcto es pasar por la función, que
+comprueba quién llama:
+
+```sql
+select public.set_user_role(
+  (select id from public.profiles where email = 'moderador@correo.com'),
+  'moderador'
+);
 ```
 
 ---

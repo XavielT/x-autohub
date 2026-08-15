@@ -17,6 +17,7 @@ const USUARIO: UserModel = {
   phone: '809-555-0101',
   location: 'Santiago',
   isVerified: true,
+  role: 'user',
   isAdmin: false,
   createdAt: '2026-07-06T10:00:00Z',
 };
@@ -104,10 +105,19 @@ describe('Perfil', () => {
   });
 
   it('muestra el rol de forma discreta a un admin', async () => {
-    const { fixture } = montar({ user: { ...USUARIO, isAdmin: true } });
+    const { fixture } = montar({ user: { ...USUARIO, role: 'admin', isAdmin: true } });
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Administrador');
+  });
+
+  it('distingue al moderador del admin', async () => {
+    const { fixture } = montar({ user: { ...USUARIO, role: 'moderador' } });
+    await fixture.whenStable();
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain('Moderador');
+    expect(texto).not.toContain('Administrador');
   });
 
   it('lista las publicaciones del usuario', async () => {
@@ -116,6 +126,44 @@ describe('Perfil', () => {
 
     expect(componente.publications().length).toBe(1);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Honda Civic 2018');
+  });
+
+  // --- Estado de moderacion (fase 5) ----------------------------------------
+
+  it('marca "Pendiente" lo que todavia no se ha revisado', async () => {
+    const { fixture } = montar({
+      publicaciones: [{ ...PUBLICACION, status: 'pendiente' }],
+    });
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Pendiente');
+  });
+
+  it('muestra el motivo debajo de lo rechazado: es lo que dice que corregir', async () => {
+    const { fixture } = montar({
+      publicaciones: [
+        {
+          ...PUBLICACION,
+          status: 'rechazado',
+          rejectionReason: 'Las fotos no dejan ver el vehiculo completo.',
+        },
+      ],
+    });
+    await fixture.whenStable();
+    const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(texto).toContain('Rechazado');
+    expect(texto).toContain('Las fotos no dejan ver el vehiculo completo.');
+  });
+
+  it('lo sembrado, sin status, se lee como aprobado y no como pendiente', async () => {
+    const { fixture, componente } = montar({
+      publicaciones: [{ ...PUBLICACION, status: undefined }],
+    });
+    await fixture.whenStable();
+
+    expect(componente.statusOf({ ...PUBLICACION, status: undefined })).toBe('aprobado');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Pendiente');
   });
 
   it('ofrece publicar cuando no hay publicaciones', async () => {

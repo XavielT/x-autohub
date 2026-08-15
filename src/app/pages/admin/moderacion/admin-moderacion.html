@@ -1,0 +1,112 @@
+<section class="adm-mod">
+  <header class="adm-mod__head">
+    <div>
+      <h2 class="adm-mod__title">Moderacion</h2>
+      <p class="adm-mod__lead">
+        @if (isLoading()) {
+          Cargando la cola...
+        } @else {
+          {{ items().length }} publicacion(es) esperando revision
+        }
+      </p>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <p class="adm-mod__empty">Cargando publicaciones...</p>
+  } @else if (items().length === 0) {
+    <div class="adm-mod__empty adm-mod__empty--done">
+      <p class="adm-mod__empty-title">No hay publicaciones pendientes.</p>
+      <p>Todo lo que la comunidad publico ya paso por revision.</p>
+    </div>
+  } @else {
+    <ul class="adm-mod__list">
+      @for (item of items(); track item.id) {
+        <li class="adm-mod__item">
+          <div class="adm-mod__row">
+            <a class="adm-mod__thumb" [routerLink]="item.detailRoute ?? '/hub-market'"
+               [attr.aria-label]="'Ver ' + item.title">
+              @if (item.images.length > 0) {
+                <img [src]="item.images[0]" [alt]="item.title" />
+              } @else {
+                <span class="adm-mod__thumb-empty">Sin imagen</span>
+              }
+            </a>
+
+            <div class="adm-mod__info">
+              <div class="adm-mod__name-row">
+                <a class="adm-mod__name" [routerLink]="item.detailRoute ?? '/hub-market'">
+                  {{ item.title }}
+                </a>
+                <span class="adm-mod__tag">{{ item.category }}</span>
+                @if (item.images.length > 1) {
+                  <span class="adm-mod__tag">{{ item.images.length }} fotos</span>
+                }
+              </div>
+
+              <p class="adm-mod__price">RD$ {{ item.price | number:'1.0-0' }}</p>
+
+              <p class="adm-mod__meta">
+                {{ item.sellerName }} · {{ item.location }}
+                @if (item.createdAt) {
+                  · {{ item.createdAt | date:'d MMM y' }}
+                  @if (waitingDays(item) > 0) {
+                    <span class="adm-mod__waiting">
+                      Esperando {{ waitingDays(item) }} dia(s)
+                    </span>
+                  }
+                }
+              </p>
+
+              <p class="adm-mod__desc">{{ item.description }}</p>
+            </div>
+
+            <div class="adm-mod__tools">
+              <button type="button" class="adm-mod__btn adm-mod__btn--ok"
+                      [disabled]="savingId() === item.id"
+                      (click)="approve(item)">
+                Aprobar
+              </button>
+              <button type="button" class="adm-mod__btn"
+                      [disabled]="savingId() === item.id"
+                      (click)="askReject(item)">
+                {{ rejectingId() === item.id ? 'Cancelar' : 'Rechazar' }}
+              </button>
+            </div>
+          </div>
+
+          @if (rejectingId() === item.id) {
+            <div class="adm-mod__reject">
+              <label class="adm-mod__reject-label" [attr.for]="'reason-' + item.id">
+                Motivo del rechazo<span class="req" aria-hidden="true">*</span>
+              </label>
+              <textarea class="adm-mod__reject-input form-input"
+                        [id]="'reason-' + item.id"
+                        name="reason"
+                        data-field="reason"
+                        rows="2"
+                        placeholder="Que tiene que corregir para volver a publicar"
+                        [class.is-invalid]="showReasonError"
+                        [ngModel]="reason()"
+                        (ngModelChange)="reason.set($event)"></textarea>
+
+              @if (showReasonError) {
+                <span class="field-error">
+                  Explica en al menos {{ minReason }} caracteres por que se rechaza.
+                </span>
+              } @else {
+                <span class="form-hint">Lo lee el vendedor en su perfil, asi que escribelo para el.</span>
+              }
+
+              <button type="button" class="adm-mod__btn adm-mod__btn--warn"
+                      [disabled]="savingId() === item.id"
+                      (click)="confirmReject(item)">
+                Confirmar rechazo
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

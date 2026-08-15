@@ -70,7 +70,11 @@ export function toUser(
     location: row.location ?? undefined,
     avatarUrl: row.avatar_url ?? undefined,
     isVerified: row.is_verified,
-    isAdmin: row.is_admin,
+    role: row.role,
+    // Se deriva del rol y no se lee de `is_admin`, aunque la fila lo traiga: la
+    // columna es un espejo de compatibilidad (0011) y `role` es la fuente de
+    // verdad. Si algún día discreparan, manda el rol.
+    isAdmin: row.role === 'admin',
     createdAt: row.created_at,
   };
 }
@@ -134,6 +138,8 @@ export function toHubMarketItem(row: HubMarketItemRow): HubMarketItemModel {
     sellerName: row.profiles?.display_name ?? row.seller_name,
     sellerId: row.seller_id ?? undefined,
     contactPhone: row.contact_phone ?? undefined,
+    status: row.status,
+    rejectionReason: row.rejection_reason ?? undefined,
     category: row.category,
     isFeatured: row.is_featured,
     detailRoute: detailRouteFor(row),
@@ -182,6 +188,9 @@ export function fromHubMarketItem(
     spec_top_speed: item.vehicleSpecs?.topSpeed ?? null,
     spec_brand: item.vehicleSpecs?.brand ?? null,
     spec_model: item.vehicleSpecs?.model ?? null,
+    // `status` **no** viaja en el insert a propósito: lo decide el trigger
+    // `hub_market_force_status` (0012) según quién publique. Mandarlo desde el
+    // cliente daría la falsa impresión de que el navegador elige el estado.
   };
 }
 

@@ -1,3 +1,16 @@
+/**
+ * Jerarquía de permisos, de más a menos:
+ *
+ * - `admin` — todo. Es el único que reparte roles.
+ * - `moderador` — aprueba y rechaza publicaciones de Hub Market. Nada más:
+ *   ni catálogo, ni pedidos, ni inventario, ni nombrar a nadie.
+ * - `user` — el valor por defecto de cualquier cuenta nueva.
+ *
+ * Migración 0011. La fuente de verdad es la columna `role`; `isAdmin` se deriva
+ * de ella.
+ */
+export type UserRole = 'admin' | 'moderador' | 'user';
+
 export interface UserModel {
   /** uuid de auth.users / profiles.id en Supabase. */
   id: string;
@@ -11,11 +24,19 @@ export interface UserModel {
   /** Cuenta verificada por el equipo de X AutoHub. */
   isVerified?: boolean;
   /**
-   * Acceso al panel de administración.
+   * Qué puede hacer esta cuenta. Ver `UserRole`.
    *
-   * Solo se puede cambiar con la clave `service_role` o con la función
-   * `set_user_admin()` llamada por otro admin: el trigger de la migración 0005
-   * congela esta columna para cualquier sesión del navegador.
+   * Solo lo cambia `set_user_role()` llamada por un admin, o la clave
+   * `service_role`: el trigger de 0005 —extendido en 0011— congela la columna
+   * para cualquier sesión del navegador.
+   */
+  role: UserRole;
+  /**
+   * Atajo de `role === 'admin'`.
+   *
+   * Se conserva mientras queden consumidores que lo lean (`AdminUserModel`, el
+   * panel). La fuente de verdad es `role`; esto se deriva, nunca se guarda
+   * aparte.
    */
   isAdmin?: boolean;
   createdAt: string;

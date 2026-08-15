@@ -1,5 +1,14 @@
 export type HubMarketCategory = 'vehiculos' | 'piezas' | 'accesorios';
 
+/**
+ * Estado de moderación de una publicación (migración 0012).
+ *
+ * - `pendiente` — recién publicada. Solo la ven su dueño y quien modera.
+ * - `aprobado` — visible en el sitio. Es lo único que sale en Hub Market.
+ * - `rechazado` — no se publica; su dueño ve el motivo en /perfil.
+ */
+export type PublicationStatus = 'pendiente' | 'aprobado' | 'rechazado';
+
 export interface HubMarketItemModel {
   id: number;
   title: string;
@@ -22,6 +31,16 @@ export interface HubMarketItemModel {
    * `shared/utils/phone.ts`.
    */
   contactPhone?: string;
+  /**
+   * Estado de moderación. El cliente **no** lo elige: lo pone un trigger al
+   * insertar y solo `moderate_publication()` lo mueve después.
+   *
+   * Opcional en el modelo por el contenido sembrado y por los mocks viejos, que
+   * se leen como `aprobado` — ver `HubMarketService`.
+   */
+  status?: PublicationStatus;
+  /** Por qué se rechazó. Solo lo ve su dueño, en /perfil. */
+  rejectionReason?: string;
   category: HubMarketCategory;
   isFeatured?: boolean;
   detailRoute?: string;

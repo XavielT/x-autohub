@@ -1,0 +1,258 @@
+// Cola de revisión. Sigue la métrica de `admin-usuarios`: misma familia de
+// tipografías, mismos bordes y el mismo verde/rojo de acción que ya usa el
+// panel, para que no se lea como una pantalla traída de otro sitio.
+
+.adm-mod {
+  font-family: var(--font-body);
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 24px;
+    margin: 0;
+  }
+
+  &__lead {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 28px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-soft, #9a9a9a);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+
+    p { margin: 0; }
+  }
+
+  &__empty--done {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__empty-title {
+    font-family: var(--font-brand);
+    font-size: 17px;
+    color: #fff;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  &__row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  &__thumb {
+    flex-shrink: 0;
+    width: 108px;
+    height: 78px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
+
+  &__thumb-empty {
+    font-size: 11px;
+    color: var(--text-soft, #9a9a9a);
+    text-align: center;
+    padding: 4px;
+  }
+
+  &__info {
+    // `min-width: 0` es lo que deja que la descripción se recorte en vez de
+    // estirar la fila: sin esto, un texto largo empuja los botones fuera.
+    flex: 1 1 260px;
+    min-width: 0;
+  }
+
+  &__name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__name {
+    font-family: var(--font-brand);
+    font-size: 17px;
+    color: #fff;
+    text-decoration: none;
+
+    &:hover { color: var(--Hub); }
+  }
+
+  &__tag {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  &__price {
+    margin: 6px 0 0;
+    font-family: var(--font-price);
+    font-size: 17px;
+    color: var(--Hub);
+  }
+
+  &__meta {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--text-soft, #9a9a9a);
+  }
+
+  // Se destaca en ámbar porque es lo que convierte "hay cola" en "hay cola
+  // desatendida", que es la única parte urgente de esta pantalla.
+  &__waiting {
+    color: var(--Hub);
+    margin-left: 4px;
+  }
+
+  &__desc {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-soft, #9a9a9a);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__tools {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    font-family: var(--font-btns);
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      border-color: var(--Hub);
+      color: var(--Hub);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  // Aprobar es la acción esperada y la que más se repite: es la única con peso.
+  &__btn--ok {
+    background: #1f7a4d;
+    border-color: #1f7a4d;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+      background: #248c58;
+      border-color: #248c58;
+      color: #fff;
+    }
+  }
+
+  &__btn--warn {
+    align-self: flex-start;
+    border-color: #e5484d;
+    color: #ff8d8f;
+
+    &:hover:not(:disabled) {
+      background: #e5484d;
+      border-color: #e5484d;
+      color: #fff;
+    }
+  }
+
+  &__reject {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &__reject-label {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  &__reject-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: inherit;
+    resize: vertical;
+
+    &:focus { outline: none; border-color: var(--Hub); }
+  }
+}
+
+@media (max-width: 640px) {
+  .adm-mod__tools {
+    flex-direction: row;
+    width: 100%;
+  }
+}

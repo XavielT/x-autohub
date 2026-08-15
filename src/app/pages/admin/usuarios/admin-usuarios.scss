@@ -98,6 +98,14 @@
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--text-soft, #9a9a9a);
 
+    // Moderador comparte la forma del distintivo de admin pero no su ámbar: es
+    // un escalón por debajo, y que se lean igual invitaría a confundirlos.
+    &--mod {
+      background-color: rgba(255, 179, 0, 0.18);
+      color: var(--Hub);
+      font-weight: 700;
+    }
+
     &--admin {
       background-color: var(--Hub);
       color: #1a1a1a;
@@ -117,6 +125,44 @@
     gap: 8px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  /// Selector de rol: los tres botones pegados leen como una sola escala, que es
+  /// justo lo que son. Un `select` habría escondido las tres opciones detrás de
+  /// un clic y con ellas la idea de que hay una jerarquía.
+  &__roles {
+    display: inline-flex;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  &__role {
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-soft, #9a9a9a);
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:last-child { border-right: none; }
+
+    &:hover:not(:disabled):not(&--on) {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+    }
+
+    &:disabled { opacity: 0.5; cursor: default; }
+
+    &--on {
+      background: var(--Hub);
+      color: #1a1a1a;
+      font-weight: 700;
+      cursor: default;
+    }
   }
 
   &__btn {

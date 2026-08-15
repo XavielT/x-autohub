@@ -248,6 +248,60 @@
     gap: 18px;
   }
 
+  /// Cada publicación con su estado de moderación debajo.
+  ///
+  /// El distintivo va fuera de la tarjeta y no encima de la imagen: superpuesto
+  /// taparía la foto, que es lo que el dueño usa para reconocer cuál es cuál en
+  /// una cuadrícula.
+  &__publication {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__status {
+    align-self: flex-start;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 20px;
+
+    // Ámbar de espera, verde de publicado, rojo de rechazado: los tres estados
+    // se distinguen por color y **también** por su texto, para quien no
+    // distingue estos tonos.
+    &--pendiente {
+      background-color: rgba(255, 179, 0, 0.18);
+      color: var(--Hub);
+    }
+
+    &--aprobado {
+      background-color: rgba(31, 122, 77, 0.22);
+      color: #4ecf8e;
+    }
+
+    &--rechazado {
+      background-color: rgba(229, 72, 77, 0.18);
+      color: #ff8d8f;
+    }
+  }
+
+  /// El motivo del rechazo. Es lo único que le dice al vendedor qué corregir,
+  /// así que se lee entero: no se recorta ni se esconde tras un "ver más".
+  &__status-reason {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--main-ultra-light);
+    background-color: rgba(229, 72, 77, 0.08);
+    border-left: 2px solid rgba(229, 72, 77, 0.5);
+    border-radius: 0 8px 8px 0;
+    padding: 8px 12px;
+  }
+
   &__empty {
     background-color: var(--secondary);
     border-radius: 14px;

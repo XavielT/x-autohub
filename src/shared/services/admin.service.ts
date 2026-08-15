@@ -4,6 +4,7 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { AdminUserRow, OrderStatus } from '../../core/supabase/database.types';
 import { AdminUserModel } from '../models/release.model';
+import { UserRole } from '../models/user.model';
 import { AdminOrderModel } from '../models/admin-order.model';
 import {
   AdminNewsModel,
@@ -31,7 +32,9 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
     email: row.email,
     phone: row.phone ?? undefined,
     location: row.location ?? undefined,
-    isAdmin: row.is_admin,
+    role: row.role,
+    // Derivado del rol, no leído de la columna espejo. Ver `toUser`.
+    isAdmin: row.role === 'admin',
     isVerified: row.is_verified,
     createdAt: new Date(row.created_at),
   };
@@ -74,28 +77,38 @@ export class AdminService {
   }
 
   /**
-   * Da o quita el acceso de administrador.
+   * Cambia el rol de una cuenta.
+   *
+   * Pasa por `set_user_role()` porque la política de `profiles` solo deja editar
+   * tu propia fila y el trigger de 0005 —extendido en 0011— congela `role`. La
+   * función vuelve a comprobar que quien llama sea **admin**: un moderador no
+   * nombra a nadie, ni siquiera a otro moderador.
    *
    * @param isVerified `null` deja la verificación como estaba.
    */
-  setUserAdmin(
+  setUserRole(
     userId: string,
-    isAdmin: boolean,
+    role: UserRole,
     isVerified: boolean | null = null,
   ): Observable<void> {
     if (this.supabase.shouldUseMockData()) {
       this.mockUsers = this.mockUsers.map((u) =>
         u.id === userId
-          ? { ...u, isAdmin, isVerified: isVerified ?? u.isVerified }
+          ? {
+              ...u,
+              role,
+              isAdmin: role === 'admin',
+              isVerified: isVerified ?? u.isVerified,
+            }
           : u,
       );
       return of(undefined);
     }
 
     return from(
-      this.supabase.db.rpc('set_user_admin', {
+      this.supabase.db.rpc('set_user_role', {
         p_user_id: userId,
-        p_is_admin: isAdmin,
+        p_role: role,
         p_is_verified: isVerified,
       }),
     ).pipe(

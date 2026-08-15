@@ -3,7 +3,8 @@
     <div>
       <h2 class="adm-usr__title">Usuarios</h2>
       <p class="adm-usr__lead">
-        {{ users().length }} cuenta(s) · {{ adminCount() }} con acceso de administrador
+        {{ users().length }} cuenta(s) · {{ adminCount() }} admin ·
+        {{ moderatorCount() }} moderador(es)
       </p>
     </div>
     <label class="adm-usr__search">
@@ -30,7 +31,11 @@
           <div class="adm-usr__info">
             <div class="adm-usr__name-row">
               <span class="adm-usr__name">{{ user.displayName }}</span>
-              @if (user.isAdmin) { <span class="adm-usr__tag adm-usr__tag--admin">Admin</span> }
+              @if (user.role === 'admin') {
+                <span class="adm-usr__tag adm-usr__tag--admin">Admin</span>
+              } @else if (user.role === 'moderador') {
+                <span class="adm-usr__tag adm-usr__tag--mod">Moderador</span>
+              }
               @if (user.isVerified) { <span class="adm-usr__tag">Verificado</span> }
               @if (user.id === currentUserId()) { <span class="adm-usr__tag">Tu</span> }
             </div>
@@ -50,26 +55,34 @@
             </button>
 
             @if (user.id === currentUserId()) {
-              <span class="adm-usr__note" title="La funcion set_user_admin lo rechaza">
-                No puedes cambiar tu propio acceso
+              <span class="adm-usr__note" title="La funcion set_user_role lo rechaza">
+                No puedes cambiar tu propio rol
               </span>
-            } @else if (user.isAdmin) {
-              <button type="button" class="adm-usr__btn"
-                      [disabled]="savingId() === user.id"
-                      (click)="toggleAdmin(user)">
-                Quitar admin
-              </button>
             } @else if (pendingPromoteId() === user.id) {
+              <!--
+                Solo aparece al pedir admin: es el unico rol que da acceso total
+                y ademas permite repartir permisos.
+              -->
               <button type="button" class="adm-usr__btn adm-usr__btn--warn"
                       [disabled]="savingId() === user.id"
-                      (click)="toggleAdmin(user)">
+                      (click)="setRole(user, 'admin')">
                 Confirmar: dar acceso total
               </button>
               <button type="button" class="adm-usr__btn" (click)="askPromote(user.id)">No</button>
             } @else {
-              <button type="button" class="adm-usr__btn" (click)="askPromote(user.id)">
-                Hacer admin
-              </button>
+              <div class="adm-usr__roles" role="group"
+                   [attr.aria-label]="'Rol de ' + user.displayName">
+                @for (role of roles; track role.value) {
+                  <button type="button" class="adm-usr__role"
+                          [class.adm-usr__role--on]="user.role === role.value"
+                          [disabled]="savingId() === user.id"
+                          [attr.aria-pressed]="user.role === role.value"
+                          [title]="role.hint"
+                          (click)="setRole(user, role.value)">
+                    {{ role.label }}
+                  </button>
+                }
+              </div>
             }
           </div>
         </li>

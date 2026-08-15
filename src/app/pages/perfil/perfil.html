@@ -51,8 +51,10 @@
               @if (u.isVerified) {
                 <span class="perfil__tag perfil__tag--verified">Verificado</span>
               }
-              @if (u.isAdmin) {
+              @if (u.role === 'admin') {
                 <span class="perfil__tag">Administrador</span>
+              } @else if (u.role === 'moderador') {
+                <span class="perfil__tag">Moderador</span>
               }
             </div>
 
@@ -91,9 +93,28 @@
             <a routerLink="/publicar" class="perfil__cta">Publicar mi primer articulo</a>
           </div>
         } @else {
+          <!--
+            El estado se dibuja aquí y no dentro de `app-hub-market-card` a
+            propósito: la tarjeta es la misma que usan Hub Market y las páginas
+            de detalle, donde solo se ven publicaciones aprobadas y un distintivo
+            de estado no significaría nada. Aquí sí, porque es la única pantalla
+            donde alguien ve las suyas en cualquier estado.
+          -->
           <div class="perfil__grid">
             @for (item of publications(); track item.id) {
-              <app-hub-market-card [item]="item" />
+              <div class="perfil__publication">
+                <app-hub-market-card [item]="item" />
+
+                @if (statusOf(item); as status) {
+                  <span class="perfil__status" [class]="'perfil__status--' + status">
+                    {{ publicationStatusLabel(status) }}
+                  </span>
+
+                  @if (status === 'rechazado' && item.rejectionReason) {
+                    <p class="perfil__status-reason">{{ item.rejectionReason }}</p>
+                  }
+                }
+              </div>
             }
           </div>
         }

@@ -51,7 +51,7 @@
                 <span class="navbar-user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
                 <span class="navbar-user-name">{{ user()?.displayName }}</span>
             </a>
-            @if (isAdmin()) {
+            @if (canModerate()) {
                 <a class="navbar-actions-button nav-button-secondary" routerLink="/admin"
                    (click)="closeMobileMenu()">
                     Panel

@@ -18,6 +18,12 @@ export type ItemCondition = 'new' | 'used';
 export type NewsScope = 'internacional' | 'local';
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
 
+/** admin > moderador > user. Migración 0011. */
+export type UserRoleDb = 'admin' | 'moderador' | 'user';
+
+/** pendiente | aprobado | rechazado. Migración 0012. */
+export type PublicationStatusDb = 'pendiente' | 'aprobado' | 'rechazado';
+
 export type ProfileRow = {
   id: string;
   display_name: string;
@@ -26,6 +32,14 @@ export type ProfileRow = {
   location: string | null;
   avatar_url: string | null;
   is_verified: boolean;
+  role: UserRoleDb;
+  /**
+   * Espejo de `role = 'admin'`, mantenido por trigger (migración 0011).
+   *
+   * Se conserva porque de él dependen el grant de columna de 0006 y los clientes
+   * ya desplegados. **No se escribe**: la fuente de verdad es `role`, y quien lo
+   * cambia es `set_user_role()`.
+   */
   is_admin: boolean;
   created_at: string;
 }
@@ -79,6 +93,15 @@ export type HubMarketItemRow = {
   contact_phone: string | null;
   category: HubMarketCategoryDb;
   condition: ItemCondition | null;
+  /**
+   * Moderación (migración 0012). Un trigger lo fuerza a 'pendiente' al insertar
+   * —salvo que quien publique modere— y lo congela en los updates normales: solo
+   * `moderate_publication()` lo mueve.
+   */
+  status: PublicationStatusDb;
+  rejection_reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   is_featured: boolean;
   is_active: boolean;
   spec_year: number | null;
@@ -219,6 +242,7 @@ export type MyProfileRow = {
   phone: string | null;
   location: string | null;
   avatar_url: string | null;
+  role: UserRoleDb;
   is_verified: boolean;
   is_admin: boolean;
   created_at: string;
@@ -231,6 +255,7 @@ export type AdminUserRow = {
   email: string;
   phone: string | null;
   location: string | null;
+  role: UserRoleDb;
   is_admin: boolean;
   is_verified: boolean;
   created_at: string;
@@ -393,6 +418,8 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      /** true para moderador y para admin (migración 0011). */
+      is_moderator_or_admin: { Args: Record<string, never>; Returns: boolean };
       /**
        * Crea un pedido con sus líneas en una sola transacción (migración 0005).
        *
@@ -423,6 +450,35 @@ export type Database = {
       set_user_admin: {
         Args: { p_user_id: string; p_is_admin: boolean; p_is_verified?: boolean | null };
         Returns: { id: string; display_name: string; is_admin: boolean; is_verified: boolean }[];
+      };
+      /**
+       * Reparte roles. **Solo un admin**: un moderador no nombra a nadie, ni
+       * siquiera otro moderador. Ver migración 0011.
+       */
+      set_user_role: {
+        Args: { p_user_id: string; p_role: UserRoleDb; p_is_verified?: boolean | null };
+        Returns: {
+          id: string;
+          display_name: string;
+          role: UserRoleDb;
+          is_admin: boolean;
+          is_verified: boolean;
+        }[];
+      };
+      /**
+       * Aprueba o rechaza una publicación en una sola transacción (estado,
+       * motivo, quién revisó y cuándo). Es el único camino sancionado: el
+       * trigger de 0012 congela esas columnas en cualquier otro update.
+       */
+      moderate_publication: {
+        Args: { p_id: number; p_decision: 'aprobado' | 'rechazado'; p_reason?: string | null };
+        Returns: {
+          id: number;
+          status: PublicationStatusDb;
+          rejection_reason: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+        }[];
       };
       create_order: {
         Args: {

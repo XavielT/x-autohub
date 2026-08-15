@@ -265,14 +265,34 @@ export class Publicar {
             }),
           };
 
-          return this.hubMarketService.publish(item, user.id, user.displayName);
+          return this.hubMarketService.publish(
+            item,
+            user.id,
+            user.displayName,
+            this.auth.canModerate(),
+          );
         }),
       )
       .subscribe({
         next: (created) => {
           this.isSubmitting.set(false);
-          this.toast.show('Tu publicacion ya esta en Hub Market.');
-          void this.router.navigate([created.detailRoute ?? '/hub-market']);
+          // Quien modera publica directo; al resto hay que decirle que su
+          // artículo todavía no se ve, o va a buscarlo en Hub Market y va a
+          // pensar que se perdió.
+          const canModerate = this.auth.canModerate();
+          this.toast.show(
+            canModerate
+              ? 'Tu publicacion ya esta en Hub Market.'
+              : 'Tu publicacion fue enviada y sera visible cuando un moderador la apruebe.',
+          );
+
+          // A quien modera se le lleva a su publicación, que ya está visible. Al
+          // resto, a /perfil: es la única pantalla donde puede ver la suya
+          // mientras espera revisión, con su distintivo "Pendiente". Mandarlo a
+          // Hub Market —donde todavía no sale— parecía que se había perdido.
+          void this.router.navigate([
+            canModerate ? (created.detailRoute ?? '/hub-market') : '/perfil',
+          ]);
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);

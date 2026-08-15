@@ -2,9 +2,32 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, from, map, of, switchMap, tap, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { toUser } from '../../core/supabase/mappers';
-import { LoginCredentials, RegisterPayload, UserModel } from '../models/user.model';
+import { LoginCredentials, RegisterPayload, UserModel, UserRole } from '../models/user.model';
 
 const MOCK_SESSION_KEY = 'x-autohub.session';
+
+/**
+ * Cómo se finge un rol en modo simulado: **por el correo con el que entras.**
+ *
+ *   admin@lo-que-sea.com  → admin
+ *   mod@lo-que-sea.com    → moderador
+ *   cualquier otro        → user
+ *
+ * Hacía falta inventar una convención porque **antes no existía ninguna**: el
+ * constructor de usuarios simulados nunca ponía `is_admin`, así que con mocks
+ * nadie era admin nunca y el panel no se podía ni abrir sin credenciales de
+ * Supabase. Esto es solo para desarrollo — en modo real el rol sale de
+ * `get_my_profile()` y lo reparte `set_user_role()` un admin.
+ *
+ * Se compara el handle completo (lo de antes de la `@`) y no un prefijo, para
+ * que `administracion@` o `modelos@` no se conviertan en admin sin querer.
+ */
+function mockRoleFor(email: string): UserRole {
+  const handle = email.split('@')[0]?.trim().toLowerCase();
+  if (handle === 'admin') return 'admin';
+  if (handle === 'mod' || handle === 'moderador') return 'moderador';
+  return 'user';
+}
 
 /**
  * Sesión del usuario.
@@ -32,14 +55,31 @@ export class AuthService {
   readonly isLoggedIn = computed(() => this._user() !== null);
 
   /**
+   * Rol de la sesión. Sin sesión, `user`: es el permiso más bajo, así que
+   * tratar "nadie" como "usuario normal" nunca abre nada de más.
+   */
+  readonly role = computed<UserRole>(() => this._user()?.role ?? 'user');
+
+  /**
    * Acceso al panel de administración.
    *
-   * Sirve para mostrar u ocultar la entrada del navbar y para el `adminGuard`,
-   * **no como medida de seguridad**: quien manipule el cliente puede poner esto
-   * en true y no conseguirá nada, porque RLS y las funciones del panel vuelven a
-   * comprobarlo dentro de Postgres.
+   * Las tres señales de rol sirven para mostrar u ocultar entradas y para los
+   * guards, **no como medida de seguridad**: quien manipule el cliente puede
+   * ponerlas en true y no conseguirá nada, porque RLS y las funciones del panel
+   * vuelven a comprobar el rol dentro de Postgres.
    */
-  readonly isAdmin = computed(() => this._user()?.isAdmin === true);
+  readonly isAdmin = computed(() => this.role() === 'admin');
+
+  /** Solo moderador. Rara vez es lo que quieres — casi siempre es `canModerate`. */
+  readonly isModerator = computed(() => this.role() === 'moderador');
+
+  /**
+   * Quién puede revisar publicaciones: moderador **y** admin.
+   *
+   * Es el espejo de `is_moderator_or_admin()` en Postgres. La jerarquía se
+   * escribe una vez de cada lado y no se repite en cada componente.
+   */
+  readonly canModerate = computed(() => this.role() !== 'user');
 
   /**
    * Se resuelve cuando ya se intentó restaurar la sesión.
@@ -323,12 +363,15 @@ export class AuthService {
 
   private buildMockUser(email: string): UserModel {
     const handle = email.split('@')[0];
+    const role = mockRoleFor(email);
     return {
       // Determinista a partir del correo: la misma cuenta conserva su id.
       id: `mock-${Math.abs(this.hash(email))}`,
       displayName: handle.charAt(0).toUpperCase() + handle.slice(1),
       email,
       isVerified: false,
+      role,
+      isAdmin: role === 'admin',
       createdAt: new Date().toISOString(),
     };
   }
@@ -356,7 +399,13 @@ export class AuthService {
       const raw = localStorage.getItem(MOCK_SESSION_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as UserModel;
-      return parsed?.email ? parsed : null;
+      if (!parsed?.email) return null;
+
+      // Una sesión guardada antes de la fase 5 no tiene `role`. Se deriva del
+      // correo con la misma convención, para que quien tenga el navegador
+      // abierto desde ayer no se quede con un rol indefinido.
+      const role = parsed.role ?? mockRoleFor(parsed.email);
+      return { ...parsed, role, isAdmin: role === 'admin' };
     } catch {
       return null;
     }
