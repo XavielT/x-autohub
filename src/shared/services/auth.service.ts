@@ -7,6 +7,31 @@ import { LoginCredentials, RegisterPayload, UserModel, UserRole } from '../model
 const MOCK_SESSION_KEY = 'x-autohub.session';
 
 /**
+ * En qué termina un registro.
+ *
+ * `signUp` puede devolver la cuenta **sin sesión**: es lo que pasa cuando el
+ * proyecto tiene activada la confirmación por correo. No es un error — la
+ * cuenta se creó — pero todavía no hay con qué leer el perfil, así que la
+ * pantalla tiene que contarlo en vez de fallar.
+ *
+ * Hoy el proyecto en vivo corre con `mailer_autoconfirm` encendido (o sea, sin
+ * confirmación) y siempre cae en `active`. Los dos caminos existen porque el
+ * ajuste está a un clic de distancia en el panel de Supabase, y el código no
+ * puede romperse el día que se cambie.
+ */
+export type RegisterOutcome =
+  { status: 'active'; user: UserModel } | { status: 'confirm-email'; email: string };
+
+/**
+ * Resultado de leer el perfil, con la distinción que importa: **no es lo mismo
+ * que la fila no exista a que la petición fallara.**
+ *
+ * Confundirlas fue el bug de producción del 27/08/2026: un 401 pasajero se
+ * reportaba como "tu cuenta no tiene perfil". Ver `fetchProfile()`.
+ */
+type ProfileLoad = { status: 'ok'; user: UserModel } | { status: 'missing' } | { status: 'failed' };
+
+/**
  * Cómo se finge un rol en modo simulado: **por el correo con el que entras.**
  *
  *   admin@lo-que-sea.com  → admin
@@ -127,7 +152,7 @@ export class AuthService {
         this._user.set(null);
         return;
       }
-      void this.loadProfile(session.user.id);
+      void this.loadProfile();
     });
   }
 
@@ -155,21 +180,34 @@ export class AuthService {
       map(({ data, error }) => {
         if (error) throw new Error(this.translateAuthError(error.message));
         if (!data.user) throw new Error('No pudimos iniciar tu sesion.');
-        return data.user.id;
       }),
       // El nombre visible sale del perfil, no de los metadatos del auth.
-      switchMap((userId) => this.loadProfileOrThrow(userId)),
+      switchMap(() => this.loadProfileOrThrow()),
     );
   }
 
-  register(payload: RegisterPayload): Observable<UserModel> {
+  /**
+   * Crea la cuenta.
+   *
+   * Devuelve **en qué terminó** el registro en vez de un usuario a secas,
+   * porque `signUp` tiene dos finales legítimos y solo uno trae usuario:
+   *
+   * - Con sesión (el proyecto no pide confirmar el correo): se lee el perfil y
+   *   la persona queda dentro → `active`.
+   * - Sin sesión (el proyecto sí la pide): la cuenta existe pero no hay con qué
+   *   leer `profiles`, y tocarla iría como `anon` → `confirm-email`. **No es un
+   *   error**, así que no se lanza: la pantalla enseña el aviso de confirmación.
+   */
+  register(payload: RegisterPayload): Observable<RegisterOutcome> {
+    const email = payload.email.trim();
+
     if (this.supabase.shouldUseMockData()) {
-      return this.mockRegister(payload);
+      return this.mockRegister(payload).pipe(map((user) => ({ status: 'active', user }) as const));
     }
 
     return from(
       this.supabase.db.auth.signUp({
-        email: payload.email.trim(),
+        email,
         password: payload.password,
         options: {
           // El trigger handle_new_user lee estos metadatos para armar el perfil.
@@ -184,9 +222,13 @@ export class AuthService {
       map(({ data, error }) => {
         if (error) throw new Error(this.translateAuthError(error.message));
         if (!data.user) throw new Error('No pudimos crear tu cuenta.');
-        return data.user.id;
+        return data.session !== null;
       }),
-      switchMap((userId) => this.loadProfileOrThrow(userId)),
+      switchMap((hasSession) =>
+        hasSession
+          ? this.loadProfileOrThrow().pipe(map((user) => ({ status: 'active', user }) as const))
+          : of({ status: 'confirm-email', email } as const),
+      ),
     );
   }
 
@@ -208,21 +250,25 @@ export class AuthService {
   // --- Supabase ------------------------------------------------------------
 
   /**
-   * Carga el perfil y falla si no existe.
+   * Carga el perfil para login/registro y falla si no se pudo.
    *
-   * El trigger `on_auth_user_created` lo crea en el mismo momento del registro,
-   * así que su ausencia significa que el trigger no está instalado.
+   * Lo que ve el usuario es siempre la misma frase amable: la pista técnica
+   * —que el trigger `on_auth_user_created` podría no estar instalado— va a la
+   * consola, que es donde sirve. Antes se lanzaba tal cual y esa frase acabó
+   * impresa en el formulario de registro del sitio en vivo.
    */
-  private loadProfileOrThrow(userId: string): Observable<UserModel> {
-    return from(this.loadProfile(userId)).pipe(
-      map((user) => {
-        if (!user) {
-          throw new Error(
-            'Tu cuenta existe pero no encontramos su perfil. Verifica que el ' +
-              'trigger on_auth_user_created este instalado (0001_schema.sql).',
+  private loadProfileOrThrow(): Observable<UserModel> {
+    return from(this.loadProfile()).pipe(
+      map((result) => {
+        if (result.status === 'ok') return result.user;
+
+        if (result.status === 'missing') {
+          console.error(
+            '[supabase] get_my_profile no devolvio fila para una sesion valida. ' +
+              'Verifica que el trigger on_auth_user_created este instalado (0001_schema.sql).',
           );
         }
-        return user;
+        throw new Error('No pudimos cargar tu perfil. Intenta de nuevo en un momento.');
       }),
     );
   }
@@ -236,17 +282,23 @@ export class AuthService {
    * por rol, no por fila. Con el select normal `user().phone` era siempre
    * `undefined`, así que el checkout nunca precargaba el teléfono.
    *
-   * La función no recibe ningún id — usa `auth.uid()` — así que `userId` solo
-   * sirve para el camino simulado.
+   * La función no recibe ningún id: usa `auth.uid()`.
+   *
+   * **Un fallo no borra la sesión.** Solo se limpia la señal cuando la fila de
+   * verdad no está; si la petición falló, lo que había se queda. Un 401 pasajero
+   * no es motivo para sacar a nadie de su cuenta.
    */
-  private async loadProfile(userId: string): Promise<UserModel | null> {
-    const { data, error } = await this.supabase.db.rpc('get_my_profile');
+  private async loadProfile(): Promise<ProfileLoad> {
+    const { data, error } = await this.fetchProfile();
     const row = data?.[0];
 
-    if (error || !row) {
-      if (error) console.error('[supabase] get_my_profile', error);
+    if (error) {
+      console.error('[supabase] get_my_profile', error);
+      return { status: 'failed' };
+    }
+    if (!row) {
       this._user.set(null);
-      return null;
+      return { status: 'missing' };
     }
 
     // El correo sale de Supabase Auth, no de la tabla: es su fuente
@@ -254,7 +306,39 @@ export class AuthService {
     const { data: authData } = await this.supabase.db.auth.getUser();
     const user = toUser(row, authData.user?.email ?? row.email, row.phone);
     this._user.set(user);
-    return user;
+    return { status: 'ok', user };
+  }
+
+  /**
+   * `get_my_profile()`, con un reintento cuando la primera llamada sale sin
+   * sesión.
+   *
+   * Esto arregla el fallo de registro del 27/08/2026. supabase-js resuelve la
+   * cabecera `Authorization` de cada llamada a PostgREST con
+   * `auth.getSession()`, y **si eso devuelve null cae a la clave anon**. Durante
+   * un `signUp`/`signInWithPassword` el cliente tiene tomado su propio lock de
+   * auth mientras notifica `SIGNED_IN`, así que esa carrera se puede perder: la
+   * llamada sale como `anon` y desde la migración 0015 `anon` ya no puede
+   * ejecutar la función → **401**. En los registros del proyecto se ven las dos
+   * llamadas seguidas, una 200 y otra 401.
+   *
+   * Con la sesión ya asentada el reintento va con el token bueno. Se reintenta
+   * también cuando no vino fila, porque una llamada como `anon` que sí tuviera
+   * permiso devolvería cero filas (`auth.uid()` es null) y eso se confundiría
+   * con "esta cuenta no tiene perfil".
+   */
+  private async fetchProfile(): Promise<Awaited<ReturnType<typeof this.callGetMyProfile>>> {
+    const first = await this.callGetMyProfile();
+    if (!first.error && first.data?.[0]) return first;
+
+    const { data } = await this.supabase.db.auth.getSession();
+    if (!data.session) return first;
+
+    return await this.callGetMyProfile();
+  }
+
+  private callGetMyProfile() {
+    return this.supabase.db.rpc('get_my_profile');
   }
 
   /**
@@ -308,9 +392,9 @@ export class AuthService {
           console.error('[supabase] updateProfile', res.error);
           throw new Error('No pudimos guardar tu perfil. Intenta de nuevo.');
         }
-        return from(this.loadProfile(current.id));
+        return from(this.loadProfile());
       }),
-      map((user) => user ?? next),
+      map((result) => (result.status === 'ok' ? result.user : next)),
     );
   }
 
@@ -318,7 +402,7 @@ export class AuthService {
     try {
       const { data } = await this.supabase.db.auth.getSession();
       if (data.session?.user) {
-        await this.loadProfile(data.session.user.id);
+        await this.loadProfile();
       }
     } finally {
       this._isRestoring.set(false);

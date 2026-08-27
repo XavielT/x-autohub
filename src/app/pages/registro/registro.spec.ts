@@ -47,4 +47,21 @@ describe('Registro', () => {
 
     expect(fixture.componentInstance.form.valid).toBe(true);
   });
+
+  // El aviso de "confirma tu correo" reemplaza al formulario: es el resultado
+  // de la pagina, no un mensaje al margen. Ver la BITACORA del 27/08/2026.
+  it('cambia el formulario por el aviso de confirmacion', async () => {
+    const fixture = TestBed.createComponent(Registro);
+    await fixture.whenStable();
+
+    fixture.componentInstance.confirmationEmail.set('tecnologia@constructorasd.com');
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Cuenta creada');
+    expect(text).toContain('tecnologia@constructorasd.com');
+    expect(text).toContain('spam');
+    // El formulario ya no esta: no hay donde volver a enviar.
+    expect((fixture.nativeElement as HTMLElement).querySelector('form')).toBeNull();
+  });
 });

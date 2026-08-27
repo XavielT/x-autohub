@@ -18,111 +18,135 @@
 
   <main class="auth__main">
     <div class="auth__card">
-      <h1 class="auth__heading">Crear cuenta</h1>
-      <p class="auth__subheading">Solo toma un minuto.</p>
+      @if (confirmationEmail(); as pendingEmail) {
+        <h1 class="auth__heading">Revisa tu correo</h1>
+        <p class="auth__subheading">Ya casi estas dentro.</p>
 
-      <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-        <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
-
-        @if (errorMessage()) {
-          <p class="auth__alert" role="alert">{{ errorMessage() }}</p>
-        }
-
-        <div class="auth__field">
-          <label for="reg-name">Nombre<span class="req" aria-hidden="true">*</span></label>
-          <input
-            id="reg-name"
-            type="text"
-            formControlName="displayName"
-            autocomplete="name"
-            placeholder="Como quieres que te vean"
-            [class.is-invalid]="showError('displayName')"
-          />
-          @if (showError('displayName')) {
-            <span class="auth__error">Escribe al menos 2 caracteres.</span>
-          }
+        <div class="auth__done" role="status">
+          <p class="auth__done-lead">
+            Cuenta creada. Te enviamos un enlace a
+            <strong>{{ pendingEmail }}</strong> — confirmalo para entrar.
+          </p>
+          <p class="auth__done-tip">
+            Si no lo ves en unos minutos, busca en la carpeta de spam o correo no deseado.
+          </p>
         </div>
 
-        <div class="auth__field">
-          <label for="reg-email">Correo<span class="req" aria-hidden="true">*</span></label>
-          <input
-            id="reg-email"
-            type="email"
-            formControlName="email"
-            autocomplete="email"
-            placeholder="tu@correo.com"
-            [class.is-invalid]="showError('email')"
-          />
-          @if (showError('email')) {
-            <span class="auth__error">Ingresa un correo valido.</span>
-          }
-        </div>
+        <p class="auth__meta">Ya lo confirmaste? <a routerLink="/login">Inicia sesion</a></p>
+      } @else {
+        <h1 class="auth__heading">Crear cuenta</h1>
+        <p class="auth__subheading">Solo toma un minuto.</p>
 
-        <div class="auth__row">
+        <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <p class="form-legend">
+            Los campos marcados con <span class="req">*</span> son obligatorios.
+          </p>
+
+          @if (errorMessage()) {
+            <p class="auth__alert" role="alert">{{ errorMessage() }}</p>
+          }
+
           <div class="auth__field">
-            <label for="reg-phone">Telefono <span aria-hidden="true">(opcional)</span></label>
+            <label for="reg-name">Nombre<span class="req" aria-hidden="true">*</span></label>
             <input
-              id="reg-phone"
-              type="tel"
-              formControlName="phone"
-              autocomplete="tel"
-              placeholder="809 000 0000"
+              id="reg-name"
+              type="text"
+              formControlName="displayName"
+              autocomplete="name"
+              placeholder="Como quieres que te vean"
+              [class.is-invalid]="showError('displayName')"
             />
+            @if (showError('displayName')) {
+              <span class="auth__error">Escribe al menos 2 caracteres.</span>
+            }
           </div>
 
           <div class="auth__field">
-            <label for="reg-location">Ciudad <span aria-hidden="true">(opcional)</span></label>
-            <app-location-select
-              formControlName="location"
-              inputId="reg-location"
-              placeholder="Elige tu provincia" />
+            <label for="reg-email">Correo<span class="req" aria-hidden="true">*</span></label>
+            <input
+              id="reg-email"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              placeholder="tu@correo.com"
+              [class.is-invalid]="showError('email')"
+            />
+            @if (showError('email')) {
+              <span class="auth__error">Ingresa un correo valido.</span>
+            }
           </div>
-        </div>
 
-        <div class="auth__field">
-          <label for="reg-password">Contrasena<span class="req" aria-hidden="true">*</span></label>
-          <input
-            id="reg-password"
-            type="password"
-            formControlName="password"
-            autocomplete="new-password"
-            placeholder="Minimo 6 caracteres"
-            [class.is-invalid]="showError('password')"
-          />
-          @if (showError('password')) {
-            <span class="auth__error">La contrasena debe tener al menos 6 caracteres.</span>
+          <div class="auth__row">
+            <div class="auth__field">
+              <label for="reg-phone">Telefono <span aria-hidden="true">(opcional)</span></label>
+              <input
+                id="reg-phone"
+                type="tel"
+                formControlName="phone"
+                autocomplete="tel"
+                placeholder="809 000 0000"
+              />
+            </div>
+
+            <div class="auth__field">
+              <label for="reg-location">Ciudad <span aria-hidden="true">(opcional)</span></label>
+              <app-location-select
+                formControlName="location"
+                inputId="reg-location"
+                placeholder="Elige tu provincia"
+              />
+            </div>
+          </div>
+
+          <div class="auth__field">
+            <label for="reg-password"
+              >Contrasena<span class="req" aria-hidden="true">*</span></label
+            >
+            <input
+              id="reg-password"
+              type="password"
+              formControlName="password"
+              autocomplete="new-password"
+              placeholder="Minimo 6 caracteres"
+              [class.is-invalid]="showError('password')"
+            />
+            @if (showError('password')) {
+              <span class="auth__error">La contrasena debe tener al menos 6 caracteres.</span>
+            }
+          </div>
+
+          <div class="auth__field">
+            <label for="reg-confirm"
+              >Confirmar contrasena<span class="req" aria-hidden="true">*</span></label
+            >
+            <input
+              id="reg-confirm"
+              type="password"
+              formControlName="confirmPassword"
+              autocomplete="new-password"
+              placeholder="Repite tu contrasena"
+              [class.is-invalid]="showMismatch"
+            />
+            @if (showMismatch) {
+              <span class="auth__error">Las contrasenas no coinciden.</span>
+            }
+          </div>
+
+          <button class="auth__submit" type="submit" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Creando cuenta...' : 'Crear cuenta' }}
+          </button>
+        </form>
+
+        <p class="auth__meta">Ya tienes cuenta? <a routerLink="/login">Inicia sesion</a></p>
+
+        <p class="auth__hint">
+          Al crear tu cuenta aceptas los
+          <a routerLink="/terminos-condiciones">terminos y condiciones</a>.
+          @if (isDemoMode) {
+            Registro de demostracion: los datos se guardan solo en este navegador.
           }
-        </div>
-
-        <div class="auth__field">
-          <label for="reg-confirm">Confirmar contrasena<span class="req" aria-hidden="true">*</span></label>
-          <input
-            id="reg-confirm"
-            type="password"
-            formControlName="confirmPassword"
-            autocomplete="new-password"
-            placeholder="Repite tu contrasena"
-            [class.is-invalid]="showMismatch"
-          />
-          @if (showMismatch) {
-            <span class="auth__error">Las contrasenas no coinciden.</span>
-          }
-        </div>
-
-        <button class="auth__submit" type="submit" [disabled]="isSubmitting()">
-          {{ isSubmitting() ? 'Creando cuenta...' : 'Crear cuenta' }}
-        </button>
-      </form>
-
-      <p class="auth__meta">Ya tienes cuenta? <a routerLink="/login">Inicia sesion</a></p>
-
-      <p class="auth__hint">
-        Al crear tu cuenta aceptas los
-        <a routerLink="/terminos-condiciones">terminos y condiciones</a>.
-        @if (isDemoMode) {
-          Registro de demostracion: los datos se guardan solo en este navegador.
-        }
-      </p>
+        </p>
+      }
     </div>
   </main>
 </div>

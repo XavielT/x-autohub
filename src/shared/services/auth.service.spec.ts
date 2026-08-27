@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
-import { AuthService } from './auth.service';
+import { AuthService, RegisterOutcome } from './auth.service';
+import { SupabaseService } from '../../core/supabase/supabase.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -145,5 +146,152 @@ describe('AuthService', () => {
     );
 
     expect(recargar().role()).toBe('moderador');
+  });
+
+  // --- Registro contra Supabase (imp 27082026, fase 1) ----------------------
+  //
+  // `signUp` tiene dos finales legitimos y solo uno trae sesion. Antes se
+  // asumia que siempre la traia y se leia el perfil de inmediato; sin sesion
+  // esa lectura sale como `anon` y la persona veia un error tecnico en el
+  // formulario, con la cuenta ya creada. Ver la BITACORA del 27/08/2026.
+
+  const PROFILE_ROW = {
+    id: 'uuid-1',
+    display_name: 'Tecnologia CSD',
+    email: 'tecnologia@constructorasd.com',
+    phone: '8097799782',
+    location: 'Santo Domingo',
+    avatar_url: null,
+    role: 'user',
+    is_verified: false,
+    is_admin: false,
+    is_test_user: false,
+    created_at: '2026-08-27T20:29:00Z',
+  };
+
+  /**
+   * Doble del cliente de Supabase con lo justo que toca `register()`.
+   *
+   * `signUpSession` es la palanca del caso: `null` finge un proyecto que pide
+   * confirmar el correo, y un objeto finge uno que no.
+   */
+  function supabaseDouble(options: {
+    signUpSession: Record<string, unknown> | null;
+    rpc?: () => Promise<{ data: unknown; error: unknown }>;
+  }) {
+    const calls = { rpc: 0 };
+    const db = {
+      auth: {
+        signUp: () =>
+          Promise.resolve({
+            data: { user: { id: PROFILE_ROW.id }, session: options.signUpSession },
+            error: null,
+          }),
+        getSession: () => Promise.resolve({ data: { session: options.signUpSession } }),
+        getUser: () => Promise.resolve({ data: { user: { email: PROFILE_ROW.email } } }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+      },
+      rpc: () => {
+        calls.rpc += 1;
+        return options.rpc
+          ? options.rpc()
+          : Promise.resolve({ data: [PROFILE_ROW], error: null });
+      },
+    };
+
+    return {
+      calls,
+      provider: {
+        provide: SupabaseService,
+        useValue: {
+          isConfigured: true,
+          db,
+          shouldUseMockData: () => false,
+        },
+      },
+    };
+  }
+
+  const registrar = (svc: AuthService) =>
+    new Promise<RegisterOutcome>((resolve, reject) =>
+      svc
+        .register({
+          displayName: 'Tecnologia CSD',
+          email: PROFILE_ROW.email,
+          password: 'secreta1',
+        })
+        .subscribe({ next: resolve, error: reject }),
+    );
+
+  const conSupabase = (double: ReturnType<typeof supabaseDouble>): AuthService => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [double.provider] });
+    return TestBed.inject(AuthService);
+  };
+
+  it('sin sesion en el signUp devuelve confirm-email y no toca el perfil', async () => {
+    const double = supabaseDouble({ signUpSession: null });
+    const outcome = await registrar(conSupabase(double));
+
+    expect(outcome.status).toBe('confirm-email');
+    expect(outcome).toEqual({ status: 'confirm-email', email: PROFILE_ROW.email });
+    // Lo que provocaba el fallo: pedir el perfil sin sesion, o sea como `anon`.
+    expect(double.calls.rpc).toBe(0);
+  });
+
+  it('con sesion en el signUp devuelve active con el usuario cargado', async () => {
+    const double = supabaseDouble({ signUpSession: { access_token: 'jwt' } });
+    const outcome = await registrar(conSupabase(double));
+
+    expect(outcome.status).toBe('active');
+    if (outcome.status !== 'active') throw new Error('se esperaba active');
+    expect(outcome.user.displayName).toBe('Tecnologia CSD');
+    expect(outcome.user.email).toBe(PROFILE_ROW.email);
+  });
+
+  it('reintenta el perfil cuando la primera llamada sale sin token (401)', async () => {
+    // La carrera real: la primera llamada se va con la clave anon —que desde la
+    // migracion 0015 no puede ejecutar get_my_profile— y responde 401. Con la
+    // sesion ya asentada, el reintento trae la fila.
+    let attempt = 0;
+    const double = supabaseDouble({
+      signUpSession: { access_token: 'jwt' },
+      rpc: () => {
+        attempt += 1;
+        return attempt === 1
+          ? Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied' } })
+          : Promise.resolve({ data: [PROFILE_ROW], error: null });
+      },
+    });
+
+    const outcome = await registrar(conSupabase(double));
+
+    expect(double.calls.rpc).toBe(2);
+    expect(outcome.status).toBe('active');
+  });
+
+  it('un fallo del perfil no filtra el detalle tecnico al usuario', async () => {
+    const double = supabaseDouble({
+      signUpSession: { access_token: 'jwt' },
+      rpc: () => Promise.resolve({ data: null, error: { code: '42501', message: 'denied' } }),
+    });
+
+    const error = await registrar(conSupabase(double)).catch((e: Error) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toBe('No pudimos cargar tu perfil. Intenta de nuevo en un momento.');
+    // Nada de nombres de triggers ni de archivos .sql en lo que se lee en pantalla.
+    expect(message).not.toContain('on_auth_user_created');
+    expect(message).not.toContain('.sql');
+  });
+
+  it('en modo simulado el registro sigue entrando directo', async () => {
+    const outcome = await registrar(service);
+
+    expect(outcome.status).toBe('active');
+    if (outcome.status !== 'active') throw new Error('se esperaba active');
+    expect(outcome.user.displayName).toBe('Tecnologia CSD');
+    expect(service.isLoggedIn()).toBe(true);
   });
 });

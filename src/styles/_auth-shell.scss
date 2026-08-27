@@ -210,6 +210,39 @@
   font-size: 14px;
 }
 
+// Registro cumplido y a la espera de que confirmen el correo. Reemplaza al
+// formulario, asi que carga el peso visual que llevaba el boton: es el
+// resultado de la pagina, no un aviso al margen.
+.auth__done {
+  padding: 18px 16px;
+  border: 1px solid rgba(var(--Hub-rgb), 0.35);
+  border-radius: 10px;
+  background-color: rgba(var(--Hub-rgb), 0.08);
+
+  &-lead {
+    margin: 0;
+    color: var(--text-strong);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+
+    strong {
+      color: var(--Hub);
+      font-weight: 600;
+      // Un correo largo no debe ensanchar la tarjeta ni desbordarla.
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &-tip {
+    margin: 12px 0 0;
+    color: var(--text-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
 .auth__submit {
   margin-top: 6px;
   padding: 15px 20px;

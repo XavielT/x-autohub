@@ -15,7 +15,8 @@ function passwordsMatch(group: AbstractControl) {
   return password && confirm && password !== confirm ? { passwordMismatch: true } : null;
 }
 
-type RegistroField = 'displayName' | 'email' | 'phone' | 'location' | 'password' | 'confirmPassword';
+type RegistroField =
+  'displayName' | 'email' | 'phone' | 'location' | 'password' | 'confirmPassword';
 
 @Component({
   selector: 'app-registro',
@@ -39,6 +40,16 @@ export class Registro {
 
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal('');
+
+  /**
+   * Correo al que se envio el enlace de confirmacion, o cadena vacia.
+   *
+   * Cuando tiene valor, la pantalla cambia de formulario a aviso: la cuenta ya
+   * se creo y lo unico que falta es que la persona abra su correo. Es el
+   * resultado principal de la pagina, no un toast — por eso reemplaza al
+   * formulario en vez de acompanarlo.
+   */
+  readonly confirmationEmail = signal('');
 
   readonly form = this.fb.nonNullable.group(
     {
@@ -104,9 +115,17 @@ export class Registro {
         location: location || undefined,
       })
       .subscribe({
-        next: (user) => {
+        next: (outcome) => {
           this.isSubmitting.set(false);
-          this.toast.show(`Cuenta creada. Bienvenido, ${user.displayName}`);
+
+          // Falta confirmar el correo: la cuenta existe, pero todavia no hay
+          // sesion. Se queda en la pagina con el aviso.
+          if (outcome.status === 'confirm-email') {
+            this.confirmationEmail.set(outcome.email);
+            return;
+          }
+
+          this.toast.show(`Cuenta creada. Bienvenido, ${outcome.user.displayName}`);
           // Al perfil y no a la portada: recién creada la cuenta, lo útil es ver
           // y completar los propios datos. El `returnUrl` del login no se toca.
           void this.router.navigateByUrl('/perfil');
