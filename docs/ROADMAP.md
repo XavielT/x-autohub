@@ -16,23 +16,16 @@ El DNS ya apunta a Vercel. Comprobado como avisaba este mismo punto —un 200 no
 prueba nada— leyendo las cabeceras: `server: Vercel` y `x-vercel-cache: HIT` en
 el apex, y `www` redirigiendo al apex. El sitio real vive ahí desde la v1.0.0.
 
-**Lo que quedó a medias de este punto:** en Supabase → Authentication → URL
-Configuration, el **Site URL sigue siendo `http://localhost:4200`**. Las
-Redirect URLs sí incluyen el dominio real (y localhost), así que hoy no rompe
-nada:
+**La otra mitad, tambien hecha:** el **Site URL** de Supabase Auth estaba en
+`http://localhost:4200` y ahora apunta a `https://xautohubrd.com`. Las Redirect
+URLs siguen incluyendo localhost, asi que el desarrollo local no se toca.
 
-- `mailer_autoconfirm` está en **true**, o sea que no se manda correo de
-  confirmación al registrarse;
-- y no hay flujo de "olvidé mi contraseña" en la app (no existe ninguna llamada a
-  `resetPasswordForEmail`).
-
-Pero Site URL es el destino por defecto de los enlaces que Supabase manda por
-correo, y la app **no pasa `emailRedirectTo`** en ningún sitio. El día que se
-active la confirmación de correo o se agregue recuperación de contraseña, esos
-enlaces van a apuntar a `localhost:4200` y no van a funcionar para nadie. No se
-cambió aquí porque cambiarlo hoy tampoco es gratis: haría que los correos del
-desarrollo local apunten a producción, y ahora mismo no arregla nada visible.
-Cuando se toque cualquiera de las dos cosas, este es el primer paso.
+No rompia nada todavia —`mailer_autoconfirm` esta en `true`, o sea que el
+registro no manda correo de confirmacion, y no hay flujo de "olvide mi
+contraseña"—, pero Site URL es el destino por defecto de los enlaces que Supabase
+manda por correo y la app **no pasa `emailRedirectTo`** en ningun sitio. El dia
+que se active la confirmacion o se agregue recuperacion de contraseña, esos
+enlaces ya apuntan al sitio y no a la maquina de quien programo.
 
 ### 2. Seguridad del backend — **ya corregida y verificada**
 
