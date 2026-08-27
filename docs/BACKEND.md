@@ -37,7 +37,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 12    | `supabase/migrations/0012_publication_moderation.sql` | Aprobación de publicaciones de Hub Market |
 | 13    | `supabase/migrations/0013_test_items.sql`      | Artículos de prueba y usuarios de prueba       |
 | 14    | `supabase/migrations/0014_site_settings.sql`   | Ajustes del sitio y los contadores del home    |
-| 15    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 15    | `supabase/migrations/0015_admin_function_grants.sql` | `anon` deja de poder invocar las funciones de admin |
+| 16    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012) e `is_test` (0013). Y las dependencias entre migraciones son
@@ -272,6 +273,44 @@ vehículo oficial no pertenece a una persona. En `inventory` el permiso lo decid
 
 > Para el primer admin no hay panel todavía: regístrate y corre
 > `node scripts/make-admin.mjs tu@correo.com`.
+
+### Quién puede invocar cada función (migración 0015)
+
+Hay dos permisos distintos y conviene no confundirlos: **quién puede llamar** a
+una función (el `grant execute`) y **quién puede hacer algo con ella** (el
+`if not is_admin() then raise` de dentro). Las funciones de admin de 0009, 0011 y
+0012 tenían el segundo bien puesto y el primero mal:
+
+```sql
+revoke all on function public.admin_list_users() from public;   -- no alcanza
+grant execute on function public.admin_list_users() to authenticated;
+```
+
+`revoke ... from public` **no le quita el permiso a `anon`**: en el proyecto de
+Supabase las funciones nuevas del esquema `public` nacen con un grant *directo* a
+`anon` y `authenticated` por los default privileges de la plataforma, y revocarle
+al pseudo-rol PUBLIC no toca esos grants. Con la clave anon —que es pública— se
+podía invocar `set_user_role()`; respondía `42501` por la comprobación interna,
+que es la que de verdad protegía.
+
+La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
+`moderate_publication`, `set_user_admin`, `set_user_role` y `set_user_test`.
+
+**Lo que NO se revoca**, porque rompería el sitio:
+
+| Función | Por qué `anon` la necesita |
+| ------- | -------------------------- |
+| `is_admin()`, `is_moderator_or_admin()`, `can_see_test_items()` | Las llaman las políticas RLS, y una política se evalúa con los permisos de quien consulta. Sin execute, **cada select anónimo falla**. |
+| `create_order(...)` | El checkout de invitado, a propósito desde 0002. |
+| `get_site_stats()` | El home sin sesión. |
+
+> El idiom completo para una función nueva son **tres** líneas:
+>
+> ```sql
+> revoke all     on function f() from public;
+> revoke execute on function f() from anon;      -- la que se olvidaba
+> grant  execute on function f() to authenticated;
+> ```
 
 ### Ajustes del sitio y contadores (migración 0014)
 
