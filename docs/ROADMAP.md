@@ -68,15 +68,26 @@ resolver sus derechos antes de darles uso. Ver `docs/CONVENTIONS.md`.
 
 ## P1 — Deuda que ya está costando
 
-### 3.5. El carrito no sobrevive una recarga
+### 3.5. ~~El carrito no sobrevive una recarga~~ ✅ **hecho**
 
-`cart.service.ts` guarda el carrito solo en memoria: no hay `localStorage` ni
-`sessionStorage`. Verificado en el navegador — agregar dos piezas, refrescar
-(F5), y el carrito queda vacío.
+`cart.service.ts` ahora lo guarda en `localStorage` (`x-autohub.cart`). Antes
+vivía solo en memoria: un F5, un enlace compartido o volver desde otra pestaña lo
+dejaba vacío.
 
-Para una tienda eso es pérdida de ventas directa: cualquier recarga, un enlace
-compartido o volver desde otra pestaña borra la compra a medias. Persistirlo en
-`localStorage` es un cambio pequeño y contenido en ese servicio.
+Guardar no era todo el trabajo, y por eso no fueron cuatro líneas: **lo guardado
+envejece**. Al arrancar se pinta lo guardado enseguida (para que el contador no
+parpadee en 0) y después se reconcilia contra el catálogo — cada pieza toma su
+nombre y su precio de la base, y la que ya no está en el catálogo se cae del
+carrito.
+
+Eso último importa porque `create_order()` **recalcula los precios en Postgres**
+(migración 0005): con un precio viejo en pantalla, alguien vería RD$ 2,850 y le
+cobrarían RD$ 3,100. Si el catálogo no responde no se toca nada — mejor un precio
+de ayer que un carrito vacío por un fallo de red.
+
+De paso se arregló algo que estorbaba para probar: **`/checkout` ya se puede
+abrir por URL directa** con el carrito lleno. Antes cualquier carga completa de
+página lo vaciaba y el checkout caía en "Tu carrito está vacío".
 
 ### 4. Unificar las cinco páginas de detalle
 
