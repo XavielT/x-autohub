@@ -1,5 +1,15 @@
 // Rojo y en mayusculas a proposito: es lo unico del sitio que grita "esto no
 // deberia estar aqui para un visitante". Ver el comentario del componente.
+//
+// Va **relleno**, y no con el rojo translucido de antes. El distintivo era
+// #c62828 sobre #c6282824, y ese fondo translucido toma el color de lo que tiene
+// detras: sobre el fondo de la pagina daba 3.1:1, pero sobre las tarjetas del
+// panel (`--main-light`) se quedaba en **1.6:1** — a 11px, ilegible. Relleno con
+// el mismo rojo y letra blanca da 5.6:1 y no depende del fondo. Es el mismo rojo
+// y la misma forma; lo unico que cambia es cual de las dos partes lo lleva.
+//
+// El relleno tampoco es un invento: es como ya se dibujan los distintivos de rol
+// del panel (`adm-usr__tag--admin`, ambar de fondo y texto oscuro).
 .test-badge {
     display: inline-flex;
     align-items: center;
@@ -7,8 +17,8 @@
     padding: 3px 8px;
     border: 1px solid #c62828;
     border-radius: 3px;
-    background-color: #c6282824;
-    color: #c62828;
+    background-color: #c62828;
+    color: #fff;
     font-family: var(--font-body);
     font-size: 11px;
     font-weight: bold;

@@ -163,6 +163,21 @@ quitar los enlaces hasta que existan.
 
 ---
 
+### 8.5. ~~El distintivo "PRUEBA" no se leia sobre las tarjetas del panel~~ ✅ **hecho**
+
+Era `#c62828` sobre `#c6282824`. El fondo translucido toma el color de lo que
+tiene detras: sobre el fondo de la pagina daba 3.1:1, pero sobre las tarjetas del
+panel (`--main-light`) se quedaba en **1.6:1**, y a 11px eso no se lee. Ahora va
+relleno con el mismo rojo y letra blanca: **5.6:1**, y ya no depende del fondo.
+
+El rojo y la forma no cambian — lo unico que cambia es cual de las dos partes
+lleva el color. Es tambien como ya se dibujaban los distintivos de rol del panel.
+
+> Sigue habiendo **cuatro copias** de este estilo: el componente
+> `shared/ui/test-badge` y una en cada uno de `admin-moderacion`,
+> `admin-usuarios` y `admin-inventario`. Hubo que cambiar las cuatro a mano. Lo
+> que toca es que las tres del panel usen el componente.
+
 ## P2 — Modernizar a Angular 21
 
 El código funciona; esto es para que siga siendo mantenible.
