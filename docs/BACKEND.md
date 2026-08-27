@@ -456,9 +456,26 @@ select public.set_user_role(
 
 1. Crea `supabase/migrations/000N_lo_que_sea.sql` — nunca edites una migración ya
    ejecutada.
-2. Ejecútala en el SQL Editor.
-3. Actualiza `core/supabase/database.types.ts` **en el mismo commit**.
-4. TypeScript te dirá qué mappers y servicios ajustar.
+2. **Pruébala en un Postgres de verdad antes de tocar la base real:**
+
+   ```bash
+   ./scripts/verify-migrations.sh
+   ```
+
+   Levanta un cluster temporal con `initdb` (sin sudo, sin Docker), aplica las
+   migraciones y el seed **desde cero**, vuelve a aplicar la última (una
+   migración tiene que poder ejecutarse dos veces) y corre 38 comprobaciones de
+   seguridad con sesiones simuladas: visibilidad pública, contenido de prueba,
+   contadores, quién puede invocar cada función y los tres frenos de la escalada
+   de privilegios. Sale en rojo con el error real de Postgres.
+
+   Lo que **no** cubre: PostgREST. El `PGRST201` de la ronda 14 era SQL válido
+   con un embed ambiguo y solo se vio en el sitio real, así que el humo contra
+   producción después de desplegar sigue siendo obligatorio.
+
+3. Ejecútala en el SQL Editor (o por la Management API).
+4. Actualiza `core/supabase/database.types.ts` **en el mismo commit**.
+5. TypeScript te dirá qué mappers y servicios ajustar.
 
 ### Regenerar el seed
 

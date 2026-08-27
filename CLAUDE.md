@@ -122,7 +122,16 @@ npm run build                          # build de producción a dist/
 npm test                               # Vitest, una corrida (sin watch)
 npx ng test --watch=false              # lo mismo, explícito
 npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
+
+./scripts/verify-migrations.sh          # las migraciones contra un Postgres de verdad
 ```
+
+`verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
+Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
+reglas de seguridad con sesiones simuladas: 38 comprobaciones que ni el build ni
+las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
+**Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
+producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
 
 El build de producción debe terminar **sin warnings**. Si tu cambio introduce uno,
 arréglalo antes de darlo por terminado.
@@ -160,7 +169,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 42 archivos, 62 pruebas, todo verde
+npm test        # 65 archivos, 304 pruebas, todo verde
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -225,6 +234,32 @@ Cosas que ya causaron un bug. No las repitas:
 - **Supabase no pasa por `HttpClient`** (usa fetch por dentro), así que los
   interceptores de Angular no lo ven. Sus errores se traducen en
   `core/supabase/supabase-error.ts`.
+- **`revoke all ... from public` no le quita el permiso a `anon`.** Es el idiom
+  que usan 0009, 0011 y 0012 para cerrar sus funciones `security definer`, y no
+  cierra nada: en Supabase las funciones nuevas del esquema `public` nacen con un
+  grant **directo** a `anon` y `authenticated` por los default privileges de la
+  plataforma, y revocarle al pseudo-rol PUBLIC no toca esos grants. Se leyó
+  `proacl` en la base en vivo: `anon` podía invocar `set_user_role()`. No era
+  explotable porque las funciones comprueban el rol dentro, pero el idiom
+  completo son **tres** líneas (`revoke all from public`, `revoke execute from
+  anon`, `grant execute to authenticated`). Migración 0015.
+- **Un trigger de congelado copiado de 0011 se bloquea a sí mismo.** Esas
+  migraciones comparan `auth.role() <> 'service_role'`, y en una sesión SQL
+  directa (una migración, el editor del dashboard, la Management API) no hay JWT:
+  `auth.role()` es `null`, la condición se cumple y el trigger lanza. Si la
+  migración inserta su propia fila semilla, **no se puede volver a ejecutar**,
+  porque un `BEFORE INSERT` se dispara antes de que el `on conflict do nothing`
+  resuelva el conflicto. Bloquea `anon` y `authenticated` por nombre, no "todo lo
+  que no sea service_role".
+- **Los grants por columna de 0006 restringen el SELECT, no el UPDATE.** El
+  `revoke select` + `grant select (columnas)` sí funciona: `email` y `phone` no
+  se pueden leer con las claves del navegador. Pero el UPDATE nunca se revocó, y
+  los default privileges dan UPDATE sobre **todas** las columnas, `role`
+  incluida. Lo que impide la escalada son las otras dos capas: la política de
+  update (con `using` **y** `with check` en `auth.uid() = id`, que además impide
+  cambiarse el propio id) y el trigger de congelado. O sea que el trigger no es
+  el cinturón de seguridad: es el freno. Está todo comprobado en
+  `scripts/verify-migrations.sh`.
 - **Dos claves foráneas a la misma tabla rompen el embed de PostgREST.** La
   migración 0012 agregó `hub_market_items.reviewed_by → profiles`, y como
   `seller_id` ya apuntaba ahí, `select('*, profiles(display_name)')` pasó a

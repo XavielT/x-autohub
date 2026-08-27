@@ -10,25 +10,29 @@ Cada punto dice **por qué** importa, no solo qué hacer.
 
 ## P0 — Lo que sigue
 
-### 1. Apuntar `xautohubrd.com` a Vercel  ⬅️ **lo único que falta para salir**
+### 1. ~~Apuntar `xautohubrd.com` a Vercel~~ ✅ **hecho**
 
-El dominio **nunca apuntó a Vercel**: apunta a Squarespace, que sirve una página
-"Próximamente" con `noindex`. El proyecto de Vercel está bien configurado y
-desplegado; falta solo el DNS.
+El DNS ya apunta a Vercel. Comprobado como avisaba este mismo punto —un 200 no
+prueba nada— leyendo las cabeceras: `server: Vercel` y `x-vercel-cache: HIT` en
+el apex, y `www` redirigiendo al apex. El sitio real vive ahí desde la v1.0.0.
 
-En el proveedor de DNS (los nameservers son `ns-cloud-a*.googledomains.com`):
+**Lo que quedó a medias de este punto:** en Supabase → Authentication → URL
+Configuration, el **Site URL sigue siendo `http://localhost:4200`**. Las
+Redirect URLs sí incluyen el dominio real (y localhost), así que hoy no rompe
+nada:
 
-```
-A      xautohubrd.com    76.76.21.21
-CNAME  www               cname.vercel-dns.com
-```
+- `mailer_autoconfirm` está en **true**, o sea que no se manda correo de
+  confirmación al registrarse;
+- y no hay flujo de "olvidé mi contraseña" en la app (no existe ninguna llamada a
+  `resetPasswordForEmail`).
 
-Cuidado al medir esto: mientras el DNS apunte a Squarespace, **cualquier ruta
-devuelve HTTP 200** aunque la app no esté sirviéndose. Un 200 no prueba nada;
-comprueba la cabecera `server:` o busca el contenido real.
-
-Después, en Supabase → Authentication → URL Configuration, cambia **Site URL** de
-`http://localhost:4200` al dominio real y deja las dos en Redirect URLs.
+Pero Site URL es el destino por defecto de los enlaces que Supabase manda por
+correo, y la app **no pasa `emailRedirectTo`** en ningún sitio. El día que se
+active la confirmación de correo o se agregue recuperación de contraseña, esos
+enlaces van a apuntar a `localhost:4200` y no van a funcionar para nadie. No se
+cambió aquí porque cambiarlo hoy tampoco es gratis: haría que los correos del
+desarrollo local apunten a producción, y ahora mismo no arregla nada visible.
+Cuando se toque cualquiera de las dos cosas, este es el primer paso.
 
 ### 2. Seguridad del backend — **ya corregida y verificada**
 
