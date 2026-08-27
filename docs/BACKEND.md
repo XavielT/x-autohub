@@ -88,7 +88,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
 Dashboard → **Authentication → Providers → Email**:
 
 - **Confirm email**: apágalo mientras desarrollas, o cada registro de prueba
-  quedará esperando un correo. Enciéndelo antes de salir a producción.
+  quedará esperando un correo. Para encenderlo hace falta **SMTP propio** — ver
+  "SMTP propio" más abajo. Encenderlo sin él deja el registro limitado a 2
+  correos por hora, y a partir del tercero la gente no puede entrar.
 - **Site URL**: `http://localhost:4200` en desarrollo; el dominio real en producción.
 - **Redirect URLs**: agrega ambos.
 
@@ -513,6 +515,101 @@ calculados (`profiles?` en los joins). Revisa el diff antes de aceptarlo.
 
 `useMockData: true` en el environment. Útil para trabajar la UI sin tocar datos
 reales, o para depurar si algo se rompió en la base.
+
+---
+
+## SMTP propio (hace falta para exigir confirmación de correo)
+
+**Estado hoy: sin configurar.** El proyecto usa el servicio de correo integrado
+de Supabase, que va limitado a **2 correos por hora** y está pensado solo para
+desarrollo. Por eso `mailer_autoconfirm` está encendido: quien se registra entra
+sin confirmar nada.
+
+**No enciendas la confirmación antes que el SMTP.** Con el límite integrado, el
+tercer registro de cada hora se queda sin correo y esa persona no puede entrar —
+la cuenta existe, pero no hay enlace que abrir.
+
+### Por qué Resend
+
+Porque el proyecto ya lo eligió: la función `club-welcome` manda su correo por
+la API de Resend. La **misma API key** sirve para las dos cosas, porque Resend
+también da SMTP. Un proveedor, una clave, un dominio que verificar.
+
+### Ojo con el DNS: el dominio ya manda correo por Google
+
+Comprobado el 27/08/2026 contra 8.8.8.8 y 1.1.1.1:
+
+| Registro | Valor actual |
+| --- | --- |
+| `MX` | `1 smtp.google.com` (Google Workspace) |
+| `TXT` (SPF) | `v=spf1 include:_spf.google.com ~all` |
+| DKIM de Resend | **no existe** |
+| `_dmarc` | **no existe** |
+
+El SPF de la raíz autoriza a Google y a nadie más. **No lo edites para meter a
+Resend**: verifica un subdominio (`send.xautohubrd.com`), que es lo que Resend
+recomienda y deja intacto el correo de Google Workspace. Los registros exactos
+los da Resend al añadir el dominio; son un `MX` y un `TXT` de SPF en el
+subdominio, más un `TXT` de DKIM.
+
+El DNS lo lleva Google Cloud DNS (`ns-cloud-a1..a4.googledomains.com`).
+
+### Pasos de Xaviel (una sola vez)
+
+1. **Cuenta en Resend** y **verificar el dominio** — Domains → Add Domain →
+   `send.xautohubrd.com`. Copiar al DNS los registros que da. Esperar a que
+   Resend lo marque como *Verified*.
+2. **Crear la API key** (API Keys → Create) con permiso de envío.
+3. **Pegarla en `.env.local`** (que está en `.gitignore`; no va al repo):
+
+   ```bash
+   SMTP_HOST=smtp.resend.com
+   SMTP_PORT=465
+   SMTP_USER=resend
+   SMTP_PASS=re_xxxxxxxxxxxx          # la API key de Resend
+   SMTP_ADMIN_EMAIL=no-reply@send.xautohubrd.com
+   SMTP_SENDER_NAME=X AutoHub
+   ```
+
+4. **Aplicarlo:**
+
+   ```bash
+   ./scripts/setup-smtp.sh
+   ```
+
+   Lee esos valores, los manda por la Management API y enseña cómo quedó. **No
+   imprime la contraseña.** Para ver el estado sin tocar nada:
+   `./scripts/setup-smtp.sh --verify`.
+
+5. **Probar con un registro real** en el sitio. Debe llegar el correo de
+   confirmación desde el remitente de arriba.
+
+6. **Solo entonces, encender la confirmación:**
+
+   ```bash
+   ./scripts/setup-smtp.sh --enable-confirmation
+   ```
+
+   El script **se niega** si no hay SMTP configurado, justo para no dejar el
+   registro atascado en el límite de 2 por hora. Para volver atrás:
+   `--disable-confirmation`.
+
+### Qué cambia en el sitio al encenderla
+
+Nada que haya que programar: la fase 1 de la ronda `imp 27082026` ya dejó el
+código preparado para los dos casos. `AuthService.register()` devuelve
+`confirm-email` cuando `signUp` no trae sesión, y `/registro` enseña la pantalla
+"Revisa tu correo" en vez del formulario. Al abrir el enlace, el
+`onAuthStateChange` carga el perfil y la sesión queda abierta.
+
+El `site_url` (`https://xautohubrd.com`) y la lista de redirecciones ya están
+puestos, así que el enlace del correo cae en el sitio.
+
+### Conviene también
+
+Añadir un `_dmarc` al dominio. Hoy no existe, y sin él los proveedores tienen
+menos con qué decidir; empieza suave (`p=none`) y endurece cuando veas los
+informes.
 
 ---
 
