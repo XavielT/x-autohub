@@ -159,12 +159,20 @@ export class AuthService {
     // Mantiene la señal sincronizada con el cliente: cubre el refresh del token,
     // el cierre de sesión desde otra pestaña y el enlace de confirmación.
     this.supabase.db.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
+      // **Solo** `SIGNED_OUT` cierra la sesión. Antes bastaba con que el evento
+      // llegara sin `session`, y eso borraba el usuario y la lectura en vuelo:
+      // un `INITIAL_SESSION` sin sesión —que llega al arrancar— soltaba el
+      // candado y dejaba pasar lecturas repetidas.
+      if (event === 'SIGNED_OUT') {
         this._user.set(null);
         // Lo que estuviera cargando era de la sesión que acaba de cerrarse.
         this.inFlight = null;
         return;
       }
+
+      // Un evento sin sesión que no sea `SIGNED_OUT` no dice nada nuevo: no hay
+      // a quién cargar, y pisar lo que ya hay solo provoca releerlo.
+      if (!session) return;
 
       // Ya tenemos el perfil de esta persona. `TOKEN_REFRESHED` llega cada vez
       // que se renueva el token y no cambia nada del perfil, así que releerlo
