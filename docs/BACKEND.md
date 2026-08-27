@@ -399,6 +399,88 @@ reales, o para depurar si algo se rompió en la base.
 
 ---
 
+## Correo de bienvenida del club
+
+El formulario "Únete al club" del home guarda el correo en `club_subscriptions` y
+después manda un correo de bienvenida. El envío lo hace una Edge Function,
+`supabase/functions/club-welcome/index.ts`, no la app.
+
+**Mientras no esté configurado, todo sigue funcionando**: la suscripción se
+guarda igual y el sitio dice "¡Listo! Ya eres parte del club." en vez de prometer
+un correo. La promesa ("Revisa tu correo") solo aparece cuando la función
+confirma que lo envió. Eso es deliberado: antes el mensaje prometía un correo que
+nadie mandaba.
+
+### Pasos de Xaviel (una sola vez)
+
+1. **Cuenta en Resend** — [resend.com](https://resend.com). El plan gratis da
+   3.000 correos al mes, de sobra para esto.
+2. **Remitente.** Lo ideal es verificar `xautohubrd.com` en Resend (Domains → Add
+   Domain, y copiar los registros DKIM/SPF al DNS del dominio). Mientras eso
+   propaga se puede usar el remitente de pruebas de Resend
+   (`onboarding@resend.dev`), que **solo puede escribirle a tu propia dirección**
+   — sirve para comprobar el flujo, no para suscriptores reales.
+3. **Crear la API key** en Resend (API Keys → Create) con permiso de envío.
+4. **Cargar los secretos** en el proyecto de Supabase:
+
+   ```bash
+   supabase secrets set \
+     RESEND_API_KEY=re_xxxxxxxxxxxx \
+     CLUB_FROM_EMAIL="X AutoHub <club@xautohubrd.com>" \
+     --project-ref <ref>
+   ```
+
+   `CLUB_SITE_URL` es opcional; sin él el correo enlaza a
+   `https://xautohubrd.com`. `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los
+   inyecta el runtime — **no** hay que darlos de alta.
+
+5. **Desplegar la función:**
+
+   ```bash
+   supabase functions deploy club-welcome --project-ref <ref>
+   ```
+
+   Sin `--no-verify-jwt`. La verificación del JWT es una de las dos cosas que
+   evitan que la función sea un relay abierto (la otra está más abajo).
+
+6. **Probar** desde el sitio: suscribirse con una dirección real en la sección
+   del home. Si llega el correo, el mensaje de la página dice "Revisa tu correo";
+   si no llega, dice "Ya eres parte del club" — y la consola del navegador tiene
+   el motivo (`not-configured`, `send-failed`, …).
+
+> El orden importa poco excepto en una cosa: si se despliega la función **sin**
+> los secretos, responde `{ sent: false, reason: 'not-configured' }` y no pasa
+> nada. Al revés (secretos sin función) tampoco: el `invoke` falla y el cliente
+> se lo traga.
+
+### Por qué no es un relay abierto
+
+La clave anon es pública — va dentro del bundle del sitio —, así que "hace falta
+la clave anon" no protege nada por sí solo. Lo que protege es la segunda
+comprobación: **la función solo escribe a un correo que acaba de suscribirse.**
+Con la clave `service_role` (que el runtime le da, y que no sale del servidor)
+consulta `club_subscriptions` y exige que la fila exista y tenga menos de 10
+minutos. Con eso:
+
+- No se puede usar para escribirle a un tercero: su dirección no está en la
+  tabla.
+- No se puede usar para bombardear a un suscriptor: su fila ya no es reciente.
+- Lo único que se puede provocar es el correo que el propio flujo iba a mandar.
+
+Y el cliente solo invoca la función cuando el `insert` fue **nuevo**: en un
+correo repetido (23505) no la llama, o el botón se convertiría en un reenviador.
+
+### Lo que falta
+
+- **Baja de verdad.** El correo pide responder con "BAJA" y que alguien la
+  procese a mano. Lo que toca es una tabla con un token por suscriptor y una
+  ruta pública `/baja/:token`, o el `List-Unsubscribe` de Resend. Mientras la
+  lista sea pequeña la respuesta a mano alcanza; cuando crezca, no.
+- **Reintentos.** Si Resend falla, el correo se pierde: no hay cola. La
+  suscripción, que es lo que importa, sí queda guardada.
+
+---
+
 ## Las imágenes del seed
 
 `seed.sql` apunta a los assets locales (`assets/imgs/...`) porque son los mismos
@@ -414,8 +496,9 @@ las fotos reales del inventario propio a Storage, actualiza esas filas.
 
 - **Pasarela de pago.** `orders` se crea con estado `pending`; no hay cobro. Los
   métodos de pago son informativos.
-- **Correos transaccionales.** Confirmación de pedido, aviso de publicación. Van
-  con Edge Functions + Resend, o el SMTP de Supabase.
+- **Correos transaccionales.** Confirmación de pedido, aviso de publicación.
+  Mismo camino que el correo de bienvenida del club, que ya está hecho (ver la
+  sección de arriba): una Edge Function con Resend.
 - **Realtime.** El feed del Social Hub se lee una vez. `supabase.channel()` lo
   volvería vivo sin recargar.
 - **Búsqueda con acentos.** Hay un índice `gin` en `hub_parts` con el diccionario

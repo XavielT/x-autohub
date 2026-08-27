@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { EmailSubscriptionService } from '../../services/email-subscription.service';
+import { EmailSubscriptionService, SubscriptionResult } from '../../services/email-subscription.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -29,8 +29,8 @@ export class ClubChannel {
     this.feedbackMessage.set('');
 
     this.emailService.subscribe(email).subscribe({
-      next: () => {
-        this.setFeedback('¡Bienvenido al club! Revisa tu correo.', 'success');
+      next: (result) => {
+        this.setFeedback(this.successMessage(result), 'success');
         this.email.set('');
       },
       error: (err) => {
@@ -41,6 +41,25 @@ export class ClubChannel {
         this.isLoading.set(false);
       },
     });
+  }
+
+  /**
+   * Lo que se le dice a alguien que acaba de suscribirse.
+   *
+   * Solo se promete el correo cuando la función confirma que lo envió. Antes
+   * este mensaje decía "Revisa tu correo" siempre, y no había nada en el sistema
+   * que mandara un correo: Xaviel se suscribió en el sitio en vivo y no le llegó
+   * nada. Si la función no está desplegada o no tiene la clave de Resend, la
+   * suscripción sigue siendo un éxito — pero no se promete lo que no va a pasar.
+   */
+  private successMessage(result: SubscriptionResult): string {
+    if (result.alreadySubscribed) {
+      return 'Ya estabas en el club.';
+    }
+
+    return result.welcomeEmailSent
+      ? '¡Bienvenido al club! Revisa tu correo.'
+      : '¡Listo! Ya eres parte del club.';
   }
 
   private isValidEmail(email: string): boolean {
