@@ -14,7 +14,7 @@
 
         @if (isEditing()) {
           <form class="perfil__form" [formGroup]="form" (ngSubmit)="save()" novalidate>
-            <p class="form-legend">Los campos marcados con * son obligatorios.</p>
+            <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
 
             <label class="perfil__field">
               <span>Nombre<span class="req" aria-hidden="true">*</span></span>

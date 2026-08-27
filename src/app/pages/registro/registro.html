@@ -22,11 +22,11 @@
       <p class="auth__subheading">Solo toma un minuto.</p>
 
       <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
+
         @if (errorMessage()) {
           <p class="auth__alert" role="alert">{{ errorMessage() }}</p>
         }
-
-        <p class="form-legend">Los campos marcados con * son obligatorios.</p>
 
         <div class="auth__field">
           <label for="reg-name">Nombre<span class="req" aria-hidden="true">*</span></label>

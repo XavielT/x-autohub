@@ -27,6 +27,17 @@
     --tertiary-light:#FFDDB2;
     --tertiary-dark:#c48400;
     --tertiary-ultra-dark:#a26c00;
+
+    // Texto sobre el fondo oscuro del sitio.
+    //
+    // `--text-soft` ya se usaba en 40 lugares del panel de administracion sin
+    // estar definida en ningun lado: lo unico que evitaba que ese texto tambien
+    // saliera negro era el valor de reserva escrito en cada `var()`. Aqui queda
+    // definida una sola vez, y un poco mas clara que ese #9a9a9a: sobre las
+    // tarjetas de `--main-light` (#474646) el gris viejo daba 3.3:1, por debajo
+    // del minimo legible.
+    --text-strong: #ffffff;
+    --text-soft: #b8b8b8;
 }
 
 // Global Fonts

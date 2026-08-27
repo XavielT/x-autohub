@@ -1,7 +1,29 @@
+// El panel es el unico rincon del sitio escrito asumiendo que el texto se
+// hereda: encabezados sin `color`, `color: inherit` en botones y controles,
+// celdas de tabla sin nada. Y nada lo heredaba — `styles.scss` le pone el fondo
+// oscuro a `html` pero nunca un color de texto, asi que todo eso caia al negro
+// por defecto del navegador sobre #121212. Por eso el H1 solo se leia en la
+// parte que el span pinta de ambar.
+//
+// El color va aqui, en el contenedor, y no en 30 selectores: todo lo que
+// cuelgue de `.admin` —incluidas las cinco paginas hijas que entran por el
+// `router-outlet`— lo hereda.
 .admin {
   max-width: 1280px;
   margin: 0 auto;
   padding: 32px 24px 80px;
+  color: var(--text-strong);
+
+  // Los controles nativos que el CSS no alcanza: el calendario de
+  // `<input type="date">` en versiones, el desplegable de `<select>` en pedidos
+  // e inventario y el relleno automatico del navegador. Sin esto el navegador
+  // los dibuja para fondo claro y quedan negro sobre negro.
+  color-scheme: dark;
+
+  // Y el color con el que el navegador pinta lo que si puede pintar: las
+  // casillas de versiones e inventario salian del azul por defecto de Chrome,
+  // el unico azul en todo el sitio.
+  accent-color: var(--Hub);
 
   &__header {
     display: flex;
@@ -24,14 +46,14 @@
 
   &__subtitle {
     font-family: var(--font-body);
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     margin: 6px 0 0;
     font-size: 15px;
   }
 
   &__exit {
     font-family: var(--font-body);
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     text-decoration: none;
     font-size: 15px;
     transition: color 0.2s ease;
@@ -80,7 +102,7 @@
   &__nav-desc {
     font-family: var(--font-body);
     font-size: 13px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__content {

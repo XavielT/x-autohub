@@ -23,7 +23,7 @@
   &__lead {
     margin: 4px 0 0;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__empty {
@@ -31,7 +31,7 @@
     padding: 28px;
     text-align: center;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
@@ -48,7 +48,7 @@
   &__empty-title {
     font-family: var(--font-brand);
     font-size: 17px;
-    color: #fff;
+    color: var(--text-strong);
   }
 
   &__list {
@@ -95,7 +95,7 @@
 
   &__thumb-empty {
     font-size: 11px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     text-align: center;
     padding: 4px;
   }
@@ -117,7 +117,7 @@
   &__name {
     font-family: var(--font-brand);
     font-size: 17px;
-    color: #fff;
+    color: var(--text-strong);
     text-decoration: none;
 
     &:hover { color: var(--Hub); }
@@ -130,7 +130,7 @@
     padding: 2px 8px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.07);
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
 
     // Mismo rojo que `app-test-badge`: el contenido de prueba se ve igual
     // dentro y fuera del panel.
@@ -152,7 +152,7 @@
   &__meta {
     margin: 4px 0 0;
     font-size: 13px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   // Se destaca en ámbar porque es lo que convierte "hay cola" en "hay cola
@@ -166,7 +166,7 @@
     margin: 8px 0 0;
     font-size: 13px;
     line-height: 1.5;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -188,7 +188,7 @@
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: transparent;
-    color: #fff;
+    color: var(--text-strong);
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.2s ease;
@@ -217,14 +217,16 @@
     }
   }
 
+  // Rechazar tampoco se deshace desde aqui: mismo rojo que "Eliminar" en
+  // versiones y que los errores de formulario.
   &__btn--warn {
     align-self: flex-start;
-    border-color: #e5484d;
-    color: #ff8d8f;
+    border-color: var(--danger);
+    color: var(--danger-text);
 
     &:hover:not(:disabled) {
-      background: #e5484d;
-      border-color: #e5484d;
+      background: var(--danger);
+      border-color: var(--danger);
       color: #fff;
     }
   }

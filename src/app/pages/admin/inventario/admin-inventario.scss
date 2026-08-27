@@ -13,7 +13,7 @@
   &__note {
     margin: 4px 0 0;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__note {
@@ -33,7 +33,7 @@
     font-family: var(--font-body);
     font-size: 14px;
     background: transparent;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 10px;
     padding: 9px 16px;
@@ -112,7 +112,7 @@
   &__sub {
     display: block;
     font-size: 12px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__input {
@@ -133,7 +133,7 @@
   &__warn {
     margin-left: 8px;
     font-size: 12px;
-    color: #ff6b6b;
+    color: var(--danger-text);
   }
 
   // Distintivo de fila de prueba. Mismo rojo que `app-test-badge`, para que sea
@@ -155,7 +155,7 @@
     font-family: var(--font-body);
     font-size: 13px;
     background: transparent;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-strong);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     padding: 7px 12px;
@@ -172,7 +172,7 @@
     border-radius: 14px;
     padding: 28px;
     text-align: center;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 }
 
@@ -215,7 +215,7 @@
     font-size: 14px;
     margin-bottom: 8px;
 
-    small { color: var(--text-soft, #9a9a9a); }
+    small { color: var(--text-soft); }
   }
 
   &__thumbs {
@@ -251,7 +251,7 @@
     line-height: 1;
     cursor: pointer;
 
-    &:hover { background-color: #ff6b6b; }
+    &:hover { background-color: var(--danger); }
   }
 
   &__thumb-tag {
@@ -282,7 +282,7 @@
     justify-content: center;
     cursor: pointer;
     font-size: 13px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
     transition: all 0.2s ease;
 
     input { display: none; }
@@ -293,7 +293,7 @@
     display: block;
     margin-top: 8px;
     font-size: 12px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__fields {
@@ -309,7 +309,7 @@
     gap: 6px;
     font-size: 14px;
 
-    small { color: var(--text-soft, #9a9a9a); font-weight: 400; }
+    small { color: var(--text-soft); font-weight: 400; }
 
     input,
     textarea,
@@ -333,7 +333,7 @@
     &--full { grid-column: 1 / -1; }
   }
 
-  &__err { color: #ff6b6b; font-size: 12px; }
+  &__err { color: var(--danger-text); font-size: 12px; }
 
   &__check {
     grid-column: 1 / -1;
@@ -380,6 +380,6 @@
   &__loading-one {
     margin: 0 0 16px;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 }

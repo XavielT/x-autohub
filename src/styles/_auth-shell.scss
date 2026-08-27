@@ -264,4 +264,17 @@
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
+
+  // El enlace a los terminos salia en el azul de enlace por defecto del
+  // navegador —el unico azul del sitio— y sobre la tarjeta oscura casi no se
+  // leia. Mismo tratamiento que el enlace de `.auth__meta`, dos parrafos mas
+  // arriba en la misma tarjeta.
+  a {
+    color: var(--Hub);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }

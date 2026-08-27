@@ -19,7 +19,7 @@
   &__lead {
     margin: 4px 0 0;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__new,
@@ -66,7 +66,7 @@
     gap: 6px;
     font-size: 14px;
 
-    small { color: var(--text-soft, #9a9a9a); font-weight: 400; }
+    small { color: var(--text-soft); font-weight: 400; }
 
     input,
     textarea {
@@ -154,7 +154,7 @@
 
   &__date {
     font-size: 13px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__badge {
@@ -166,6 +166,10 @@
     background-color: rgba(255, 255, 255, 0.1);
   }
 
+  // Ver detalle / Editar / Eliminar. La misma metrica que `.adm-usr__btn` y
+  // `.adm-inv__btn`, y como ellos con el color de texto principal: en gris
+  // sobre la tarjeta (`--main-light`, #474646) se leian como texto apagado y no
+  // como algo en lo que hacer clic.
   &__item-tools {
     display: flex;
     gap: 6px;
@@ -175,7 +179,7 @@
       font-family: var(--font-body);
       font-size: 13px;
       background: transparent;
-      color: var(--text-soft, #9a9a9a);
+      color: var(--text-strong);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
       padding: 5px 10px;
@@ -184,16 +188,35 @@
 
       &:hover { color: var(--Hub); border-color: var(--Hub); }
     }
-  }
 
-  &__danger,
-  &__danger-soft {
-    &:hover { color: #ff6b6b !important; border-color: #ff6b6b !important; }
-  }
+    // Borrar una version no se deshace: lleva el rojo de los errores de
+    // formulario (`--danger`), el unico rojo del sitio que significa "esto
+    // salio mal", y no el ambar de las demas acciones.
+    //
+    // Las dos reglas van anidadas aqui, y no como `&__danger` al nivel de
+    // arriba, porque asi le ganan en especificidad al `button` de la regla
+    // anterior. Antes lo resolvian cuatro `!important`.
+    .adm-rel__danger-soft {
+      color: var(--danger-text);
+      border-color: rgba(229, 72, 77, 0.45);
 
-  &__danger {
-    color: #ff6b6b !important;
-    border-color: #ff6b6b !important;
+      &:hover {
+        color: #fff;
+        background-color: var(--danger);
+        border-color: var(--danger);
+      }
+    }
+
+    // El segundo clic, el que ya borra. Va relleno para que no se confunda con
+    // el paso anterior.
+    .adm-rel__danger {
+      color: #fff;
+      background-color: var(--danger);
+      border-color: var(--danger);
+      font-weight: 700;
+
+      &:hover { filter: brightness(1.1); color: #fff; border-color: var(--danger); }
+    }
   }
 
   &__item-title {
@@ -205,7 +228,7 @@
   &__item-summary {
     margin: 6px 0 0;
     font-size: 14px;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 
   &__changes {
@@ -224,6 +247,6 @@
     border-radius: 14px;
     padding: 28px;
     text-align: center;
-    color: var(--text-soft, #9a9a9a);
+    color: var(--text-soft);
   }
 }

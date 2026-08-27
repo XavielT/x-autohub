@@ -7,6 +7,17 @@
   background-color: var(--main);
   padding: 32px 24px 80px;
 
+  // Lo mismo que le pasaba al panel de administracion (ver `admin.scss`): nueve
+  // elementos de esta pagina no declaran `color` y nada se lo heredaba, asi que
+  // salian en el negro por defecto del navegador sobre `--main`. Los dos
+  // `<h2>` de seccion —"Mis publicaciones" y "Actividad"— eran practicamente
+  // invisibles. El color va en el contenedor, no en cada selector.
+  color: var(--text-strong);
+
+  // El calendario y los desplegables nativos de esta pagina, por la misma razon.
+  color-scheme: dark;
+  accent-color: var(--Hub);
+
   &__inner {
     max-width: 1080px;
     margin: 0 auto;

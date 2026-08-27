@@ -20,6 +20,16 @@ $form-error: #e5484d; // borde e indicador
 $form-error-text: #ff8d8f; // texto sobre fondo oscuro
 $form-error-glow: rgba(229, 72, 77, 0.18);
 
+// Los mismos dos colores como propiedades personalizadas, para el SCSS que no
+// puede leer estas variables de Sass: el panel de administracion tiene acciones
+// destructivas ("Eliminar", "Confirmar rechazo") que deben usar exactamente el
+// rojo de los errores, y tenia tres rojos distintos inventados a mano. La
+// definicion sigue siendo una sola: si cambia el valor de arriba, cambian las dos.
+:root {
+  --danger: #{$form-error};
+  --danger-text: #{$form-error-text};
+}
+
 /// El asterisco junto a la etiqueta de un campo obligatorio.
 ///
 /// Va con `aria-hidden` en la plantilla: para un lector de pantalla lo que marca
@@ -32,11 +42,28 @@ $form-error-glow: rgba(229, 72, 77, 0.18);
 }
 
 /// La línea que explica el asterisco. Una por formulario, arriba de los campos.
+///
+/// Sin margen inferior propio: los cuatro formularios que la usan (`registro`,
+/// `publicar`, `perfil`, `checkout`) la ponen dentro de un contenedor flex o
+/// grid con `gap`, y un margen aquí se **suma** al gap. Con `margin-bottom: 18px`
+/// y un `gap: 24px` la leyenda quedaba a 42px del primer campo, flotando entre
+/// el formulario y su encabezado. Donde la leyenda queda fuera del contenedor
+/// con gap, la separación la pone la página (ver `checkout.scss`).
 .form-legend {
-  margin: 0 0 18px;
+  margin: 0;
   color: var(--main-ultra-light);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
+
+  /// El asterisco de la leyenda **no** lleva `aria-hidden`: aquí no es un
+  /// adorno junto a una etiqueta, es la palabra de la que habla la frase, y
+  /// silenciarlo deja "los campos marcados con son obligatorios". Por lo mismo
+  /// no necesita el margen que lo separa del texto de un `<label>`: va entre
+  /// dos espacios.
+  .req {
+    margin-left: 0;
+  }
 }
 
 /// Marca de campo inválido. Se aplica al control, no al contenedor.

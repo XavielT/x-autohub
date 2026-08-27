@@ -132,6 +132,14 @@
         }
     }
 
+    // La leyenda de campos obligatorios es la unica de las cuatro que no vive
+    // dentro de un contenedor con `gap`, asi que la separacion del primer campo
+    // la pone la pagina (ver el comentario de `.form-legend` en
+    // `styles/_forms.scss`).
+    .form-legend {
+        margin: 0 0 18px;
+    }
+
     &__fields {
         display: grid;
         grid-template-columns: 1fr;
