@@ -1,0 +1,160 @@
+// Ajustes del sitio. Misma metrica que las otras secciones del panel: fuentes,
+// tarjeta de `--main-light`, radio 14px y los tokens de texto que la fase 1
+// definio (`--text-strong` lo hereda del contenedor `.admin`).
+
+.adm-set {
+  font-family: var(--font-body);
+
+  &__head {
+    margin-bottom: 20px;
+  }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 24px;
+    margin: 0;
+  }
+
+  &__lead {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+
+  &__card {
+    display: block;
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 22px;
+    max-width: 620px;
+  }
+
+  &__card-title {
+    font-family: var(--font-brand);
+    font-size: 19px;
+    margin: 0;
+  }
+
+  &__card-text {
+    margin: 8px 0 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-soft);
+  }
+
+  // La comparacion de los dos modos. Estrecha a proposito: son tres filas de
+  // dos numeros, no una tabla de datos.
+  &__compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    th,
+    td {
+      text-align: left;
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    thead th {
+      font-family: var(--font-brand);
+      font-size: 13px;
+      color: var(--Hub);
+      font-weight: 600;
+    }
+
+    tbody th {
+      font-weight: 600;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    td {
+      font-family: var(--font-brand2);
+      // Orbitron a 14px deja el cero como un cuadrito; a 16 se lee.
+      font-size: 16px;
+      color: var(--text-soft);
+    }
+  }
+
+  // La columna que esta activa ahora mismo, en el ambar de la marca: es lo que
+  // el visitante esta viendo.
+  &__cell--on {
+    color: var(--Hub) !important;
+    font-weight: 700;
+  }
+
+  &__exact {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  &__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  // Cada opcion es un boton con su explicacion dentro: la diferencia entre los
+  // dos modos no cabe en una palabra, y ponerla en un `title` la esconde.
+  &__option {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    font-family: var(--font-body);
+    background: transparent;
+    color: var(--text-strong);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled):not(.adm-set__option--on) {
+      border-color: var(--Hub);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    &--on {
+      background-color: var(--Hub);
+      border-color: var(--Hub);
+      color: #1a1a1a;
+      cursor: default;
+    }
+  }
+
+  &__option-label {
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  &__option-hint {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-soft);
+
+    // Sobre el ambar del boton activo, el gris no se lee.
+    .adm-set__option--on & {
+      color: rgba(26, 26, 26, 0.75);
+    }
+  }
+
+  &__note {
+    margin: 18px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    font-style: italic;
+    color: var(--text-soft);
+  }
+}

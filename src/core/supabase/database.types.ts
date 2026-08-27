@@ -24,6 +24,17 @@ export type UserRoleDb = 'admin' | 'moderador' | 'user';
 /** pendiente | aprobado | rechazado. Migración 0012. */
 export type PublicationStatusDb = 'pendiente' | 'aprobado' | 'rechazado';
 
+/**
+ * El valor de una fila de `site_settings` (migración 0014).
+ *
+ * La columna es `jsonb`, así que puede ser cualquier cosa que quepa en JSON. Se
+ * declara como unión y no como `unknown` para que el `select` de un ajuste no
+ * obligue a un `as` en cada uso; quien lo lea sigue teniendo que estrechar el
+ * tipo, que es correcto: Postgres no comprueba la forma del valor (lo hace un
+ * `check` por clave).
+ */
+export type SettingValue = string | number | boolean | null | SettingValue[] | { [key: string]: SettingValue };
+
 export type ProfileRow = {
   id: string;
   display_name: string;
@@ -417,6 +428,20 @@ export type Database = {
         Update: Partial<{ email: string }>;
         Relationships: [];
       };
+      /**
+       * Ajustes del sitio, clave/valor (migración 0014).
+       *
+       * Se lee en público (`anon` incluido: el home los necesita sin sesión) y
+       * **no se escribe por aquí**: la tabla no tiene política de escritura, así
+       * que `Insert` y `Update` no existen desde el navegador. El único camino
+       * es la función `set_site_setting()`.
+       */
+      site_settings: {
+        Row: { key: string; value: SettingValue; updated_at: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       shipping_options: {
         Row: ShippingOptionRow;
         Insert: ShippingOptionRow;
@@ -534,6 +559,26 @@ export type Database = {
           reviewed_by: string | null;
           reviewed_at: string | null;
         }[];
+      };
+      /**
+       * Los tres contadores del home en una sola llamada (migración 0014).
+       *
+       * `security definer` por **miembros**: contar `profiles` con la clave anon
+       * es imposible a propósito. Devuelve solo números, nunca filas, y aplica
+       * la visibilidad de un visitante anónimo sea quien sea el que llame — así
+       * un admin no ve en el home unos números que nadie más ve.
+       */
+      get_site_stats: {
+        Args: Record<string, never>;
+        Returns: { vehicles: number; parts: number; members: number }[];
+      };
+      /**
+       * Cambia un ajuste **existente**. Solo un admin, comprobado dentro de
+       * Postgres. No crea claves nuevas: un ajuste nace en una migración.
+       */
+      set_site_setting: {
+        Args: { p_key: string; p_value: SettingValue };
+        Returns: { key: string; value: SettingValue; updated_at: string }[];
       };
       create_order: {
         Args: {

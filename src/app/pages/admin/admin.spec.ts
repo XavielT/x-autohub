@@ -45,7 +45,7 @@ describe('Admin', () => {
     return { fixture, componente: fixture.componentInstance };
   }
 
-  it('un admin ve las cinco secciones', () => {
+  it('un admin ve las seis secciones', () => {
     const { componente } = montar('admin');
 
     expect(componente.sections().map((s) => s.path)).toEqual([
@@ -54,6 +54,7 @@ describe('Admin', () => {
       'pedidos',
       'inventario',
       'usuarios',
+      'ajustes',
     ]);
   });
 
@@ -72,6 +73,8 @@ describe('Admin', () => {
     expect(texto).not.toContain('Usuarios');
     expect(texto).not.toContain('Inventario');
     expect(texto).not.toContain('Pedidos');
+    // Los ajustes del sitio cambian lo que ve todo el mundo: no son moderacion.
+    expect(texto).not.toContain('Ajustes');
   });
 
   it('dice de que rol es la sesion abierta', async () => {

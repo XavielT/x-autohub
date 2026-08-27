@@ -36,7 +36,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 11    | `supabase/migrations/0011_user_roles.sql`      | Roles: admin > moderador > user                |
 | 12    | `supabase/migrations/0012_publication_moderation.sql` | Aprobación de publicaciones de Hub Market |
 | 13    | `supabase/migrations/0013_test_items.sql`      | Artículos de prueba y usuarios de prueba       |
-| 14    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 14    | `supabase/migrations/0014_site_settings.sql`   | Ajustes del sitio y los contadores del home    |
+| 15    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012) e `is_test` (0013). Y las dependencias entre migraciones son
@@ -272,6 +273,58 @@ vehículo oficial no pertenece a una persona. En `inventory` el permiso lo decid
 > Para el primer admin no hay panel todavía: regístrate y corre
 > `node scripts/make-admin.mjs tu@correo.com`.
 
+### Ajustes del sitio y contadores (migración 0014)
+
+Dos cosas que la sección de contadores del home necesita: un ajuste que diga qué
+números mostrar, y una función que los cuente.
+
+**`site_settings`** — clave/valor, `value` en `jsonb`. Hoy una sola clave:
+
+| Clave        | Valores                 | Qué hace                                            |
+| ------------ | ----------------------- | --------------------------------------------------- |
+| `stats_mode` | `"showcase"` \| `"real"` | Si el home muestra los números de impresión o los reales |
+
+La lee **cualquiera**, incluido `anon`: el home tiene que funcionar sin sesión.
+La escritura no tiene política **a propósito** — sin política RLS niega, así que
+no hay `update` desde el navegador que pueda tocarla. El único camino es:
+
+```sql
+select * from set_site_setting('stats_mode', '"real"');
+```
+
+`security definer`, comprueba `is_admin()` dentro de Postgres, y solo cambia
+claves que ya existen (un ajuste nuevo nace en una migración, con su `check`).
+Un moderador no entra: los ajustes del sitio no son moderación de contenido.
+
+Hay además un trigger, `guard_site_settings_write`, que hoy no protege de nada:
+está para el día en que alguien agregue una política de escritura "para editar
+los ajustes desde el Table Editor" y reabra el agujero sin darse cuenta. Misma
+defensa en profundidad que el congelado de 0005.
+
+**`get_site_stats()`** — los tres contadores en una llamada:
+
+```sql
+select * from get_site_stats();
+--  vehicles | parts | members
+-- ----------+-------+---------
+--        10 |    35 |       2
+```
+
+Es `security definer` por **miembros**: contar `profiles` con la clave anon es
+imposible a propósito. Devuelve **solo números**, ninguna fila. Y como
+`security definer` se salta RLS, las condiciones de visibilidad van escritas
+dentro de la función: `is_available`/`is_active`, `status = 'aprobado'`, y nada
+de `is_test`. Eso es deliberado — los contadores dicen lo mismo a todo el mundo.
+Sin ello, un admin (que por RLS ve el contenido de prueba y lo pendiente) leería
+en el home unos números que ningún visitante ve.
+
+> **Si cambian las políticas de select de 0013, hay que cambiar esta función.**
+> Es el precio de saltarse RLS a propósito, y está anotado también dentro del
+> SQL.
+
+El ajuste se cambia desde `/admin/ajustes`, que enseña los dos modos con sus
+números al lado antes de tocar nada.
+
 ### Datos privados del perfil (migración 0006)
 
 `email` y `phone` de `profiles` **no** son legibles con la clave anon ni con una
@@ -369,6 +422,13 @@ select public.set_user_role(
 4. TypeScript te dirá qué mappers y servicios ajustar.
 
 ### Regenerar el seed
+
+> `site_settings` **no** está en el seed, y no es un olvido: la fila
+> `stats_mode` la siembra la migración 0014 con `on conflict do nothing`. Si
+> estuviera en el seed, regenerarlo devolvería el contador a `showcase` y
+> desharía en silencio la elección del admin. El seed es contenido de demo, no
+> configuración.
+
 
 Si cambias un mock y quieres que la base refleje lo mismo:
 

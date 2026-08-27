@@ -1,0 +1,68 @@
+<section class="adm-set">
+  <header class="adm-set__head">
+    <div>
+      <h2 class="adm-set__title">Ajustes del sitio</h2>
+      <p class="adm-set__lead">Lo que se cambia aqui lo ve todo el mundo, con sesion o sin ella.</p>
+    </div>
+  </header>
+
+  <article class="adm-set__card">
+    <h3 class="adm-set__card-title">Contador del home</h3>
+    <p class="adm-set__card-text">
+      La fila de "Vehiculos · Piezas · Miembros" debajo del inicio. Elige si muestra numeros de
+      impresion o los datos reales del sitio.
+    </p>
+
+    <table class="adm-set__compare">
+      <thead>
+        <tr>
+          <th scope="col">Metrica</th>
+          <th scope="col">Impresion</th>
+          <th scope="col">Datos reales</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.label) {
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            <td [class.adm-set__cell--on]="mode() === 'showcase'">{{ row.showcase }}</td>
+            <td [class.adm-set__cell--on]="mode() === 'real'">{{ row.real }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (exactCounts(); as exact) {
+      <p class="adm-set__exact">Conteo exacto ahora mismo: {{ exact }}</p>
+    }
+
+    <div class="adm-set__options" role="group" aria-label="Que muestra el contador del home">
+      <button
+        type="button"
+        class="adm-set__option"
+        [class.adm-set__option--on]="mode() === 'showcase'"
+        [attr.aria-pressed]="mode() === 'showcase'"
+        [disabled]="isSaving()"
+        (click)="choose('showcase')">
+        <span class="adm-set__option-label">Impresion</span>
+        <span class="adm-set__option-hint">Los numeros de siempre. Mejor primera impresion.</span>
+      </button>
+
+      <button
+        type="button"
+        class="adm-set__option"
+        [class.adm-set__option--on]="mode() === 'real'"
+        [attr.aria-pressed]="mode() === 'real'"
+        [disabled]="isSaving()"
+        (click)="choose('real')">
+        <span class="adm-set__option-label">Datos reales</span>
+        <span class="adm-set__option-hint">Lo que hay de verdad, contado en el momento.</span>
+      </button>
+    </div>
+
+    <p class="adm-set__note">
+      Los datos reales cuentan lo que ve un visitante cualquiera: sin articulos de prueba, sin
+      publicaciones pendientes y sin cuentas de prueba.
+    </p>
+  </article>
+</section>

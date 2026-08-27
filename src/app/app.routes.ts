@@ -179,6 +179,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin/usuarios/admin-usuarios').then((m) => m.AdminUsuarios),
       },
+      {
+        path: 'ajustes',
+        title: `Ajustes | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./pages/admin/ajustes/admin-ajustes').then((m) => m.AdminAjustes),
+      },
     ],
   },
 
