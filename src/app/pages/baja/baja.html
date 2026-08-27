@@ -1,0 +1,60 @@
+<div class="baja">
+  <section class="baja__sheet">
+    <h1 class="baja__title">Club <span class="baja__title-highlight">X AutoHub</span></h1>
+
+    @switch (estado()) {
+      @case ('confirmar') {
+        <p class="baja__lead">
+          Vas a dejar de recibir los correos del club: alertas de productos, ofertas en piezas y
+          los eventos.
+        </p>
+        <div class="baja__actions">
+          <button type="button" class="baja__button" (click)="confirmar()">
+            Si, darme de baja
+          </button>
+          <a routerLink="/" class="baja__link">Mejor no, volver al sitio</a>
+        </div>
+        <p class="baja__note">
+          Tu cuenta y tus pedidos no se tocan. Puedes volver a suscribirte cuando quieras desde el
+          inicio.
+        </p>
+      }
+
+      @case ('saliendo') {
+        <p class="baja__lead">Sacandote de la lista...</p>
+      }
+
+      @case ('listo') {
+        <p class="baja__lead baja__lead--ok">Listo, ya no recibiras mas correos del club.</p>
+        <p class="baja__note">
+          Si cambias de idea, puedes volver a suscribirte desde el inicio en cualquier momento.
+        </p>
+        <div class="baja__actions">
+          <a routerLink="/" class="baja__button">Volver al sitio</a>
+        </div>
+      }
+
+      @case ('invalido') {
+        <p class="baja__lead">Este enlace ya no vale.</p>
+        <p class="baja__note">
+          Puede que ya te hayas dado de baja con el, o que el enlace se haya cortado al copiarlo.
+          Si sigues recibiendo correos, respondele a cualquiera de ellos y te sacamos a mano.
+        </p>
+        <div class="baja__actions">
+          <a routerLink="/" class="baja__button">Volver al sitio</a>
+        </div>
+      }
+
+      @case ('error') {
+        <p class="baja__lead">Algo salio mal de nuestro lado.</p>
+        <p class="baja__note">
+          Vuelve a intentarlo en un momento. Si sigue fallando, respondele a cualquiera de nuestros
+          correos y te sacamos a mano.
+        </p>
+        <div class="baja__actions">
+          <button type="button" class="baja__button" (click)="confirmar()">Intentar de nuevo</button>
+        </div>
+      }
+    }
+  </section>
+</div>

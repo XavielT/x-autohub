@@ -25,10 +25,16 @@
 //                    lo que promete.
 //   CLUB_FROM_EMAIL  remitente, p. ej. `X AutoHub <club@xautohubrd.com>`.
 //                    El dominio tiene que estar verificado en Resend.
-//   CLUB_SITE_URL    opcional, para el enlace del correo.
+//   CLUB_SITE_URL    opcional. Es la base del enlace "Entrar a X AutoHub" y
+//                    tambien del enlace de baja (`/baja/<token>`), asi que si
+//                    apunta al sitio equivocado la baja no funciona.
 //
 // `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el propio runtime;
 // no hay que darlos de alta.
+//
+// Depende de la migracion **0016**: de ahi sale `unsubscribe_token`. Si la base
+// no la tiene aplicada, la funcion no manda nada — un correo sin salida es peor
+// que ningun correo (y es lo que hace que Gmail lo mande a spam).
 
 /** Ventana en la que un correo se considera recien suscrito. */
 const FRESH_WINDOW_MINUTES = 10;
@@ -78,7 +84,7 @@ function isValidEmail(value: unknown): value is string {
  * Todo va en linea y con tablas: los clientes de correo no cargan hojas de
  * estilo externas y varios ignoran flexbox y grid.
  */
-function welcomeHtml(siteUrl: string): string {
+function welcomeHtml(siteUrl: string, unsubscribeUrl: string): string {
   return `<!doctype html>
 <html lang="es">
   <head>
@@ -121,8 +127,9 @@ function welcomeHtml(siteUrl: string): string {
               <td style="padding:28px 32px 32px 32px;border-top:1px solid #2a2a2a;">
                 <p style="margin:16px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#929090;">
                   Te escribimos porque registraste este correo en X AutoHub. Si no quieres seguir
-                  recibiendo estos mensajes, responde a este correo con la palabra
-                  <strong style="color:#b8b8b8;">BAJA</strong> y te sacamos de la lista.
+                  recibiendo estos mensajes,
+                  <a href="${unsubscribeUrl}" style="color:#b8b8b8;text-decoration:underline;">darte de baja</a>
+                  toma un clic.
                 </p>
               </td>
             </tr>
@@ -135,7 +142,7 @@ function welcomeHtml(siteUrl: string): string {
 }
 
 /** Version en texto plano. Sin esto el correo puntua peor en los filtros. */
-function welcomeText(siteUrl: string): string {
+function welcomeText(siteUrl: string, unsubscribeUrl: string): string {
   return [
     'Bienvenido al Club X AutoHub',
     '',
@@ -146,8 +153,8 @@ function welcomeText(siteUrl: string): string {
     `Entrar a X AutoHub: ${siteUrl}`,
     '',
     'Te escribimos porque registraste este correo en X AutoHub. Si no quieres seguir',
-    'recibiendo estos mensajes, responde a este correo con la palabra BAJA y te',
-    'sacamos de la lista.',
+    'recibiendo estos mensajes, darte de baja toma un clic:',
+    unsubscribeUrl,
   ].join('\n');
 }
 
@@ -169,11 +176,11 @@ async function isFreshSubscriber(
   supabaseUrl: string,
   serviceRoleKey: string,
   email: string,
-): Promise<{ ok: true } | { ok: false; reason: Reason }> {
+): Promise<{ ok: true; unsubscribeToken: string } | { ok: false; reason: Reason }> {
   const since = new Date(Date.now() - FRESH_WINDOW_MINUTES * 60_000).toISOString();
   const query =
     `${supabaseUrl}/rest/v1/club_subscriptions` +
-    `?select=email&email=eq.${encodeURIComponent(email)}` +
+    `?select=email,unsubscribe_token&email=eq.${encodeURIComponent(email)}` +
     `&created_at=gte.${encodeURIComponent(since)}&limit=1`;
 
   const res = await fetch(query, {
@@ -188,7 +195,7 @@ async function isFreshSubscriber(
     return { ok: false, reason: 'lookup-failed' };
   }
 
-  const rows = (await res.json()) as unknown[];
+  const rows = (await res.json()) as { unsubscribe_token?: string }[];
   if (!Array.isArray(rows) || rows.length === 0) {
     // Puede ser abuso, o un suscriptor de hace tiempo pidiendo el correo otra
     // vez. Las dos cosas se rechazan igual; no se distingue a proposito, para
@@ -196,7 +203,15 @@ async function isFreshSubscriber(
     return { ok: false, reason: 'not-subscribed' };
   }
 
-  return { ok: true };
+  const unsubscribeToken = rows[0].unsubscribe_token;
+  if (!unsubscribeToken) {
+    // La columna la agrega la migración 0016. Si falta, es que la base está
+    // atrasada respecto a esta función: mejor no mandar un correo sin salida.
+    console.error('[club-welcome] la fila no trae unsubscribe_token; falta la migracion 0016');
+    return { ok: false, reason: 'lookup-failed' };
+  }
+
+  return { ok: true, unsubscribeToken };
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -239,6 +254,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return answer(fresh.reason === 'lookup-failed' ? 500 : 403, false, fresh.reason);
     }
 
+    const unsubscribeUrl = `${siteUrl.replace(/\/$/, '')}/baja/${fresh.unsubscribeToken}`;
+
     const send = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -249,8 +266,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
         from,
         to: [email],
         subject: 'Bienvenido al Club X AutoHub',
-        html: welcomeHtml(siteUrl),
-        text: welcomeText(siteUrl),
+        html: welcomeHtml(siteUrl, unsubscribeUrl),
+        text: welcomeText(siteUrl, unsubscribeUrl),
+        // Lo que hace que Gmail y Outlook dibujen su propio "cancelar
+        // suscripción" arriba del correo, en vez de dejar que la única salida
+        // sea el botón de spam.
+        //
+        // **Sin** `List-Unsubscribe-Post` a propósito: esa cabecera (RFC 8058)
+        // le promete al cliente de correo que puede dar de baja con un POST y
+        // sin preguntar, y la pantalla de baja pide confirmación — porque los
+        // clientes de correo abren los enlaces por su cuenta para
+        // previsualizarlos, y una baja al cargar sacaría de la lista a quien
+        // nunca hizo clic.
+        headers: {
+          'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        },
       }),
     });
 

@@ -321,6 +321,42 @@ check "checkout de invitado" "1" \
   "$(as_anon "select count(*) from create_order('invitado@correo.com','Cliente Invitado','Calle 1','standard','card','[{\"part_id\": 1, \"quantity\": 1}]'::jsonb);")"
 check "contadores del home sin sesion" "35" "$(as_anon 'select parts from get_site_stats();')"
 
+echo "→ Baja del club con token (migracion 0016)"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into club_subscriptions (email) values ('uno@correo.com'), ('dos@correo.com');
+SQL
+check "cada suscriptor recibe su propio token" "2" \
+  "select count(distinct unsubscribe_token) from club_subscriptions;"
+# Ojo con lo que se comprueba: `anon` **no** recibe un error, recibe **cero
+# filas**. La tabla tiene el grant de tabla por los default privileges y lo que
+# la cierra es que no hay politica de select desde 0002 — igual que
+# `site_settings`. Lo que importa es que la lista de correos y sus tokens no
+# salgan, no como se niegan.
+check "la lista y sus tokens no salen con la clave del navegador" "0" \
+  "$(as_anon 'select count(*) from club_subscriptions;')"
+check "un token basura no da de baja a nadie" "f" \
+  "$(as_anon "select unsubscribe_from_club('lo-que-sea');")"
+check "ni uno nulo" "f" "$(as_anon 'select unsubscribe_from_club(null);')"
+check "ni un uuid que no existe" "f" \
+  "$(as_anon "select unsubscribe_from_club('11111111-2222-3333-4444-555555555555');")"
+check "y nadie se fue todavia" "2" "select count(*) from club_subscriptions;"
+
+# El token de verdad, leido por encima de RLS para simular el que llego por
+# correo.
+TOKEN="$($PSQL -t -A -c "select unsubscribe_token from club_subscriptions where email='uno@correo.com';" | tr -d '[:space:]')"
+check "con su token, alguien sin sesion se da de baja" "t" \
+  "$(as_anon "select unsubscribe_from_club('$TOKEN');")"
+check "y la fila desaparece" "dos@correo.com" \
+  "select string_agg(email, ',') from club_subscriptions;"
+check "el mismo enlace dos veces no revienta, solo dice que no" "f" \
+  "$(as_anon "select unsubscribe_from_club('$TOKEN');")"
+# Volver a suscribirse tiene que funcionar sin nada extra: es la razon por la que
+# la baja borra la fila en vez de marcarla (ver la cabecera de la 0016).
+check "volver a suscribirse no da error" "" \
+  "$(as_anon "insert into club_subscriptions (email) values ('uno@correo.com');")"
+check "y la fila nueva trae un token distinto del que se uso" "t" \
+  "select unsubscribe_token <> '$TOKEN' from club_subscriptions where email='uno@correo.com';"
+
 echo "→ Escalada de privilegios: quien para que (0005 / 0006 / 0011 / 0013)"
 #
 # Escribir esto obligo a comprobar cual de las defensas hace el trabajo, y la

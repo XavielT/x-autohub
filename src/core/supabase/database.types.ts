@@ -423,7 +423,13 @@ export type Database = {
         Relationships: [];
       };
       club_subscriptions: {
-        Row: { id: number; email: string; created_at: string };
+        /**
+         * `unsubscribe_token` (migración 0016) va en el enlace de baja del
+         * correo. Está en el tipo porque la Edge Function lo lee con la clave
+         * `service_role`; **desde el navegador no se puede leer** — la tabla no
+         * tiene política de select para `anon`.
+         */
+        Row: { id: number; email: string; created_at: string; unsubscribe_token: string };
         Insert: { email: string };
         Update: Partial<{ email: string }>;
         Relationships: [];
@@ -568,6 +574,18 @@ export type Database = {
        * la visibilidad de un visitante anónimo sea quien sea el que llame — así
        * un admin no ve en el home unos números que nadie más ve.
        */
+      /**
+       * Saca de la lista del club a quien tenga ese token (migración 0016).
+       *
+       * Se le da a `anon` a propósito, al contrario de las funciones de admin:
+       * el enlace se abre desde el correo, casi siempre sin sesión. Devuelve
+       * `false` —y no lanza— cuando el token no existe, que es lo que pasa al
+       * abrir dos veces el mismo enlace.
+       */
+      unsubscribe_from_club: {
+        Args: { p_token: string };
+        Returns: boolean;
+      };
       get_site_stats: {
         Args: Record<string, never>;
         Returns: { vehicles: number; parts: number; members: number }[];

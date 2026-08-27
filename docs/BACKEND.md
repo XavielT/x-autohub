@@ -38,7 +38,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 13    | `supabase/migrations/0013_test_items.sql`      | Artículos de prueba y usuarios de prueba       |
 | 14    | `supabase/migrations/0014_site_settings.sql`   | Ajustes del sitio y los contadores del home    |
 | 15    | `supabase/migrations/0015_admin_function_grants.sql` | `anon` deja de poder invocar las funciones de admin |
-| 16    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 16    | `supabase/migrations/0016_club_unsubscribe.sql` | Token de baja del club y su función             |
+| 17    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012) e `is_test` (0013). Y las dependencias entre migraciones son
@@ -586,14 +587,53 @@ minutos. Con eso:
 Y el cliente solo invoca la función cuando el `insert` fue **nuevo**: en un
 correo repetido (23505) no la llama, o el botón se convertiría en un reenviador.
 
+### La baja (migración 0016)
+
+Cada fila de `club_subscriptions` tiene un `unsubscribe_token` (uuid). El correo
+lo lleva en dos sitios:
+
+- un enlace en el pie, `https://xautohubrd.com/baja/<token>`;
+- y la cabecera `List-Unsubscribe`, que es lo que hace que Gmail y Outlook
+  dibujen su propio "cancelar suscripción" arriba del mensaje en vez de dejar que
+  la única salida sea el botón de spam.
+
+La pantalla **pide confirmación antes de dar de baja**, y eso no es cortesía: los
+clientes de correo y los antivirus abren los enlaces por su cuenta para
+previsualizarlos y comprobarlos, así que una baja al cargar sacaría de la lista a
+gente que nunca hizo clic. Por lo mismo el correo **no** manda
+`List-Unsubscribe-Post` (RFC 8058): esa cabecera promete que se puede dar de baja
+con un POST y sin preguntar.
+
+Al confirmar se llama a:
+
+```sql
+select unsubscribe_from_club('<token>');   -- true si habia alguien, false si no
+```
+
+`security definer`, y **con grant a `anon`** al contrario de las funciones de
+admin: el enlace se abre desde el correo, casi siempre sin sesión. Es el mismo
+caso que `create_order()` con el checkout de invitado. Devuelve `false` en vez de
+lanzar cuando el token no existe, que es lo que pasa al abrir dos veces el mismo
+enlace.
+
+El token **no se puede leer desde el navegador**: la tabla no tiene política de
+select desde 0002. Lo leen la función (definer) y la Edge Function del correo
+(con la clave `service_role`).
+
+> **Por qué se borra la fila y no se marca.** Un `unsubscribed_at` sería lo
+> habitual en listas grandes —sirve de lista de supresión—, pero al volver a
+> suscribirse desde el home el insert choca con el `unique` del correo y el
+> cliente lo trata como "ya estabas en el club": quien se dio de baja y se
+> arrepiente quedaría en una lista de la que nunca más recibe nada. Soportarlo
+> bien pide convertir también el alta en una función que reactive la fila.
+> Borrar es honesto y volver a suscribirse funciona sin nada extra. **Cuando haya
+> campañas de verdad, toca la lista de supresión.**
+
 ### Lo que falta
 
-- **Baja de verdad.** El correo pide responder con "BAJA" y que alguien la
-  procese a mano. Lo que toca es una tabla con un token por suscriptor y una
-  ruta pública `/baja/:token`, o el `List-Unsubscribe` de Resend. Mientras la
-  lista sea pequeña la respuesta a mano alcanza; cuando crezca, no.
 - **Reintentos.** Si Resend falla, el correo se pierde: no hay cola. La
   suscripción, que es lo que importa, sí queda guardada.
+- **Lista de supresión**, cuando la lista crezca (ver el recuadro de arriba).
 
 ---
 

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, delay, from, map, of, switchMap, timeout } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
-import { translateDbError } from '../../core/supabase/supabase-error';
+import { translateDbError, unwrap } from '../../core/supabase/supabase-error';
 
 export interface SubscriptionResult {
   ok: boolean;
@@ -23,6 +23,13 @@ export interface SubscriptionResult {
  * no puede dejar el formulario colgado en "Registrando...".
  */
 const WELCOME_TIMEOUT_MS = 5000;
+
+/**
+ * La forma de un token de baja. Solo se usa en la rama simulada: en modo real la
+ * comprobación de verdad la hace Postgres, que además es el único que sabe si ese
+ * token existe.
+ */
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Suscripciones al Club X AutoHub (formulario del home). */
 @Injectable({ providedIn: 'root' })
@@ -59,6 +66,27 @@ export class EmailSubscriptionService {
           map((welcomeEmailSent) => this.result({ alreadySubscribed: false, welcomeEmailSent })),
         );
       }),
+    );
+  }
+
+  /**
+   * Saca de la lista al dueño de ese token (migración 0016).
+   *
+   * `true` = se dio de baja. `false` = ese token no corresponde a nadie, que es
+   * lo normal al abrir dos veces el mismo enlace del correo — no es un error y
+   * no se trata como tal.
+   *
+   * En modo simulado se responde `true` para cualquier token con forma de uuid,
+   * porque no hay lista de la que sacar a nadie: lo que se prueba con mocks es
+   * la pantalla, no la baja.
+   */
+  unsubscribe(token: string): Observable<boolean> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(UUID_SHAPE.test(token)).pipe(delay(400));
+    }
+
+    return from(this.supabase.db.rpc('unsubscribe_from_club', { p_token: token })).pipe(
+      map((res) => unwrap(res) === true),
     );
   }
 

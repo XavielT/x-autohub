@@ -1,0 +1,108 @@
+// Misma tarjeta que /terminos-condiciones y las pantallas de auth: fondo #1a1a1a,
+// borde #2e2e2e, radio 16px y el resplandor ambar de la marca. No es un lenguaje
+// visual nuevo — es la unica pantalla del sitio a la que se llega desde un correo
+// y conviene que se reconozca.
+
+.baja {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  color: var(--text-strong);
+
+  &__sheet {
+    width: 100%;
+    max-width: 520px;
+    padding: 40px;
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 1px rgba(var(--Hub-rgb), 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      0 32px 80px rgba(0, 0, 0, 0.4);
+
+    @media (max-width: 520px) {
+      padding: 28px 22px;
+    }
+  }
+
+  &__title {
+    margin: 0 0 14px;
+    font-family: var(--font-brand);
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  &__title-highlight {
+    color: var(--Hub);
+  }
+
+  &__lead {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    color: #e6e6e6;
+
+    &--ok {
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-top: 24px;
+  }
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 13px 22px;
+    border: none;
+    border-radius: 8px;
+    background: var(--Hub);
+    color: #1a1a1a;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      filter 0.2s ease,
+      transform 0.15s ease;
+
+    &:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+  }
+
+  &__link {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--main-ultra-light);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--Hub);
+      text-decoration: underline;
+    }
+  }
+
+  &__note {
+    margin: 22px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid #2a2a2a;
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--main-ultra-light);
+  }
+}

@@ -189,6 +189,19 @@ export const routes: Routes = [
     ],
   },
 
+  // --- Club ---
+  //
+  // Publica y sin guard: se llega desde el enlace del correo, casi siempre sin
+  // sesion. El token va en la ruta porque es la direccion de una cosa concreta,
+  // no un parametro de busqueda. La pantalla **pide confirmacion** antes de dar
+  // de baja — ver el comentario del componente: los clientes de correo abren los
+  // enlaces por su cuenta para previsualizarlos.
+  {
+    path: 'baja/:token',
+    title: `Baja del club | ${BRAND}`,
+    loadComponent: () => import('./pages/baja/baja').then((m) => m.Baja),
+  },
+
   // --- Legal ---
   {
     path: 'terminos-condiciones',

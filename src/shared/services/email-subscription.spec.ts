@@ -38,6 +38,10 @@ describe('EmailSubscriptionService', () => {
 
     readonly inserted: { email: string }[] = [];
     readonly invoked: { name: string; body: unknown }[] = [];
+    readonly rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+
+    /** Lo que responde `rpc()`. Por defecto, una baja que encontro a alguien. */
+    rpcResult: { data: unknown; error: unknown } = { data: true, error: null };
 
     shouldUseMockData(): boolean {
       return this.mockMode;
@@ -56,6 +60,10 @@ describe('EmailSubscriptionService', () => {
             this.invoked.push({ name, body: options.body });
             return this.invokeBehavior();
           },
+        },
+        rpc: (name: string, args: Record<string, unknown>) => {
+          this.rpcCalls.push({ name, args });
+          return Promise.resolve(this.rpcResult);
         },
       } as unknown as SupabaseService['db'];
     }
@@ -134,6 +142,41 @@ describe('EmailSubscriptionService', () => {
 
       expect(result).toEqual({ ok: true, alreadySubscribed: true, welcomeEmailSent: false });
       expect(fake.invoked).toEqual([]);
+    });
+  });
+
+  describe('darse de baja con el token del correo', () => {
+    const TOKEN = 'a1b2c3d4-1111-2222-3333-444455556666';
+
+    it('llama a la funcion con el token tal como vino', async () => {
+      const salio = await firstValueFrom(service.unsubscribe(TOKEN));
+
+      expect(fake.rpcCalls).toEqual([
+        { name: 'unsubscribe_from_club', args: { p_token: TOKEN } },
+      ]);
+      expect(salio).toBe(true);
+    });
+
+    it('un token que no corresponde a nadie es false, no un error', async () => {
+      // Es lo que pasa al abrir dos veces el mismo enlace del correo. La
+      // pantalla lo trata como "ese enlace ya no vale", no como un fallo.
+      fake.rpcResult = { data: false, error: null };
+
+      await expect(firstValueFrom(service.unsubscribe(TOKEN))).resolves.toBe(false);
+    });
+
+    it('si la base falla de verdad, si lanza', async () => {
+      fake.rpcResult = { data: null, error: { message: 'boom', code: '08006' } };
+
+      await expect(firstValueFrom(service.unsubscribe(TOKEN))).rejects.toThrow();
+    });
+
+    it('en modo simulado no toca la base', async () => {
+      fake.mockMode = true;
+
+      await expect(firstValueFrom(service.unsubscribe(TOKEN))).resolves.toBe(true);
+      await expect(firstValueFrom(service.unsubscribe('no-es-un-uuid'))).resolves.toBe(false);
+      expect(fake.rpcCalls).toEqual([]);
     });
   });
 
