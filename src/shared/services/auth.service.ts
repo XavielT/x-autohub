@@ -136,6 +136,17 @@ export class AuthService {
    */
   private readonly ready: Promise<void>;
 
+  /**
+   * La lectura del perfil que ya está en vuelo, si hay alguna.
+   *
+   * Existe porque el perfil se pedía **4 o 5 veces por navegación**: cada
+   * `onAuthStateChange` (`INITIAL_SESSION`, `SIGNED_IN`, `TOKEN_REFRESHED`…)
+   * lanzaba la suya, y encima `restoreSupabaseSession` y `login`/`register`
+   * pedían la propia. Todas devolvían lo mismo. Compartiendo la que ya corre,
+   * las que coinciden en el tiempo se vuelven una sola petición.
+   */
+  private inFlight: Promise<ProfileLoad> | null = null;
+
   constructor() {
     if (this.supabase.shouldUseMockData()) {
       this._user.set(this.readMockSession());
@@ -150,8 +161,17 @@ export class AuthService {
     this.supabase.db.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         this._user.set(null);
+        // Lo que estuviera cargando era de la sesión que acaba de cerrarse.
+        this.inFlight = null;
         return;
       }
+
+      // Ya tenemos el perfil de esta persona. `TOKEN_REFRESHED` llega cada vez
+      // que se renueva el token y no cambia nada del perfil, así que releerlo
+      // es una petición por gusto. Si cambia de cuenta, el id no coincide y sí
+      // se relee.
+      if (this._user()?.id === session.user.id) return;
+
       void this.loadProfile();
     });
   }
@@ -288,7 +308,25 @@ export class AuthService {
    * verdad no está; si la petición falló, lo que había se queda. Un 401 pasajero
    * no es motivo para sacar a nadie de su cuenta.
    */
-  private async loadProfile(): Promise<ProfileLoad> {
+  private loadProfile(): Promise<ProfileLoad> {
+    if (this.inFlight) return this.inFlight;
+
+    const run = this.reloadProfile();
+    this.inFlight = run;
+    void run.finally(() => {
+      // Solo si sigue siendo la misma: un cierre de sesión pudo haberla soltado
+      // ya, y no hay que pisar lo que venga después.
+      if (this.inFlight === run) this.inFlight = null;
+    });
+    return run;
+  }
+
+  /**
+   * La lectura de verdad, sin compartir. La usa `updateProfile()`, que
+   * **necesita** releer después de guardar: reusar una lectura que empezó antes
+   * del guardado devolvería los datos viejos.
+   */
+  private async reloadProfile(): Promise<ProfileLoad> {
     const { data, error } = await this.fetchProfile();
     const row = data?.[0];
 
@@ -392,7 +430,7 @@ export class AuthService {
           console.error('[supabase] updateProfile', res.error);
           throw new Error('No pudimos guardar tu perfil. Intenta de nuevo.');
         }
-        return from(this.loadProfile());
+        return from(this.reloadProfile());
       }),
       map((result) => (result.status === 'ok' ? result.user : next)),
     );
@@ -401,9 +439,16 @@ export class AuthService {
   private async restoreSupabaseSession(): Promise<void> {
     try {
       const { data } = await this.supabase.db.auth.getSession();
-      if (data.session?.user) {
-        await this.loadProfile();
-      }
+      const user = data.session?.user;
+      if (!user) return;
+
+      // El `INITIAL_SESSION` de `onAuthStateChange` puede habérsenos adelantado
+      // y dejar el perfil ya cargado. Si sigue en vuelo, `loadProfile()`
+      // devuelve esa misma promesa y esto la espera, que es lo que los guards
+      // necesitan de `whenReady()`.
+      if (this._user()?.id === user.id) return;
+
+      await this.loadProfile();
     } finally {
       this._isRestoring.set(false);
     }

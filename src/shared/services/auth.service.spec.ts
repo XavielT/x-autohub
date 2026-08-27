@@ -179,7 +179,8 @@ describe('AuthService', () => {
     signUpSession: Record<string, unknown> | null;
     rpc?: () => Promise<{ data: unknown; error: unknown }>;
   }) {
-    const calls = { rpc: 0 };
+    const calls = { rpc: 0, getUser: 0 };
+    const listeners: ((event: string, session: unknown) => void)[] = [];
     const db = {
       auth: {
         signUp: () =>
@@ -188,8 +189,14 @@ describe('AuthService', () => {
             error: null,
           }),
         getSession: () => Promise.resolve({ data: { session: options.signUpSession } }),
-        getUser: () => Promise.resolve({ data: { user: { email: PROFILE_ROW.email } } }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+        getUser: () => {
+          calls.getUser += 1;
+          return Promise.resolve({ data: { user: { email: PROFILE_ROW.email } } });
+        },
+        onAuthStateChange: (cb: (event: string, session: unknown) => void) => {
+          listeners.push(cb);
+          return { data: { subscription: { unsubscribe: () => undefined } } };
+        },
       },
       rpc: () => {
         calls.rpc += 1;
@@ -197,10 +204,17 @@ describe('AuthService', () => {
           ? options.rpc()
           : Promise.resolve({ data: [PROFILE_ROW], error: null });
       },
+      // Lo minimo que encadena `updateProfile`: .from().update().eq()
+      from: () => ({
+        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+      }),
     };
+
+    const emit = (event: string, session: unknown) => listeners.forEach((cb) => cb(event, session));
 
     return {
       calls,
+      emit,
       provider: {
         provide: SupabaseService,
         useValue: {
@@ -293,5 +307,69 @@ describe('AuthService', () => {
     if (outcome.status !== 'active') throw new Error('se esperaba active');
     expect(outcome.user.displayName).toBe('Tecnologia CSD');
     expect(service.isLoggedIn()).toBe(true);
+  });
+
+  // --- Cargas repetidas del perfil (imp 27082026, seguimiento) -------------
+  //
+  // El perfil se pedia 4 o 5 veces por navegacion: cada evento de
+  // `onAuthStateChange` lanzaba su lectura, y encima la restauracion de sesion
+  // y `login`/`register` pedian la suya. Todas devolvian lo mismo.
+
+  const SESSION = { access_token: 'jwt', user: { id: PROFILE_ROW.id } };
+
+  it('el registro lee el perfil una sola vez, aunque el evento SIGNED_IN tambien lo pida', async () => {
+    const double = supabaseDouble({ signUpSession: SESSION });
+    const svc = conSupabase(double);
+
+    // Lo que hace signUp por dentro: avisa del SIGNED_IN antes de resolver.
+    double.emit('SIGNED_IN', SESSION);
+    const outcome = await registrar(svc);
+
+    expect(outcome.status).toBe('active');
+    expect(double.calls.rpc).toBe(1);
+    expect(double.calls.getUser).toBe(1);
+  });
+
+  it('un refresco de token no vuelve a leer el perfil', async () => {
+    const double = supabaseDouble({ signUpSession: SESSION });
+    const svc = conSupabase(double);
+    await registrar(svc);
+    const after = double.calls.rpc;
+
+    double.emit('TOKEN_REFRESHED', SESSION);
+    double.emit('SIGNED_IN', SESSION);
+    await Promise.resolve();
+
+    // Mismo usuario ya cargado: no hay nada nuevo que traer.
+    expect(double.calls.rpc).toBe(after);
+  });
+
+  it('cerrar sesion limpia el usuario y permite volver a leer', async () => {
+    const double = supabaseDouble({ signUpSession: SESSION });
+    const svc = conSupabase(double);
+    await registrar(svc);
+    expect(svc.isLoggedIn()).toBe(true);
+
+    double.emit('SIGNED_OUT', null);
+    expect(svc.isLoggedIn()).toBe(false);
+
+    const before = double.calls.rpc;
+    double.emit('SIGNED_IN', SESSION);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(double.calls.rpc).toBe(before + 1);
+  });
+
+  it('guardar el perfil lo relee de verdad, sin reusar una lectura vieja', async () => {
+    const double = supabaseDouble({ signUpSession: SESSION });
+    const svc = conSupabase(double);
+    await registrar(svc);
+    const before = double.calls.rpc;
+
+    await new Promise((resolve, reject) =>
+      svc.updateProfile({ displayName: 'Otro Nombre' }).subscribe({ next: resolve, error: reject }),
+    );
+
+    // Una para el update y otra para releer: releer es justo el punto.
+    expect(double.calls.rpc).toBeGreaterThan(before);
   });
 });
