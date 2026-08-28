@@ -619,6 +619,16 @@ El formulario "Únete al club" del home guarda el correo en `club_subscriptions`
 después manda un correo de bienvenida. El envío lo hace una Edge Function,
 `supabase/functions/club-welcome/index.ts`, no la app.
 
+> **Estado (27/08/2026): la función ya está desplegada** en el proyecto de
+> producción (`ACTIVE`, `verify_jwt: true`, v1), así que el paso 5 de abajo está
+> hecho. Lo que **falta son los secretos**: sin `RESEND_API_KEY` responde
+> `{ sent: false, reason: 'not-configured' }` y no manda nada — comprobado
+> invocándola. Eso es a propósito y no rompe nada: la suscripción se guarda y el
+> sitio no promete un correo que no va a llegar.
+>
+> La misma API key de Resend que pide la sección "SMTP propio" sirve para esto:
+> un proveedor y una clave para las dos cosas.
+
 **Mientras no esté configurado, todo sigue funcionando**: la suscripción se
 guarda igual y el sitio dice "¡Listo! Ya eres parte del club." en vez de prometer
 un correo. La promesa ("Revisa tu correo") solo aparece cuando la función
@@ -648,7 +658,8 @@ nadie mandaba.
    `https://xautohubrd.com`. `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los
    inyecta el runtime — **no** hay que darlos de alta.
 
-5. **Desplegar la función:**
+5. **Desplegar la función** (ya hecho el 27/08/2026 — ver el recuadro de
+   arriba; queda aquí para reproducirlo en otro proyecto):
 
    ```bash
    supabase functions deploy club-welcome --project-ref <ref>
