@@ -605,11 +605,52 @@ código preparado para los dos casos. `AuthService.register()` devuelve
 El `site_url` (`https://xautohubrd.com`) y la lista de redirecciones ya están
 puestos, así que el enlace del correo cae en el sitio.
 
-### Conviene también
+### DMARC: falta, y conviene añadirlo
 
-Añadir un `_dmarc` al dominio. Hoy no existe, y sin él los proveedores tienen
-menos con qué decidir; empieza suave (`p=none`) y endurece cuando veas los
-informes.
+Comprobado el 28/08/2026 contra 8.8.8.8 y 1.1.1.1:
+
+| Pieza | Estado |
+| --- | --- |
+| SPF | ✅ `v=spf1 include:_spf.google.com ~all` |
+| DKIM de Workspace | ✅ `google._domainkey` publica una clave válida |
+| **DMARC** | ❌ **no existe** |
+
+O sea que el correo que sale por Google ya va firmado y alineado; lo único que
+falta es la política que le dice al mundo qué hacer con lo que **no** cuadre.
+
+El registro a añadir en Google Cloud DNS:
+
+```
+Nombre : _dmarc.xautohubrd.com
+Tipo   : TXT
+TTL    : 3600
+Valor  : v=DMARC1; p=none; rua=mailto:dmarc@xautohubrd.com; fo=1
+```
+
+**`p=none` a propósito.** Es observar, no bloquear: no cambia la entrega de
+nada. Es lo correcto justo ahora porque se va a meter un remitente nuevo
+(Resend); poner `quarantine` o `reject` antes de que ese remitente esté
+verificado y alineado mandaría a spam correo legítimo — incluido el de
+confirmación de cuenta, que es justo el que no puede fallar.
+
+> ⚠️ **Si la dirección de `rua` es de otro dominio** (por ejemplo una
+> `@constructorasd.com`), ese dominio **tiene que autorizarlo** publicando:
+>
+> ```
+> xautohubrd.com._report._dmarc.constructorasd.com   TXT   "v=DMARC1"
+> ```
+>
+> Sin eso, la mayoría de los proveedores **no manda los informes** y el `rua`
+> queda de adorno. Con una dirección del propio `xautohubrd.com` no hace falta
+> nada de esto — por eso el ejemplo usa una de casa.
+
+Los informes agregados llegan como XML comprimido y pueden ser varios al día,
+así que mejor un buzón dedicado (`dmarc@`) que la bandeja de alguien.
+
+**Cuándo endurecer:** cuando Resend esté verificado y los informes salgan limpios
+un par de semanas, subir a `p=quarantine` y más adelante a `p=reject`. No antes:
+endurecer a ciegas es la forma más rápida de que el correo del sitio deje de
+llegar.
 
 ---
 
