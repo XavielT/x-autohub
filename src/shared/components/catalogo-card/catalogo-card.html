@@ -1,7 +1,7 @@
 <div class="hub-part-card">
     <div class="hub-part-card__top">
         <a class="hub-part-card__image-link" [routerLink]="['/hub-part-details', hubPart().id]"><img class="hub-part-card__img"
-                [ngSrc]="hubPart().imgUrl" width="330" height="220" /></a>
+                [ngSrc]="hubPart().imgUrl" [priority]="priority()" fill /></a>
     </div>
     <div class="hub-part-card__middle">
         <div class="hub-part-card__middle-header">

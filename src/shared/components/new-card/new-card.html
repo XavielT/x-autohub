@@ -4,7 +4,7 @@
             <app-info-badge [text]="newCard().location"/>
         </div>
         <a class="new-card__imgLink" [routerLink]="['/news', newCard().id]">
-            <img class="new-card__img" [ngSrc]="newCard().imageUrl" width="400" height="300"/>
+            <img class="new-card__img" [ngSrc]="newCard().imageUrl" fill/>
         </a>
     </div>
     <div class="new-card__down">

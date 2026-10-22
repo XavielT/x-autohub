@@ -13,6 +13,8 @@ import { TestBadge } from '../../ui/test-badge/test-badge';
 })
 export class HubMarketCard {
   readonly item = input.required<HubMarketItemModel>();
+  /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
+  readonly priority = input(false);
 
   readonly itemLink = computed<string[]>(() => {
     const item = this.item();

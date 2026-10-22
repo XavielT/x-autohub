@@ -66,7 +66,7 @@
     </section>
     @if (new.isTest) { <app-test-badge /> }
     <h1 class="new-details__title">{{ new.title }}</h1>
-    <span class="new-details__date">{{ new.date }}</span>
+    <span class="new-details__date">{{ new.date | date: 'd MMMM y' }}</span>
     <p class="new-details__text">{{ new.textLarge }}</p>
 </div>
 } @else {

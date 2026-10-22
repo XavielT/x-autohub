@@ -18,6 +18,8 @@ export class CatalogoCard {
   private readonly toastService = inject(ToastService);
 
   readonly hubPart = input.required<HubPartModel>();
+  /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
+  readonly priority = input(false);
 
   addToCart(): void {
     const hubPart = this.hubPart();

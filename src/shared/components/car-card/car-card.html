@@ -1,7 +1,7 @@
 <div class="car-card">
     <div class="car-card-img">
-        <a [routerLink]="car().detailRoute || ['/car-details', car().id]" class="car-card-link">
-            <img class="car-card-img-item" [ngSrc]="car().images[0]" width="350" height="220"/>
+        <a [routerLink]="car().detailRoute || ['/car-details', car().id]" class="car-card-link car-card-img-link">
+            <img class="car-card-img-item" [ngSrc]="car().images[0]" fill/>
         </a>
     </div>
     <div class="car-card-info">

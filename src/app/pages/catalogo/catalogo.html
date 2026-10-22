@@ -43,8 +43,8 @@
             </div>
         </div>
         <div class="catalogo__content-main">
-            @for (part of filteredParts(); track part.id){
-            <app-catalogo-card [hubPart]="part"></app-catalogo-card>
+            @for (part of filteredParts(); track part.id; let i = $index){
+            <app-catalogo-card [hubPart]="part" [priority]="i < 4"></app-catalogo-card>
             }@empty {
                 <div class="empty-state">
                     @if (isLoading()) {

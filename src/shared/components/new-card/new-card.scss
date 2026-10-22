@@ -15,7 +15,15 @@
     &__up{
         display: flex;
         position: relative;
+        width: 100%;
         margin-bottom: 10px;
+    }
+
+    &__imgLink{
+        display: block;
+        position: relative;
+        width: 100%;
+        height: 300px;
     }
 
     &__badge{
@@ -26,8 +34,6 @@
     }
 
     &__img{
-        width: 100%;
-        height: 300px;
         object-fit: cover;
         border-radius: 10px;
         box-shadow: 0 0 10px 3px var(--main-ultra-light);
@@ -95,7 +101,7 @@
     .new-card {
         padding: 16px;
 
-        &__img {
+        &__imgLink {
             height: 260px;
         }
 

@@ -13,4 +13,6 @@ import { TestBadge } from '../../ui/test-badge/test-badge';
 })
 export class AutohubCard {
   readonly autoHub = input.required<AutoHubModel>();
+  /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
+  readonly priority = input(false);
 }

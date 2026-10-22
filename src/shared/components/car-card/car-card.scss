@@ -20,9 +20,14 @@
     text-decoration: none;
 }
 
-.car-card-link img{
+.car-card-img-link{
+    display: block;
+    position: relative;
     width: 350px;
     height: 220px;
+}
+
+.car-card-link img{
     border-radius: 10px;
     object-fit: cover;
 }
@@ -126,7 +131,7 @@
         padding: 16px 12px 0;
     }
 
-    .car-card-link img {
+    .car-card-img-link {
         width: 100%;
         max-width: 100%;
         height: auto;

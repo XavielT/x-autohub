@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { NewCardModel } from '../../../shared/models/new-card.model';
@@ -7,7 +8,7 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-new-details',
-  imports: [RouterLink, TestBadge],
+  imports: [DatePipe, RouterLink, TestBadge],
   templateUrl: './new-details.html',
   styleUrl: './new-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

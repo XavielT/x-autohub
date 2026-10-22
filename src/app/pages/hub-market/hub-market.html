@@ -31,8 +31,8 @@
   </div>
 
   <div class="hub-market__grid">
-    @for (item of filteredItems(); track item.id) {
-      <app-hub-market-card [item]="item" />
+    @for (item of filteredItems(); track item.id; let i = $index) {
+      <app-hub-market-card [item]="item" [priority]="i < 3" />
     }
   </div>
 
