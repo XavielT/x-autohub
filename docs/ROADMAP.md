@@ -22,8 +22,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 
 | Fase | Qué entrega                                                       | Versión   | Toca `supabase/` | Estado       |
 | ---- | ----------------------------------------------------------------- | --------- | ---------------- | ------------ |
-| 0    | Documentación del pivote                                          | 1.4.0     | No               | preparada    |
-| 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | pendiente    |
+| 0    | Documentación del pivote                                          | 1.4.0     | No               | hecha        |
+| 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | preparada    |
 | 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | **2.0.0** | No               | pendiente    |
 | 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | pendiente    |
 | 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | pendiente    |
@@ -286,14 +286,14 @@ vez, así que decídelo aparte.
 
 ### `ChangeDetectionStrategy.OnPush`
 
-**50** componentes ya lo usan; la versión anterior de este punto decía "cero" y
+**53** componentes ya lo usan; la versión anterior de este punto decía "cero" y
 era falsa. Falta saber cuáles no, y migrarlos. (La antigua `PROYECTO.md`
 afirmaba que todos lo tenían; tampoco era cierto.)
 
 ### Cargar `supabase-js` bajo demanda
 
-El cliente pesa ~200 KB y hoy va en el bundle inicial (**568 kB** en total,
-**148 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
+El cliente pesa ~200 KB y hoy va en el bundle inicial (**585 kB** en total,
+**154 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
 sesión desde el primer render. El presupuesto de `angular.json` es 600 kB de
 aviso: queda poco margen y el pivote va a sumar navbar, buscador y barra
 inferior al bundle inicial.

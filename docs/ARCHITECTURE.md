@@ -1,13 +1,14 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-22** (v1.3.7). Si cambias la estructura,
+Estado real del proyecto al **2026-10-22** (v1.5.0, la fase 1 del pivote). Si cambias la estructura,
 actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 todavía no está en el código.** Este documento
-> describe lo que existe hoy. Lo que el pivote va a agregar (tienda con
-> categorías, home nuevo, checkout por transferencia, agenda de servicios, PWA)
-> está en `docs/PIVOT-2026-10.md`, y la estructura final se documenta aquí al
-> cerrar la fase 7, no antes.
+> **El pivote de octubre de 2026 va por la fase 1.** Ya existe el esquema de la
+> tienda (migración 0017: categorías, compatibilidad por vehículo, garaje,
+> búsqueda), sus servicios y el panel para cargarla; **no** existe todavía nada
+> de lo que ve el visitante (home nuevo, `/tienda`, checkout por transferencia,
+> agenda de servicios, PWA). Eso está en `docs/PIVOT-2026-10.md`, y la
+> estructura final se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
 
@@ -17,7 +18,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0016 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0017 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, make-admin, setup-smtp,
@@ -67,7 +68,9 @@ x-autohub/
     │       ├── servicios/  social-hub/  new-details/
     │       ├── login/  registro/  perfil/  baja/
     │       ├── admin/  (moderacion, versiones, pedidos, inventario,
-    │       │            usuarios, ajustes)
+    │       │            usuarios, ajustes). inventario/ trae además las pestañas
+    │       │            Categorías y Marcas y modelos y los editores de
+    │       │            compatibilidad y de especificaciones de la pieza
     │       └── terminos-condiciones/  not-found/
     │
     ├── shared/                Reutilizable entre páginas
@@ -79,9 +82,12 @@ x-autohub/
     │   ├── ui/                    Presentacionales puros, sin dependencias
     │   │   ├── highlight-badge/  info-badge/
     │   │   └── location-select/  test-badge/
-    │   ├── models/                Interfaces de los modelos
+    │   ├── models/                Interfaces de los modelos (product.model.ts: la tienda)
     │   ├── data/                  Mocks (*.mock.ts), locations, showcase-stats
-    │   └── services/              18 servicios, todos providedIn: 'root'
+    │   ├── utils/                 slugify, product-search (la búsqueda en memoria),
+    │   │                          category-tree, test-visibility, phone, whatsapp…
+    │   ├── testing/               product.fixture.ts (un ProductModel para los specs)
+    │   └── services/              22 servicios, todos providedIn: 'root'
     │
     ├── styles/
     │   ├── _auth-shell.scss       Parcial compartido por login y registro
@@ -112,13 +118,22 @@ Hoy hay **tres modelos de artículo** porque representan tres inventarios distin
 | -------------------- | ----------------------------- | ------------------------------------------- | ------------------------------------ |
 | `AutoHubModel`       | `auto-hub.model.ts`           | Vehículo **propio**, verificado             | `/auto-hub`, `/auto-hub-details/:id` |
 | `HubMarketItemModel` | `hub-market-item.model.ts`    | Publicación de **usuario** (3 categorías)   | `/hub-market` y sus 3 detalles       |
-| `HubPartModel`       | `hub-part.model.ts`           | Pieza de la **tienda propia**               | `/catalogo`, carrito, checkout       |
+| `ProductModel`       | `product.model.ts`            | Producto de la **tienda propia** (tabla `hub_parts`) | `/catalogo`, carrito, checkout, panel |
+
+`HubPartModel` (`hub-part.model.ts`) es un alias deprecado de `ProductModel`, para no
+romper imports; se retira en la fase 7. El archivo `product.model.ts` trae además
+`ProductCategoryModel`, `VehicleMakeModel`, `VehicleModelModel`,
+`ProductFitmentModel`, `ProfileVehicleModel` y los tipos de la búsqueda.
 
 Otros: `CatalogItem` (tarjetas de categoría del home), `NewCardModel` (noticias),
 `ServiciosCardModel` (servicios), `UserModel` (sesión), `SocialPostModel` /
 `SocialClubModel` / `SocialEventModel` (Social Hub), `Checkout*` (checkout).
 
 `CarCardModel` es solo un alias de `HubMarketItemModel`.
+
+> Los modelos nuevos de la tienda (categorías, vehículos, compatibilidad, garaje)
+> no son un cuarto inventario: son lo que describe a `ProductModel` y a quien
+> compra. El detalle está en la sección 4 de `docs/PIVOT-2026-10.md`.
 
 > La duplicación de **lógica** entre los tres (galería de imágenes, tarjetas,
 > páginas de detalle) sí es deuda técnica y está en `docs/ROADMAP.md`. La
@@ -154,7 +169,8 @@ Sin librería de estado. Todo con **signals de Angular** dentro de servicios ra�
 
 | Servicio      | Estado                                  | Notas                             |
 | ------------- | --------------------------------------- | --------------------------------- |
-| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `HubPartModel`; persiste en `localStorage` |
+| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `HubPartModel` (alias de `ProductModel`); persiste en `localStorage` |
+| `VehicleService` | `selected`: el vehículo elegido para filtrar la tienda | `localStorage` sin sesión, el garaje (`profile_vehicles`) con sesión |
 | `ToastService`| cola de toasts, auto-cierre a 3s        | Renderizado por `<app-toast>`     |
 | `AuthService` | sesión de Supabase Auth + perfil       | `user`, `isLoggedIn`, `isRestoring` |
 
@@ -193,11 +209,12 @@ Con el pivote `/catalogo` pasará a redirigir a `/tienda`; hoy no existe `/tiend
 
 ## Base de datos
 
-16 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
+21 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
-| Cuentas              | `profiles` (espeja `auth.users` vía trigger)                   |
+| Cuentas              | `profiles` (espeja `auth.users` vía trigger), `profile_vehicles` (el garaje) |
+| Tienda               | `product_categories`, `vehicle_makes`, `vehicle_models`, `product_fitments` (más las columnas nuevas de `hub_parts`) |
 | Administración       | `releases` (historial de versiones), `site_settings`          |
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
@@ -213,12 +230,12 @@ Decisiones que conviene conocer:
 - **`seller_name` y `author_name` están denormalizados**: el contenido sembrado
   no tiene usuario real detrás. Cuando hay `seller_id`, el nombre sale del join
   con `profiles` y esa columna queda de respaldo.
-- **RLS está activo en las 16 tablas.** La clave anon es pública; las políticas
+- **RLS está activo en las 21 tablas.** La clave anon es pública; las políticas
   son lo único que protege los datos.
 
 ## Build
 
-- Bundle inicial: **568 kB** (~148 kB transferidos, medido el 2026-10-22). Cada
+- Bundle inicial: **585 kB** (~154 kB transferidos, medido el 2026-10-22; el límite de aviso es 600 kB). Cada
   página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
   porque el navbar necesita la sesión desde el primer render.
 - `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
@@ -229,7 +246,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 66 archivos, 336 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
+- 75 archivos, 497 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

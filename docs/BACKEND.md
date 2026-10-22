@@ -39,10 +39,11 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 14    | `supabase/migrations/0014_site_settings.sql`   | Ajustes del sitio y los contadores del home    |
 | 15    | `supabase/migrations/0015_admin_function_grants.sql` | `anon` deja de poder invocar las funciones de admin |
 | 16    | `supabase/migrations/0016_club_unsubscribe.sql` | Token de baja del club y su función             |
-| 17    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 17    | `supabase/migrations/0017_store_catalog.sql`   | Tienda: categorías, compatibilidad por vehículo, garaje y búsqueda |
+| 18    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
-> `status` (0012) e `is_test` (0013). Y las dependencias entre migraciones son
+> `status` (0012), `is_test` (0013) y las columnas de la tienda (0017). Y las dependencias entre migraciones son
 > reales: la **0012 usa `is_moderator_or_admin()`**, que crea la 0011, y la
 > **0013 rehace las políticas de select de 0002 y 0012** — aplicarla antes
 > dejaría a esas políticas sin el filtro de prueba, o directamente sin existir.
@@ -154,6 +155,10 @@ La clave anon es pública. La seguridad real está en RLS:
 | `profiles`                      | Todos               | Solo el propio                       |
 | `club_subscriptions`            | Solo admin          | Cualquiera puede insertar            |
 | `orders`, `order_items`         | Solo el dueño       | Cualquiera puede crear el suyo       |
+| `product_categories`            | Todos (las activas; el admin ve también las ocultas) | Solo admin (`is_admin()`) |
+| `vehicle_makes`, `vehicle_models` | Todos           | Solo admin (`is_admin()`)            |
+| `product_fitments`              | Todos, pero **solo los de un producto que quien consulta pueda ver** (el `exists` sobre `hub_parts` aplica RLS) | Solo admin |
+| `profile_vehicles` (el garaje)  | Solo el dueño; `anon` ni siquiera tiene el permiso de tabla | Solo el dueño (`using` **y** `with check` en `auth.uid() = user_id`) |
 
 El `with check (seller_id = auth.uid())` de Hub Market es lo que impide publicar
 en nombre de otro, incluso desde un cliente manipulado.
@@ -367,6 +372,59 @@ en el home unos números que ningún visitante ve.
 El ajuste se cambia desde `/admin/ajustes`, que enseña los dos modos con sus
 números al lado antes de tocar nada.
 
+### La tienda (migración 0017)
+
+Primera fase del pivote de octubre de 2026 (`docs/PIVOT-2026-10.md`, §4). No
+renombra `hub_parts`: la extiende. En el código los modelos se llaman
+`Product*` y el mapper traduce (`toProduct`).
+
+**Qué trae:**
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `product_categories` | Árbol de dos niveles (lo exige un trigger). Semilla: las 12 de primer nivel del plan. Las hijas las crea el admin. |
+| `hub_parts` + `category_id`, `slug`, `sku`, `short_description`, `compare_at_price`, `is_featured`, `fulfillment`, `lead_time_days`, `fitment_type`, `installable`, `installation_service_id`, `specs`, `sold_count`, `updated_at`, `search_vector` | La ficha de la tienda: oferta, stock o bajo pedido, compatibilidad, instalación, búsqueda de texto |
+| `vehicle_makes`, `vehicle_models` | 35 marcas y 88 modelos (los más comunes de las diez primeras). **No** es un catálogo completo: el resto se carga desde el panel. |
+| `product_fitments` | "Este producto sirve para esta marca [y modelo] [entre estos años]". `model_id` nulo = toda la marca; años nulos = sin límite. |
+| `profile_vehicles` | El garaje de cada usuario. Uno por defecto, y marcar otro desmarca el anterior (trigger). |
+| `search_products()` | Texto + categoría + compatibilidad + precio + stock, ordenada y paginada, con `total_count`. `security invoker`, así que `anon` la invoca y RLS decide qué ve. |
+
+**Decisiones que conviene conocer:**
+
+- **`fitment_type` nace en `'specific'`**, también para las piezas que ya
+  existían. Un "universal" puesto por error le promete compatibilidad a quien no
+  la tiene; un "específico" sin fitments solo muestra "Consultar compatibilidad".
+  Mejor eso que mentir. Con un vehículo elegido, `search_products()` devuelve los
+  universales y los específicos con un fitment que lo cubra; **un específico sin
+  fitments nunca aparece**.
+- **`hub_parts.category` (texto) sigue vivo y ya no es `not null`.** `/catalogo`
+  todavía filtra por él. Un trigger lo rellena con la categoría raíz cuando se
+  crea una pieza con `category_id` y sin texto. Se elimina en la fase 7.
+- **`slug` y `sku` los pone un trigger si vienen vacíos** (`nombre-<id>` y
+  `XAH-000123`); después son `not null` y únicos. El id al final del slug es lo
+  que garantiza la unicidad sin reintentos; el admin puede editarlo.
+- **Los parámetros de `search_products()` llevan prefijo `p_`** (`p_query`,
+  `p_category_slug`, `p_make_id`, `p_model_id`, `p_year`, `p_min_price`,
+  `p_max_price`, `p_in_stock_only`, `p_sort`, `p_limit`, `p_offset`). El plan los
+  nombra sin él, pero `limit` y `offset` son palabras reservadas.
+- **`unaccent` va en el esquema `extensions`**, envuelto en `xah_unaccent()`
+  marcada inmutable: `unaccent()` es STABLE y una columna generada o un índice
+  exigen IMMUTABLE. Sin eso no hay búsqueda sin acentos en un índice.
+
+**Al aplicarla sobre la base que ya tiene piezas** (la real): el backfill hace
+lo suyo con las filas existentes. Les pone slug y SKU, les asigna `category_id`
+según el mapeo de las 17 categorías de texto a las 12 del plan (ninguna queda
+sin mapear; `refrigeracion`, `escape`, `transmision`, `aceites` y `filtros` caen
+en `motor-filtros`, `electrico` y `bateria` en `electrico-baterias`) y las deja
+como `specific`, en stock, sin oferta ni instalación. `verify-migrations.sh`
+ejercita justo este camino en una segunda base, porque el recorrido "desde cero
++ seed" aplica la migración con `hub_parts` vacía.
+
+El seed regenerado **no actualiza** las filas que ya existen (`on conflict (id)
+do nothing`): la mezcla de ofertas, bajo pedido y compatibilidad de los mocks
+solo llega a una base nueva. Para la real, el catálogo se carga desde el panel
+(Inventario → Piezas, Categorías, Marcas y modelos).
+
 ### Datos privados del perfil (migración 0006)
 
 `email` y `phone` de `profiles` **no** son legibles con la clave anon ni con una
@@ -467,10 +525,18 @@ select public.set_user_role(
 
    Levanta un cluster temporal con `initdb` (sin sudo, sin Docker), aplica las
    migraciones y el seed **desde cero**, vuelve a aplicar la última (una
-   migración tiene que poder ejecutarse dos veces) y corre 38 comprobaciones de
-   seguridad con sesiones simuladas: visibilidad pública, contenido de prueba,
-   contadores, quién puede invocar cada función y los tres frenos de la escalada
-   de privilegios. Sale en rojo con el error real de Postgres.
+   migración tiene que poder ejecutarse dos veces) y corre 114 comprobaciones de
+   seguridad y de comportamiento con sesiones simuladas: visibilidad pública,
+   contenido de prueba, contadores, quién puede invocar cada función, los tres
+   frenos de la escalada de privilegios, las tablas de la tienda (lectura pública
+   y escritura solo admin, el garaje de cada quien), `search_products()` y el
+   camino de actualización de la 0017 sobre piezas ya existentes. Sale en rojo
+   con el error real de Postgres.
+
+   **En Windows** el script corre dentro de WSL (espera `initdb` en
+   `/usr/lib/postgresql/*/bin` y usa un socket unix, que el Postgres de Windows no
+   tiene). Si el repo está con saltos de línea CRLF (`core.autocrlf=true`) bash
+   falla en el primer `\r`: pásalo por `tr -d '\r'` antes de ejecutarlo.
 
    Lo que **no** cubre: PostgREST. El `PGRST201` de la ronda 14 era SQL válido
    con un embed ambiguo y solo se vio en el sitio real, así que el humo contra
@@ -765,8 +831,7 @@ las fotos reales del inventario propio a Storage, actualiza esas filas.
   sección de arriba): una Edge Function con Resend.
 - **Realtime.** El feed del Social Hub se lee una vez. `supabase.channel()` lo
   volvería vivo sin recargar.
-- **Búsqueda con acentos.** Hay un índice `gin` en `hub_parts` con el diccionario
-  español, pero los servicios todavía filtran en el cliente. Migrar a
-  `.textSearch()` cuando el catálogo crezca.
-- **Panel de admin.** Hoy Auto Hub, catálogo y noticias se editan desde el Table
-  Editor de Supabase.
+- **Búsqueda en la interfaz.** `search_products()` ya existe (migración 0017) y
+  `ProductService.searchProducts()` la llama, con texto sin acentos y por prefijo;
+  lo que falta es la interfaz que la use (buscador del navbar y `/tienda`, fases
+  2 y 3 del pivote). El catálogo actual todavía filtra en el cliente.

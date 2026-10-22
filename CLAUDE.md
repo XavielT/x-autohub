@@ -140,7 +140,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 38 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 114 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -181,7 +181,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 66 archivos, 336 pruebas, todo verde (cifra al 22/10/2026)
+npm test        # 75 archivos, 497 pruebas, todo verde (cifra al 22/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -281,6 +281,23 @@ Cosas que ya causaron un bug. No las repitas:
   mano tampoco, porque la ambigüedad la resuelve PostgREST y no Postgres— así
   que si agregas una columna que referencie una tabla ya referenciada, revisa
   todos los `select` con embed de esa tabla.
+- **El texto de un `select` de supabase-js tiene que ser una sola cadena
+  literal.** El tipo de la fila sale de leer ese texto; si lo armas con `'a, ' +
+  'b'` (para que no quede una línea de 300 caracteres) TypeScript lo ensancha a
+  `string` y cada fila pasa a ser `GenericStringError`, con un error por cada
+  propiedad que uses. Una constante con la cadena entera en una línea, y un
+  comentario que lo explique.
+- **Una columna generada o un índice exigen funciones `IMMUTABLE`, y
+  `unaccent()` es `STABLE`.** Para buscar sin acentos en un índice hay que
+  envolverla (`xah_unaccent()`, migración 0017). Y la extensión va en el esquema
+  `extensions`, no en `public`, donde PostgREST la expondría como rpc.
+- **El seed no actualiza lo que ya existe** (`on conflict (id) do nothing`):
+  regenerarlo cambia lo que recibe una base nueva, no una que ya tiene filas. Para
+  la real, los datos nuevos se cargan por el panel o con un `update` explícito. Y
+  una migración que agrega columnas `not null` a una tabla con datos se prueba
+  **con datos**: `verify-migrations.sh` tiene una segunda base para eso, porque el
+  recorrido "desde cero + seed" migra con la tabla vacía y nunca ejercita el
+  backfill.
 
 ---
 
