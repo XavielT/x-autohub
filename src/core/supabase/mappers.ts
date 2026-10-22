@@ -11,7 +11,14 @@
  */
 
 import { AutoHubModel } from '../../shared/models/auto-hub.model';
-import { HubPartModel } from '../../shared/models/hub-part.model';
+import {
+  ProductCategoryModel,
+  ProductFitmentModel,
+  ProductModel,
+  ProfileVehicleModel,
+  VehicleMakeModel,
+  VehicleModelModel,
+} from '../../shared/models/product.model';
 import { HubMarketItemModel } from '../../shared/models/hub-market-item.model';
 import { NewCardModel } from '../../shared/models/new-card.model';
 import { ServiciosCardModel } from '../../shared/models/servicios-card.model';
@@ -31,12 +38,17 @@ import {
   HubPartRow,
   NewsRow,
   PaymentMethodRow,
+  ProductCategoryRow,
+  ProductFitmentRow,
   ProfileRow,
+  ProfileVehicleRow,
   ServiceRow,
   ShippingOptionRow,
   SocialClubRow,
   SocialEventRow,
   SocialPostRow,
+  VehicleMakeRow,
+  VehicleModelRow,
 } from './database.types';
 
 /**
@@ -102,18 +114,101 @@ export function toAutoHubVehicle(row: AutoHubVehicleRow): AutoHubModel {
   };
 }
 
-export function toHubPart(row: HubPartRow): HubPartModel {
+/**
+ * Fila de `hub_parts` (o de `search_products()`, que trae las mismas columnas) a
+ * `ProductModel`. El nombre de la tabla no cambió con el pivote; el del modelo sí.
+ */
+export function toProduct(row: Omit<HubPartRow, 'search_vector'>): ProductModel {
   return {
     id: row.id,
-    category: row.category,
+    category: row.category ?? '',
+    categoryId: row.category_id,
+    slug: row.slug,
+    sku: row.sku,
     imgUrl: row.img_url,
     images: row.images?.length ? row.images : undefined,
     name: row.name,
     brand: row.brand,
+    shortDescription: row.short_description,
     starsRating: Number(row.stars_rating),
     price: Number(row.price),
+    // `numeric` llega como string o número según el cliente; nulo se queda nulo.
+    compareAtPrice: row.compare_at_price === null ? null : Number(row.compare_at_price),
     description: row.description,
+    stock: row.stock,
+    isFeatured: row.is_featured,
+    fulfillment: row.fulfillment,
+    leadTimeDays: row.lead_time_days,
+    fitmentType: row.fitment_type,
+    installable: row.installable,
+    installationServiceId: row.installation_service_id,
+    specs: toSpecs(row.specs),
+    soldCount: row.sold_count,
     isTest: row.is_test,
+    isActive: row.is_active,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
+}
+
+/** @deprecated Usa `toProduct`. Se retira en la fase 7. */
+export const toHubPart = toProduct;
+
+/**
+ * `specs` es jsonb y la ficha solo muestra pares de texto. Un valor que no sea
+ * texto (alguien cargó `{"peso": 2}` a mano) se convierte en vez de perderse, y
+ * lo que no sea un objeto se descarta entero.
+ */
+export function toSpecs(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  const out: Record<string, string> = {};
+  for (const [key, v] of Object.entries(value)) {
+    if (v === null || v === undefined) continue;
+    out[key] = typeof v === 'string' ? v : String(v);
+  }
+  return out;
+}
+
+export function toProductCategory(row: ProductCategoryRow): ProductCategoryModel {
+  return {
+    id: row.id,
+    parentId: row.parent_id,
+    slug: row.slug,
+    name: row.name,
+    icon: row.icon,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  };
+}
+
+export function toVehicleMake(row: VehicleMakeRow): VehicleMakeModel {
+  return { id: row.id, name: row.name, slug: row.slug };
+}
+
+export function toVehicleModel(row: VehicleModelRow): VehicleModelModel {
+  return { id: row.id, makeId: row.make_id, name: row.name, slug: row.slug };
+}
+
+export function toProductFitment(row: ProductFitmentRow): ProductFitmentModel {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    makeId: row.make_id,
+    modelId: row.model_id,
+    yearFrom: row.year_from,
+    yearTo: row.year_to,
+  };
+}
+
+export function toProfileVehicle(row: ProfileVehicleRow): ProfileVehicleModel {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    makeId: row.make_id,
+    modelId: row.model_id,
+    year: row.year,
+    nickname: row.nickname,
+    isDefault: row.is_default,
   };
 }
 

@@ -5,20 +5,12 @@ import { CartService, CartItem } from './cart.service';
 import { HubPartService } from './hub-part.service';
 import { AuthService } from './auth.service';
 import { HubPartModel } from '../models/hub-part.model';
+import { makeProduct } from '../testing/product.fixture';
 
 const STORAGE_KEY = 'x-autohub.cart';
 
 function pieza(id: number, price: number, name = `Pieza ${id}`): HubPartModel {
-  return {
-    id,
-    category: 'frenos',
-    imgUrl: 'assets/imgs/pieza.jpg',
-    name,
-    brand: 'Brembo',
-    starsRating: 4.5,
-    price,
-    description: 'x',
-  };
+  return makeProduct({ id, price, name, brand: 'Brembo', imgUrl: 'assets/imgs/pieza.jpg', starsRating: 4.5, description: 'x' });
 }
 
 /**

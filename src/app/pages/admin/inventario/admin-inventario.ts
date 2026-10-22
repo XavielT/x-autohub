@@ -1,8 +1,17 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { switchMap } from 'rxjs';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { forkJoin, map, switchMap } from 'rxjs';
 import { AdminService } from '../../../../shared/services/admin.service';
+import { AdminCatalogService } from '../../../../shared/services/admin-catalog.service';
+import { ServiciosCardService } from '../../../../shared/services/servicios-card.service';
 import { StorageService } from '../../../../shared/services/storage.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import {
@@ -11,14 +20,47 @@ import {
   AdminVehicleModel,
   CHASIS_OPTIONS,
   FUEL_OPTIONS,
-  PART_CATEGORIES,
+  FitmentDraft,
   SCOPE_OPTIONS,
   TRACTION_OPTIONS,
 } from '../../../../shared/models/admin-inventory.model';
 import { ChasisType, FuelType, NewsScope, TractionType } from '../../../../core/supabase/database.types';
+import { ProductCategoryModel, ProductFitmentType, ProductFulfillment } from '../../../../shared/models/product.model';
+import { ServiciosCardModel } from '../../../../shared/models/servicios-card.model';
+import { buildCategoryTree } from '../../../../shared/utils/category-tree';
 import { LocationSelect } from '../../../../shared/ui/location-select/location-select';
+import { AdminCategorias } from './admin-categorias/admin-categorias';
+import { AdminMarcas } from './admin-marcas/admin-marcas';
+import { FitmentEditor } from './fitment-editor/fitment-editor';
+import { SpecsEditor } from './specs-editor/specs-editor';
 
-type Tab = 'piezas' | 'vehiculos' | 'noticias';
+type Tab = 'piezas' | 'vehiculos' | 'noticias' | 'categorias' | 'marcas';
+
+/**
+ * Reglas que cruzan dos campos del formulario de una pieza.
+ *
+ *   · La oferta (`compareAtPrice`) tiene que ser mayor que el precio: un "antes"
+ *     igual o menor que el "ahora" no es una oferta, y la base lo rechaza.
+ *   · Un artículo bajo pedido tiene que decir cuántos días tarda: es lo que se
+ *     muestra en la tarjeta, la ficha y el checkout.
+ *
+ * Los mismos checks existen en Postgres; aquí solo se avisa antes de ir a la red.
+ */
+function partRules(group: AbstractControl): ValidationErrors | null {
+  const price = Number(group.get('price')?.value);
+  const compareAt = group.get('compareAtPrice')?.value as number | null;
+  const fulfillment = group.get('fulfillment')?.value as ProductFulfillment;
+  const leadTime = group.get('leadTimeDays')?.value as number | null;
+
+  const errors: ValidationErrors = {};
+  if (compareAt !== null && compareAt !== undefined && !(compareAt > price)) {
+    errors['compareAtLow'] = true;
+  }
+  if (fulfillment === 'on_order' && !(leadTime !== null && leadTime >= 1)) {
+    errors['leadTimeMissing'] = true;
+  }
+  return Object.keys(errors).length > 0 ? errors : null;
+}
 
 /** Año máximo razonable para un modelo: el que viene, no 2100. */
 const MAX_YEAR = new Date().getFullYear() + 1;
@@ -40,13 +82,24 @@ const MAX_YEAR = new Date().getFullYear() + 1;
  */
 @Component({
   selector: 'app-admin-inventario',
-  imports: [DecimalPipe, DatePipe, ReactiveFormsModule, LocationSelect],
+  imports: [
+    DecimalPipe,
+    DatePipe,
+    ReactiveFormsModule,
+    LocationSelect,
+    FitmentEditor,
+    SpecsEditor,
+    AdminCategorias,
+    AdminMarcas,
+  ],
   templateUrl: './admin-inventario.html',
   styleUrl: './admin-inventario.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminInventario implements OnInit {
   private readonly admin = inject(AdminService);
+  private readonly catalog = inject(AdminCatalogService);
+  private readonly servicios = inject(ServiciosCardService);
   private readonly storage = inject(StorageService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -87,23 +140,58 @@ export class AdminInventario implements OnInit {
    */
   private removedImages: string[] = [];
 
-  readonly categories = PART_CATEGORIES;
+  /** Todas las categorías, para el selector de la pieza y para mostrar su nombre. */
+  readonly categories = signal<ProductCategoryModel[]>([]);
+  /** Las activas en forma de árbol, que es como se ofrecen en el `<select>`. */
+  readonly categoryTree = computed(() =>
+    buildCategoryTree(this.categories().filter((c) => c.isActive)),
+  );
+  /** Servicios del taller, para ligar una pieza instalable a su instalación. */
+  readonly services = signal<ServiciosCardModel[]>([]);
+  /** Compatibilidad y especificaciones de la pieza abierta; el formulario las guarda aparte. */
+  readonly fitments = signal<FitmentDraft[]>([]);
+  readonly specs = signal<Record<string, string>>({});
+
+  readonly fulfillmentOptions: readonly { value: ProductFulfillment; label: string }[] = [
+    { value: 'stock', label: 'En stock (inventario propio)' },
+    { value: 'on_order', label: 'Bajo pedido' },
+  ];
+  readonly fitmentOptions: readonly { value: ProductFitmentType; label: string }[] = [
+    { value: 'specific', label: 'Solo para ciertos vehiculos' },
+    { value: 'universal', label: 'Universal (sirve para cualquiera)' },
+  ];
+
   readonly chasisOptions = CHASIS_OPTIONS;
   readonly tractionOptions = TRACTION_OPTIONS;
   readonly fuelOptions = FUEL_OPTIONS;
   readonly scopeOptions = SCOPE_OPTIONS;
   readonly maxYear = MAX_YEAR;
 
-  readonly partForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.maxLength(120)]],
-    brand: ['', Validators.required],
-    category: ['frenos', Validators.required],
-    price: [0, [Validators.required, Validators.min(0)]],
-    stock: [0, [Validators.required, Validators.min(0)]],
-    description: [''],
-    isActive: [true],
-    isTest: [false],
-  });
+  readonly partForm = this.fb.nonNullable.group(
+    {
+      name: ['', [Validators.required, Validators.maxLength(120)]],
+      brand: ['', Validators.required],
+      categoryId: [null as number | null, Validators.required],
+      // Vacío = lo genera la base al guardar (nombre-id), que es la única forma
+      // de garantizar que no choque con otro.
+      slug: ['', Validators.pattern(/^([a-z0-9]+(-[a-z0-9]+)*)?$/)],
+      sku: ['', Validators.maxLength(40)],
+      shortDescription: ['', Validators.maxLength(160)],
+      description: [''],
+      price: [0, [Validators.required, Validators.min(0)]],
+      compareAtPrice: [null as number | null, Validators.min(0)],
+      fulfillment: ['stock' as ProductFulfillment, Validators.required],
+      stock: [0, [Validators.required, Validators.min(0)]],
+      leadTimeDays: [null as number | null, Validators.min(1)],
+      fitmentType: ['specific' as ProductFitmentType, Validators.required],
+      installable: [false],
+      installationServiceId: [null as number | null],
+      isFeatured: [false],
+      isActive: [true],
+      isTest: [false],
+    },
+    { validators: partRules },
+  );
 
   readonly vehicleForm = this.fb.nonNullable.group({
     brand: ['', Validators.required],
@@ -168,6 +256,28 @@ export class AdminInventario implements OnInit {
       next: (v) => { this.news.set(v); done(); },
       error: fail,
     });
+
+    // No bloquean la pantalla: solo alimentan los selectores del formulario de
+    // la pieza, y sin ellos el resto del panel sirve igual.
+    this.catalog.getCategories().subscribe({
+      next: (v) => this.categories.set(v),
+      error: (e: Error) => this.toast.show(e.message, 'error'),
+    });
+    this.servicios.getServicios().subscribe({
+      next: (v) => this.services.set(v),
+      error: () => undefined,
+    });
+  }
+
+  /** El nombre de la categoría de una pieza, con el texto viejo de respaldo. */
+  categoryName(part: AdminPartModel): string {
+    return this.categories().find((c) => c.id === part.categoryId)?.name ?? part.category;
+  }
+
+  /** Error de grupo del formulario de la pieza (las reglas que cruzan campos). */
+  partRuleError(code: 'compareAtLow' | 'leadTimeMissing'): boolean {
+    const touched = this.partForm.touched || this.partForm.dirty;
+    return touched && !!this.partForm.errors?.[code];
   }
 
   setTab(tab: Tab): void {
@@ -181,9 +291,16 @@ export class AdminInventario implements OnInit {
     this.editingId.set(null);
     this.isCreating.set(true);
     this.clearImages();
+    this.resetForms();
+  }
+
+  /** Deja los cuatro formularios (y lo que cuelga de la pieza) como al principio. */
+  private resetForms(): void {
     this.partForm.reset();
     this.vehicleForm.reset();
     this.newsForm.reset();
+    this.fitments.set([]);
+    this.specs.set({});
   }
 
   /**
@@ -206,18 +323,32 @@ export class AdminInventario implements OnInit {
 
     switch (this.tab()) {
       case 'piezas':
-        this.admin.getPart(id).subscribe({
-          next: (p) => {
+        // La ficha y su compatibilidad son dos lecturas; se abre el formulario
+        // cuando llegan las dos, para no mostrarlo a medias.
+        forkJoin({ part: this.admin.getPart(id), fitments: this.catalog.getFitments(id) }).subscribe({
+          next: ({ part: p, fitments }) => {
             this.partForm.setValue({
               name: p.name,
               brand: p.brand,
-              category: p.category,
-              price: p.price,
-              stock: p.stock,
+              categoryId: p.categoryId,
+              slug: p.slug,
+              sku: p.sku,
+              shortDescription: p.shortDescription,
               description: p.description,
+              price: p.price,
+              compareAtPrice: p.compareAtPrice,
+              fulfillment: p.fulfillment,
+              stock: p.stock,
+              leadTimeDays: p.leadTimeDays,
+              fitmentType: p.fitmentType,
+              installable: p.installable,
+              installationServiceId: p.installationServiceId,
+              isFeatured: p.isFeatured,
               isActive: p.isActive,
               isTest: p.isTest,
             });
+            this.fitments.set(fitments);
+            this.specs.set(p.specs);
             this.existingImages.set(p.images.length ? p.images : [p.imgUrl].filter(Boolean));
             this.isLoadingOne.set(false);
           },
@@ -279,9 +410,7 @@ export class AdminInventario implements OnInit {
     this.isCreating.set(false);
     this.editingId.set(null);
     this.clearImages();
-    this.partForm.reset();
-    this.vehicleForm.reset();
-    this.newsForm.reset();
+    this.resetForms();
   }
 
   /**
@@ -375,20 +504,40 @@ export class AdminInventario implements OnInit {
           // portada: así reordenar es cuestión de quitar y volver a subir.
           const images = [...this.existingImages(), ...nuevas];
           const draft = {
-            category: form.category,
+            categoryId: form.categoryId,
+            slug: form.slug,
+            sku: form.sku,
             name: form.name,
             brand: form.brand,
+            shortDescription: form.shortDescription,
             imgUrl: images[0],
             images,
             price: form.price,
+            compareAtPrice: form.compareAtPrice,
             description: form.description,
             stock: form.stock,
+            isFeatured: form.isFeatured,
+            fulfillment: form.fulfillment,
+            leadTimeDays: form.leadTimeDays,
+            fitmentType: form.fitmentType,
+            installable: form.installable,
+            installationServiceId: form.installationServiceId,
+            specs: this.specs(),
             isActive: form.isActive,
             isTest: form.isTest,
           };
-          return id === null
-            ? this.admin.createPart(draft)
-            : this.admin.updatePartFull(id, draft);
+          return (
+            id === null ? this.admin.createPart(draft) : this.admin.updatePartFull(id, draft)
+          ).pipe(
+            // La compatibilidad se guarda con la pieza ya creada (hace falta su
+            // id). Un producto universal no lleva ninguna: si antes era
+            // específico, se limpia en vez de dejar filas que nadie ve.
+            switchMap((saved) =>
+              this.catalog
+                .replaceFitments(saved.id, form.fitmentType === 'specific' ? this.fitments() : [])
+                .pipe(map(() => saved)),
+            ),
+          );
         }),
       )
       .subscribe({

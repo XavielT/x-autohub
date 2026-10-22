@@ -19,12 +19,23 @@ import { pathToFileURL } from 'node:url';
 const ENTRY = `
 export { AUTO_HUB_MOCK } from './src/shared/data/auto-hub.mock';
 export { HUB_PART_MOCK } from './src/shared/data/hub-part.mock';
+export { PRODUCT_FITMENT_SEEDS } from './src/shared/data/product-fitment.mock';
+export { PRODUCT_CATEGORIES_MOCK } from './src/shared/data/product-category.mock';
 export { HUB_MARKET_ITEMS_MOCK } from './src/shared/data/hub-market-item.mock';
 export { NEWS_MOCK } from './src/shared/data/new-card.mock';
 export { SERVICIOS_CARD_MOCK } from './src/shared/data/servicios-card.mock';
 export { SOCIAL_POSTS_MOCK, SOCIAL_CLUBS_MOCK, SOCIAL_EVENTS_MOCK } from './src/shared/data/social-hub.mock';
 export { CHECKOUT_SHIPPING_OPTIONS_MOCK, CHECKOUT_PAYMENT_METHODS_MOCK } from './src/shared/data/checkout-options.mock';
 `;
+
+/** Mismo criterio que src/shared/utils/slugify.ts y public.xah_slugify(). */
+const slugify = (text) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
 /** Escapa un valor para SQL. */
 const sql = (value) => {
@@ -80,8 +91,11 @@ try {
 -- src/shared/models. No lo edites a mano: edita el mock y vuelve a generar.
 --
 -- Ejecutar **al final**, después de todas las migraciones: usa stars_rating
--- (0004), contact_phone (0010), status (0012) e is_test (0013). Ver la tabla de
--- puesta en marcha de docs/BACKEND.md.
+-- (0004), contact_phone (0010), status (0012), is_test (0013) y las columnas de
+-- la tienda (0017). Ver la tabla de puesta en marcha de docs/BACKEND.md.
+--
+-- Las categorías, marcas y modelos de vehículos los siembra la propia migración
+-- 0017; aquí solo se referencian por slug.
 --
 -- Las rutas de imagen apuntan a los assets locales del frontend
 -- (assets/imgs/...). Cuando subas las fotos reales a Storage, reemplázalas por
@@ -107,17 +121,60 @@ try {
     ),
   );
 
+  // --- Servicios ------------------------------------------------------------
+  // Antes que el catálogo: hub_parts.installation_service_id apunta aquí.
+  parts.push('\n-- Servicios del taller\n');
+  parts.push(
+    table(
+      'services',
+      ['id', 'icon', 'title', 'description', 'sort_order'],
+      m.SERVICIOS_CARD_MOCK.map((s, idx) => [
+        sql(s.id), sql(s.icon), sql(s.title), sql(s.description), sql(idx),
+      ]),
+    ),
+  );
+
   // --- Catálogo -------------------------------------------------------------
+  // El slug y el sku se escriben a propósito (el trigger de 0017 daría los mismos
+  // valores) y la categoría se resuelve por slug: los ids de las categorías los
+  // asigna Postgres al correr la migración.
+  const categorySlug = (id) => m.PRODUCT_CATEGORIES_MOCK.find((c) => c.id === id)?.slug;
+
   parts.push('\n-- Catálogo: piezas de la tienda propia\n');
   parts.push(
     table(
       'hub_parts',
-      ['id', 'category', 'name', 'brand', 'img_url', 'images', 'stars_rating',
-       'price', 'description', 'stock', 'is_test'],
+      ['id', 'category', 'category_id', 'slug', 'sku', 'name', 'brand', 'short_description',
+       'img_url', 'images', 'stars_rating', 'price', 'compare_at_price', 'description', 'stock',
+       'is_featured', 'fulfillment', 'lead_time_days', 'fitment_type', 'installable',
+       'installation_service_id', 'specs', 'sold_count', 'is_test'],
       m.HUB_PART_MOCK.map((p) => [
-        sql(p.id), sql(p.category), sql(p.name), sql(p.brand), sql(p.imgUrl),
-        sql(p.images ?? []), sql(Number(p.starsRating)), sql(p.price),
-        sql(p.description), sql(25), sql(p.isTest ?? false),
+        sql(p.id), sql(p.category),
+        `(select id from public.product_categories where slug = ${sql(categorySlug(p.categoryId))})`,
+        sql(p.slug), sql(p.sku), sql(p.name), sql(p.brand), sql(p.shortDescription),
+        sql(p.imgUrl), sql(p.images ?? []), sql(Number(p.starsRating)), sql(p.price),
+        sql(p.compareAtPrice), sql(p.description), sql(p.stock),
+        sql(p.isFeatured), `${sql(p.fulfillment)}::public.product_fulfillment`,
+        sql(p.leadTimeDays), `${sql(p.fitmentType)}::public.product_fitment_type`,
+        sql(p.installable), sql(p.installationServiceId),
+        `${sql(JSON.stringify(p.specs))}::jsonb`, sql(p.soldCount), sql(p.isTest ?? false),
+      ]),
+    ),
+  );
+
+  parts.push('\n-- Catálogo: compatibilidad por vehículo (marca y modelo por slug)\n');
+  parts.push(
+    table(
+      'product_fitments',
+      ['id', 'product_id', 'make_id', 'model_id', 'year_from', 'year_to'],
+      m.PRODUCT_FITMENT_SEEDS.map((f, idx) => [
+        sql(idx + 1), sql(f.productId),
+        `(select id from public.vehicle_makes where slug = ${sql(f.makeSlug)})`,
+        f.model === null
+          ? 'null'
+          : `(select vm.id from public.vehicle_models vm join public.vehicle_makes mk on mk.id = vm.make_id` +
+            ` where mk.slug = ${sql(f.makeSlug)} and vm.slug = ${sql(slugify(f.model))})`,
+        sql(f.yearFrom), sql(f.yearTo),
       ]),
     ),
   );
@@ -144,18 +201,6 @@ try {
         sql(i.vehicleSpecs?.zeroTo100), sql(i.vehicleSpecs?.topSpeed),
         sql(i.vehicleSpecs?.brand), sql(i.vehicleSpecs?.model),
         i.createdAt ? sql(i.createdAt) : 'now()',
-      ]),
-    ),
-  );
-
-  // --- Servicios ------------------------------------------------------------
-  parts.push('\n-- Servicios del taller\n');
-  parts.push(
-    table(
-      'services',
-      ['id', 'icon', 'title', 'description', 'sort_order'],
-      m.SERVICIOS_CARD_MOCK.map((s, idx) => [
-        sql(s.id), sql(s.icon), sql(s.title), sql(s.description), sql(idx),
       ]),
     ),
   );
@@ -240,6 +285,7 @@ try {
   const counts = {
     'auto_hub_vehicles': m.AUTO_HUB_MOCK.length,
     'hub_parts': m.HUB_PART_MOCK.length,
+    'product_fitments': m.PRODUCT_FITMENT_SEEDS.length,
     'hub_market_items': m.HUB_MARKET_ITEMS_MOCK.length,
     'services': m.SERVICIOS_CARD_MOCK.length,
     'news': m.NEWS_MOCK.length,

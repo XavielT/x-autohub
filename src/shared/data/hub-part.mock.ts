@@ -1,6 +1,37 @@
-import { HubPartModel } from "../models/hub-part.model";
+import { ProductFulfillment, ProductFitmentType, ProductModel } from "../models/product.model";
+import { slugify } from "../utils/slugify";
+import { LEGACY_CATEGORY_TO_SLUG, PRODUCT_CATEGORIES_MOCK } from "./product-category.mock";
 
-export const HUB_PART_MOCK: HubPartModel[] = [
+/** Los campos que tenía una pieza antes del pivote (migración 0017). */
+interface LegacyPart {
+    id: number;
+    category: string;
+    imgUrl: string;
+    images?: string[];
+    name: string;
+    brand: string;
+    starsRating: number;
+    price: number;
+    description: string;
+    isTest?: boolean;
+}
+
+/** Lo que el pivote le agrega a cada pieza. Una fila por id, abajo. */
+interface ProductExtras {
+    /** Unidades en inventario propio. */
+    stock: number;
+    fulfillment?: ProductFulfillment;
+    leadTimeDays?: number;
+    fitmentType: ProductFitmentType;
+    compareAtPrice?: number;
+    featured?: boolean;
+    /** Id del servicio que instala la pieza (el catálogo de servicios es de la fase 5). */
+    installationServiceId?: number;
+    soldCount?: number;
+    specs?: Record<string, string>;
+}
+
+const LEGACY_PARTS: LegacyPart[] = [
     {
         id: 1,
         category: "frenos",
@@ -368,3 +399,100 @@ export const HUB_PART_MOCK: HubPartModel[] = [
         isTest: true
     }
 ];
+
+
+/*
+ * Mezcla a propósito: de inventario y bajo pedido, universales y específicos,
+ * con y sin oferta, instalables y no. Un solo producto "agotado" (id 12) y dos
+ * específicos sin compatibilidad cargada (1 y 13) para que la ficha muestre
+ * "Consultar compatibilidad". La compatibilidad de los demás está en
+ * product-fitment.mock.ts.
+ */
+const EXTRAS: Readonly<Record<number, ProductExtras>> = {
+    1:  { stock: 4,  fitmentType: "specific", featured: true, installationServiceId: 2, soldCount: 18, specs: { Diametro: "355 mm", Tipo: "Ventilado" } },
+    2:  { stock: 12, fitmentType: "specific", compareAtPrice: 3400, soldCount: 64, specs: { Material: "Algodon con aceite", Reusable: "Si" } },
+    3:  { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 15, featured: true, installationServiceId: 2, soldCount: 9, specs: { Ajuste: "Altura y dureza" } },
+    4:  { stock: 40, fitmentType: "universal", installationServiceId: 1, soldCount: 210, specs: { Viscosidad: "5W-30", Contenido: "5 L" } },
+    5:  { stock: 25, fitmentType: "specific", installationServiceId: 1, soldCount: 87, specs: { Base: "H7", Temperatura: "6000 K" } },
+    6:  { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 20, soldCount: 5, specs: { Diametro: "3 pulgadas", Material: "Acero inoxidable" } },
+    7:  { stock: 9,  fitmentType: "universal", installationServiceId: 1, soldCount: 52, specs: { Capacidad: "70 Ah", Tecnologia: "AGM" } },
+    8:  { stock: 16, fitmentType: "specific", soldCount: 41, specs: { Material: "Termoplastico", Piezas: "4" } },
+    9:  { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 12, soldCount: 7, specs: { Material: "Aluminio", Filas: "2" } },
+    10: { stock: 0,  fitmentType: "universal", fulfillment: "on_order", leadTimeDays: 21, compareAtPrice: 11500, featured: true, soldCount: 12, specs: { Medida: "18x8.5", Material: "Forjado" } },
+    11: { stock: 22, fitmentType: "specific", installationServiceId: 2, soldCount: 73, specs: { Compuesto: "Ceramico" } },
+    12: { stock: 0,  fitmentType: "universal", soldCount: 95, specs: { Tipo: "DOT 4", Contenido: "500 ml" } },
+    13: { stock: 6,  fitmentType: "specific", soldCount: 4, specs: { Ajuste: "Ajustable" } },
+    14: { stock: 14, fitmentType: "specific", installationServiceId: 2, soldCount: 38, specs: { Tipo: "A gas" } },
+    15: { stock: 30, fitmentType: "specific", soldCount: 47, specs: { Cantidad: "1 unidad" } },
+    16: { stock: 35, fitmentType: "specific", installationServiceId: 1, soldCount: 118, specs: { Electrodo: "Iridio", Cantidad: "4 unidades" } },
+    17: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 10, soldCount: 6, specs: { Material: "Fibra de carbono" } },
+    18: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 18, compareAtPrice: 25900, soldCount: 3, specs: { Material: "Acero inoxidable" } },
+    19: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 14, soldCount: 2, specs: { Etapa: "Stage 2" } },
+    20: { stock: 28, fitmentType: "universal", soldCount: 33, specs: { Viscosidad: "75W-90", Contenido: "1 L" } },
+    21: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 16, soldCount: 1 },
+    22: { stock: 18, fitmentType: "specific", soldCount: 21, specs: { Apertura: "68 C" } },
+    23: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 10, installationServiceId: 2, soldCount: 8, specs: { Amperaje: "Alta salida" } },
+    24: { stock: 20, fitmentType: "universal", soldCount: 29, specs: { Calibre: "0 AWG" } },
+    25: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 20, featured: true, installationServiceId: 1, soldCount: 4, specs: { Tecnologia: "Bi-LED" } },
+    26: { stock: 11, fitmentType: "universal", compareAtPrice: 7200, installationServiceId: 1, soldCount: 36, specs: { Largo: "20 pulgadas" } },
+    27: { stock: 7,  fitmentType: "universal", featured: true, installationServiceId: 1, soldCount: 24, specs: { Diametro: "12 pulgadas", Potencia: "1000 W" } },
+    28: { stock: 10, fitmentType: "universal", compareAtPrice: 8900, installationServiceId: 1, soldCount: 19, specs: { Clase: "D", Canales: "1" } },
+    29: { stock: 60, fitmentType: "universal", soldCount: 140, specs: { pH: "Neutro", Contenido: "1 L" } },
+    30: { stock: 45, fitmentType: "universal", soldCount: 102, specs: { Tipo: "Spray" } },
+    31: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 12, soldCount: 5, specs: { Material: "Gamuza" } },
+    32: { stock: 13, fitmentType: "universal", installationServiceId: 1, soldCount: 17, specs: { Material: "ABS" } },
+    33: { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 15, soldCount: 3, specs: { Ajuste: "Angulo regulable" } },
+    34: { stock: 17, fitmentType: "universal", soldCount: 26, specs: { Rango: "20-200 Nm" } },
+    35: { stock: 23, fitmentType: "universal", compareAtPrice: 2900, featured: true, soldCount: 88, specs: { Conexion: "Bluetooth" } },
+    36: { stock: 25, fitmentType: "universal" },
+};
+
+const FIRST_PART_DATE = new Date("2026-08-01T12:00:00Z");
+
+/**
+ * Las piezas de la tienda, ya como `ProductModel`.
+ *
+ * El slug y el SKU salen igual que los generaría el trigger de la migración
+ * 0017 (`nombre-<id>` y `XAH-000123`), así que el mock y la base real dan las
+ * mismas URLs.
+ */
+export const HUB_PART_MOCK: ProductModel[] = LEGACY_PARTS.map((part) => {
+    const extra = EXTRAS[part.id];
+    if (!extra) throw new Error(`Falta la fila de EXTRAS para la pieza ${part.id}`);
+
+    const categorySlug = LEGACY_CATEGORY_TO_SLUG[part.category];
+    const category = PRODUCT_CATEGORIES_MOCK.find((c) => c.slug === categorySlug);
+    if (!category) throw new Error(`La categoria ${part.category} no tiene mapeo`);
+
+    const fulfillment = extra.fulfillment ?? "stock";
+    return {
+        id: part.id,
+        category: part.category,
+        categoryId: category.id,
+        slug: `${slugify(part.name) || "producto"}-${part.id}`,
+        sku: `XAH-${String(part.id).padStart(6, "0")}`,
+        name: part.name,
+        brand: part.brand,
+        // Las descripciones son de una sola frase: la corta es la primera.
+        shortDescription: part.description.split(".")[0],
+        imgUrl: part.imgUrl,
+        images: part.images,
+        starsRating: part.starsRating,
+        price: part.price,
+        compareAtPrice: extra.compareAtPrice ?? null,
+        description: part.description,
+        stock: extra.stock,
+        isFeatured: extra.featured ?? false,
+        fulfillment,
+        leadTimeDays: fulfillment === "on_order" ? extra.leadTimeDays ?? null : null,
+        fitmentType: extra.fitmentType,
+        installable: extra.installationServiceId !== undefined,
+        installationServiceId: extra.installationServiceId ?? null,
+        specs: extra.specs ?? {},
+        soldCount: extra.soldCount ?? 0,
+        isTest: part.isTest ?? false,
+        isActive: true,
+        createdAt: FIRST_PART_DATE,
+        updatedAt: FIRST_PART_DATE,
+    };
+});

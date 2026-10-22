@@ -4,6 +4,7 @@ import {
   NewsScope,
   TractionType,
 } from '../../core/supabase/database.types';
+import { ProductFitmentType, ProductFulfillment } from './product.model';
 
 /**
  * Vistas reducidas del inventario propio para el panel.
@@ -17,7 +18,12 @@ export interface AdminPartModel {
   id: number;
   name: string;
   brand: string;
+  /** Categoría de texto de antes del pivote. Se retira en la fase 7; usa `categoryId`. */
   category: string;
+  /** Categoría del árbol nuevo. Nula si la pieza todavía no se clasificó. */
+  categoryId: number | null;
+  sku: string;
+  fulfillment: ProductFulfillment;
   price: number;
   stock: number;
   isActive: boolean;
@@ -63,15 +69,33 @@ export interface AdminNewsModel {
 // Al revés quedaría una fila apuntando a fotos que no existen.
 
 export interface NewPartDraft {
-  category: string;
+  /** Categoría del árbol. Nula solo si se deja sin clasificar a propósito. */
+  categoryId: number | null;
+  /** Vacío = lo genera la base (`nombre-<id>`). */
+  slug: string;
+  /** Vacío = lo genera la base (`XAH-000123`). */
+  sku: string;
   name: string;
   brand: string;
+  shortDescription: string;
   /** Portada. Es la primera de las imágenes subidas. */
   imgUrl: string;
   images: string[];
   price: number;
+  /** Precio anterior. Nulo = sin oferta; si se llena tiene que ser mayor que `price`. */
+  compareAtPrice: number | null;
   description: string;
+  /** Unidades en inventario propio. Solo cuenta cuando `fulfillment` es `stock`. */
   stock: number;
+  isFeatured: boolean;
+  fulfillment: ProductFulfillment;
+  /** Obligatorio cuando `fulfillment` es `on_order`. */
+  leadTimeDays: number | null;
+  fitmentType: ProductFitmentType;
+  installable: boolean;
+  /** Solo con `installable`. */
+  installationServiceId: number | null;
+  specs: Record<string, string>;
   isActive: boolean;
   isTest: boolean;
 }
@@ -153,16 +177,31 @@ export const SCOPE_OPTIONS: readonly { value: NewsScope; label: string }[] = [
   { value: 'internacional', label: 'Internacional' },
 ];
 
-/**
- * Categorías del catálogo.
- *
- * `hub_parts.category` es `text` y no un enum, así que la base acepta cualquier
- * cosa. Esta lista es la que ya existe en los datos: se ofrece para que no
- * aparezcan variantes como "Frenos" y "frenos" conviviendo, pero el campo deja
- * escribir una nueva.
- */
-export const PART_CATEGORIES: readonly string[] = [
-  'aceites', 'audio', 'bateria', 'detailing', 'electrico', 'escape', 'exterior',
-  'filtros', 'frenos', 'herramientas', 'interior', 'llantas', 'luces', 'motor',
-  'refrigeracion', 'suspension', 'transmision',
-];
+// --- Tienda (pivote, migración 0017) ------------------------------------------
+
+/** Una fila de compatibilidad tal como la edita el formulario, todavía sin guardar. */
+export interface FitmentDraft {
+  makeId: number;
+  /** Nulo = toda la marca. */
+  modelId: number | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+}
+
+/** Una categoría para crear. El slug lo calcula el servicio si no viene. */
+export interface NewCategoryDraft {
+  name: string;
+  slug?: string;
+  /** Nulo = primer nivel. */
+  parentId: number | null;
+  sortOrder: number;
+}
+
+/** Lo que se puede cambiar de una categoría existente. */
+export type CategoryChange = Partial<{
+  name: string;
+  slug: string;
+  parentId: number | null;
+  sortOrder: number;
+  isActive: boolean;
+}>;

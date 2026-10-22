@@ -1,0 +1,32 @@
+<div class="spec">
+  @if (entries().length > 0) {
+    <ul class="spec__list">
+      @for (entry of entries(); track entry[0]) {
+        <li class="spec__item">
+          <span><strong>{{ entry[0] }}:</strong> {{ entry[1] }}</span>
+          <button type="button" class="spec__remove" [attr.aria-label]="'Quitar ' + entry[0]"
+                  (click)="remove(entry[0])">×</button>
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="spec__add">
+    <label class="spec__field">
+      <span>Nombre</span>
+      <input type="text" placeholder="Material" maxlength="60"
+             [ngModel]="key()" (ngModelChange)="key.set($event)"
+             [ngModelOptions]="{ standalone: true }" />
+    </label>
+    <label class="spec__field">
+      <span>Valor</span>
+      <input type="text" placeholder="Aluminio" maxlength="120"
+             [ngModel]="value()" (ngModelChange)="value.set($event)"
+             [ngModelOptions]="{ standalone: true }" />
+    </label>
+  </div>
+
+  @if (error()) { <p class="spec__error" role="alert">{{ error() }}</p> }
+
+  <button type="button" class="spec__add-btn" (click)="add()">+ Agregar especificacion</button>
+</div>

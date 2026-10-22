@@ -12,7 +12,7 @@
 #
 # PARA QUE SIRVE
 # --------------
-# Ni el build, ni `tsc`, ni las 304 pruebas ven un solo error de SQL: las
+# Ni el build, ni `tsc`, ni las pruebas del suite ven un solo error de SQL: las
 # pruebas corren en modo simulado a proposito (`TestSupabaseService`), y en modo
 # simulado no hay Postgres ni RLS. Hasta ahora la unica forma de saber si una
 # migracion aplicaba limpia era ejecutarla en la base de verdad.
@@ -118,6 +118,12 @@ $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;
 
+-- El esquema donde Supabase instala las extensiones (unaccent, de la 0017). Los
+-- tres roles ya tienen USAGE en la plataforma real (comprobado en la base en
+-- vivo); sin esto `search_products()` fallaria para `anon` solo en el andamio.
+create schema extensions;
+grant usage on schema extensions to anon, authenticated, service_role;
+
 create schema storage;
 create table storage.buckets (
   id text primary key, name text not null, public boolean default false,
@@ -136,19 +142,24 @@ grant usage on schema storage to anon, authenticated, service_role;
 SQL
 echo "→ Andamio de Supabase puesto"
 
+# Una segunda base, copia del andamio, para el camino de actualizacion de la
+# 0017: la base real ya tiene piezas cuando la migracion se aplica, y el recorrido
+# "desde cero + seed" no lo ejercita nunca (ahi hub_parts esta vacia al migrar).
+$PSQL -c "create database upgrade template postgres" >/dev/null
+
 # --- Migraciones y seed -------------------------------------------------------
 
 FAILED=0
 LAST_MIGRATION=""
 
 apply() {
-  local file="$1" name
+  local file="$1" db="${2:-postgres}" name
   name="$(basename "$file")"
-  if $PSQL -v ON_ERROR_STOP=1 --single-transaction -f "$file" >"$WORKDIR/$name.log" 2>&1; then
+  if $PSQL -d "$db" -v ON_ERROR_STOP=1 --single-transaction -f "$file" >"$WORKDIR/$name.$db.log" 2>&1; then
     printf '   OK    %s\n' "$name"
   else
     printf '   FALLA %s\n' "$name"
-    sed 's/^/         /' "$WORKDIR/$name.log" | head -8
+    sed 's/^/         /' "$WORKDIR/$name.$db.log" | head -8
     FAILED=$((FAILED + 1))
   fi
 }
@@ -202,7 +213,7 @@ check() {
   # rojo mata el script en vez de dejar comparar el mensaje. `|| true` no basta,
   # porque `pipefail` tambien alcanza a los pipes de la extraccion de abajo.
   set +e
-  raw="$($PSQL -t -A -c "$sql" 2>&1)"
+  raw="$($PSQL -d "${CHECK_DB:-postgres}" -t -A -c "$sql" 2>&1)"
   set -e
 
   # De la salida se saca una sola linea para comparar:
@@ -417,6 +428,230 @@ check "ni cambiarse el id (with check de la politica)" \
 check "los correos siguen fuera del alcance de la clave anon (0006)" \
   "ERROR:  permission denied for table profiles" \
   "$(as_anon 'select email from profiles limit 1;')"
+
+echo "→ Tienda (migracion 0017): lectura publica, escritura solo admin"
+ADMIN='11111111-1111-1111-1111-111111111111'
+USER_A='22222222-2222-2222-2222-222222222222'
+USER_B='33333333-3333-3333-3333-333333333333'
+
+check "las 12 categorias de primer nivel" "12" \
+  "$(as_anon 'select count(*) from product_categories where parent_id is null;')"
+check "anon lee las 35 marcas" "35" "$(as_anon 'select count(*) from vehicle_makes;')"
+check "anon lee los 88 modelos" "88" "$(as_anon 'select count(*) from vehicle_models;')"
+check "las 36 piezas del seed quedan clasificadas" "0" \
+  "select count(*) from hub_parts where category_id is null;"
+check "y todas traen slug y sku" "0" \
+  "select count(*) from hub_parts where slug is null or sku is null;"
+check "anon lee los 29 fitments de las piezas visibles" "29" \
+  "$(as_anon 'select count(*) from product_fitments;')"
+
+check "anon no crea categorias" \
+  'ERROR:  new row violates row-level security policy for table "product_categories"' \
+  "$(as_anon "insert into product_categories (slug, name) values ('hackeada', 'Hackeada');")"
+# Igual que site_settings: el update de `anon` no da error, se queda en cero
+# filas. Lo que importa es que el nombre no cambie.
+check "anon no cambia una categoria: el update no toca ninguna fila" "Frenos" \
+  "$(as_anon "update product_categories set name='Hackeada' where slug='frenos'; select name from product_categories where slug='frenos';")"
+check "anon no crea marcas" \
+  'ERROR:  new row violates row-level security policy for table "vehicle_makes"' \
+  "$(as_anon "insert into vehicle_makes (name, slug) values ('Falsa', 'falsa');")"
+check "anon no crea modelos" \
+  'ERROR:  new row violates row-level security policy for table "vehicle_models"' \
+  "$(as_anon "insert into vehicle_models (make_id, name, slug) values (1, 'Falso', 'falso');")"
+check "anon no crea fitments" \
+  'ERROR:  new row violates row-level security policy for table "product_fitments"' \
+  "$(as_anon "insert into product_fitments (product_id, make_id) values (1, 1);")"
+check "un usuario normal tampoco crea categorias" \
+  'ERROR:  new row violates row-level security policy for table "product_categories"' \
+  "$(as_user "$USER_A" "insert into product_categories (slug, name) values ('hackeada', 'Hackeada');")"
+check "ni fitments" \
+  'ERROR:  new row violates row-level security policy for table "product_fitments"' \
+  "$(as_user "$USER_A" "insert into product_fitments (product_id, make_id) values (1, 1);")"
+check "un admin si crea una subcategoria" "discos" \
+  "$(as_user "$ADMIN" "insert into product_categories (slug, name, parent_id) select 'discos', 'Discos', id from product_categories where slug='frenos' returning slug;")"
+check "una subcategoria no puede tener hijas: tres niveles no" \
+  "ERROR:  Las categorias admiten dos niveles como maximo." \
+  "$(as_user "$ADMIN" "insert into product_categories (slug, name, parent_id) select 'x3', 'X3', id from product_categories where slug='discos';")"
+check "ni una categoria con hijas puede pasar a ser hija" \
+  "ERROR:  Una categoria con subcategorias no puede ser subcategoria." \
+  "$(as_user "$ADMIN" "update product_categories set parent_id = (select id from product_categories where slug='suspension') where slug='frenos';")"
+
+echo "→ Reglas del producto (migracion 0017)"
+check "una oferta no puede costar lo mismo o mas que el precio normal" \
+  'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_compare_at_price_check"' \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, compare_at_price) values ('QQ Mala oferta', 'M', 'x.jpg', 100, 100);")"
+check "un articulo bajo pedido tiene que decir cuanto tarda" \
+  'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_on_order_needs_lead_time"' \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, fulfillment) values ('QQ Sin plazo', 'M', 'x.jpg', 100, 'on_order');")"
+check "un servicio de instalacion exige que el producto sea instalable" \
+  'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_installation_needs_installable"' \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, installation_service_id) values ('QQ No instalable', 'M', 'x.jpg', 100, 1);")"
+check "las especificaciones tienen que ser un objeto" \
+  'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_specs_is_object"' \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, specs) values ('QQ Specs', 'M', 'x.jpg', 100, '[1]'::jsonb);")"
+check "slug y sku salen solos al insertar" "t" \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price) values ('QQ Alta Rapida', 'M', 'x.jpg', 100) returning (slug = 'qq-alta-rapida-' || id) and (sku = 'XAH-' || lpad(id::text, 6, '0'));")"
+check "la categoria de texto la rellena el trigger con la raiz" "frenos" \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, category_id) select 'QQ Hija', 'M', 'x.jpg', 100, id from product_categories where slug='discos' returning category;")"
+check "un producto nuevo nace como especifico, sin prometer compatibilidad" "specific" \
+  "select fitment_type from hub_parts where name = 'QQ Alta Rapida';"
+check "un fitment no puede mezclar la marca de un modelo con otra" \
+  'ERROR:  insert or update on table "product_fitments" violates foreign key constraint "product_fitments_model_of_make"' \
+  "$(as_user "$ADMIN" "insert into product_fitments (product_id, make_id, model_id) select 1, mk.id, vm.id from vehicle_makes mk, vehicle_models vm where mk.slug='toyota' and vm.slug='civic';")"
+check "ni tener los anios al reves" \
+  'ERROR:  new row for relation "product_fitments" violates check constraint "product_fitments_year_order"' \
+  "$(as_user "$ADMIN" "insert into product_fitments (product_id, make_id, year_from, year_to) select 1, id, 2020, 2010 from vehicle_makes where slug='toyota';")"
+check "ni el mismo fitment dos veces" \
+  'ERROR:  duplicate key value violates unique constraint "product_fitments_unique"' \
+  "$(as_user "$ADMIN" "insert into product_fitments (product_id, make_id, model_id, year_from, year_to) select f.product_id, f.make_id, f.model_id, f.year_from, f.year_to from product_fitments f limit 1;")"
+
+echo "→ search_products(): texto, vehiculo, precio y stock (migracion 0017)"
+# Datos propios para no depender del seed: siete productos, cada uno un caso.
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into hub_parts (id, name, brand, img_url, price, fitment_type, stock, fulfillment, lead_time_days, is_active) values
+  (9001, 'ZZTEST Universal',           'Marca', 'x.jpg', 100, 'universal', 5, 'stock',    null, true),
+  (9002, 'ZZTEST Corolla',             'Marca', 'x.jpg', 200, 'specific',  5, 'stock',    null, true),
+  (9003, 'ZZTEST Toyota',              'Marca', 'x.jpg', 300, 'specific',  5, 'stock',    null, true),
+  (9004, 'ZZTEST Civic',               'Marca', 'x.jpg', 400, 'specific',  5, 'stock',    null, true),
+  (9005, 'ZZTEST Sin fitments',        'Marca', 'x.jpg', 500, 'specific',  5, 'stock',    null, true),
+  (9006, 'ZZTEST Batería bajo pedido', 'Marca', 'x.jpg', 600, 'universal', 0, 'on_order', 7,    true),
+  (9007, 'ZZTEST Inactivo',            'Marca', 'x.jpg',  50, 'universal', 5, 'stock',    null, false);
+
+insert into product_fitments (product_id, make_id, model_id, year_from, year_to)
+select 9002, mk.id, vm.id, 2010, 2020
+  from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id
+ where mk.slug = 'toyota' and vm.slug = 'corolla';
+insert into product_fitments (product_id, make_id)
+select 9003, id from vehicle_makes where slug = 'toyota';
+insert into product_fitments (product_id, make_id, model_id)
+select 9004, mk.id, vm.id
+  from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id
+ where mk.slug = 'honda' and vm.slug = 'civic';
+SQL
+
+TOYOTA="(select id from vehicle_makes where slug='toyota')"
+HONDA="(select id from vehicle_makes where slug='honda')"
+COROLLA="(select vm.id from vehicle_models vm join vehicle_makes mk on mk.id=vm.make_id where mk.slug='toyota' and vm.slug='corolla')"
+CIVIC="(select vm.id from vehicle_models vm join vehicle_makes mk on mk.id=vm.make_id where mk.slug='honda' and vm.slug='civic')"
+NAMES="select string_agg(name, '|' order by price) from search_products"
+
+check "el texto encuentra los 6 activos (el inactivo no sale)" "6" \
+  "$(as_anon "select total_count from search_products(p_query := 'zztest', p_limit := 1);")"
+check "una palabra a medias busca por prefijo" "6" \
+  "$(as_anon "select total_count from search_products(p_query := 'zztes', p_limit := 1);")"
+check "sin acentos: 'bateria' encuentra 'Batería'" "ZZTEST Batería bajo pedido" \
+  "$(as_anon "select name from search_products(p_query := 'zztest bateria');")"
+check "un inactivo no sale ni buscandolo por el nombre" "0" \
+  "$(as_anon "select count(*) from search_products(p_query := 'zztest inactivo');")"
+check "Toyota Corolla 2015: universales + los que cubren ese carro" \
+  "ZZTEST Universal|ZZTEST Corolla|ZZTEST Toyota|ZZTEST Batería bajo pedido" \
+  "$(as_anon "$NAMES(p_query := 'zztest', p_make_id := $TOYOTA, p_model_id := $COROLLA, p_year := 2015);")"
+check "Toyota Corolla 2005: el de 2010-2020 queda fuera" \
+  "ZZTEST Universal|ZZTEST Toyota|ZZTEST Batería bajo pedido" \
+  "$(as_anon "$NAMES(p_query := 'zztest', p_make_id := $TOYOTA, p_model_id := $COROLLA, p_year := 2005);")"
+check "Honda Civic: el de Toyota queda fuera" \
+  "ZZTEST Universal|ZZTEST Civic|ZZTEST Batería bajo pedido" \
+  "$(as_anon "$NAMES(p_query := 'zztest', p_make_id := $HONDA, p_model_id := $CIVIC);")"
+check "solo la marca: cualquier modelo de esa marca" \
+  "ZZTEST Universal|ZZTEST Corolla|ZZTEST Toyota|ZZTEST Batería bajo pedido" \
+  "$(as_anon "$NAMES(p_query := 'zztest', p_make_id := $TOYOTA);")"
+# El caso del plan (§7): un `specific` sin compatibilidad cargada no aparece
+# como compatible con nada, ni con la marca sola.
+check "un especifico sin fitments no sale en ninguna busqueda por vehiculo" "0" \
+  "$(as_anon "select count(*) from search_products(p_query := 'zztest', p_make_id := $TOYOTA) where name like '%Sin fitments%';")"
+check "solo en stock deja fuera lo bajo pedido" "5" \
+  "$(as_anon "select total_count from search_products(p_query := 'zztest', p_in_stock_only := true, p_limit := 1);")"
+check "rango de precio" "3" \
+  "$(as_anon "select total_count from search_products(p_query := 'zztest', p_min_price := 200, p_max_price := 400, p_limit := 1);")"
+check "orden por precio mayor" "ZZTEST Batería bajo pedido" \
+  "$(as_anon "select name from search_products(p_query := 'zztest', p_sort := 'price_desc', p_limit := 1);")"
+check "paginacion: dos filas, total de seis" "2/6" \
+  "$(as_anon "select count(*) || '/' || max(total_count) from search_products(p_query := 'zztest', p_limit := 2);")"
+check "una categoria incluye los productos de sus hijas" "4" \
+  "$(as_anon "select total_count from search_products(p_category_slug := 'frenos', p_limit := 1);")"
+check "y una hija solo los suyos" "1" \
+  "$(as_anon "select total_count from search_products(p_category_slug := 'discos', p_limit := 1);")"
+check "simbolos de tsquery en el texto no revientan" "t" \
+  "$(as_anon "select count(*) >= 0 from search_products(p_query := 'zz|&!:*()<>');")"
+check "ni una palabra vacia del diccionario" "t" \
+  "$(as_anon "select count(*) >= 0 from search_products(p_query := 'de');")"
+check "ni un porcentaje" "t" \
+  "$(as_anon "select count(*) >= 0 from search_products(p_query := '100%');")"
+
+echo "→ El garaje (profile_vehicles): cada quien el suyo (migracion 0017)"
+check "un usuario guarda un vehiculo en su garaje" "" \
+  "$(as_user "$USER_A" "insert into profile_vehicles (user_id, make_id, model_id, year, is_default) select auth.uid(), mk.id, vm.id, 2015, true from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id where mk.slug='toyota' and vm.slug='corolla';")"
+check "y lo ve" "1" "$(as_user "$USER_A" 'select count(*) from profile_vehicles;')"
+check "otro usuario no ve el garaje ajeno" "0" "$(as_user "$USER_B" 'select count(*) from profile_vehicles;')"
+check "anon no tiene garaje" 'ERROR:  permission denied for table profile_vehicles' \
+  "$(as_anon 'select count(*) from profile_vehicles;')"
+check "nadie escribe en el garaje de otro" \
+  'ERROR:  new row violates row-level security policy for table "profile_vehicles"' \
+  "$(as_user "$USER_B" "insert into profile_vehicles (user_id, make_id, model_id, year) select '$USER_A', mk.id, vm.id, 2020 from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id where mk.slug='toyota' and vm.slug='corolla';")"
+check "ni mueve su vehiculo al garaje de otro" \
+  'ERROR:  new row violates row-level security policy for table "profile_vehicles"' \
+  "$(as_user "$USER_A" "update profile_vehicles set user_id = '$USER_B' where user_id = auth.uid();")"
+check "el modelo tiene que ser de la marca" \
+  'ERROR:  insert or update on table "profile_vehicles" violates foreign key constraint "profile_vehicles_model_of_make"' \
+  "$(as_user "$USER_A" "insert into profile_vehicles (user_id, make_id, model_id, year) select auth.uid(), mk.id, vm.id, 2020 from vehicle_makes mk, vehicle_models vm where mk.slug='toyota' and vm.slug='civic';")"
+check "un segundo vehiculo por defecto entra sin error" "" \
+  "$(as_user "$USER_A" "insert into profile_vehicles (user_id, make_id, model_id, year, is_default) select auth.uid(), mk.id, vm.id, 2018, true from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id where mk.slug='honda' and vm.slug='civic';")"
+check "...y desmarca al primero: queda uno solo por defecto" "1" \
+  "select count(*) from profile_vehicles where user_id = '$USER_A' and is_default;"
+check "los dos siguen en el garaje" "2" \
+  "select count(*) from profile_vehicles where user_id = '$USER_A';"
+
+echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
+# El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
+# hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
+# category_id) tiene que hacer su trabajo.
+for migration in supabase/migrations/00{01..16}_*.sql; do
+  apply "$migration" upgrade
+done
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into hub_parts (category, name, brand, img_url, price, stock) values
+  ('interior',      'Alfombras all-weather',  'WeatherTech', 'x.jpg', 2950, 10),
+  ('exterior',      'Lip frontal',            'Maxton',      'x.jpg', 3250, 10),
+  ('luces',         'Kit LED H7',             'Philips',     'x.jpg', 3650, 10),
+  ('audio',         'Subwoofer 12in',         'JL Audio',    'x.jpg', 9600, 10),
+  ('llantas',       'Rin forjado',            'Enkei',       'x.jpg', 9800, 10),
+  ('frenos',        'Disco ventilado',        'Brembo',      'x.jpg', 12950, 10),
+  ('suspension',    'Kit Coilover',           'BC Racing',   'x.jpg', 32500, 10),
+  ('motor',         'Bobina de encendido',    'NGK',         'x.jpg', 2150, 10),
+  ('filtros',       'Filtro de aire',         'K&N',         'x.jpg', 2850, 10),
+  ('aceites',       'Aceite sintetico',       'Motul',       'x.jpg', 2250, 10),
+  ('escape',        'Downpipe inox',          'Borla',       'x.jpg', 11800, 10),
+  ('transmision',   'Kit clutch',             'Exedy',       'x.jpg', 16700, 10),
+  ('refrigeracion', 'Radiador aluminio',      'Mishimoto',   'x.jpg', 15400, 10),
+  ('electrico',     'Alternador',             'Powermaster', 'x.jpg', 13200, 10),
+  ('bateria',       'Batería AGM 70Ah',       'Bosch',       'x.jpg', 6900, 10),
+  ('detailing',     'Shampoo pH neutro',      'Meguiars',    'x.jpg', 780, 10),
+  ('herramientas',  'Llave torque',           'Tekton',      'x.jpg', 3650, 10);
+SQL
+apply "$LAST_MIGRATION" upgrade
+echo "   (las 17 categorias de texto de la tienda anterior, una pieza por cada una)"
+CHECK_DB=upgrade check "las 17 piezas quedan clasificadas" "17" \
+  "select count(*) from hub_parts where category_id is not null;"
+CHECK_DB=upgrade check "refrigeracion cae en motor-filtros (no en aire acondicionado)" "motor-filtros" \
+  "select c.slug from hub_parts p join product_categories c on c.id = p.category_id where p.category = 'refrigeracion';"
+CHECK_DB=upgrade check "bateria cae en electrico-baterias" "electrico-baterias" \
+  "select c.slug from hub_parts p join product_categories c on c.id = p.category_id where p.category = 'bateria';"
+CHECK_DB=upgrade check "interior cae en accesorios-interior" "accesorios-interior" \
+  "select c.slug from hub_parts p join product_categories c on c.id = p.category_id where p.category = 'interior';"
+CHECK_DB=upgrade check "cada pieza recibe su slug y su sku, sin repetir" "17|17" \
+  "select count(distinct slug) || '|' || count(distinct sku) from hub_parts;"
+CHECK_DB=upgrade check "el slug lleva el id al final y el sku el relleno de ceros" "t" \
+  "select slug = 'alfombras-all-weather-' || id and sku = 'XAH-' || lpad(id::text, 6, '0') from hub_parts where category = 'interior';"
+CHECK_DB=upgrade check "la categoria de texto se conserva" "17" \
+  "select count(*) from hub_parts where category is not null;"
+CHECK_DB=upgrade check "las piezas existentes quedan como especificas: no se promete compatibilidad" "0" \
+  "select count(*) from hub_parts where fitment_type <> 'specific';"
+CHECK_DB=upgrade check "y como de inventario propio, sin oferta ni instalacion" "0" \
+  "select count(*) from hub_parts where fulfillment <> 'stock' or compare_at_price is not null or installable;"
+CHECK_DB=upgrade check "la busqueda de texto queda lista para todas" "17" \
+  "select count(*) from hub_parts where search_vector is not null;"
+CHECK_DB=upgrade check "y busca sin acentos sobre lo que ya habia" "Batería AGM 70Ah" \
+  "select name from search_products(p_query := 'bateria');"
 
 # --- Resumen ------------------------------------------------------------------
 

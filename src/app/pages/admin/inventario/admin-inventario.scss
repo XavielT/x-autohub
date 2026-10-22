@@ -383,3 +383,29 @@
     color: var(--text-soft);
   }
 }
+
+// Encabezado de cada grupo del formulario de la pieza (precio, disponibilidad...).
+.adm-inv__section {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-brand);
+  font-size: 15px;
+  color: var(--Hub);
+}
+
+// En el telefono: campos de 44px de alto y 16px de letra (debajo de eso Safari en
+// iPhone hace zoom al enfocar), y botones que se pulsan con el pulgar.
+@media (max-width: 560px) {
+  .adm-inv__field {
+    input,
+    textarea,
+    select { font-size: 16px; min-height: 44px; }
+  }
+
+  .adm-inv__actions { flex-direction: column; }
+
+  .adm-inv__save,
+  .adm-inv__cancel { min-height: 48px; }
+}

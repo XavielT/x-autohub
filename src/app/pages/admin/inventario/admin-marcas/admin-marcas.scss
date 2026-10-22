@@ -1,0 +1,99 @@
+.mk {
+  font-family: var(--font-body);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  &__add-model {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    align-items: end;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+
+    small { color: var(--text-soft); }
+
+    // Con 16px de letra para que el iPhone no haga zoom al enfocar el campo y
+    // con 44px de alto para que se pulse bien con el pulgar.
+    input,
+    select {
+      font-family: var(--font-body);
+      font-size: 16px;
+      min-height: 44px;
+      background-color: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: inherit;
+      width: 100%;
+      box-sizing: border-box;
+
+      &:focus { outline: none; border-color: var(--Hub); }
+    }
+  }
+
+  &__btn {
+    min-height: 44px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 10px 18px;
+    cursor: pointer;
+
+    &--primary {
+      color: #1a1a1a;
+      background-color: var(--Hub);
+      border: none;
+
+      &:hover:not(:disabled) { filter: brightness(1.1); }
+      &:disabled { opacity: 0.6; cursor: default; }
+    }
+  }
+
+  &__models {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__model {
+    padding: 8px 14px;
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+  }
+
+  &__hint,
+  &__empty {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+
+  &__empty {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+  }
+}

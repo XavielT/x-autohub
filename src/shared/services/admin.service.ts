@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
-import { AdminUserRow, OrderStatus } from '../../core/supabase/database.types';
+import { AdminUserRow, HubPartRow, OrderStatus } from '../../core/supabase/database.types';
+import { toSpecs } from '../../core/supabase/mappers';
 import { AdminUserModel } from '../models/release.model';
 import { UserRole } from '../models/user.model';
 import { AdminOrderModel } from '../models/admin-order.model';
@@ -38,6 +39,77 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
     isVerified: row.is_verified,
     isTestUser: row.is_test_user,
     createdAt: new Date(row.created_at),
+  };
+}
+
+/** Las columnas del listado de piezas del panel. */
+const ADMIN_PART_COLUMNS =
+  'id, name, brand, category, category_id, sku, fulfillment, price, stock, is_active, is_test';
+
+type AdminPartRow = Pick<
+  HubPartRow,
+  | 'id' | 'name' | 'brand' | 'category' | 'category_id' | 'sku' | 'fulfillment'
+  | 'price' | 'stock' | 'is_active' | 'is_test'
+>;
+
+function toAdminPart(r: AdminPartRow): AdminPartModel {
+  return {
+    id: r.id,
+    name: r.name,
+    brand: r.brand,
+    category: r.category ?? '',
+    categoryId: r.category_id,
+    sku: r.sku,
+    fulfillment: r.fulfillment,
+    price: Number(r.price),
+    stock: r.stock,
+    isActive: r.is_active,
+    isTest: r.is_test,
+  };
+}
+
+/** Las columnas de la ficha completa que se edita en el formulario. */
+// Una sola cadena literal: ver PRODUCT_COLUMNS en product.service.ts.
+const EDITABLE_PART_COLUMNS =
+  'id, category_id, slug, sku, name, brand, short_description, img_url, images, price, compare_at_price, description, stock, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, is_active, is_test';
+
+/**
+ * Lo que se escribe en `hub_parts` al crear o editar desde el formulario.
+ *
+ * Dos reglas que viven aquí y no en el componente:
+ *   · `category` (el texto de antes del pivote) se manda **nulo** y lo rellena el
+ *     trigger de la migración 0017 con la categoría raíz. Si no, al cambiar la
+ *     categoría el texto viejo se quedaría diciendo otra cosa.
+ *   · Lo que no aplica se limpia: los días de entrega solo valen para un artículo
+ *     bajo pedido, y el servicio de instalación solo para uno instalable. La base
+ *     rechaza lo contrario con un check, y es mejor no llegar a ese error.
+ *
+ * `slug` y `sku` vacíos los genera la base.
+ */
+function partWriteRow(draft: NewPartDraft) {
+  return {
+    category: null,
+    category_id: draft.categoryId,
+    slug: draft.slug.trim(),
+    sku: draft.sku.trim(),
+    name: draft.name.trim(),
+    brand: draft.brand.trim(),
+    short_description: draft.shortDescription.trim(),
+    img_url: draft.imgUrl,
+    images: draft.images,
+    price: draft.price,
+    compare_at_price: draft.compareAtPrice,
+    description: draft.description.trim(),
+    stock: draft.stock,
+    is_featured: draft.isFeatured,
+    fulfillment: draft.fulfillment,
+    lead_time_days: draft.fulfillment === 'on_order' ? draft.leadTimeDays : null,
+    fitment_type: draft.fitmentType,
+    installable: draft.installable,
+    installation_service_id: draft.installable ? draft.installationServiceId : null,
+    specs: draft.specs,
+    is_active: draft.isActive,
+    is_test: draft.isTest,
   };
 }
 
@@ -203,22 +275,9 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('hub_parts')
-        .select('id, name, brand, category, price, stock, is_active, is_test')
+        .select(ADMIN_PART_COLUMNS)
         .order('name'),
-    ).pipe(
-      map((res) =>
-        unwrap(res).map((r) => ({
-          id: r.id,
-          name: r.name,
-          brand: r.brand,
-          category: r.category,
-          price: Number(r.price),
-          stock: r.stock,
-          isActive: r.is_active,
-          isTest: r.is_test,
-        })),
-      ),
-    );
+    ).pipe(map((res) => unwrap(res).map(toAdminPart)));
   }
 
   updatePart(
@@ -354,11 +413,15 @@ export class AdminService {
 
   createPart(draft: NewPartDraft): Observable<AdminPartModel> {
     if (this.supabase.shouldUseMockData()) {
+      const id = Math.max(0, ...this.mockParts.map((p) => p.id)) + 1;
       const created: AdminPartModel = {
-        id: Math.max(0, ...this.mockParts.map((p) => p.id)) + 1,
+        id,
         name: draft.name,
         brand: draft.brand,
-        category: draft.category,
+        category: '',
+        categoryId: draft.categoryId,
+        sku: draft.sku.trim() || `XAH-${String(id).padStart(6, '0')}`,
+        fulfillment: draft.fulfillment,
         price: draft.price,
         stock: draft.stock,
         isActive: draft.isActive,
@@ -371,35 +434,10 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('hub_parts')
-        .insert({
-          category: draft.category.trim(),
-          name: draft.name.trim(),
-          brand: draft.brand.trim(),
-          img_url: draft.imgUrl,
-          images: draft.images,
-          price: draft.price,
-          description: draft.description.trim(),
-          stock: draft.stock,
-          is_active: draft.isActive,
-          is_test: draft.isTest,
-        })
-        .select('id, name, brand, category, price, stock, is_active, is_test')
+        .insert(partWriteRow(draft))
+        .select(ADMIN_PART_COLUMNS)
         .single(),
-    ).pipe(
-      map((res) => {
-        const r = unwrap(res);
-        return {
-          id: r.id,
-          name: r.name,
-          brand: r.brand,
-          category: r.category,
-          price: Number(r.price),
-          stock: r.stock,
-          isActive: r.is_active,
-          isTest: r.is_test,
-        };
-      }),
-    );
+    ).pipe(map((res) => toAdminPart(unwrap(res))));
   }
 
   createVehicle(draft: NewVehicleDraft): Observable<AdminVehicleModel> {
@@ -517,20 +555,35 @@ export class AdminService {
       const p = this.mockParts.find((x) => x.id === id);
       if (!p) return throwError(() => new Error('No encontramos esa pieza.'));
       return of({
-        ...p,
+        id: p.id,
+        categoryId: p.categoryId,
+        slug: '',
+        sku: p.sku,
+        name: p.name,
+        brand: p.brand,
+        shortDescription: '',
         imgUrl: '',
         images: [],
+        price: p.price,
+        compareAtPrice: null,
         description: '',
+        stock: p.stock,
+        isFeatured: false,
+        fulfillment: p.fulfillment,
+        leadTimeDays: p.fulfillment === 'on_order' ? 10 : null,
+        fitmentType: 'specific' as const,
+        installable: false,
+        installationServiceId: null,
+        specs: {},
         isActive: p.isActive,
+        isTest: p.isTest,
       });
     }
 
     return from(
       this.supabase.db
         .from('hub_parts')
-        .select(
-          'id, category, name, brand, img_url, images, price, description, stock, is_active, is_test',
-        )
+        .select(EDITABLE_PART_COLUMNS)
         .eq('id', id)
         .single(),
     ).pipe(
@@ -538,14 +591,25 @@ export class AdminService {
         const r = unwrap(res);
         return {
           id: r.id,
-          category: r.category,
+          categoryId: r.category_id,
+          slug: r.slug,
+          sku: r.sku,
           name: r.name,
           brand: r.brand,
+          shortDescription: r.short_description,
           imgUrl: r.img_url,
           images: r.images ?? [],
           price: Number(r.price),
+          compareAtPrice: r.compare_at_price === null ? null : Number(r.compare_at_price),
           description: r.description,
           stock: r.stock,
+          isFeatured: r.is_featured,
+          fulfillment: r.fulfillment,
+          leadTimeDays: r.lead_time_days,
+          fitmentType: r.fitment_type,
+          installable: r.installable,
+          installationServiceId: r.installation_service_id,
+          specs: toSpecs(r.specs),
           isActive: r.is_active,
           isTest: r.is_test,
         };
@@ -555,11 +619,15 @@ export class AdminService {
 
   updatePartFull(id: number, draft: NewPartDraft): Observable<AdminPartModel> {
     if (this.supabase.shouldUseMockData()) {
+      const previous = this.mockParts.find((p) => p.id === id);
       const updated: AdminPartModel = {
         id,
         name: draft.name,
         brand: draft.brand,
-        category: draft.category,
+        category: previous?.category ?? '',
+        categoryId: draft.categoryId,
+        sku: draft.sku.trim() || previous?.sku || `XAH-${String(id).padStart(6, '0')}`,
+        fulfillment: draft.fulfillment,
         price: draft.price,
         stock: draft.stock,
         isActive: draft.isActive,
@@ -572,36 +640,11 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('hub_parts')
-        .update({
-          category: draft.category.trim(),
-          name: draft.name.trim(),
-          brand: draft.brand.trim(),
-          img_url: draft.imgUrl,
-          images: draft.images,
-          price: draft.price,
-          description: draft.description.trim(),
-          stock: draft.stock,
-          is_active: draft.isActive,
-          is_test: draft.isTest,
-        })
+        .update(partWriteRow(draft))
         .eq('id', id)
-        .select('id, name, brand, category, price, stock, is_active, is_test')
+        .select(ADMIN_PART_COLUMNS)
         .single(),
-    ).pipe(
-      map((res) => {
-        const r = unwrap(res);
-        return {
-          id: r.id,
-          name: r.name,
-          brand: r.brand,
-          category: r.category,
-          price: Number(r.price),
-          stock: r.stock,
-          isActive: r.is_active,
-          isTest: r.is_test,
-        };
-      }),
-    );
+    ).pipe(map((res) => toAdminPart(unwrap(res))));
   }
 
   getVehicle(id: number): Observable<EditableVehicle> {

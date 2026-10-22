@@ -18,6 +18,12 @@ export type ItemCondition = 'new' | 'used';
 export type NewsScope = 'internacional' | 'local';
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
 
+/** Cómo se cumple un producto: de inventario propio o bajo pedido. Migración 0017. */
+export type ProductFulfillmentDb = 'stock' | 'on_order';
+
+/** Si un producto sirve para cualquier vehículo o solo para los declarados. Migración 0017. */
+export type ProductFitmentTypeDb = 'universal' | 'specific';
+
 /** admin > moderador > user. Migración 0011. */
 export type UserRoleDb = 'admin' | 'moderador' | 'user';
 
@@ -88,7 +94,12 @@ export type AutoHubVehicleRow = {
 
 export type HubPartRow = {
   id: number;
-  category: string;
+  /**
+   * Categoría de texto de la tienda anterior al pivote. Nula en los productos
+   * nuevos que solo traen `category_id` (un trigger la rellena con la categoría
+   * raíz). Se elimina en la fase 7 (migración 0021).
+   */
+  category: string | null;
   name: string;
   brand: string;
   img_url: string;
@@ -101,6 +112,89 @@ export type HubPartRow = {
   /** Contenido de prueba: solo lo ven admin, moderador y usuarios de prueba. Migración 0013. */
   is_test: boolean;
   created_at: string;
+  // --- Migración 0017 (tienda) ---
+  category_id: number | null;
+  /** Único. Lo rellena un trigger si viene vacío: `nombre-<id>`. */
+  slug: string;
+  /** Único. Lo rellena un trigger si viene vacío: `XAH-000123`. */
+  sku: string;
+  short_description: string;
+  /** Precio anterior. Nulo = sin oferta; si existe, es mayor que `price`. */
+  compare_at_price: number | null;
+  is_featured: boolean;
+  fulfillment: ProductFulfillmentDb;
+  /** Obligatorio cuando `fulfillment = 'on_order'`. */
+  lead_time_days: number | null;
+  fitment_type: ProductFitmentTypeDb;
+  installable: boolean;
+  installation_service_id: number | null;
+  specs: Record<string, SettingValue>;
+  sold_count: number;
+  updated_at: string;
+  /**
+   * Columna generada para la búsqueda de texto. Solo la lee la base: no viene
+   * en los `select` que piden columnas y no se escribe nunca.
+   */
+  search_vector?: string;
+}
+
+/** Dos niveles como máximo: `parent_id` nulo es primer nivel. Migración 0017. */
+export type ProductCategoryRow = {
+  id: number;
+  parent_id: number | null;
+  slug: string;
+  name: string;
+  icon: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type VehicleMakeRow = {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export type VehicleModelRow = {
+  id: number;
+  make_id: number;
+  name: string;
+  slug: string;
+}
+
+/**
+ * Un producto `specific` sirve para esta marca [y modelo] [entre estos años].
+ * `model_id` nulo = toda la marca; los años nulos = sin límite.
+ */
+export type ProductFitmentRow = {
+  id: number;
+  product_id: number;
+  make_id: number;
+  model_id: number | null;
+  year_from: number | null;
+  year_to: number | null;
+}
+
+/** El garaje de un usuario. Cada quien ve solo el suyo. Migración 0017. */
+export type ProfileVehicleRow = {
+  id: number;
+  user_id: string;
+  make_id: number;
+  model_id: number;
+  year: number;
+  nickname: string | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+/**
+ * Fila de `search_products()`: un producto más el total de la consulta. Es la
+ * misma forma que `HubPartRow`, sin `search_vector`, y con `total_count` (el
+ * número de coincidencias antes de paginar, igual en todas las filas).
+ */
+export type SearchProductRow = Omit<HubPartRow, 'search_vector'> & {
+  total_count: number;
 }
 
 export type HubMarketItemRow = {
@@ -379,8 +473,38 @@ export type Database = {
       };
       hub_parts: {
         Row: HubPartRow;
-        Insert: Insert<HubPartRow, 'category' | 'name' | 'brand' | 'img_url' | 'price'>;
+        Insert: Insert<HubPartRow, 'name' | 'brand' | 'img_url' | 'price'>;
         Update: Partial<HubPartRow>;
+        Relationships: [];
+      };
+      product_categories: {
+        Row: ProductCategoryRow;
+        Insert: Insert<ProductCategoryRow, 'slug' | 'name'>;
+        Update: Partial<ProductCategoryRow>;
+        Relationships: [];
+      };
+      vehicle_makes: {
+        Row: VehicleMakeRow;
+        Insert: Insert<VehicleMakeRow, 'name' | 'slug'>;
+        Update: Partial<VehicleMakeRow>;
+        Relationships: [];
+      };
+      vehicle_models: {
+        Row: VehicleModelRow;
+        Insert: Insert<VehicleModelRow, 'make_id' | 'name' | 'slug'>;
+        Update: Partial<VehicleModelRow>;
+        Relationships: [];
+      };
+      product_fitments: {
+        Row: ProductFitmentRow;
+        Insert: Insert<ProductFitmentRow, 'product_id' | 'make_id'>;
+        Update: Partial<ProductFitmentRow>;
+        Relationships: [];
+      };
+      profile_vehicles: {
+        Row: ProfileVehicleRow;
+        Insert: Insert<ProfileVehicleRow, 'user_id' | 'make_id' | 'model_id' | 'year'>;
+        Update: Partial<ProfileVehicleRow>;
         Relationships: [];
       };
       hub_market_items: {
@@ -586,6 +710,32 @@ export type Database = {
         Args: { p_token: string };
         Returns: boolean;
       };
+      /**
+       * Búsqueda de la tienda (migración 0017): texto, categoría, vehículo,
+       * precio y stock en una sola consulta, ya ordenada y paginada.
+       *
+       * `security invoker`: RLS decide qué productos ve quien llama, así que
+       * `anon` la puede invocar. Los parámetros llevan prefijo `p_`.
+       *
+       * Con vehículo devuelve los `universal` y los `specific` con un fitment
+       * que lo cubra; un `specific` sin fitments no aparece.
+       */
+      search_products: {
+        Args: {
+          p_query?: string | null;
+          p_category_slug?: string | null;
+          p_make_id?: number | null;
+          p_model_id?: number | null;
+          p_year?: number | null;
+          p_min_price?: number | null;
+          p_max_price?: number | null;
+          p_in_stock_only?: boolean;
+          p_sort?: 'relevance' | 'price_asc' | 'price_desc' | 'best_sellers' | 'newest';
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: SearchProductRow[];
+      };
       get_site_stats: {
         Args: Record<string, never>;
         Returns: { vehicles: number; parts: number; members: number }[];
@@ -622,6 +772,8 @@ export type Database = {
       item_condition: ItemCondition;
       news_scope: NewsScope;
       order_status: OrderStatus;
+      product_fulfillment: ProductFulfillmentDb;
+      product_fitment_type: ProductFitmentTypeDb;
     };
     CompositeTypes: Record<string, never>;
   };

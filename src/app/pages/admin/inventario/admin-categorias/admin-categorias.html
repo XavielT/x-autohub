@@ -1,0 +1,73 @@
+<section class="cat">
+  <form class="cat__add" (ngSubmit)="add()">
+    <label class="cat__field">
+      <span>Nueva categoria</span>
+      <input type="text" name="name" placeholder="Discos y pastillas" maxlength="80"
+             [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
+    </label>
+    <label class="cat__field">
+      <span>Dentro de</span>
+      <select name="parent" [ngModel]="newParentId()" (ngModelChange)="newParentId.set($event)">
+        <option [ngValue]="null">Ninguna (primer nivel)</option>
+        @for (root of tree(); track root.id) {
+          <option [ngValue]="root.id">{{ root.name }}</option>
+        }
+      </select>
+    </label>
+    <button type="submit" class="cat__btn cat__btn--primary" [disabled]="isAdding()">
+      {{ isAdding() ? 'Agregando...' : 'Agregar' }}
+    </button>
+  </form>
+
+  @if (isLoading()) {
+    <p class="cat__empty">Cargando categorias...</p>
+  } @else if (tree().length === 0) {
+    <p class="cat__empty">No hay categorias. Agrega la primera arriba.</p>
+  } @else {
+    <ul class="cat__tree">
+      @for (root of tree(); track root.id) {
+        <li class="cat__node" [class.cat__node--off]="!root.isActive">
+          <div class="cat__row">
+            <input type="text" class="cat__name" maxlength="80" [value]="root.name"
+                   [disabled]="savingId() === root.id"
+                   [attr.aria-label]="'Nombre de ' + root.name"
+                   (change)="rename(root, $event)" />
+            <div class="cat__tools">
+              <button type="button" class="cat__btn" [disabled]="savingId() !== null || $first"
+                      [attr.aria-label]="'Subir ' + root.name" (click)="move(root, -1)">↑</button>
+              <button type="button" class="cat__btn" [disabled]="savingId() !== null || $last"
+                      [attr.aria-label]="'Bajar ' + root.name" (click)="move(root, 1)">↓</button>
+              <button type="button" class="cat__btn" [disabled]="savingId() === root.id"
+                      (click)="toggleActive(root)">{{ root.isActive ? 'Ocultar' : 'Mostrar' }}</button>
+            </div>
+          </div>
+          <span class="cat__slug">/{{ root.slug }}</span>
+
+          @if (root.children.length > 0) {
+            <ul class="cat__children">
+              @for (child of root.children; track child.id) {
+                <li class="cat__node cat__node--child" [class.cat__node--off]="!child.isActive">
+                  <div class="cat__row">
+                    <input type="text" class="cat__name" maxlength="80" [value]="child.name"
+                           [disabled]="savingId() === child.id"
+                           [attr.aria-label]="'Nombre de ' + child.name"
+                           (change)="rename(child, $event)" />
+                    <div class="cat__tools">
+                      <button type="button" class="cat__btn" [disabled]="savingId() !== null || $first"
+                              [attr.aria-label]="'Subir ' + child.name" (click)="move(child, -1)">↑</button>
+                      <button type="button" class="cat__btn" [disabled]="savingId() !== null || $last"
+                              [attr.aria-label]="'Bajar ' + child.name" (click)="move(child, 1)">↓</button>
+                      <button type="button" class="cat__btn" [disabled]="savingId() === child.id"
+                              (click)="toggleActive(child)">{{ child.isActive ? 'Ocultar' : 'Mostrar' }}</button>
+                    </div>
+                  </div>
+                  <span class="cat__slug">/{{ child.slug }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

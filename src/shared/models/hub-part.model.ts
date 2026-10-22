@@ -1,13 +1,7 @@
-export interface HubPartModel {
-    id: number;
-    category: string;
-    imgUrl: string;
-    images?: string[];
-    name: string;
-    brand: string;
-    starsRating: number;
-    price: number;
-    description: string;
-    /** Artículo de prueba. Ver `shared/utils/test-visibility.ts`. */
-    isTest?: boolean;
-}
+import { ProductModel } from './product.model';
+
+/**
+ * @deprecated Usa `ProductModel` (`shared/models/product.model.ts`). Es un alias
+ * para no romper imports durante el pivote; se retira en la fase 7.
+ */
+export type HubPartModel = ProductModel;

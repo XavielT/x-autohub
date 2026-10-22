@@ -1,0 +1,50 @@
+<section class="mk">
+  <form class="mk__card" (ngSubmit)="addMake()">
+    <label class="mk__field">
+      <span>Nueva marca</span>
+      <input type="text" name="make" placeholder="Hyundai" maxlength="60"
+             [ngModel]="newMakeName()" (ngModelChange)="newMakeName.set($event)" />
+    </label>
+    <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()">Agregar marca</button>
+  </form>
+
+  @if (isLoading()) {
+    <p class="mk__empty">Cargando marcas...</p>
+  } @else {
+    <div class="mk__card">
+      <label class="mk__field">
+        <span>Marca <small>({{ makes().length }})</small></span>
+        <select [ngModel]="selectedMakeId()" (ngModelChange)="selectMake($event)"
+                [ngModelOptions]="{ standalone: true }">
+          <option [ngValue]="null">Elige una marca para ver sus modelos</option>
+          @for (m of makes(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
+        </select>
+      </label>
+
+      @if (selectedMake(); as make) {
+        <form class="mk__add-model" (ngSubmit)="addModel()">
+          <label class="mk__field">
+            <span>Nuevo modelo de {{ make.name }}</span>
+            <input type="text" name="model" placeholder="Corolla" maxlength="60"
+                   [ngModel]="newModelName()" (ngModelChange)="newModelName.set($event)" />
+          </label>
+          <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()">
+            Agregar modelo
+          </button>
+        </form>
+
+        @if (isLoadingModels()) {
+          <p class="mk__hint">Cargando modelos...</p>
+        } @else if (models().length === 0) {
+          <p class="mk__hint">{{ make.name }} todavia no tiene modelos. Agrega el primero arriba.</p>
+        } @else {
+          <ul class="mk__models">
+            @for (model of models(); track model.id) {
+              <li class="mk__model">{{ model.name }}</li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  }
+</section>

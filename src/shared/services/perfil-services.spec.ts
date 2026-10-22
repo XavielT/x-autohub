@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { HubMarketService } from './hub-market.service';
 import { OrderService } from './order.service';
 import { HubMarketItemModel } from '../models/hub-market-item.model';
+import { makeProduct } from '../testing/product.fixture';
 
 /**
  * Los caminos simulados de lo que consume el perfil.
@@ -105,7 +106,7 @@ describe('OrderService.getByUserId (mock)', () => {
         },
         [
           {
-            part: { id: 1, name: 'Pieza', price: 1000, brand: 'X', category: 'frenos', imgUrl: 'x', description: '', starsRating: 4 },
+            part: makeProduct({ id: 1, name: 'Pieza', price: 1000, brand: 'X', imgUrl: 'x', description: '', starsRating: 4 }),
             quantity: 2,
           },
         ],

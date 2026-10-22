@@ -3,10 +3,24 @@ import {
   toHubMarketItem,
   toHubPart,
   toNews,
+  toProduct,
+  toProductCategory,
+  toProductFitment,
+  toProfileVehicle,
   toSocialPost,
+  toSpecs,
+  toVehicleMake,
+  toVehicleModel,
   fromHubMarketItem,
 } from './mappers';
-import { AutoHubVehicleRow, HubMarketItemRow, HubPartRow, NewsRow, SocialPostRow } from './database.types';
+import {
+  AutoHubVehicleRow,
+  HubMarketItemRow,
+  HubPartRow,
+  NewsRow,
+  SearchProductRow,
+  SocialPostRow,
+} from './database.types';
 
 describe('mappers', () => {
   describe('toHubMarketItem', () => {
@@ -150,7 +164,7 @@ describe('mappers', () => {
     });
   });
 
-  describe('toHubPart', () => {
+  describe('toProduct', () => {
     const row: HubPartRow = {
       id: 1,
       category: 'frenos',
@@ -165,15 +179,126 @@ describe('mappers', () => {
       is_active: true,
       is_test: false,
       created_at: '2026-01-01T00:00:00Z',
+      category_id: 6,
+      slug: 'disco-gtr-1',
+      sku: 'XAH-000001',
+      short_description: 'Disco ventilado',
+      compare_at_price: null,
+      is_featured: false,
+      fulfillment: 'stock',
+      lead_time_days: null,
+      fitment_type: 'specific',
+      installable: false,
+      installation_service_id: null,
+      specs: {},
+      sold_count: 0,
+      updated_at: '2026-01-02T00:00:00Z',
     };
 
-    it('convierte la calificacion numerica a string, como espera la plantilla', () => {
-      expect(toHubPart(row).starsRating).toBe(4.9);
+    it('mapea snake_case a camelCase, con las columnas de la tienda', () => {
+      const p = toProduct(row);
+      expect(p.categoryId).toBe(6);
+      expect(p.slug).toBe('disco-gtr-1');
+      expect(p.sku).toBe('XAH-000001');
+      expect(p.shortDescription).toBe('Disco ventilado');
+      expect(p.fulfillment).toBe('stock');
+      expect(p.fitmentType).toBe('specific');
+      expect(p.isActive).toBe(true);
+      expect(p.updatedAt?.toISOString()).toBe('2026-01-02T00:00:00.000Z');
+    });
+
+    it('convierte la calificacion numerica a numero, como espera la plantilla', () => {
+      expect(toProduct(row).starsRating).toBe(4.9);
+      // Postgres devuelve numeric como texto en algunos clientes.
+      expect(toProduct({ ...row, stars_rating: '4.9' as unknown as number }).starsRating).toBe(4.9);
     });
 
     it('deja images indefinido cuando el arreglo viene vacio', () => {
-      expect(toHubPart(row).images).toBeUndefined();
-      expect(toHubPart({ ...row, images: ['a.jpg'] }).images).toEqual(['a.jpg']);
+      expect(toProduct(row).images).toBeUndefined();
+      expect(toProduct({ ...row, images: ['a.jpg'] }).images).toEqual(['a.jpg']);
+    });
+
+    it('un producto sin oferta tiene compareAtPrice nulo, y con oferta es un numero', () => {
+      expect(toProduct(row).compareAtPrice).toBeNull();
+      expect(toProduct({ ...row, compare_at_price: '14900.00' as unknown as number }).compareAtPrice).toBe(14900);
+    });
+
+    it('un producto nuevo con solo category_id no rompe el texto de la categoria', () => {
+      expect(toProduct({ ...row, category: null }).category).toBe('');
+    });
+
+    it('toHubPart sigue siendo el mismo mapper, para quien aun lo importa', () => {
+      expect(toHubPart).toBe(toProduct);
+    });
+
+    it('lee una fila de search_products() igual que una de hub_parts', () => {
+      const found: SearchProductRow = { ...row, total_count: 12 };
+      expect(toProduct(found).slug).toBe('disco-gtr-1');
+    });
+  });
+
+  describe('toSpecs', () => {
+    it('deja pasar los pares de texto', () => {
+      expect(toSpecs({ Material: 'Aluminio', Medida: '18x8.5' })).toEqual({ Material: 'Aluminio', Medida: '18x8.5' });
+    });
+
+    it('convierte en texto lo que alguien cargo como numero o booleano', () => {
+      expect(toSpecs({ Piezas: 4, Reusable: true })).toEqual({ Piezas: '4', Reusable: 'true' });
+    });
+
+    it('descarta los nulos y lo que no es un objeto', () => {
+      expect(toSpecs({ A: null, B: 'x' })).toEqual({ B: 'x' });
+      expect(toSpecs(null)).toEqual({});
+      expect(toSpecs([1, 2])).toEqual({});
+      expect(toSpecs('texto')).toEqual({});
+    });
+  });
+
+  describe('catalogo de vehiculos y categorias', () => {
+    it('toProductCategory', () => {
+      expect(
+        toProductCategory({
+          id: 7,
+          parent_id: 6,
+          slug: 'discos',
+          name: 'Discos',
+          icon: null,
+          sort_order: 10,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00Z',
+        }),
+      ).toEqual({ id: 7, parentId: 6, slug: 'discos', name: 'Discos', icon: null, sortOrder: 10, isActive: true });
+    });
+
+    it('toVehicleMake y toVehicleModel', () => {
+      expect(toVehicleMake({ id: 1, name: 'Toyota', slug: 'toyota' })).toEqual({ id: 1, name: 'Toyota', slug: 'toyota' });
+      expect(toVehicleModel({ id: 2, make_id: 1, name: 'Corolla', slug: 'corolla' })).toEqual({
+        id: 2,
+        makeId: 1,
+        name: 'Corolla',
+        slug: 'corolla',
+      });
+    });
+
+    it('toProductFitment conserva los nulos: toda la marca, sin limite de anos', () => {
+      expect(
+        toProductFitment({ id: 1, product_id: 9, make_id: 1, model_id: null, year_from: null, year_to: 2020 }),
+      ).toEqual({ id: 1, productId: 9, makeId: 1, modelId: null, yearFrom: null, yearTo: 2020 });
+    });
+
+    it('toProfileVehicle', () => {
+      expect(
+        toProfileVehicle({
+          id: 3,
+          user_id: 'u-1',
+          make_id: 1,
+          model_id: 2,
+          year: 2015,
+          nickname: 'El diario',
+          is_default: true,
+          created_at: '2026-01-01T00:00:00Z',
+        }),
+      ).toEqual({ id: 3, userId: 'u-1', makeId: 1, modelId: 2, year: 2015, nickname: 'El diario', isDefault: true });
     });
   });
 

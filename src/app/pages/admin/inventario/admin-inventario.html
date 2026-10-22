@@ -3,10 +3,10 @@
     <div>
       <h2 class="adm-inv__title">Inventario propio</h2>
       <p class="adm-inv__lead">
-        Catalogo, Auto Hub y noticias. Hub Market no se administra aqui: lo publica la comunidad.
+        Tienda, Auto Hub y noticias, mas las categorias y los vehiculos de la tienda. Hub Market no se administra aqui: lo publica la comunidad.
       </p>
     </div>
-    @if (!isCreating()) {
+    @if (!isCreating() && tab() !== 'categorias' && tab() !== 'marcas') {
       <button type="button" class="adm-inv__new" (click)="startCreate()">
         @switch (tab()) {
           @case ('piezas') { + Nueva pieza }
@@ -24,21 +24,29 @@
     </button>
     <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'vehiculos'"
             [class.adm-inv__tab--active]="tab() === 'vehiculos'" (click)="setTab('vehiculos')">
-      Vehiculos <span>{{ vehicles().length }}</span>
+      Auto Hub <span>{{ vehicles().length }}</span>
     </button>
     <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'noticias'"
             [class.adm-inv__tab--active]="tab() === 'noticias'" (click)="setTab('noticias')">
       Noticias <span>{{ news().length }}</span>
     </button>
+    <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'categorias'"
+            [class.adm-inv__tab--active]="tab() === 'categorias'" (click)="setTab('categorias')">
+      Categorias
+    </button>
+    <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'marcas'"
+            [class.adm-inv__tab--active]="tab() === 'marcas'" (click)="setTab('marcas')">
+      Marcas y modelos
+    </button>
   </div>
 
   <!-- Selector de imagenes: comun a los tres formularios -->
-  @if (isCreating()) {
+  @if (isCreating() && tab() !== 'categorias' && tab() !== 'marcas') {
     <div class="adm-inv__form">
       <h3 class="adm-inv__form-title">
         @if (editingId() === null) {
           @switch (tab()) {
-            @case ('piezas') { Nueva pieza del catalogo }
+            @case ('piezas') { Nueva pieza de la tienda }
             @case ('vehiculos') { Nuevo vehiculo de Auto Hub }
             @case ('noticias') { Nueva noticia }
           }
@@ -105,29 +113,130 @@
             </label>
             <label class="adm-inv__field">
               <span>Categoria</span>
-              <input type="text" formControlName="category" list="categorias-piezas" />
-              <datalist id="categorias-piezas">
-                @for (c of categories; track c) { <option [value]="c"></option> }
-              </datalist>
+              <select formControlName="categoryId">
+                <option [ngValue]="null" disabled>Elige una categoria</option>
+                @for (root of categoryTree(); track root.id) {
+                  @if (root.children.length === 0) {
+                    <option [ngValue]="root.id">{{ root.name }}</option>
+                  } @else {
+                    <optgroup [label]="root.name">
+                      <option [ngValue]="root.id">{{ root.name }} (general)</option>
+                      @for (child of root.children; track child.id) {
+                        <option [ngValue]="child.id">{{ child.name }}</option>
+                      }
+                    </optgroup>
+                  }
+                }
+              </select>
+              @if (showError('part', 'categoryId')) { <small class="adm-inv__err">Elige una categoria.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>Precio (RD$)</span>
-              <input type="number" formControlName="price" min="0" step="50" />
-              @if (showError('part', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              <span>SKU <small>(vacio = automatico)</small></span>
+              <input type="text" formControlName="sku" placeholder="XAH-000123" />
             </label>
             <label class="adm-inv__field">
-              <span>Existencias</span>
-              <input type="number" formControlName="stock" min="0" step="1" />
-              @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              <span>Direccion web (slug) <small>(vacio = automatica)</small></span>
+              <input type="text" formControlName="slug" placeholder="disco-ventilado-gtr-355mm" />
+              @if (showError('part', 'slug')) {
+                <small class="adm-inv__err">Solo minusculas, numeros y guiones.</small>
+              }
+            </label>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Descripcion corta <small>(la que sale en las tarjetas)</small></span>
+              <input type="text" formControlName="shortDescription" maxlength="160"
+                     placeholder="Una linea: que es y para que sirve" />
             </label>
             <label class="adm-inv__field adm-inv__field--full">
               <span>Descripcion</span>
               <textarea formControlName="description" rows="3"
-                        placeholder="Para que sirve, con que vehiculos es compatible…"></textarea>
+                        placeholder="El detalle completo de la pieza…"></textarea>
+            </label>
+
+            <h4 class="adm-inv__section">Precio</h4>
+            <label class="adm-inv__field">
+              <span>Precio (RD$)</span>
+              <input type="number" inputmode="decimal" formControlName="price" min="0" step="50" />
+              @if (showError('part', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+            </label>
+            <label class="adm-inv__field">
+              <span>Precio anterior (RD$) <small>(vacio = sin oferta)</small></span>
+              <input type="number" inputmode="decimal" formControlName="compareAtPrice" min="0" step="50" />
+              @if (partRuleError('compareAtLow')) {
+                <small class="adm-inv__err">Tiene que ser mayor que el precio actual.</small>
+              }
+            </label>
+
+            <h4 class="adm-inv__section">Disponibilidad</h4>
+            <label class="adm-inv__field">
+              <span>Como se entrega</span>
+              <select formControlName="fulfillment">
+                @for (o of fulfillmentOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            @if (partForm.controls.fulfillment.value === 'stock') {
+              <label class="adm-inv__field">
+                <span>Existencias</span>
+                <input type="number" inputmode="numeric" formControlName="stock" min="0" step="1" />
+                @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              </label>
+            } @else {
+              <label class="adm-inv__field">
+                <span>Dias de entrega</span>
+                <input type="number" inputmode="numeric" formControlName="leadTimeDays" min="1" step="1"
+                       placeholder="10" />
+                @if (partRuleError('leadTimeMissing')) {
+                  <small class="adm-inv__err">Un articulo bajo pedido tiene que decir cuantos dias tarda.</small>
+                }
+              </label>
+            }
+
+            <h4 class="adm-inv__section">Compatibilidad</h4>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Para que vehiculos sirve</span>
+              <select formControlName="fitmentType">
+                @for (o of fitmentOptions; track o.value) {
+                  <option [value]="o.value">{{ o.label }}</option>
+                }
+              </select>
+            </label>
+            @if (partForm.controls.fitmentType.value === 'specific') {
+              <div class="adm-inv__field adm-inv__field--full">
+                <app-fitment-editor [(fitments)]="fitments" />
+              </div>
+            }
+
+            <h4 class="adm-inv__section">Instalacion</h4>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="installable" />
+              <span>Se puede instalar en el taller</span>
+            </label>
+            @if (partForm.controls.installable.value) {
+              <label class="adm-inv__field adm-inv__field--full">
+                <span>Servicio que la instala <small>(opcional: de ahi sale el precio)</small></span>
+                <select formControlName="installationServiceId">
+                  <option [ngValue]="null">Sin servicio asociado</option>
+                  @for (svc of services(); track svc.id) {
+                    <option [ngValue]="svc.id">{{ svc.title }}</option>
+                  }
+                </select>
+              </label>
+            }
+
+            <h4 class="adm-inv__section">Especificaciones</h4>
+            <div class="adm-inv__field adm-inv__field--full">
+              <app-specs-editor [(specs)]="specs" />
+            </div>
+
+            <h4 class="adm-inv__section">Visibilidad</h4>
+            <label class="adm-inv__check">
+              <input type="checkbox" formControlName="isFeatured" />
+              <span>Destacada <small>(sale primero en la tienda)</small></span>
             </label>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="isActive" />
-              <span>Visible en el catalogo</span>
+              <span>Visible en la tienda</span>
             </label>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="isTest" />
@@ -135,7 +244,7 @@
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
-                {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar al catalogo' : 'Guardar cambios') }}
+                {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a la tienda' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
             </div>
@@ -297,17 +406,21 @@
     </div>
   }
 
-  @if (isLoading()) {
+  @if (tab() === 'categorias') {
+    <app-admin-categorias />
+  } @else if (tab() === 'marcas') {
+    <app-admin-marcas />
+  } @else if (isLoading()) {
     <p class="adm-inv__empty">Cargando inventario...</p>
   } @else {
     @switch (tab()) {
       @case ('piezas') {
         @if (parts().length === 0) {
-          <p class="adm-inv__empty">No hay piezas en el catalogo.</p>
+          <p class="adm-inv__empty">No hay piezas en la tienda.</p>
         } @else {
           <div class="adm-inv__table-wrap">
             <table class="adm-inv__table">
-              <caption class="adm-inv__caption">Piezas del catalogo</caption>
+              <caption class="adm-inv__caption">Piezas de la tienda</caption>
               <thead>
                 <tr><th scope="col">Pieza</th><th scope="col">Precio (RD$)</th>
                     <th scope="col">Stock</th><th scope="col">Estado</th></tr>
@@ -318,7 +431,7 @@
                     <td>
                       <span class="adm-inv__name">{{ part.name }}</span>
                       @if (part.isTest) { <span class="adm-inv__test">PRUEBA</span> }
-                      <span class="adm-inv__sub">{{ part.brand }} · {{ part.category }}</span>
+                      <span class="adm-inv__sub">{{ part.brand }} · {{ categoryName(part) }} · {{ part.sku }}</span>
                     </td>
                     <td>
                       <input type="number" min="0" step="50" class="adm-inv__input"
@@ -331,7 +444,11 @@
                              [value]="part.stock" [disabled]="savingId() === 'p' + part.id"
                              (change)="savePartField(part, 'stock', $event)"
                              [attr.aria-label]="'Existencias de ' + part.name" />
-                      @if (part.stock === 0) { <span class="adm-inv__warn">agotado</span> }
+                      @if (part.fulfillment === 'on_order') {
+                        <span class="adm-inv__sub">Bajo pedido</span>
+                      } @else if (part.stock === 0) {
+                        <span class="adm-inv__warn">agotado</span>
+                      }
                     </td>
                     <td>
                       <div class="adm-inv__row-tools">

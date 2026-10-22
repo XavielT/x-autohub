@@ -1,0 +1,121 @@
+.cat {
+  font-family: var(--font-body);
+
+  &__add {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    align-items: end;
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+
+    input,
+    select { @extend %cat-input; }
+  }
+
+  &__tree,
+  &__children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__children { margin-top: 10px; padding-left: 18px; }
+
+  &__node {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 14px;
+
+    &--child { background-color: rgba(0, 0, 0, 0.2); padding: 10px 12px; }
+    &--off { opacity: 0.5; }
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  &__name {
+    @extend %cat-input;
+    flex: 1 1 180px;
+    width: auto;
+    font-weight: 600;
+  }
+
+  &__tools { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  &__slug {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-soft);
+  }
+
+  &__btn {
+    min-width: 44px;
+    min-height: 44px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    background: transparent;
+    color: var(--text-strong);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover:not(:disabled) { color: var(--Hub); border-color: var(--Hub); }
+    &:disabled { opacity: 0.4; cursor: default; }
+
+    &--primary {
+      font-family: var(--font-btns);
+      font-weight: 700;
+      color: #1a1a1a;
+      background-color: var(--Hub);
+      border-color: var(--Hub);
+
+      &:hover:not(:disabled) { color: #1a1a1a; filter: brightness(1.1); }
+    }
+  }
+
+  &__empty {
+    background-color: var(--main-light);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    color: var(--text-soft);
+  }
+}
+
+// Mismo campo que el resto del panel. Con 16px de letra para que el iPhone no
+// haga zoom al enfocarlo y con 44px de alto para que se pulse bien con el pulgar.
+%cat-input {
+  font-family: var(--font-body);
+  font-size: 16px;
+  min-height: 44px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus { outline: none; border-color: var(--Hub); }
+  &:disabled { opacity: 0.5; }
+}
