@@ -73,24 +73,36 @@ git worktree remove --force /tmp/verify
 
 ## Qué es X AutoHub
 
-Plataforma web para la comunidad automotriz de **República Dominicana**. No es un
-concesionario ni una tienda: es el punto de encuentro donde alguien compra un
-carro, encuentra la pieza que necesita, contrata un taller y sigue la escena.
+Tienda en línea de accesorios y piezas para vehículos en **República Dominicana**,
+con taller propio. Alrededor están los vehículos (oficiales y de la comunidad) y
+la comunidad automotriz, pero el pilar principal es la tienda.
 
-El texto del hero lo resume: *"El hub central de los autos en RD"*.
+La frase que lo resume desde el pivote: *"Todo lo que tu carro necesita, en un
+solo lugar: accesorios, piezas y taller, en RD."* (El `<title>`, la ruta
+del home y el login todavía dicen *"El hub central de los autos en RD"*; eso
+cambia en la fase 2.)
 
 La interfaz está **100% en español dominicano**. Ver `docs/VISION.md` para el
 detalle del producto.
 
-### Los cinco pilares (no los confundas)
+### Los pilares (no los confundas)
 
-| Pilar          | Ruta           | Qué es                                                                 | Inventario de     |
-| -------------- | -------------- | ---------------------------------------------------------------------- | ----------------- |
-| **Auto Hub**   | `/auto-hub`    | Vehículos **oficiales de X AutoHub**, verificados por el equipo         | La empresa        |
-| **Hub Market** | `/hub-market`  | Clasificados **publicados por usuarios**: vehículos, piezas, accesorios | La comunidad      |
-| **Catálogo**   | `/catalogo`    | Tienda **propia** de piezas, con carrito y checkout                     | La empresa        |
-| **Servicios**  | `/servicios`   | Taller: mantenimiento, reparación, diagnóstico. Contacto por WhatsApp   | La empresa        |
-| **Social Hub** | `/social-hub`  | Comunidad: feed, clubes y eventos                                      | La comunidad      |
+Desde el pivote de octubre de 2026 X AutoHub es **una tienda de accesorios y
+piezas con taller propio**; lo demás queda en segundo plano. El plan completo
+está en `docs/PIVOT-2026-10.md` y manda sobre `docs/VISION.md` y
+`docs/ROADMAP.md` donde se contradigan.
+
+| Pilar          | Ruta                       | Rol        | Qué es                                                                |
+| -------------- | -------------------------- | ---------- | --------------------------------------------------------------------- |
+| **Tienda**     | `/tienda`                  | Principal  | Accesorios y piezas de X AutoHub. Carrito, checkout, pedidos          |
+| **Servicios**  | `/servicios`               | Soporte    | Taller: instalación, mantenimiento, mecánica ligera, eléctrico, A/C   |
+| **Vehículos**  | `/auto-hub`, `/hub-market` | Secundario | Auto Hub (oficiales) y Hub Market (de la comunidad)                   |
+| **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
+
+> **El pivote se entrega por fases** (ver `docs/ROADMAP.md`). Mientras una fase
+> no esté desplegada, el código sigue siendo el anterior: hoy la tienda vive en
+> `/catalogo` y el navbar todavía muestra los cinco pilares. No documentes ni
+> asumas como existente lo que una fase posterior va a construir.
 
 > **Auto Hub y Hub Market están separados a propósito.** Auto Hub son los carros
 > que vende X AutoHub; Hub Market son los que publican los usuarios. No los
@@ -169,7 +181,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 65 archivos, 304 pruebas, todo verde
+npm test        # 66 archivos, 336 pruebas, todo verde (cifra al 22/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -276,6 +288,7 @@ Cosas que ya causaron un bug. No las repitas:
 
 | Archivo                  | Para qué                                                        |
 | ------------------------ | --------------------------------------------------------------- |
+| `docs/PIVOT-2026-10.md`  | **El plan vigente del producto**: decisiones, modelo de datos, fases y prompts |
 | `docs/VISION.md`         | Qué es el producto, para quién, y el tono de la marca            |
 | `docs/ARCHITECTURE.md`   | Estructura de carpetas, flujo de datos, dónde va cada archivo    |
 | `docs/CONVENTIONS.md`    | Convenciones de TS, plantillas, SCSS, nombres, imágenes          |

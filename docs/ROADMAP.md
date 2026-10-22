@@ -1,16 +1,96 @@
 # Roadmap
 
-Trabajo pendiente, ordenado por relación valor/esfuerzo. Sale de la auditoría del
-2026-08-11 (`docs/AUDIT-2026-08-11.md`), donde ya se arregló todo lo que estaba
-roto. Esto es lo que **queda**.
+Trabajo hecho y pendiente. Hasta agosto de 2026 salía de la auditoría del
+2026-08-11 (`docs/AUDIT-2026-08-11.md`); desde octubre el rumbo lo marca el
+pivote del producto, descrito en `docs/PIVOT-2026-10.md`, que manda sobre este
+archivo donde se contradigan.
+
+Estado de partida del pivote: `v1.3.7`, sitio en vivo en `xautohubrd.com`.
 
 Cada punto dice **por qué** importa, no solo qué hacer.
 
 ---
 
-## P0 — Lo que sigue
+## El pivote: tienda de accesorios con taller (1.4.0 → 2.5.0)
 
-### 1. ~~Apuntar `xautohubrd.com` a Vercel~~ ✅ **hecho**
+X AutoHub pasa de cinco pilares al mismo nivel a **una tienda con taller**, con
+vehículos y comunidad en segundo plano. Es el trabajo que sigue, en este orden,
+una fase por sesión y un push a `main` con su versión cada una. Cada fase cierra
+con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
+`verify-migrations.sh` si tocó `supabase/`, bump, tag anotado, fila en
+`releases`, `vercel --prod`).
+
+| Fase | Qué entrega                                                       | Versión   | Toca `supabase/` | Estado       |
+| ---- | ----------------------------------------------------------------- | --------- | ---------------- | ------------ |
+| 0    | Documentación del pivote                                          | 1.4.0     | No               | preparada    |
+| 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | pendiente    |
+| 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | **2.0.0** | No               | pendiente    |
+| 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | pendiente    |
+| 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | pendiente    |
+| 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | pendiente    |
+| 6    | PWA                                                               | 2.4.0     | No               | pendiente    |
+| 7    | Reseñas, SEO de producto, limpieza de código muerto               | 2.5.0     | 0020 (y 0021)    | pendiente    |
+
+El orden está pensado para que el sitio nunca quede a medias en producción: la
+fase 1 es invisible para el usuario; la 2 estrena la cara nueva sobre el
+catálogo que ya existe; la 3 y la 4 lo convierten en tienda de verdad; la 5 y la
+6 suman el taller y la app.
+
+### Fase 1 — Esquema de tienda (1.5.0)
+
+**Por qué:** todo lo demás se apoya en categorías jerárquicas, compatibilidad por
+vehículo, disponibilidad (stock o bajo pedido) y una búsqueda que los cruce.
+Hacerlo primero y sin UI pública permite probar el esquema y la seguridad sin
+que el usuario lo note.
+
+### Fase 2 — Shell y home nuevos (2.0.0)
+
+**Por qué:** es lo que el visitante ve primero. Hoy el home abre con un hero que
+no le dice qué hacer; el buscador, las categorías y "elige tu vehículo" sí. Es
+`major` porque cambia cómo se navega el sitio publicado.
+
+### Fase 3 — Tienda: listado, filtros, "mi vehículo" y ficha (2.1.0)
+
+**Por qué:** sin filtros por vehículo y una ficha que diga "¿sirve para mi
+carro?", una tienda de piezas es un catálogo mudo. La compatibilidad es la
+diferencia con preguntar por WhatsApp.
+
+### Fase 4 — Checkout, pedidos y pago (2.2.0)
+
+**Por qué:** hoy el checkout ofrece una tarjeta que no existe. Sin pasarela, el
+flujo real es transferencia con comprobante o cierre por WhatsApp, y alguien
+tiene que poder marcar `paid` en dos toques desde el teléfono, o no se hará.
+
+### Fase 5 — Servicios: catálogo, cotización, agenda y trabajos (2.3.0)
+
+**Por qué:** el taller es el segundo pilar y hoy son cuatro tarjetas y un botón
+de WhatsApp. Cotizar, agendar sin llamar y ver trabajos hechos es lo que
+convierte una visita en un cliente, y habilita la instalación de lo que se
+vende.
+
+### Fase 6 — PWA (2.4.0)
+
+**Por qué:** el cliente de una tienda de accesorios entra desde el teléfono. Una
+app instalable con barra de pestañas y shell en caché se siente como Mercado
+Libre y no como una página, sin cachear precios ni stock.
+
+### Fase 7 — Reseñas, SEO y limpieza (2.5.0)
+
+**Por qué:** las reseñas con compra verificada dan confianza, el SEO de producto
+trae tráfico sin pagar, y la limpieza retira el código que el pivote dejó sin
+dueño (`page-counter-overview`, `home-featured-*`, `home-news`, `HubPartModel`,
+la columna `category text`) en cuanto nada lo importa.
+
+**Fuera de esta ronda, a propósito:** pasarela de tarjeta (Azul/CardNet vía
+función serverless), notificaciones push, variantes de producto, cupones,
+inventario multi-almacén, facturación con NCF y trabajo nuevo en Social Hub.
+Ver `docs/PIVOT-2026-10.md` §9.
+
+---
+
+## Hecho
+
+### ~~Apuntar `xautohubrd.com` a Vercel~~ ✅ **hecho**
 
 El DNS ya apunta a Vercel. Comprobado como avisaba este mismo punto —un 200 no
 prueba nada— leyendo las cabeceras: `server: Vercel` y `x-vercel-cache: HIT` en
@@ -27,7 +107,7 @@ manda por correo y la app **no pasa `emailRedirectTo`** en ningun sitio. El dia
 que se active la confirmacion o se agregue recuperacion de contraseña, esos
 enlaces ya apuntan al sitio y no a la maquina de quien programo.
 
-### 2. Seguridad del backend — **ya corregida y verificada**
+### Seguridad del backend — **ya corregida y verificada**
 
 Las migraciones 0004, 0005 y 0006 están ejecutadas. Se deja constancia de lo que
 se encontró, porque son las trampas a no repetir (ver también `CLAUDE.md`):
@@ -47,7 +127,7 @@ Para gestionar el inventario propio necesitas ser admin. Regístrate y corre:
 node scripts/make-admin.mjs tu@correo.com
 ```
 
-### 3. Fuentes — **resuelto en la v0.1.0**
+### Fuentes sin licencia — **resuelto en la v0.1.0**
 
 Se retiraron las cuatro que no tenían licencia comercial (Batman, ROLNER,
 Designer, Dimona) y Biotrip-Serif, que decía `Personal use only`. Las reemplazan
@@ -55,13 +135,10 @@ Chakra Petch y Orbitron, ambas SIL OFL 1.1 y distribuidas con su `OFL.txt`.
 
 Todo está ya en WOFF2 y con subconjunto latino: `src/assets/fonts` pesa **336 KB**.
 
-Quedan dos sin usar y sin licencia documentada, **Gefika** (`--font-heading`) y
-**Spoiler-script** (`--font-highlight`). No se renderizan en ningún lado; hay que
-resolver sus derechos antes de darles uso. Ver `docs/CONVENTIONS.md`.
+Lo que quedó sin resolver (Gefika y Spoiler-script) está en "Pendiente que no
+depende del pivote".
 
-## P1 — Deuda que ya está costando
-
-### 3.5. ~~El carrito no sobrevive una recarga~~ ✅ **hecho**
+### ~~El carrito no sobrevive una recarga~~ ✅ **hecho**
 
 `cart.service.ts` ahora lo guarda en `localStorage` (`x-autohub.cart`). Antes
 vivía solo en memoria: un F5, un enlace compartido o volver desde otra pestaña lo
@@ -82,57 +159,10 @@ De paso se arregló algo que estorbaba para probar: **`/checkout` ya se puede
 abrir por URL directa** con el carrito lleno. Antes cualquier carga completa de
 página lo vaciaba y el checkout caía en "Tu carrito está vacío".
 
-### 4. Unificar las cinco páginas de detalle
+### Panel de administración — **hecho**
 
-`car-details`, `auto-hub-details`, `hub-part-details`, `hub-market-part-details` y
-`accessory-details` tienen **el mismo código de galería copiado cinco veces**:
-
-```ts
-selectImage(index) { ... }
-prevImage()  { if (this.images.length <= 1) return; ... }
-nextImage()  { if (this.images.length <= 1) return; ... }
-```
-
-Y el mismo `toggleDescription()` en dos de ellas.
-
-**Qué hacer:** extraer un `<app-image-gallery [images]="images">` en `shared/ui/` y
-un `<app-expandable-text [text]="..." [maxLength]="200">`. Cada página de detalle
-se queda solo con lo que la hace distinta.
-
-**Por qué importa:** cinco copias significa que un arreglo de galería hay que
-hacerlo cinco veces, y ya hay divergencia entre ellas (unas manejan el caso
-"artículo no encontrado", otras no).
-
-> Esto **no** unifica Auto Hub con Hub Market como producto. Comparten la galería,
-> no el inventario.
-
-### 5. `accessory-details` está sin terminar
-
-Es la única página que sigue siendo un borrador: siete `<p>` sin estilo, mientras
-las otras cuatro páginas de detalle tienen diseño completo. Ya se le arreglaron dos
-bugs (bindeaba el array de imágenes completo al `src`, y el precio sin formato),
-pero **visualmente rompe el sitio**. Es alcanzable desde `/hub-market` filtrando
-accesorios.
-
-Lo más rápido: reusar la estructura de `hub-market-part-details`, que muestra
-exactamente el mismo modelo (`HubMarketItemModel`).
-
-### 6. El carrito solo acepta piezas del catálogo
-
-`CartService` está tipado a `HubPartModel`, así que:
-
-- No se puede comprar un accesorio de Hub Market.
-- `cart-modal` y `checkout` acceden a `item.part.price` — el nombre `part` está
-  incrustado en las plantillas.
-
-**Qué hacer:** introducir un `CartLineItem` con lo mínimo que el carrito necesita
-(`id`, `name`, `price`, `imageUrl`, `source: 'catalogo' | 'hub-market'`) y que los
-servicios mapeen hacia él. El checkout deja de conocer el modelo de piezas.
-
-### 7. Panel de administración — **hecho**
-
-`/admin` con cuatro secciones: historial de versiones, pedidos, inventario y
-usuarios. Ver `docs/BACKEND.md`.
+`/admin` con seis secciones: moderación, versiones, pedidos, inventario, usuarios
+y ajustes. Ver `docs/BACKEND.md`.
 
 El inventario da de alta y edita por completo piezas, vehículos y noticias:
 todos los campos, incluidas las imágenes, que se suben al bucket `inventory`
@@ -148,15 +178,7 @@ líneas apunta a `hub_parts` y borrar una pieza vendida dejaría el histórico
 señalando a nada. Ocultarla (`is_active = false`) hace el mismo trabajo sin ese
 riesgo, y ya está.
 
-### 8. Enlaces del footer que no llevan a nada
-
-`Privacidad`, `Contacto` y `Reportar problema` son `href="#"`. Un enlace que no
-lleva a ningún lado es peor que no tenerlo. Hay que crear las tres páginas o
-quitar los enlaces hasta que existan.
-
----
-
-### 8.5. ~~El distintivo "PRUEBA" no se leia sobre las tarjetas del panel~~ ✅ **hecho**
+### ~~El distintivo "PRUEBA" no se leia sobre las tarjetas del panel~~ ✅ **hecho**
 
 Era `#c62828` sobre `#c6282824`. El fondo translucido toma el color de lo que
 tiene detras: sobre el fondo de la pagina daba 3.1:1, pero sobre las tarjetas del
@@ -171,94 +193,156 @@ lleva el color. Es tambien como ya se dibujaban los distintivos de rol del panel
 > `admin-usuarios` y `admin-inventario`. Hubo que cambiar las cuatro a mano. Lo
 > que toca es que las tres del panel usen el componente.
 
-## P2 — Modernizar a Angular 21
-
-El código funciona; esto es para que siga siendo mantenible.
-
-### 9. ~~`inject()` en vez de constructor~~ ✅
+### ~~`inject()` en vez de constructor~~ ✅
 
 Hecho durante la migración a Supabase: todos los componentes que tocaban un
 servicio pasaron a `inject()`. Quedan constructores solo donde no inyectan nada.
 
-### 10. ~~`@if` / `@for` en vez de `*ngIf` / `*ngFor`~~ ✅
+### ~~`@if` / `@for` en vez de `*ngIf` / `*ngFor`~~ ✅
 
 Hecho. **Cero** `*ngIf` / `*ngFor` en el proyecto, y `CommonModule` se cambió por
 imports puntuales (`DecimalPipe`, `SlicePipe`, `DatePipe`) donde hacían falta.
 
-### 11. Route params como inputs
+---
 
-Las cinco páginas de detalle hacen `route.paramMap.subscribe(...)` en `ngOnInit`.
-Con `withComponentInputBinding()` en el router, el `id` llega como un `@Input` y
-desaparece la suscripción manual.
+## Pendiente que no depende del pivote
 
-### 12. `ChangeDetectionStrategy.OnPush`
+Lo que ya estaba en la lista antes del pivote y no cabe en ninguna de sus fases.
+Ordenado por relación valor/esfuerzo. Donde una fase del pivote toca el mismo
+terreno, se dice.
 
-**Cero** componentes lo usan hoy. (La antigua `PROYECTO.md` afirmaba que todos lo
-tenían; no era cierto.) Se vuelve relevante cuando el estado migre a signals — con
-signals + OnPush el rendimiento sube sin esfuerzo extra.
+### Fuentes: Gefika y Spoiler-script
 
-### 13. Cargar `supabase-js` bajo demanda
+Quedan dos sin usar y sin licencia documentada, **Gefika** (`--font-heading`) y
+**Spoiler-script** (`--font-highlight`). No se renderizan en ningún lado; hay que
+resolver sus derechos antes de darles uso. Ver `docs/CONVENTIONS.md`.
 
-El cliente pesa ~200 KB y hoy va en el bundle inicial (535 KB en total, 137 KB
-transferidos) porque el navbar necesita la sesión desde el primer render.
+**Por qué:** cargar una fuente sin saber si se puede usar comercialmente es el
+mismo error que obligó a retirar Batman y ROLNER.
+
+### Unificar las páginas de detalle (galería duplicada)
+
+`car-details`, `auto-hub-details`, `hub-part-details` y `hub-market-part-details`
+tienen **el mismo código de galería copiado cuatro veces** (`selectImage`,
+`prevImage`, `nextImage`, y el mismo `toggleDescription()` en dos de ellas).
+`accessory-details` no lo tiene porque muestra solo la primera imagen.
+
+**Qué hacer:** extraer un `<app-image-gallery [images]="images">` en `shared/ui/`
+y un `<app-expandable-text [text]="..." [maxLength]="200">`. Cada página de
+detalle se queda solo con lo que la hace distinta.
+
+**Por qué importa:** cuatro copias significa que un arreglo de galería hay que
+hacerlo cuatro veces. **Ojo con la fase 3:** la ficha nueva (`/tienda/p/:slug`)
+necesita galería con zoom; conviene extraer el componente ahí y no escribir una
+quinta copia.
+
+> Esto **no** unifica Auto Hub con Hub Market como producto. Comparten la galería,
+> no el inventario.
+
+### `accessory-details` está sin terminar
+
+Es la única página de detalle que sigue siendo un borrador: `<h1>`, una imagen y
+cuatro `<p>` sin estilo (más el botón de WhatsApp y el estado "no encontrado"),
+mientras las otras tienen diseño completo. Es alcanzable desde `/hub-market`
+filtrando accesorios.
+
+Lo más rápido: reusar la estructura de `hub-market-part-details`, que muestra
+exactamente el mismo modelo (`HubMarketItemModel`).
+
+**Por qué:** la fase 2 le pone la etiqueta "De la comunidad" a las tarjetas de
+Hub Market; la página a la que llevan debería estar a la altura.
+
+### El carrito solo acepta piezas del catálogo
+
+`CartService` está tipado a `HubPartModel` (`CartItem.part`), así que no se puede
+comprar un accesorio de Hub Market, y `cart-modal` y `checkout` acceden a
+`item.part.price`: el nombre `part` está incrustado en las plantillas.
+
+**Cómo queda con el pivote:** la fase 1 convierte `HubPartModel` en alias
+deprecado de `ProductModel`, y la fase 4 reescribe el checkout, así que el
+carrito va a tocarse igual. Hub Market sigue sin vender dentro del sitio (el
+contacto es por WhatsApp), de modo que el `CartLineItem` con `source:
+'catalogo' | 'hub-market'` que proponía este punto **ya no hace falta**; basta
+con que el carrito hable de `ProductModel`.
+
+### Enlaces del footer que no llevan a nada
+
+`Privacidad`, `Contacto` y `Reportar problema` son `href="#"`. Un enlace que no
+lleva a ningún lado es peor que no tenerlo. Hay que crear las tres páginas o
+quitar los enlaces hasta que existan.
+
+**Por qué:** la fase 2 reescribe el footer; si no se decide ahí, el `href="#"`
+sobrevive al rediseño.
+
+### Route params como inputs
+
+Las páginas de detalle hacen `route.paramMap.subscribe(...)` en `ngOnInit`. Con
+`withComponentInputBinding()` en el router (hoy no está puesto), el `id` llega
+como un `@Input` y desaparece la suscripción manual.
+
+**Por qué:** la fase 3 estrena `/tienda/p/:slug` y `/tienda/c/:slug`; es el
+momento natural de adoptarlo, pero cambia todas las páginas con parámetros a la
+vez, así que decídelo aparte.
+
+### `ChangeDetectionStrategy.OnPush`
+
+**50** componentes ya lo usan; la versión anterior de este punto decía "cero" y
+era falsa. Falta saber cuáles no, y migrarlos. (La antigua `PROYECTO.md`
+afirmaba que todos lo tenían; tampoco era cierto.)
+
+### Cargar `supabase-js` bajo demanda
+
+El cliente pesa ~200 KB y hoy va en el bundle inicial (**568 kB** en total,
+**148 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
+sesión desde el primer render. El presupuesto de `angular.json` es 600 kB de
+aviso: queda poco margen y el pivote va a sumar navbar, buscador y barra
+inferior al bundle inicial.
 
 Un `await import('@supabase/supabase-js')` dentro de `SupabaseService` lo sacaría
 del chunk inicial, a costa de volver asíncrono el getter `db` y, con él, todos los
 servicios. **Solo vale la pena si el tiempo de primera carga se vuelve un
-problema medible** — no antes.
+problema medible** — no antes. La fase 2 es el punto donde revisar la cifra.
 
-### 14. Nombres inconsistentes
+### Nombres inconsistentes
 
-- `cart.ts` exporta `CartService` → renombrar a `cart.service.ts`.
 - El sufijo `Component` es irregular: `HomeComponent`, `CatalogoComponent` vs
   `AutoHub`, `CarDetails`, `Servicios`. Elegir uno y aplicarlo.
-- Los mocks viven en `shared/models/` junto a las interfaces, excepto
-  `checkout-options.mock.ts` que está en `shared/data/`. Unificar en
-  `shared/mocks/`.
+- Los mocks viven en `shared/models/` junto a las interfaces, excepto los de
+  `shared/data/`. Unificar en `shared/mocks/`.
 
----
+(`cart.ts` ya se llama `cart.service.ts`: ese punto está hecho.)
 
-## P3 — Funciones nuevas
+### Perfil: gestionar las publicaciones
 
-Ordenadas por lo que más le suma al producto.
+`/perfil` existe y lista las publicaciones del usuario (`getBySellerId`), pero la
+página no llama a `deactivate()`: el servicio y las políticas RLS que la respaldan
+están, falta el botón. El usuario puede publicar y no puede retirar lo suyo desde
+su perfil.
 
-### 15. Perfil de usuario y "mis publicaciones"
-
-Ya hay sesión (`AuthService`), `/publicar` está protegido y el servicio expone
-`getBySeller(uid)` y `deactivate(id)` — con las políticas RLS que las respaldan.
-Falta solo la página: el usuario puede publicar y después no puede gestionarlo.
-
-Es el hueco más obvio del flujo actual y el que menos trabajo cuesta cerrar.
-
-### 16. Favoritos
+### Favoritos
 
 Guardar vehículos y piezas. Encaja con el `Club X AutoHub` que ya se promociona en
 la página y da una razón concreta para crear cuenta.
 
-### 17. Publicar en Social Hub
+### Publicar en Social Hub
 
 El feed es de solo lectura. Falta el formulario para que un miembro publique su
-build. Es lo que convierte el Social Hub de escaparate a comunidad.
+build. **Congelado por el pivote**: Comunidad no recibe trabajo nuevo por ahora.
 
-### 18. Búsqueda global
-
-Hoy cada pilar tiene su propio buscador y no se hablan. Un buscador en el navbar
-que cruce Auto Hub + Hub Market + Catálogo.
-
-### 19. Filtros de verdad en Auto Hub
+### Filtros de verdad en Auto Hub
 
 `/auto-hub` solo filtra por marca y modelo, con el filtro de categoría comentado en
 el código. Para vehículos hacen falta rangos: precio, año, kilometraje, tipo de
 chasis, combustible, tracción. Todos esos campos ya existen en `AutoHubModel`.
 
-### 20. Video del hero: poster y peso
+### Video del hero: poster y peso
 
-`citroen-c3-flying.mp4` son 2.5 MB con `autoplay`, y compite con el contenido por
-el ancho de banda en la primera carga. Agregarle un `poster` (un frame exportado a
-JPEG) hace que se vea algo de inmediato. Re-codificarlo a ~800 KB con `ffmpeg`
-(no está instalado en este entorno) sería el arreglo completo.
+`citroen-c3-flying.mp4` sigue en `src/assets/videos/` (792 KB en disco; la
+versión anterior de este punto decía 2.5 MB) y lo usa `home-welcome` con
+`autoplay`. La fase 2 lo muda a `/social-hub`. Falta agregarle un `poster` (un
+frame exportado a JPEG) para que se vea algo de inmediato.
 
-### 21. Layout de Auto Hub
+### Layout de Auto Hub
 
 `auto-hub.scss` tiene el grid comentado y el contenedor en
 `flex-direction: column`, así que las tarjetas se apilan en una sola columna
@@ -269,23 +353,26 @@ incluso en pantalla ancha. Parece un experimento a medias más que una decisión
 
 ## Limpieza mecánica
 
-Rápido, sin riesgo, cuando haya un rato:
+Rápido, sin riesgo, cuando haya un rato. Los assets los decide Xaviel (ver
+`CLAUDE.md`); aquí se listan, no se borran.
 
-- **19 iconos SVG sin usar** en `src/assets/icons/` (~120 KB). Lista completa en la
-  auditoría. Varios son la versión inactiva de un par (`network-icon.svg`) o
-  quedaron de rediseños (`next-*`, `bag-*`, `crowd-*`).
+- **Iconos SVG sin usar** en `src/assets/icons/` (la auditoría contó 19; hoy hay
+  44 archivos en la carpeta y el número exacto hay que recalcularlo). Varios son
+  la versión inactiva de un par (`network-icon.svg`) o quedaron de rediseños
+  (`next-*`, `bag-*`, `crowd-*`). La fase 2 cambia el navbar y puede dejar más.
 - **4 imágenes sin usar** en `src/assets/imgs/cars/` (corvette, gtr, lambo-bg,
-  porsche) y `catalog/turbo.jpg` — ya optimizadas, ~150 KB en total.
-- **`'Trebuchet MS'` a mano en 20 lugares**, saltándose el sistema de tokens.
-  Debería ser `var(--font-body)` (o un token nuevo si el look es intencional).
-- **Tokens declarados y nunca usados** en `styles.scss`: `--font-heading`,
-  `--font-card-title`, `--font-highlight`, `--font-highlight3`, `--font-body2`,
-  `--SpaceIndigo`, `--HubDark`.
-- **24 ramas de git ya fusionadas** (todas con 0 commits por delante de `main`):
-  ```bash
-  git branch -d $(git branch --merged main | grep -v main)
-  git remote prune origin
-  ```
+  porsche) y `catalog/turbo.jpg`; sin recomprobar contra el código de hoy.
+- **`'Trebuchet MS'` a mano en 26 lugares** de los `.scss`, saltándose el sistema
+  de tokens (la auditoría contó 20). Debería ser `var(--font-body)` (o un token
+  nuevo si el look es intencional).
+- **Tokens declarados y nunca usados** en `styles.scss` (0 usos de `var(--x)`
+  medidos el 22/10/2026): `--font-heading`, `--font-card-title`,
+  `--font-highlight`, `--font-body2`, `--SpaceIndigo`. La lista anterior traía
+  dos errores: `--HubDark` **sí se usa** (3 veces) y `--font-highlight3` **no
+  existe** en `styles.scss`.
+- **Ramas de git ya fusionadas:** la lista de 24 ramas ya no es cierta (hoy solo
+  `develop` y `main` figuran como fusionadas). Revisa con
+  `git branch --merged main` y `git remote prune origin` antes de borrar nada.
 - **Barras de scroll ocultas globalmente** (`::-webkit-scrollbar { display: none }`
   en `styles.scss`). Se ve limpio pero le quita al usuario la referencia de dónde
   está en una página larga. Alternativa: una barra fina en los colores de la marca.

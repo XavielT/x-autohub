@@ -1,7 +1,13 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-08-11**. Si cambias la estructura, actualiza
-este archivo en el mismo commit.
+Estado real del proyecto al **2026-10-22** (v1.3.7). Si cambias la estructura,
+actualiza este archivo en el mismo commit.
+
+> **El pivote de octubre de 2026 todavía no está en el código.** Este documento
+> describe lo que existe hoy. Lo que el pivote va a agregar (tienda con
+> categorías, home nuevo, checkout por transferencia, agenda de servicios, PWA)
+> está en `docs/PIVOT-2026-10.md`, y la estructura final se documenta aquí al
+> cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
 
@@ -10,10 +16,12 @@ x-autohub/
 ├── CLAUDE.md                  Instrucciones de trabajo (leer primero)
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
-├── supabase/                  Esquema SQL, RLS, storage y seed
-│   ├── migrations/            0001_schema, 0002_rls, 0003_storage
+├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
+│   ├── migrations/            0001 a 0016 (ver docs/BACKEND.md)
+│   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
-├── scripts/generate-seed.mjs  Convierte los mocks en seed.sql
+├── scripts/                   generate-seed, make-admin, setup-smtp,
+│                              verify-migrations.sh
 ├── public/                    Se copia tal cual a la raíz de dist/ (favicons)
 ├── angular.json               Build, budgets, fileReplacements, providersFile
 └── src/
@@ -29,9 +37,12 @@ x-autohub/
     │
     ├── core/                  Infraestructura transversal, sin UI
     │   ├── guards/
-    │   │   └── auth.guard.ts         authGuard + guestGuard
+    │   │   ├── auth.guard.ts         authGuard + guestGuard
+    │   │   ├── admin.guard.ts        adminGuard
+    │   │   └── moderator.guard.ts    moderatorGuard (admin y moderador)
     │   ├── supabase/
     │   │   ├── supabase.service.ts   Cliente perezoso + shouldUseMockData()
+    │   │   ├── supabase.service.testing.ts  TestSupabaseService (fuerza modo mock)
     │   │   ├── database.types.ts     Tipos espejo del esquema SQL
     │   │   ├── mappers.ts            snake_case ↔ camelCase
     │   │   └── supabase-error.ts     Errores de Postgrest → español
@@ -48,13 +59,15 @@ x-autohub/
     │   │   ├── home-featured-vehicles/   Últimos vehículos de Hub Market
     │   │   ├── home-featured-catalog/    Grid de categorías del catálogo
     │   │   └── home-news/                Noticias
-    │   └── pages/                    Una carpeta por ruta (18)
+    │   └── pages/                    Una carpeta por página (21)
     │       ├── home/  auto-hub/  auto-hub-details/
     │       ├── catalogo/  hub-part-details/  checkout/
     │       ├── hub-market/  car-details/  hub-market-part-details/
     │       ├── accessory-details/  publicar/
     │       ├── servicios/  social-hub/  new-details/
-    │       ├── login/  registro/
+    │       ├── login/  registro/  perfil/  baja/
+    │       ├── admin/  (moderacion, versiones, pedidos, inventario,
+    │       │            usuarios, ajustes)
     │       └── terminos-condiciones/  not-found/
     │
     ├── shared/                Reutilizable entre páginas
@@ -64,23 +77,34 @@ x-autohub/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
     │   │   ├── cart-modal/  toast/  club-channel/
     │   ├── ui/                    Presentacionales puros, sin dependencias
-    │   │   ├── highlight-badge/
-    │   │   └── info-badge/
-    │   ├── models/                Interfaces + mocks (conviven hoy)
-    │   ├── data/                  checkout-options.mock.ts
-    │   └── services/              14 servicios, todos providedIn: 'root'
+    │   │   ├── highlight-badge/  info-badge/
+    │   │   └── location-select/  test-badge/
+    │   ├── models/                Interfaces de los modelos
+    │   ├── data/                  Mocks (*.mock.ts), locations, showcase-stats
+    │   └── services/              18 servicios, todos providedIn: 'root'
     │
     ├── styles/
-    │   └── _auth-shell.scss       Parcial compartido por login y registro
+    │   ├── _auth-shell.scss       Parcial compartido por login y registro
+    │   ├── _forms.scss            Parcial de formularios
+    │   └── _whatsapp-btn.scss     Botón de WhatsApp compartido
     │
     └── assets/
-        ├── fonts/                 21 familias (solo ~4 en uso — ver ROADMAP)
+        ├── fonts/                 5 carpetas: Chakra-Petch, Orbitron,
+        │                          main-fonts (Space-Grotesk, manrope), Gefika
+        │                          y spoiler-script (estas dos sin uso, ver ROADMAP)
         ├── icons/                 SVG. Convención: *-hub-icon.svg = estado activo
         ├── imgs/                  Fotos de vehículos, piezas, noticias
         └── videos/                Video de fondo del hero
 ```
 
 ## Modelo de datos
+
+> **Nota sobre el pivote.** Lo de abajo es el modelo **de hoy**. El pivote lo
+> extiende (categorías jerárquicas, `ProductModel`, compatibilidad por vehículo,
+> pedidos con comprobante, citas de servicio, reseñas) sin renombrar ninguna tabla
+> existente. El detalle de lo que viene, tabla por tabla y migración por
+> migración, está en la **sección 4 de `docs/PIVOT-2026-10.md`**. Hasta que cada
+> fase se despliegue, no asumas que esas tablas ni esos modelos existen.
 
 Hoy hay **tres modelos de artículo** porque representan tres inventarios distintos:
 
@@ -130,7 +154,7 @@ Sin librería de estado. Todo con **signals de Angular** dentro de servicios ra�
 
 | Servicio      | Estado                                  | Notas                             |
 | ------------- | --------------------------------------- | --------------------------------- |
-| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `HubPartModel`        |
+| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `HubPartModel`; persiste en `localStorage` |
 | `ToastService`| cola de toasts, auto-cierre a 3s        | Renderizado por `<app-toast>`     |
 | `AuthService` | sesión de Supabase Auth + perfil       | `user`, `isLoggedIn`, `isRestoring` |
 
@@ -155,21 +179,26 @@ intencional — el usuario nunca pierde la navegación.
 
 ## Rutas
 
-18 rutas, todas con `loadComponent` (lazy) y `title`. Ver `src/app/app.routes.ts`,
+20 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
+`title`; `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
 que está agrupado por pilar y comentado.
 
-Protegidas por `authGuard`: `/publicar`.
+Protegidas por `authGuard`: `/publicar`, `/perfil`.
 Protegidas por `guestGuard` (redirigen si ya hay sesión): `/login`, `/registro`.
-`**` → `NotFoundComponent`. Debe quedar siempre de último.
+`/admin` usa `moderatorGuard` en el padre y **cada sección se protege por su
+cuenta** (`adminGuard` salvo `moderacion`); ver el comentario en el archivo.
+`**` → `NotFound`. Debe quedar siempre de último.
+
+Con el pivote `/catalogo` pasará a redirigir a `/tienda`; hoy no existe `/tienda`.
 
 ## Base de datos
 
-13 tablas en Postgres. Ver `supabase/migrations/0001_schema.sql` y
-`docs/BACKEND.md`.
+16 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
 | Cuentas              | `profiles` (espeja `auth.users` vía trigger)                   |
+| Administración       | `releases` (historial de versiones), `site_settings`          |
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
 | Comercio             | `shipping_options`, `payment_methods`, `orders`, `order_items` |
@@ -184,22 +213,23 @@ Decisiones que conviene conocer:
 - **`seller_name` y `author_name` están denormalizados**: el contenido sembrado
   no tiene usuario real detrás. Cuando hay `seller_id`, el nombre sale del join
   con `profiles` y esa columna queda de respaldo.
-- **RLS está activo en las 13 tablas.** La clave anon es pública; las políticas
+- **RLS está activo en las 16 tablas.** La clave anon es pública; las políticas
   son lo único que protege los datos.
 
 ## Build
 
-- Bundle inicial: **535 kB** (~137 kB transferidos). Cada página es un chunk
-  aparte; el cliente de Supabase (~200 kB) va en el inicial porque el navbar
-  necesita la sesión desde el primer render.
-- `dist/` total: **15 MB**, dominado por `assets/fonts` (7.3 MB) y el video (2.5 MB).
+- Bundle inicial: **568 kB** (~148 kB transferidos, medido el 2026-10-22). Cada
+  página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
+  porque el navbar necesita la sesión desde el primer render.
+- `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
+  792 KB.
 - Budgets en `angular.json`: inicial 600 kB warning / 1 MB error; estilo por
   componente 8 kB / 16 kB (el default de 4 kB es irreal para páginas completas).
 - Producción sustituye `environment.ts` por `environment.production.ts`.
 
 ## Pruebas
 
-- 42 archivos, 62 pruebas, todas pasando. Corren siempre en modo mock (los
+- 66 archivos, 336 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

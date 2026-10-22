@@ -1,78 +1,105 @@
 # Visión del producto — X AutoHub
 
+> Esta visión sigue el pivote de octubre de 2026. El plan completo, con las
+> decisiones cerradas y las fases, está en `docs/PIVOT-2026-10.md` y manda sobre
+> este documento donde se contradigan.
+
 ## La idea en una frase
 
-**El hub central de los autos en RD.** Un solo lugar donde un entusiasta
-dominicano compra un carro, encuentra la pieza que necesita, contrata un taller y
-sigue lo que pasa en la escena.
+**Todo lo que tu carro necesita, en un solo lugar: accesorios, piezas y taller,
+en RD.**
+
+X AutoHub es una tienda en línea de accesorios y piezas para vehículos en
+República Dominicana, con taller propio. Los vehículos y la comunidad siguen
+aquí, pero en segundo plano.
 
 ## El problema que resuelve
 
-Hoy la escena automotriz dominicana está repartida en pedazos: los carros se
-venden en grupos de Facebook y clasificados genéricos, las piezas se buscan por
-WhatsApp preguntando de taller en taller, los eventos se enteran por Instagram si
-seguías a la cuenta correcta, y no hay forma de saber si el vendedor del otro lado
-es serio.
+Comprar algo para el carro en RD hoy es preguntar de taller en taller por
+WhatsApp: no sabes si la pieza le sirve a tu modelo, el precio cambia según a
+quién le preguntes, no sabes cuánto cuesta con envío ni cuándo llega, y después
+tienes que buscar quién te lo instale.
 
-X AutoHub junta esas cuatro cosas y le pone una capa de confianza encima: hay
-inventario **verificado por la casa** y hay inventario **de la comunidad**, y el
-usuario siempre sabe cuál está viendo.
+X AutoHub junta eso en un solo sitio: precio claro, compatibilidad declarada por
+vehículo, disponibilidad dicha sin rodeos (hay en stock, llega bajo pedido, o
+está agotado), envío nacional o retiro en el taller, e instalación si la quieres.
 
 ## Para quién
 
-- **El entusiasta** — proyectos, performance, modificaciones. Quiere piezas
-  específicas y gente que hable su idioma.
-- **El comprador común** — busca un carro confiable a buen precio y necesitar
-  saber que no lo van a estafar.
-- **El que vende** — un particular con un carro, o un taller con inventario.
-  Necesita publicar rápido y que lo vean.
-- **Los clubes y crews** — ya existen, pero sin un lugar central donde organizarse.
+En este orden, que es el orden en que se diseña:
 
-## Los cinco pilares
+1. **El dueño de carro común.** Quiere una alfombra, un cargador, unas luces, un
+   juego de bujías para su Corolla 2015, y quiere saber si le sirve, cuánto
+   cuesta con envío a Santiago y cuándo le llega.
+2. **El entusiasta.** Busca piezas específicas y performance. Valora la
+   compatibilidad bien declarada y poder hablar con alguien que sabe.
+3. **El cliente del taller.** Tiene un problema o un mantenimiento pendiente.
+   Quiere cotizar rápido y agendar sin llamar.
+4. **La comunidad (vendedores, clubes).** Sigue teniendo su espacio en Hub
+   Market y Comunidad, pero no es por quien se diseña el home.
 
-### 1. Auto Hub — `/auto-hub`
+## Los pilares
 
-Vehículos **de X AutoHub**, revisados por el equipo. El copy de la página lo dice:
-*"Vehículos verificados por X AutoHub"*. Este es el inventario propio y es la
-diferencia con cualquier clasificado: si está aquí, la casa responde por él.
+| Pilar          | Ruta                       | Rol        | Qué es                                                                |
+| -------------- | -------------------------- | ---------- | --------------------------------------------------------------------- |
+| **Tienda**     | `/tienda`                  | Principal  | Accesorios y piezas de X AutoHub. Carrito, checkout, pedidos          |
+| **Servicios**  | `/servicios`               | Soporte    | Taller: instalación, mantenimiento, mecánica ligera, eléctrico, A/C   |
+| **Vehículos**  | `/auto-hub`, `/hub-market` | Secundario | Auto Hub (oficiales) y Hub Market (de la comunidad)                   |
+| **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
 
-### 2. Hub Market — `/hub-market`
+### Tienda
 
-Los clasificados de la **comunidad**: vehículos, piezas y accesorios que publican
-los usuarios desde `/publicar`. Volumen y variedad. Aquí X AutoHub es la
-plataforma, no el vendedor.
+El pilar principal. Inventario propio **y** artículos bajo pedido; accesorios
+universales **y** piezas por modelo con compatibilidad. Se cobra por
+transferencia con comprobante o cerrando el pedido por WhatsApp (sin pasarela de
+tarjeta en esta ronda). Se entrega por envío nacional o retiro en el taller.
+
+> **Hoy** la tienda es `/catalogo` (17 categorías de texto, carrito y checkout
+> con precios calculados en Postgres). `/tienda` y todo lo de arriba llega por
+> fases: ver `docs/ROADMAP.md`. `/catalogo` redirigirá a `/tienda`.
+
+### Servicios
+
+El taller: instalación de lo que se vende, mantenimiento, mecánica ligera,
+electricidad, aire acondicionado y diagnóstico. **No** mecánica pesada (motor,
+transmisión). Cotización por WhatsApp, agenda de citas en la web y galería de
+trabajos realizados.
+
+### Vehículos
+
+Dos inventarios que **no se funden**, agrupados bajo un mismo menú:
+
+- **Auto Hub** (`/auto-hub`): vehículos **de X AutoHub**, revisados por el
+  equipo. Si está aquí, la casa responde por él.
+- **Hub Market** (`/hub-market`): los clasificados de la **comunidad** (vehículos,
+  piezas y accesorios que publican los usuarios desde `/publicar`). Cada tarjeta
+  lleva la etiqueta **"De la comunidad"** para separarla de la tienda oficial.
+  Aquí X AutoHub es la plataforma, no el vendedor.
 
 > Auto Hub y Hub Market conviven a propósito. Son dos promesas distintas al
 > usuario y no deben fundirse en una sola lista.
 
-### 3. Catálogo — `/catalogo`
+### Comunidad
 
-La **tienda propia de piezas**, con carrito y checkout. Filtro por 17 categorías
-(frenos, suspensión, motor, escape, audio, detailing…). Es el único pilar con
-flujo de compra completo dentro del sitio.
-
-### 4. Servicios — `/servicios`
-
-El taller: mantenimiento, reparación, chequeo y diagnóstico computarizado, y
-búsqueda/verificación de vehículos para quien está por comprar. El cierre es por
-WhatsApp, que es como realmente se contrata un servicio en RD.
-
-### 5. Social Hub — `/social-hub`
-
-La comunidad. Feed de builds y preguntas, directorio de clubes por enfoque y
-provincia, y calendario de eventos (car shows, drift days, caravanas). Es lo que
-hace que alguien vuelva sin querer comprar nada.
+Antes Social Hub; la ruta `/social-hub` no cambia. Feed de builds y preguntas,
+directorio de clubes por enfoque y provincia, y calendario de eventos. Hereda el
+hero cinematográfico que antes abría el home. Queda congelado: si alguien lo usa
+sigue funcionando, pero no recibe trabajo nuevo.
 
 ## Tono y marca
 
-- **Idioma:** español dominicano. Directo, sin corporativismo. "Qué estás
-  buscando?", no "Realice su búsqueda".
+- **Idioma:** español dominicano. Directo, sin corporativismo. "¿Qué le hace
+  falta a tu carro?", no "Explore nuestro catálogo".
 - **Paleta:** negro (`--main: #121212`) con ámbar (`--Hub: #ffb300`) y naranja
   (`--primary: #ff5f00`). Oscuro, alto contraste, energía de garaje nocturno.
 - **Tipografía:** Space Grotesk para marca y títulos, Manrope para cuerpo y
   precios, ROLNER como acento de marca.
-- **Sensación:** alto octanaje. El badge del hero dice *"Experiencia de Alto
-  Octanaje"* — eso es la vara.
+- **Referencia de experiencia:** Amazon, eBay, Mercado Libre. Buscador arriba,
+  categorías a un toque, tarjetas con precio claro, carrito siempre visible,
+  checkout de pocos pasos.
+
+**Los colores, tipografías y tokens de `src/styles.scss` no cambian con el
+pivote.** Cambia la estructura, no la identidad.
 
 ## Qué no es
 
@@ -80,9 +107,23 @@ hace que alguien vuelva sin querer comprar nada.
 - No es una red social genérica con tema de carros.
 - No es un marketplace internacional. Es **RD**: los precios son en `RD$`, las
   ubicaciones son provincias dominicanas, los teléfonos son 809.
+- No es un taller de mecánica pesada: motor y transmisión quedan fuera.
+- No cobra con tarjeta todavía. Transferencia o WhatsApp.
 
-## Estado actual (2026-08-11)
+## Estado actual (2026-10-22, v1.3.7)
 
-Frontend Angular funcional sobre datos simulados. Los cinco pilares tienen página.
-Login/registro y Social Hub funcionan con autenticación y contenido simulados.
-Falta el backend real: ver `docs/ROADMAP.md`.
+El sitio está en vivo en `xautohubrd.com` (Vercel, desde la v1.0.0), con
+Supabase como backend (Postgres, Auth y Storage). Todo el contenido publicado es
+de prueba.
+
+Lo que funciona hoy: los cinco pilares anteriores al pivote (Auto Hub, Hub
+Market, Catálogo, Servicios, Social Hub) con su página, registro e inicio de
+sesión, publicación de clasificados con moderación, carrito persistente y
+checkout de invitado o con cuenta (precios calculados en Postgres), perfil con
+"mis publicaciones", y un panel de administración (moderación, versiones,
+pedidos, inventario, usuarios, ajustes). Dieciséis migraciones aplicadas.
+
+**El pivote todavía no existe en el código.** El navbar, el home y las rutas
+siguen siendo los de los cinco pilares. Esta documentación se adelanta a
+propósito para que cada fase tenga un destino escrito. Ver `docs/ROADMAP.md`
+para el orden.
