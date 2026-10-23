@@ -148,7 +148,7 @@ export class Checkout implements OnInit {
 
   /** Lo bajo pedido del carrito, para decir cuándo llega cada cosa. */
   readonly lines = computed(() =>
-    this.cartService.items().map((item) => ({ item, availability: availabilityOf(item.part) })),
+    this.cartService.items().map((item) => ({ item, availability: availabilityOf(item.part, item.variant) })),
   );
 
   readonly hasOnOrder = computed(() => this.lines().some((l) => l.availability.kind === 'on_order'));
@@ -194,8 +194,9 @@ export class Checkout implements OnInit {
   }
 
   fixIssue(issue: StockIssue): void {
-    if (issue.available > 0) this.cartService.setQuantity(issue.part.id, issue.available);
-    else this.cartService.removeFromCart(issue.part.id);
+    const variantId = issue.variant?.id ?? null;
+    if (issue.available > 0) this.cartService.setQuantity(issue.part.id, issue.available, variantId);
+    else this.cartService.removeFromCart(issue.part.id, variantId);
   }
 
   // --- Pasos -----------------------------------------------------------------

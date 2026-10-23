@@ -42,6 +42,7 @@ const PAYLOAD: CheckoutSubmitPayload = {
 const line = (over: Parameters<typeof makeProduct>[0], quantity = 1): CartItem => ({
   part: makeProduct(over),
   quantity,
+  variant: null,
 });
 
 describe('OrderService (mock)', () => {
@@ -111,6 +112,53 @@ describe('OrderService (mock)', () => {
       expect(await errorOf(service.create(PAYLOAD, [line({ id: 1, name: 'Disco', stock: 0 })]))).toBe(
         'Se agoto "Disco". Quitala del carrito para continuar.',
       );
+    });
+
+    describe('con opciones', () => {
+      const opcion = (id: number, name: string, stock: number) => ({
+        id, productId: 8, name, sku: null, stock, sortOrder: id, isActive: true,
+      });
+      const conOpcion = (variant: ReturnType<typeof opcion> | null, quantity = 1, over: Parameters<typeof makeProduct>[0] = {}): CartItem => ({
+        part: makeProduct({ id: 8, name: 'Alfombras', hasVariants: true, variantLabel: 'Color', stock: 10, ...over }),
+        quantity,
+        variant,
+      });
+
+      it('sin elegir opción se rechaza, diciendo el producto (como la base)', async () => {
+        expect(await errorOf(service.create(PAYLOAD, [conOpcion(null)]))).toBe(
+          'Elige una opcion de "Alfombras" antes de comprarlo.',
+        );
+      });
+
+      it('una opción en un producto que no las tiene se rechaza', async () => {
+        expect(
+          await errorOf(service.create(PAYLOAD, [{ ...conOpcion(opcion(1, 'Negro', 5)), part: makeProduct({ id: 8, name: 'Alfombras' }) }])),
+        ).toBe('La opcion elegida de "Alfombras" ya no esta disponible.');
+      });
+
+      it('el stock que cuenta es el de la opción, y el mensaje la nombra', async () => {
+        expect(await errorOf(service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 2), 3)]))).toBe(
+          'De "Alfombras (Negro)" solo quedan 2 y pediste 3. Ajusta la cantidad.',
+        );
+        expect(await errorOf(service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 0))]))).toBe(
+          'Se agoto "Alfombras (Negro)". Quitala del carrito para continuar.',
+        );
+      });
+
+      it('con la opción elegida el pedido sale, y la línea se llama "Producto · Opción"', async () => {
+        const created = await firstValueFrom(service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 5), 2)]));
+        const view = (await firstValueFrom(service.getOrder(created.id)))!;
+
+        expect(view.items).toEqual([{ name: 'Alfombras · Negro', unitPrice: 1000, quantity: 2 }]);
+      });
+
+      it('bajo pedido, la opción no depende del stock', async () => {
+        const created = await firstValueFrom(
+          service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 0), 1, { fulfillment: 'on_order', leadTimeDays: 7 })]),
+        );
+
+        expect(created.subtotal).toBe(1000);
+      });
     });
 
     it('lo bajo pedido se vende aunque no haya stock', async () => {

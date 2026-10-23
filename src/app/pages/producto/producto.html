@@ -72,6 +72,26 @@
           </section>
         }
 
+        @if (variants().length > 0) {
+          <fieldset class="prod__variants">
+            <legend class="prod__variants-title">
+              {{ variantLabel() }}@if (selectedVariant(); as v) {: <strong>{{ v.name }}</strong>}
+            </legend>
+            <div class="prod__variants-list" role="radiogroup" [attr.aria-label]="variantLabel()">
+              @for (v of variants(); track v.id) {
+                <button type="button" class="prod__variant" role="radio"
+                        [class.is-selected]="selectedVariant()?.id === v.id"
+                        [class.is-out]="!isVariantAvailable(v)"
+                        [attr.aria-checked]="selectedVariant()?.id === v.id"
+                        [attr.aria-disabled]="!isVariantAvailable(v)"
+                        (click)="chooseVariant(v)">
+                  {{ v.name }}@if (!isVariantAvailable(v)) {<small> · Agotado</small>}
+                </button>
+              }
+            </div>
+          </fieldset>
+        }
+
         <div class="prod__actions">
           <button type="button" class="prod__add" [disabled]="!availability()?.canBuy" (click)="addToCart()">
             {{ availability()?.canBuy ? 'Agregar al carrito' : 'Agotado' }}

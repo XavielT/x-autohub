@@ -1,0 +1,53 @@
+<div class="var">
+  @if (variants().length === 0) {
+    <p class="var__empty">Sin opciones. El producto se compra tal cual, con el stock de arriba.</p>
+  } @else {
+    <ul class="var__list">
+      @for (v of variants(); track $index) {
+        <li class="var__item" [class.var__item--off]="!v.isActive">
+          <label class="var__field var__field--name">
+            <span>Nombre</span>
+            <input type="text" [attr.maxlength]="nameMax" [ngModel]="v.name"
+                   (ngModelChange)="patch($index, { name: $event })" [ngModelOptions]="{ standalone: true }" />
+          </label>
+          <label class="var__field">
+            <span>Existencias</span>
+            <input type="number" inputmode="numeric" min="0" step="1" [ngModel]="v.stock"
+                   (ngModelChange)="setStock($index, $event)" [ngModelOptions]="{ standalone: true }" />
+          </label>
+          <label class="var__field">
+            <span>SKU <small>(opcional)</small></span>
+            <input type="text" maxlength="40" [ngModel]="v.sku"
+                   (ngModelChange)="patch($index, { sku: $event })" [ngModelOptions]="{ standalone: true }" />
+          </label>
+          <label class="var__check">
+            <input type="checkbox" [ngModel]="v.isActive"
+                   (ngModelChange)="patch($index, { isActive: $event })" [ngModelOptions]="{ standalone: true }" />
+            <span>Se ofrece</span>
+          </label>
+          <div class="var__tools">
+            <button type="button" class="var__btn" [disabled]="$first" [attr.aria-label]="'Subir ' + v.name"
+                    (click)="move($index, -1)">↑</button>
+            <button type="button" class="var__btn" [disabled]="$last" [attr.aria-label]="'Bajar ' + v.name"
+                    (click)="move($index, 1)">↓</button>
+            <button type="button" class="var__btn var__btn--danger" [attr.aria-label]="'Quitar ' + v.name"
+                    (click)="remove($index)">×</button>
+          </div>
+        </li>
+      }
+    </ul>
+    <p class="var__total">Existencias del producto: <strong>{{ total() }}</strong>&ngsp;<small>(la suma de las opciones que se ofrecen)</small></p>
+  }
+
+  <div class="var__add">
+    <label class="var__field var__field--name">
+      <span>Nueva opción</span>
+      <input type="text" placeholder="Negro" [attr.maxlength]="nameMax" autocomplete="off"
+             [ngModel]="newName()" (ngModelChange)="newName.set($event)" [ngModelOptions]="{ standalone: true }"
+             (keydown.enter)="$event.preventDefault(); add()" />
+    </label>
+    <button type="button" class="var__add-btn" (click)="add()">+ Agregar opción</button>
+  </div>
+
+  @if (error()) { <p class="var__error" role="alert">{{ error() }}</p> }
+</div>

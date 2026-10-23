@@ -15,6 +15,7 @@ import {
   ProductCategoryModel,
   ProductFitmentModel,
   ProductModel,
+  ProductVariantModel,
   ProfileVehicleModel,
   VehicleMakeModel,
   VehicleModelModel,
@@ -54,6 +55,7 @@ import {
   PaymentMethodRow,
   ProductCategoryRow,
   ProductFitmentRow,
+  ProductVariantRow,
   ProfileRow,
   CouponRow,
   CouponTypeDb,
@@ -162,12 +164,26 @@ export function toProduct(row: Omit<HubPartRow, 'search_vector' | 'stars_seed' |
     fitmentType: row.fitment_type,
     installable: row.installable,
     installationServiceId: row.installation_service_id,
+    hasVariants: row.has_variants,
+    variantLabel: row.variant_label,
     specs: toSpecs(row.specs),
     soldCount: row.sold_count,
     isTest: row.is_test,
     isActive: row.is_active,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+  };
+}
+
+export function toProductVariant(row: ProductVariantRow): ProductVariantModel {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    name: row.name,
+    sku: row.sku,
+    stock: row.stock,
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
   };
 }
 

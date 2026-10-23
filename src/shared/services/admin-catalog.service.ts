@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, from, map, of, switchMap, throwError } from 'rxjs';
+import { Observable, concat, defer, forkJoin, from, map, of, switchMap, throwError, toArray } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { toProductCategory, toVehicleMake, toVehicleModel } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
@@ -7,6 +7,7 @@ import {
   CategoryChange,
   FitmentDraft,
   NewCategoryDraft,
+  VariantDraft,
 } from '../models/admin-inventory.model';
 import {
   ProductCategoryModel,
@@ -15,8 +16,19 @@ import {
 } from '../models/product.model';
 import { PRODUCT_CATEGORIES_MOCK } from '../data/product-category.mock';
 import { PRODUCT_FITMENTS_MOCK } from '../data/product-fitment.mock';
+import { PRODUCT_VARIANTS_MOCK } from '../data/product-variant.mock';
 import { VEHICLE_MAKES_MOCK, VEHICLE_MODELS_MOCK } from '../data/vehicle.mock';
 import { slugify } from '../utils/slugify';
+import { validateVariantDrafts } from '../utils/variant-rules';
+
+/** Lo que devuelve `saveVariants()`: las opciones que se quisieron borrar pero se apagaron. */
+export interface SaveVariantsResult {
+  /** Nombres de las opciones que ya tenían pedidos: no se pueden borrar, quedaron apagadas. */
+  deactivated: string[];
+}
+
+/** El código de Postgres de una violación de clave foránea. */
+const FOREIGN_KEY_VIOLATION = '23503';
 
 /**
  * Gestión de la tienda desde el panel: categorías, marcas y modelos, y la
@@ -39,6 +51,9 @@ export class AdminCatalogService {
   private mockModels: VehicleModelModel[] = [...VEHICLE_MODELS_MOCK];
   /** Fitments por producto, en modo mock. */
   private mockFitments = new Map<number, FitmentDraft[]>();
+  /** Opciones por producto, en modo mock. */
+  private mockVariants = new Map<number, VariantDraft[]>();
+  private mockVariantSeq = 1000;
 
   // --- Categorías ----------------------------------------------------------------
 
@@ -295,6 +310,169 @@ export class AdminCatalogService {
       }),
       map(() => undefined),
     );
+  }
+
+  // --- Opciones (color, talla…) ----------------------------------------------------------
+
+  /**
+   * Las opciones de un producto como las edita el formulario: **también las apagadas**
+   * (un admin las ve todas), en el orden en que se ofrecen.
+   */
+  getVariants(productId: number): Observable<VariantDraft[]> {
+    if (this.supabase.shouldUseMockData()) {
+      const edited = this.mockVariants.get(productId);
+      if (edited) return of(edited.map((v) => ({ ...v })));
+      return of(
+        PRODUCT_VARIANTS_MOCK.filter((v) => v.productId === productId)
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+          .map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? '', stock: v.stock, isActive: v.isActive })),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('product_variants')
+        .select('id, name, sku, stock, is_active')
+        .eq('product_id', productId)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true }),
+    ).pipe(
+      map((res) =>
+        unwrap(res).map((v) => ({
+          id: v.id,
+          name: v.name,
+          sku: v.sku ?? '',
+          stock: v.stock,
+          isActive: v.is_active,
+        })),
+      ),
+    );
+  }
+
+  /**
+   * Guarda la lista de opciones de un producto **sin borrar y volver a insertar**: una opción
+   * tiene identidad (los pedidos apuntan a ella), así que se compara con lo que había al abrir
+   * el formulario (`baseline`) y solo se toca lo que cambió:
+   *
+   *   · una opción nueva (`id` nulo) se inserta;
+   *   · una existente cuyo contenido cambió se actualiza (y una que no cambió no se toca: si
+   *     alguien compró mientras el formulario estaba abierto, su stock no se pisa con el viejo);
+   *   · una que estaba y ya no está en la lista se borra, y si ya tuvo pedidos (la base no deja)
+   *     se **apaga** en su lugar, y se avisa en el resultado.
+   *
+   * El orden de la lista pasa a ser `sort_order`. El stock del producto lo recalcula un trigger
+   * de la base; aquí no se escribe.
+   */
+  saveVariants(
+    productId: number,
+    drafts: readonly VariantDraft[],
+    baseline: readonly VariantDraft[],
+  ): Observable<SaveVariantsResult> {
+    const invalid = validateVariantDrafts(drafts);
+    if (invalid) return throwError(() => new Error(invalid));
+
+    const clean = drafts.map((v, i) => ({
+      ...v,
+      name: v.name.trim(),
+      sku: v.sku.trim(),
+      sortOrder: i + 1,
+    }));
+    const keptIds = new Set(clean.map((v) => v.id).filter((id): id is number => id !== null));
+    const removed = baseline.filter((b) => b.id !== null && !keptIds.has(b.id));
+    const baselineById = new Map(baseline.filter((b) => b.id !== null).map((b) => [b.id as number, b]));
+    // El orden también cuenta como cambio: moverla en la lista es editarla.
+    const baselineOrder = new Map(baseline.map((b, i) => [b.id, i + 1]));
+
+    if (this.supabase.shouldUseMockData()) {
+      this.mockVariants.set(
+        productId,
+        clean.map((v) => ({
+          id: v.id ?? ++this.mockVariantSeq,
+          name: v.name,
+          sku: v.sku,
+          stock: v.stock,
+          isActive: v.isActive,
+        })),
+      );
+      return of({ deactivated: [] });
+    }
+
+    const changed = clean.filter((v) => {
+      if (v.id === null) return false;
+      const before = baselineById.get(v.id);
+      return (
+        !before ||
+        before.name !== v.name ||
+        before.sku !== v.sku ||
+        before.stock !== v.stock ||
+        before.isActive !== v.isActive ||
+        baselineOrder.get(v.id) !== v.sortOrder
+      );
+    });
+    const created = clean.filter((v) => v.id === null);
+
+    return defer(() => {
+      const db = this.supabase.db;
+      const deactivated: string[] = [];
+
+      // Borrar: de a una, porque la que tiene pedidos falla sola y se apaga sin afectar a las demás.
+      const removals = removed.map((b) =>
+        from(db.from('product_variants').delete().eq('id', b.id as number)).pipe(
+          switchMap((res) => {
+            if (!res.error) return of(undefined);
+            if (res.error.code !== FOREIGN_KEY_VIOLATION) {
+              unwrap({ data: null, error: res.error });
+            }
+            return from(db.from('product_variants').update({ is_active: false }).eq('id', b.id as number)).pipe(
+              map((off) => {
+                if (off.error) unwrap({ data: null, error: off.error });
+                deactivated.push(b.name);
+              }),
+            );
+          }),
+        ),
+      );
+
+      const updates = changed.map((v) =>
+        from(
+          db
+            .from('product_variants')
+            .update({
+              name: v.name,
+              sku: v.sku || null,
+              stock: v.stock,
+              is_active: v.isActive,
+              sort_order: v.sortOrder,
+            })
+            .eq('id', v.id as number),
+        ).pipe(map((res) => void unwrap(res))),
+      );
+
+      const inserts = created.length
+        ? [
+            from(
+              db.from('product_variants').insert(
+                created.map((v) => ({
+                  product_id: productId,
+                  name: v.name,
+                  sku: v.sku || null,
+                  stock: v.stock,
+                  is_active: v.isActive,
+                  sort_order: v.sortOrder,
+                })),
+              ),
+            ).pipe(map((res) => void unwrap(res))),
+          ]
+        : [];
+
+      // En fila y en este orden: primero se borra lo que sale (para que un nombre se pueda
+      // reusar), luego lo que cambió, y al final lo nuevo. En paralelo, un "Rojo" borrado y un
+      // "Rojo" nuevo chocarían con el índice único del nombre.
+      return concat(...removals, ...updates, ...inserts).pipe(
+        toArray(),
+        map(() => ({ deactivated })),
+      );
+    });
   }
 }
 

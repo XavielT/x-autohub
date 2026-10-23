@@ -224,11 +224,34 @@ export type HubPartRow = {
    * es un promedio real y no el sembrado.
    */
   review_count: number;
+  // --- Migración 0023 (variantes) ---
+  /** Cómo se llama la opción ("Color", "Talla"). Solo texto para la ficha. */
+  variant_label: string;
+  /**
+   * Tiene opciones activas; lo mantiene un trigger. Si es true, `stock` es la suma del
+   * stock de las opciones y al comprar hay que elegir una.
+   */
+  has_variants: boolean;
   /**
    * Columna generada para la búsqueda de texto. Solo la lee la base: no viene
    * en los `select` que piden columnas y no se escribe nunca.
    */
   search_vector?: string;
+}
+
+/**
+ * Una opción de un producto (color, talla…) con su propio stock. Comparte el precio del
+ * producto. Migración 0023.
+ */
+export type ProductVariantRow = {
+  id: number;
+  product_id: number;
+  name: string;
+  sku: string | null;
+  stock: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 /** Dos niveles como máximo: `parent_id` nulo es primer nivel. Migración 0017. */
@@ -648,6 +671,8 @@ export type OrderItemRow = {
   quantity: number;
   /** Cuánto stock descontó esta línea (0 si era bajo pedido). Migración 0018. */
   stock_deducted: number;
+  /** La opción comprada, si el producto las tiene. Migración 0023. */
+  variant_id: number | null;
 }
 
 /**
@@ -687,6 +712,15 @@ type OrderItemRelationships = [
     columns: ['order_id'];
     isOneToOne: false;
     referencedRelation: 'orders';
+    referencedColumns: ['id'];
+  },
+];
+type ProductVariantRelationships = [
+  {
+    foreignKeyName: 'product_variants_product_id_fkey';
+    columns: ['product_id'];
+    isOneToOne: false;
+    referencedRelation: 'hub_parts';
     referencedColumns: ['id'];
   },
 ];
@@ -752,6 +786,16 @@ export type Database = {
         Insert: Insert<HubPartRow, 'name' | 'brand' | 'img_url' | 'price'>;
         Update: Partial<HubPartRow>;
         Relationships: [];
+      };
+      /**
+       * Opciones de un producto (migración 0023). Las ve quien ve el producto; solo un admin
+       * escribe. El stock del producto es la suma de las activas (lo mantiene un trigger).
+       */
+      product_variants: {
+        Row: ProductVariantRow;
+        Insert: Insert<ProductVariantRow, 'product_id' | 'name'>;
+        Update: Partial<ProductVariantRow>;
+        Relationships: ProductVariantRelationships;
       };
       product_categories: {
         Row: ProductCategoryRow;
@@ -1094,7 +1138,7 @@ export type Database = {
           p_address_line1: string;
           p_shipping_option_id: string;
           p_payment_method_id: string;
-          p_items: { part_id: number; quantity: number }[];
+          p_items: { part_id: number; quantity: number; variant_id?: number | null }[];
           p_contact_phone?: string | null;
           p_city?: string | null;
           p_postal_code?: string | null;

@@ -5,6 +5,7 @@ import {
   toProduct,
   toProductCategory,
   toProductFitment,
+  toProductVariant,
   toOrderView,
   toCoupon,
   toCouponValidation,
@@ -200,6 +201,8 @@ describe('mappers', () => {
       specs: {},
       sold_count: 0,
       updated_at: '2026-01-02T00:00:00Z',
+      variant_label: '',
+      has_variants: false,
     };
 
     it('mapea snake_case a camelCase, con las columnas de la tienda', () => {
@@ -233,6 +236,50 @@ describe('mappers', () => {
     it('lee una fila de search_products() igual que una de hub_parts', () => {
       const found: SearchProductRow = { ...row, total_count: 12 };
       expect(toProduct(found).slug).toBe('disco-gtr-1');
+    });
+
+    it('un producto sin opciones dice hasVariants false y no tiene etiqueta', () => {
+      const p = toProduct(row);
+      expect(p.hasVariants).toBe(false);
+      expect(p.variantLabel).toBe('');
+    });
+
+    it('uno con opciones trae su etiqueta ("Color") y hasVariants true', () => {
+      const p = toProduct({ ...row, has_variants: true, variant_label: 'Color' });
+      expect(p.hasVariants).toBe(true);
+      expect(p.variantLabel).toBe('Color');
+    });
+  });
+
+  describe('opciones de producto', () => {
+    it('toProductVariant mapea la fila', () => {
+      expect(
+        toProductVariant({
+          id: 3,
+          product_id: 8,
+          name: 'Negro',
+          sku: 'ALF-NEG',
+          stock: 8,
+          sort_order: 1,
+          is_active: true,
+          created_at: '2026-10-01T00:00:00Z',
+        }),
+      ).toEqual({ id: 3, productId: 8, name: 'Negro', sku: 'ALF-NEG', stock: 8, sortOrder: 1, isActive: true });
+    });
+
+    it('un sku nulo se queda nulo', () => {
+      const v = toProductVariant({
+        id: 4,
+        product_id: 8,
+        name: 'Gris',
+        sku: null,
+        stock: 0,
+        sort_order: 2,
+        is_active: false,
+        created_at: '2026-10-01T00:00:00Z',
+      });
+      expect(v.sku).toBeNull();
+      expect(v.isActive).toBe(false);
     });
   });
 

@@ -24,6 +24,11 @@ export interface AdminPartModel {
   fulfillment: ProductFulfillment;
   price: number;
   stock: number;
+  /**
+   * Tiene opciones activas (color, talla…). Su `stock` es entonces la suma de las opciones
+   * y no se edita a mano: se edita el de cada opción (migración 0023).
+   */
+  hasVariants: boolean;
   isActive: boolean;
   /**
    * Artículo de prueba (migración 0013).
@@ -93,9 +98,25 @@ export interface NewPartDraft {
   installable: boolean;
   /** Solo con `installable`. */
   installationServiceId: number | null;
+  /** Cómo se llama lo que se elige ("Color", "Talla"). Vacío = "Opción". */
+  variantLabel: string;
   specs: Record<string, string>;
   isActive: boolean;
   isTest: boolean;
+}
+
+/**
+ * Una opción de un producto tal como la edita el formulario. `id` nulo = todavía no existe.
+ * El orden de la lista es el orden en que se ofrecen.
+ */
+export interface VariantDraft {
+  id: number | null;
+  name: string;
+  /** Opcional. Vacío = sin SKU propio. */
+  sku: string;
+  stock: number;
+  /** Apagada = no se ofrece, pero se conserva (si ya tuvo pedidos no se puede borrar). */
+  isActive: boolean;
 }
 
 export interface NewVehicleDraft {

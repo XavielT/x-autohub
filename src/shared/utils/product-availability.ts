@@ -1,4 +1,4 @@
-import { ProductModel } from '../models/product.model';
+import { ProductModel, ProductVariantModel } from '../models/product.model';
 
 export type AvailabilityKind = 'in_stock' | 'on_order' | 'out_of_stock';
 
@@ -19,8 +19,12 @@ export interface Availability {
  * lo mismo porque leen esto, no cada uno su propia cuenta. Un producto bajo
  * pedido nunca está "agotado" (no depende del inventario) y uno de inventario sin
  * existencias sí.
+ *
+ * Con una `variant` (la opción elegida en la ficha o la de una línea del carrito) las
+ * existencias son las de esa opción. Sin ella, un producto con opciones usa su stock, que
+ * es la suma de las activas: "hay" si queda alguna opción con unidades.
  */
-export function availabilityOf(product: ProductModel): Availability {
+export function availabilityOf(product: ProductModel, variant: ProductVariantModel | null = null): Availability {
   if (product.fulfillment === 'on_order') {
     const days = product.leadTimeDays;
     return {
@@ -31,8 +35,10 @@ export function availabilityOf(product: ProductModel): Availability {
     };
   }
 
-  if (product.stock > 0) {
-    return { kind: 'in_stock', label: `En stock: ${product.stock}`, short: 'En stock', canBuy: true };
+  const stock = variant ? variant.stock : product.stock;
+
+  if (stock > 0) {
+    return { kind: 'in_stock', label: `En stock: ${stock}`, short: 'En stock', canBuy: true };
   }
 
   return { kind: 'out_of_stock', label: 'Agotado', short: 'Agotado', canBuy: false };

@@ -45,12 +45,12 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
 
 /** Las columnas del listado de piezas del panel. */
 const ADMIN_PART_COLUMNS =
-  'id, name, brand, category_id, sku, fulfillment, price, stock, is_active, is_test';
+  'id, name, brand, category_id, sku, fulfillment, price, stock, has_variants, is_active, is_test';
 
 type AdminPartRow = Pick<
   HubPartRow,
   | 'id' | 'name' | 'brand' | 'category_id' | 'sku' | 'fulfillment'
-  | 'price' | 'stock' | 'is_active' | 'is_test'
+  | 'price' | 'stock' | 'has_variants' | 'is_active' | 'is_test'
 >;
 
 function toAdminPart(r: AdminPartRow): AdminPartModel {
@@ -63,6 +63,7 @@ function toAdminPart(r: AdminPartRow): AdminPartModel {
     fulfillment: r.fulfillment,
     price: Number(r.price),
     stock: r.stock,
+    hasVariants: r.has_variants,
     isActive: r.is_active,
     isTest: r.is_test,
   };
@@ -71,7 +72,7 @@ function toAdminPart(r: AdminPartRow): AdminPartModel {
 /** Las columnas de la ficha completa que se edita en el formulario. */
 // Una sola cadena literal: ver PRODUCT_COLUMNS en product.service.ts.
 const EDITABLE_PART_COLUMNS =
-  'id, category_id, slug, sku, name, brand, short_description, img_url, images, price, compare_at_price, description, stock, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, is_active, is_test';
+  'id, category_id, slug, sku, name, brand, short_description, img_url, images, price, compare_at_price, description, stock, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, is_active, is_test, variant_label';
 
 /**
  * Lo que se escribe en `hub_parts` al crear o editar desde el formulario.
@@ -103,6 +104,7 @@ function partWriteRow(draft: NewPartDraft) {
     fitment_type: draft.fitmentType,
     installable: draft.installable,
     installation_service_id: draft.installable ? draft.installationServiceId : null,
+    variant_label: draft.variantLabel.trim(),
     specs: draft.specs,
     is_active: draft.isActive,
     is_test: draft.isTest,
@@ -436,6 +438,7 @@ export class AdminService {
         fulfillment: draft.fulfillment,
         price: draft.price,
         stock: draft.stock,
+        hasVariants: false,
         isActive: draft.isActive,
         isTest: draft.isTest,
       };
@@ -586,6 +589,7 @@ export class AdminService {
         fitmentType: 'specific' as const,
         installable: false,
         installationServiceId: null,
+        variantLabel: '',
         specs: {},
         isActive: p.isActive,
         isTest: p.isTest,
@@ -621,6 +625,7 @@ export class AdminService {
           fitmentType: r.fitment_type,
           installable: r.installable,
           installationServiceId: r.installation_service_id,
+          variantLabel: r.variant_label,
           specs: toSpecs(r.specs),
           isActive: r.is_active,
           isTest: r.is_test,
@@ -641,6 +646,7 @@ export class AdminService {
         fulfillment: draft.fulfillment,
         price: draft.price,
         stock: draft.stock,
+        hasVariants: previous?.hasVariants ?? false,
         isActive: draft.isActive,
         isTest: draft.isTest,
       };

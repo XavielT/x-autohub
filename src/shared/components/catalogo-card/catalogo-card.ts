@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { ProductModel } from '../../models/product.model';
 import { CartService } from '../../services/cart.service';
@@ -28,6 +28,7 @@ import { availabilityOf } from '../../utils/product-availability';
 export class CatalogoCard {
   private readonly cartService = inject(CartService);
   private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly hubPart = input.required<ProductModel>();
   /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
@@ -47,6 +48,12 @@ export class CatalogoCard {
   addToCart(): void {
     const hubPart = this.hubPart();
     if (!this.availability().canBuy) return;
+
+    // Con opciones no se puede agregar desde aquí: hay que elegir color, talla… en la ficha.
+    if (hubPart.hasVariants) {
+      void this.router.navigate(['/tienda', 'p', hubPart.slug]);
+      return;
+    }
 
     try {
       this.cartService.addToCart(hubPart);

@@ -23,16 +23,19 @@ import {
   FitmentDraft,
   SCOPE_OPTIONS,
   TRACTION_OPTIONS,
+  VariantDraft,
 } from '../../../../shared/models/admin-inventory.model';
 import { ChasisType, FuelType, NewsScope, TractionType } from '../../../../core/supabase/database.types';
 import { ProductCategoryModel, ProductFitmentType, ProductFulfillment } from '../../../../shared/models/product.model';
 import { ServiciosCardModel } from '../../../../shared/models/servicios-card.model';
 import { buildCategoryTree } from '../../../../shared/utils/category-tree';
+import { VARIANT_LABEL_MAX, activeVariantStock, validateVariantDrafts } from '../../../../shared/utils/variant-rules';
 import { LocationSelect } from '../../../../shared/ui/location-select/location-select';
 import { AdminCategorias } from './admin-categorias/admin-categorias';
 import { AdminMarcas } from './admin-marcas/admin-marcas';
 import { FitmentEditor } from './fitment-editor/fitment-editor';
 import { SpecsEditor } from './specs-editor/specs-editor';
+import { VariantEditor } from './variant-editor/variant-editor';
 
 type Tab = 'piezas' | 'vehiculos' | 'noticias' | 'categorias' | 'marcas';
 
@@ -89,6 +92,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     LocationSelect,
     FitmentEditor,
     SpecsEditor,
+    VariantEditor,
     AdminCategorias,
     AdminMarcas,
   ],
@@ -151,6 +155,14 @@ export class AdminInventario implements OnInit {
   /** Compatibilidad y especificaciones de la pieza abierta; el formulario las guarda aparte. */
   readonly fitments = signal<FitmentDraft[]>([]);
   readonly specs = signal<Record<string, string>>({});
+  /** Las opciones (color, talla…) de la pieza abierta, también las apagadas. */
+  readonly variants = signal<VariantDraft[]>([]);
+  /** Lo que había al abrir el formulario: `saveVariants` solo toca lo que cambió respecto a esto. */
+  private variantBaseline: VariantDraft[] = [];
+  /** Con alguna opción que se ofrece, el stock de la pieza es la suma y no se escribe a mano. */
+  readonly hasActiveVariants = computed(() => this.variants().some((v) => v.isActive));
+  readonly variantsStock = computed(() => activeVariantStock(this.variants()));
+  readonly variantLabelMax = VARIANT_LABEL_MAX;
 
   readonly fulfillmentOptions: readonly { value: ProductFulfillment; label: string }[] = [
     { value: 'stock', label: 'En stock (inventario propio)' },
@@ -186,6 +198,8 @@ export class AdminInventario implements OnInit {
       fitmentType: ['specific' as ProductFitmentType, Validators.required],
       installable: [false],
       installationServiceId: [null as number | null],
+      // Cómo se llama lo que se elige ("Color", "Talla"). Vacío = "Opción" en la ficha.
+      variantLabel: ['', Validators.maxLength(VARIANT_LABEL_MAX)],
       isFeatured: [false],
       isActive: [true],
       isTest: [false],
@@ -269,6 +283,17 @@ export class AdminInventario implements OnInit {
     });
   }
 
+  /**
+   * Vuelve a pedir el listado de piezas. Tras guardar, el stock y si tiene opciones los deja el
+   * trigger de la base (la suma de las opciones), no el formulario: se lee tal como quedó.
+   */
+  private loadParts(): void {
+    this.admin.getInventoryParts().subscribe({
+      next: (v) => this.parts.set(v),
+      error: () => undefined,
+    });
+  }
+
   /** El nombre de la categoría de una pieza, o "Sin clasificar" si todavía no tiene. */
   categoryName(part: AdminPartModel): string {
     return this.categories().find((c) => c.id === part.categoryId)?.name ?? 'Sin clasificar';
@@ -301,6 +326,8 @@ export class AdminInventario implements OnInit {
     this.newsForm.reset();
     this.fitments.set([]);
     this.specs.set({});
+    this.variants.set([]);
+    this.variantBaseline = [];
   }
 
   /**
@@ -323,10 +350,14 @@ export class AdminInventario implements OnInit {
 
     switch (this.tab()) {
       case 'piezas':
-        // La ficha y su compatibilidad son dos lecturas; se abre el formulario
-        // cuando llegan las dos, para no mostrarlo a medias.
-        forkJoin({ part: this.admin.getPart(id), fitments: this.catalog.getFitments(id) }).subscribe({
-          next: ({ part: p, fitments }) => {
+        // La ficha, su compatibilidad y sus opciones son tres lecturas; se abre el
+        // formulario cuando llegan las tres, para no mostrarlo a medias.
+        forkJoin({
+          part: this.admin.getPart(id),
+          fitments: this.catalog.getFitments(id),
+          variants: this.catalog.getVariants(id),
+        }).subscribe({
+          next: ({ part: p, fitments, variants }) => {
             this.partForm.setValue({
               name: p.name,
               brand: p.brand,
@@ -343,11 +374,14 @@ export class AdminInventario implements OnInit {
               fitmentType: p.fitmentType,
               installable: p.installable,
               installationServiceId: p.installationServiceId,
+              variantLabel: p.variantLabel,
               isFeatured: p.isFeatured,
               isActive: p.isActive,
               isTest: p.isTest,
             });
             this.fitments.set(fitments);
+            this.variants.set(variants.map((v) => ({ ...v })));
+            this.variantBaseline = variants.map((v) => ({ ...v }));
             this.specs.set(p.specs);
             this.existingImages.set(p.images.length ? p.images : [p.imgUrl].filter(Boolean));
             this.isLoadingOne.set(false);
@@ -495,6 +529,15 @@ export class AdminInventario implements OnInit {
     const form = this.partForm.getRawValue();
     const id = this.editingId();
 
+    // Las opciones se validan antes de subir las fotos: no tiene sentido subirlas para fallar después.
+    const variantProblem = validateVariantDrafts(this.variants());
+    if (variantProblem) {
+      this.toast.show(variantProblem, 'error');
+      return;
+    }
+    /** Las opciones que ya tuvieron pedidos y se apagaron en lugar de borrarse. */
+    let deactivated: string[] = [];
+
     this.isSubmitting.set(true);
     this.storage
       .uploadInventoryImages(this.selectedFiles, 'piezas')
@@ -515,13 +558,16 @@ export class AdminInventario implements OnInit {
             price: form.price,
             compareAtPrice: form.compareAtPrice,
             description: form.description,
-            stock: form.stock,
+            // Con opciones que se ofrecen, el stock de la pieza es la suma de ellas (el trigger de
+            // la base lo recalcula al guardar las opciones; aquí se manda el mismo número).
+            stock: this.hasActiveVariants() ? this.variantsStock() : form.stock,
             isFeatured: form.isFeatured,
             fulfillment: form.fulfillment,
             leadTimeDays: form.leadTimeDays,
             fitmentType: form.fitmentType,
             installable: form.installable,
             installationServiceId: form.installationServiceId,
+            variantLabel: form.variantLabel,
             specs: this.specs(),
             isActive: form.isActive,
             isTest: form.isTest,
@@ -537,6 +583,15 @@ export class AdminInventario implements OnInit {
                 .replaceFitments(saved.id, form.fitmentType === 'specific' ? this.fitments() : [])
                 .pipe(map(() => saved)),
             ),
+            // Y las opciones, también con la pieza ya creada. Solo se toca lo que cambió.
+            switchMap((saved) =>
+              this.catalog.saveVariants(saved.id, this.variants(), this.variantBaseline).pipe(
+                map((result) => {
+                  deactivated = result.deactivated;
+                  return saved;
+                }),
+              ),
+            ),
           );
         }),
       )
@@ -551,6 +606,13 @@ export class AdminInventario implements OnInit {
           this.toast.show(
             id === null ? `"${saved.name}" agregada al catalogo.` : `"${saved.name}" actualizada.`,
           );
+          if (deactivated.length > 0) {
+            this.toast.show(
+              `No se pueden borrar las opciones con pedidos: quedaron apagadas (${deactivated.join(', ')}).`,
+            );
+          }
+          // El listado trae el stock y si tiene opciones tal como los dejó la base.
+          this.loadParts();
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);

@@ -196,6 +196,67 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(replace).toHaveBeenCalledWith(c.parts()[0].id, []);
     });
 
+    it('guarda las opciones con la pieza, comparando con lo que había al abrir', () => {
+      const { c, catalog } = montar();
+      vi.spyOn(catalog, 'replaceFitments').mockReturnValue(of(undefined));
+      const save = vi.spyOn(catalog, 'saveVariants').mockReturnValue(of({ deactivated: [] }));
+      c.startCreate();
+      llenar(c, { fitmentType: 'universal', variantLabel: 'Color' });
+      const lista = [{ id: null, name: 'Negro', sku: '', stock: 4, isActive: true }];
+      c.variants.set(lista);
+
+      c.submitPart();
+
+      expect(save).toHaveBeenCalledWith(c.parts()[0].id, lista, []);
+    });
+
+    it('con opciones que se ofrecen, el stock de la pieza es la suma (no lo escrito a mano)', () => {
+      const { c, catalog } = montar();
+      vi.spyOn(catalog, 'replaceFitments').mockReturnValue(of(undefined));
+      vi.spyOn(catalog, 'saveVariants').mockReturnValue(of({ deactivated: [] }));
+      c.startCreate();
+      llenar(c, { fitmentType: 'universal', stock: 99 });
+      c.variants.set([
+        { id: null, name: 'Negro', sku: '', stock: 4, isActive: true },
+        { id: null, name: 'Gris', sku: '', stock: 3, isActive: true },
+        { id: null, name: 'Beige', sku: '', stock: 50, isActive: false },
+      ]);
+
+      c.submitPart();
+
+      expect(c.parts()[0].stock).toBe(7);
+    });
+
+    it('una lista de opciones con problemas no se guarda, y no sube nada', () => {
+      const { c, catalog } = montar();
+      const save = vi.spyOn(catalog, 'saveVariants');
+      const antes = c.parts().length;
+      c.startCreate();
+      llenar(c, { fitmentType: 'universal' });
+      c.variants.set([
+        { id: null, name: 'Negro', sku: '', stock: 1, isActive: true },
+        { id: null, name: 'negro', sku: '', stock: 1, isActive: true },
+      ]);
+
+      c.submitPart();
+
+      expect(c.parts().length).toBe(antes);
+      expect(save).not.toHaveBeenCalled();
+      expect(show).toHaveBeenCalledWith('Hay dos opciones llamadas "negro".', 'error');
+    });
+
+    it('si una opción con pedidos se apagó en lugar de borrarse, se avisa', () => {
+      const { c, catalog } = montar();
+      vi.spyOn(catalog, 'replaceFitments').mockReturnValue(of(undefined));
+      vi.spyOn(catalog, 'saveVariants').mockReturnValue(of({ deactivated: ['Rojo'] }));
+      c.startCreate();
+      llenar(c, { fitmentType: 'universal' });
+
+      c.submitPart();
+
+      expect(show).toHaveBeenCalledWith('No se pueden borrar las opciones con pedidos: quedaron apagadas (Rojo).');
+    });
+
     it('no guarda un formulario invalido ni uno sin imagen', () => {
       const { c } = montar();
       const antes = c.parts().length;
@@ -221,6 +282,30 @@ describe('AdminInventario (piezas de la tienda)', () => {
       c.submitPart();
 
       expect(c.parts().length).toBe(antes);
+    });
+
+    it('el stock de una pieza con opciones es la suma y no se escribe a mano', () => {
+      const { fixture, c, el } = montar();
+      c.startCreate();
+      fixture.detectChanges();
+      expect(el.querySelector('input[formcontrolname="stock"]')).not.toBeNull();
+
+      c.variants.set([{ id: null, name: 'Negro', sku: '', stock: 6, isActive: true }]);
+      fixture.detectChanges();
+
+      expect(el.querySelector('input[formcontrolname="stock"]')).toBeNull();
+      expect(el.querySelector('.adm-inv__note strong')?.textContent).toBe('6');
+    });
+
+    it('editar una pieza con opciones las trae, y la lista marca la suma sin campo editable', () => {
+      const { fixture, c, el, catalog } = montar();
+      vi.spyOn(catalog, 'getVariants').mockReturnValue(of([{ id: 1, name: 'Negro', sku: '', stock: 6, isActive: true }]));
+
+      c.startEdit(1);
+      fixture.detectChanges();
+
+      expect(c.variants().map((x) => x.name)).toEqual(['Negro']);
+      expect(el.querySelector('app-variant-editor')).not.toBeNull();
     });
 
     it('editar una pieza abre el formulario con sus datos y su compatibilidad', () => {

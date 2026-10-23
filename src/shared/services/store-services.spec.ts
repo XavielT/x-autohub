@@ -99,6 +99,25 @@ describe('servicios de la tienda (mock)', () => {
       expect(await firstValueFrom(products().getBySlug('prueba-pieza-de-prueba-36'))).toBeUndefined();
     });
 
+    it('getVariants trae las opciones activas de un producto, en orden, y nada de uno sin opciones', async () => {
+      const v = await firstValueFrom(products().getVariants(8));
+      expect(v.map((x) => x.name)).toEqual(['Negro', 'Gris', 'Beige']);
+      expect(await firstValueFrom(products().getVariants(1))).toEqual([]);
+    });
+
+    it('getVariantsFor junta varios productos en una sola lectura', async () => {
+      expect((await firstValueFrom(products().getVariantsFor([1, 8]))).length).toBe(3);
+      expect(await firstValueFrom(products().getVariantsFor([]))).toEqual([]);
+    });
+
+    it('un producto con opciones lo dice, y su stock es la suma de ellas', async () => {
+      const p = await firstValueFrom(products().getBySlug('alfombras-all-weather-8'));
+      expect(p?.hasVariants).toBe(true);
+      expect(p?.variantLabel).toBe('Color');
+      expect(p?.stock).toBe(16);
+      expect((await firstValueFrom(products().getBySlug('disco-ventilado-gtr-355mm-1')))?.hasVariants).toBe(false);
+    });
+
     it('getFitments trae la compatibilidad declarada, y nada de un universal', async () => {
       expect((await firstValueFrom(products().getFitments(2))).length).toBe(2);
       expect(await firstValueFrom(products().getFitments(4))).toEqual([]);
@@ -430,6 +449,44 @@ describe('servicios de la tienda (mock)', () => {
       expect(await firstValueFrom(catalog().getFitments(2))).toEqual([
         { makeId: honda, modelId: null, yearFrom: null, yearTo: null },
       ]);
+    });
+
+    it('las opciones del panel traen también las apagadas y se leen de los mocks', async () => {
+      const v = await firstValueFrom(catalog().getVariants(8));
+      expect(v.map((x) => [x.name, x.stock, x.isActive])).toEqual([['Negro', 8, true], ['Gris', 5, true], ['Beige', 3, true]]);
+      expect(await firstValueFrom(catalog().getVariants(1))).toEqual([]);
+    });
+
+    it('guardar las opciones las reemplaza, asigna id a las nuevas y respeta el orden', async () => {
+      const base = await firstValueFrom(catalog().getVariants(8));
+      const lista = [
+        { ...base[2], stock: 9 },
+        { id: null, name: 'Rojo', sku: '', stock: 1, isActive: true },
+      ];
+
+      const r = await firstValueFrom(catalog().saveVariants(8, lista, base));
+
+      expect(r.deactivated).toEqual([]);
+      const despues = await firstValueFrom(catalog().getVariants(8));
+      expect(despues.map((x) => [x.name, x.stock])).toEqual([['Beige', 9], ['Rojo', 1]]);
+      expect(despues[1].id).not.toBeNull();
+    });
+
+    it('una lista con problemas no se guarda y dice cuál es', async () => {
+      expect(
+        await errorOf(
+          catalog().saveVariants(8, [
+            { id: null, name: 'A', sku: '', stock: 1, isActive: true },
+            { id: null, name: 'a', sku: '', stock: 1, isActive: true },
+          ], []),
+        ),
+      ).toBe('Hay dos opciones llamadas "a".');
+    });
+
+    it('guardar una lista vacia quita las opciones del producto', async () => {
+      const base = await firstValueFrom(catalog().getVariants(8));
+      await firstValueFrom(catalog().saveVariants(8, [], base));
+      expect(await firstValueFrom(catalog().getVariants(8))).toEqual([]);
     });
 
     it('guardar una lista vacia deja al producto sin compatibilidad', async () => {

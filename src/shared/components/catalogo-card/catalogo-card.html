@@ -26,6 +26,9 @@
             @if (compatible()) {
                 <span class="hub-part-card__compat">✓ Compatible</span>
             }
+            @if (hubPart().hasVariants) {
+                <span class="hub-part-card__options">Elige {{ (hubPart().variantLabel || 'opción').toLowerCase() }}</span>
+            }
         </div>
     </div>
     <div class="hub-part-card__bottom">
@@ -39,7 +42,7 @@
             type="button"
             class="hub-part-card__cart-button"
             [disabled]="!availability().canBuy"
-            [attr.aria-label]="availability().canBuy ? 'Agregar ' + hubPart().name + ' al carrito' : hubPart().name + ' esta agotado'"
+            [attr.aria-label]="!availability().canBuy ? hubPart().name + ' esta agotado' : hubPart().hasVariants ? 'Elegir ' + (hubPart().variantLabel || 'opción').toLowerCase() + ' de ' + hubPart().name : 'Agregar ' + hubPart().name + ' al carrito'"
             (click)="addToCart()">
             <img src="assets/icons/cart-icon.svg" alt="" />
         </button>

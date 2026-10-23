@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
-import { toProduct, toProductFitment } from '../../core/supabase/mappers';
+import { toProduct, toProductFitment, toProductVariant } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
 import {
   ProductFacets,
@@ -9,11 +9,13 @@ import {
   ProductModel,
   ProductSearchParams,
   ProductSearchResult,
+  ProductVariantModel,
 } from '../models/product.model';
 import { SearchProductRow } from '../../core/supabase/database.types';
 import { HUB_PART_MOCK } from '../data/hub-part.mock';
 import { PRODUCT_FITMENTS_MOCK } from '../data/product-fitment.mock';
 import { PRODUCT_CATEGORIES_MOCK } from '../data/product-category.mock';
+import { PRODUCT_VARIANTS_MOCK } from '../data/product-variant.mock';
 import { AuthService } from './auth.service';
 import { visibleTo } from '../utils/test-visibility';
 import { searchProductsInMemory } from '../utils/product-search';
@@ -26,7 +28,7 @@ import { searchProductsInMemory } from '../utils/product-search';
 // Una sola cadena literal: supabase-js deduce el tipo de la fila leyendo el texto
 // del select, y una concatenación ('a' + 'b') se ensancha a `string` y lo rompe.
 const PRODUCT_COLUMNS =
-  'id, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at';
+  'id, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at, has_variants, variant_label';
 
 /** Más reciente primero; a igual fecha, el de id mayor (el último que se cargó). */
 function newestFirst(a: ProductModel, b: ProductModel): number {
@@ -291,6 +293,43 @@ export class ProductService {
     return from(
       this.supabase.db.from('hub_parts').select(PRODUCT_COLUMNS).eq('slug', slug).maybeSingle(),
     ).pipe(map((res) => (res.data ? toProduct(res.data) : undefined)));
+  }
+
+  /**
+   * Las opciones activas de un producto (color, talla…), en el orden que les dio el equipo.
+   * Vacío si no tiene. Cada una trae su propio stock.
+   */
+  getVariants(productId: number): Observable<ProductVariantModel[]> {
+    return this.getVariantsFor([productId]);
+  }
+
+  /**
+   * Las opciones activas de varios productos de una sola vez: lo que necesita el carrito
+   * para refrescar el stock de cada línea sin una consulta por producto.
+   */
+  getVariantsFor(productIds: readonly number[]): Observable<ProductVariantModel[]> {
+    if (productIds.length === 0) return of([]);
+
+    const byOrder = (a: ProductVariantModel, b: ProductVariantModel) =>
+      a.sortOrder - b.sortOrder || a.id - b.id;
+
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        PRODUCT_VARIANTS_MOCK.filter((v) => v.isActive && productIds.includes(v.productId))
+          .map((v) => ({ ...v }))
+          .sort(byOrder),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('product_variants')
+        .select('id, product_id, name, sku, stock, sort_order, is_active, created_at')
+        .eq('is_active', true)
+        .in('product_id', [...productIds])
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true }),
+    ).pipe(map((res) => unwrap(res).map(toProductVariant)));
   }
 
   /**

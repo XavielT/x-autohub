@@ -1295,6 +1295,133 @@ check "ni un usuario" "$(denied coupon_check)" "$(as_user "$USER_A" "select * fr
 check "anon si valida y si crea pedidos (el checkout de invitado)" "true|true" \
   "select has_function_privilege('anon', 'public.validate_coupon(text,numeric,numeric,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.create_order(text,text,text,text,text,jsonb,text,text,text,text,text,text,boolean,text)', 'execute')::text;"
 
+echo "→ Variantes de producto (migracion 0023)"
+
+# Un producto efimero con tres opciones; lo creo por encima de RLS y las opciones como admin.
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into hub_parts (id, name, brand, img_url, price, stock, installable) values
+  (99911, 'Alfombra con opciones', 'X', 'x.jpg', 1000, 7, false),
+  (99912, 'Otro producto',         'X', 'x.jpg', 500,  4, false);
+SQL
+
+echo "   (quien ve y quien escribe las opciones)"
+check "un admin crea las opciones" "3" "$(as_user "$ADMIN" "
+  insert into product_variants (product_id, name, stock, sort_order) values
+    (99911, 'Negro', 3, 1), (99911, 'Gris', 2, 2), (99911, 'Beige', 0, 3);
+  select count(*) from product_variants where product_id = 99911;")"
+check "anon no inserta opciones" 'ERROR:  permission denied for table product_variants' \
+  "$(as_anon "insert into product_variants (product_id, name, stock) values (99911, 'Hack', 1);")"
+check "un usuario normal tampoco" 'ERROR:  new row violates row-level security policy for table "product_variants"' \
+  "$(as_user "$USER_A" "insert into product_variants (product_id, name, stock) values (99911, 'Hack', 1);")"
+check "anon lee las opciones activas" "3" "$(as_anon 'select count(*) from product_variants where product_id = 99911;')"
+check "un usuario no cambia el stock de una opcion (0 filas)" "0" \
+  "$(as_user "$USER_A" "with u as (update product_variants set stock = 999 where name = 'Negro' and product_id = 99911 returning 1) select count(*) from u;")"
+
+echo "   (la forma de una opcion la exige la base)"
+check "el nombre no se repite en un producto (sin importar mayusculas)" 'ERROR:  duplicate key value violates unique constraint "product_variants_name_key"' \
+  "$(as_user "$ADMIN" "insert into product_variants (product_id, name) values (99911, 'NEGRO');")"
+check "pero si en otro producto" "1" \
+  "$(as_user "$ADMIN" "insert into product_variants (product_id, name, stock) values (99912, 'Negro', 4); select count(*) from product_variants where product_id = 99912;")"
+check "sin espacios a los lados" 'ERROR:  new row for relation "product_variants" violates check constraint "product_variants_name_check"' \
+  "$(as_user "$ADMIN" "insert into product_variants (product_id, name) values (99911, ' Rojo ');")"
+check "el stock no es negativo" 'ERROR:  new row for relation "product_variants" violates check constraint "product_variants_stock_check"' \
+  "$(as_user "$ADMIN" "insert into product_variants (product_id, name, stock) values (99911, 'Rojo', -1);")"
+check "el sku no se repite" 'ERROR:  duplicate key value violates unique constraint "product_variants_sku_key"' \
+  "$(as_user "$ADMIN" "insert into product_variants (product_id, name, sku) values (99911, 'Azul', 'SKU-A'), (99911, 'Verde', 'SKU-A');")"
+
+echo "   (el stock del producto es la suma de sus opciones activas)"
+check "el producto pasa a tener opciones y su stock es la suma (3+2+0)" "true|5" \
+  "select has_variants::text || '|' || stock from hub_parts where id = 99911;"
+check "un producto con otra opcion no se mezcla" "true|4" \
+  "select has_variants::text || '|' || stock from hub_parts where id = 99912;"
+check "apagar una opcion la saca de la suma" "true|3" \
+  "$(as_user "$ADMIN" "update product_variants set is_active = false where product_id = 99911 and name = 'Gris'; select has_variants::text || '|' || stock from hub_parts where id = 99911;")"
+check "anon ya no ve la apagada" "2" "$(as_anon 'select count(*) from product_variants where product_id = 99911;')"
+check "un admin si" "3" "$(as_user "$ADMIN" 'select count(*) from product_variants where product_id = 99911;')"
+check "volver a encenderla la suma otra vez" "5" \
+  "$(as_user "$ADMIN" "update product_variants set is_active = true where product_id = 99911 and name = 'Gris'; select stock from hub_parts where id = 99911;")"
+check "mover una opcion de producto recalcula los dos (Gris 2 se va: 3 y 6)" "3|6" \
+  "$(as_user "$ADMIN" "update product_variants set product_id = 99912 where product_id = 99911 and name = 'Gris'; select (select stock from hub_parts where id = 99911) || '|' || (select stock from hub_parts where id = 99912);")"
+check "y al devolverla vuelven a 5 y 4" "5|4" \
+  "$(as_user "$ADMIN" "update product_variants set product_id = 99911 where name = 'Gris' and product_id = 99912; select (select stock from hub_parts where id = 99911) || '|' || (select stock from hub_parts where id = 99912);")"
+
+echo "   (create_order con opciones)"
+VAR_NEGRO="$(scalar "select id from product_variants where product_id = 99911 and name = 'Negro';")"
+VAR_GRIS="$(scalar "select id from product_variants where product_id = 99911 and name = 'Gris';")"
+VAR_BEIGE="$(scalar "select id from product_variants where product_id = 99911 and name = 'Beige';")"
+VAR_OTRO="$(scalar "select id from product_variants where product_id = 99912 and name = 'Negro';")"
+vorder() { echo "select * from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');"; }
+check "sin elegir opcion se rechaza, diciendo cual producto" 'ERROR:  Elige una opcion de "Alfombra con opciones" antes de comprarlo.' \
+  "$(as_anon "$(vorder '[{"part_id": 99911, "quantity": 1}]')")"
+check "una opcion de otro producto se rechaza" 'ERROR:  La opcion elegida de "Alfombra con opciones" ya no esta disponible.' \
+  "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_OTRO}]")")"
+check "una opcion inexistente tambien" 'ERROR:  La opcion elegida de "Alfombra con opciones" ya no esta disponible.' \
+  "$(as_anon "$(vorder '[{"part_id": 99911, "quantity": 1, "variant_id": 987654}]')")"
+P5NAME="$(scalar 'select name from hub_parts where id = 5;')"
+check "un producto sin opciones no acepta ninguna" "ERROR:  La opcion elegida de \"$P5NAME\" ya no esta disponible." \
+  "$(as_anon "$(vorder "[{\"part_id\": 5, \"quantity\": 1, \"variant_id\": $VAR_NEGRO}]")")"
+check "pedir mas de lo que tiene la opcion" 'ERROR:  De "Alfombra con opciones (Negro)" solo quedan 3 y pediste 4. Ajusta la cantidad.' \
+  "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 4, \"variant_id\": $VAR_NEGRO}]")")"
+check "una opcion agotada se dice por su nombre" 'ERROR:  Se agoto "Alfombra con opciones (Beige)". Quitala del carrito para continuar.' \
+  "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_BEIGE}]")")"
+check "el stock se suma si la misma opcion viene dos veces" 'ERROR:  De "Alfombra con opciones (Negro)" solo quedan 3 y pediste 4. Ajusta la cantidad.' \
+  "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 2, \"variant_id\": $VAR_NEGRO}, {\"part_id\": 99911, \"quantity\": 2, \"variant_id\": $VAR_NEGRO}]")")"
+check "los rechazos no descuentan nada" "3|5" \
+  "select (select stock from product_variants where id = $VAR_NEGRO) || '|' || (select stock from hub_parts where id = 99911);"
+
+ORD_VAR="$(scalar "$(as_anon "select id from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 99911, \"quantity\": 2, \"variant_id\": $VAR_NEGRO}, {\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_GRIS}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")")"
+check "un pedido con dos opciones: el stock baja en cada una" "1|1" \
+  "select (select stock from product_variants where id = $VAR_NEGRO) || '|' || (select stock from product_variants where id = $VAR_GRIS);"
+check "y el del producto es la suma de lo que queda (1+1+0)" "2" "select stock from hub_parts where id = 99911;"
+check "las lineas guardan la opcion y el nombre congelado 'Producto · Opcion'" "Alfombra con opciones · Gris,Alfombra con opciones · Negro" \
+  "select string_agg(name, ',' order by name) from order_items where order_id = '$ORD_VAR';"
+check "el precio es el del producto" "3000.00" "select subtotal from orders where id = '$ORD_VAR';"
+check "cada linea guarda variant_id y lo descontado" "2|1" \
+  "select (select stock_deducted from order_items where order_id = '$ORD_VAR' and variant_id = $VAR_NEGRO) || '|' || (select stock_deducted from order_items where order_id = '$ORD_VAR' and variant_id = $VAR_GRIS);"
+
+echo "   (cancelar devuelve el stock a la opcion)"
+check "cancelar el pedido" "cancelled" "$(as_user "$ADMIN" "select status from set_order_status('$ORD_VAR', 'cancelled');")"
+check "las opciones recuperan lo suyo" "3|2" \
+  "select (select stock from product_variants where id = $VAR_NEGRO) || '|' || (select stock from product_variants where id = $VAR_GRIS);"
+check "y el producto vuelve a la suma" "5" "select stock from hub_parts where id = 99911;"
+P5_BEFORE="$(scalar 'select stock from hub_parts where id = 5;')"
+ORD_P5="$(scalar "$(as_anon "select id from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")")"
+check "una pieza sin opciones sigue descontandose del producto" "$((P5_BEFORE - 1))" "select stock from hub_parts where id = 5;"
+check "y al cancelar se devuelve al producto" "$P5_BEFORE" \
+  "$(as_user "$ADMIN" "select status from set_order_status('$ORD_P5', 'cancelled'); select stock from hub_parts where id = 5;")"
+
+echo "   (una opcion con pedidos no se borra; sin pedidos si)"
+ORD_VAR2="$(scalar "$(as_anon "select id from create_order('v2@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_NEGRO}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")")"
+check "borrar una opcion con pedidos se rechaza" 'ERROR:  update or delete on table "product_variants" violates foreign key constraint "order_items_variant_id_fkey" on table "order_items"' \
+  "$(as_user "$ADMIN" "delete from product_variants where id = $VAR_NEGRO;")"
+check "borrar una sin pedidos si, y el producto sigue sumando (Negro 2 + Gris 2 = 4)" "4" \
+  "$(as_user "$ADMIN" "delete from product_variants where id = $VAR_BEIGE; select stock from hub_parts where id = 99911;")"
+check "sin ninguna opcion activa deja de tener opciones y conserva el stock (se recalcula por sentencia, no fila a fila)" "false|4" \
+  "$(as_user "$ADMIN" "update product_variants set is_active = false where product_id = 99911; select has_variants::text || '|' || stock from hub_parts where id = 99911;")"
+check "apagadas todas, un pedido ya no pide opcion" "1" \
+  "$(as_anon "select count(*) from create_order('v3@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 99911, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+check "borrar un producto con pedidos de opciones se rechaza (la opcion lo impide)" 'ERROR:  update or delete on table "product_variants" violates foreign key constraint "order_items_variant_id_fkey" on table "order_items"' \
+  "$(as_user "$ADMIN" "delete from hub_parts where id = 99911;")"
+
+echo "   (search_products devuelve has_variants y variant_label)"
+check "un producto con opciones lo dice" "true|Color" \
+  "$(as_user "$ADMIN" "update product_variants set is_active = true where id = $VAR_NEGRO; update hub_parts set variant_label = 'Color' where id = 99911; select has_variants::text || '|' || variant_label from search_products(p_query => 'Alfombra con opciones');")"
+check "y uno sin opciones, no" "false|" \
+  "$(as_anon "select has_variants::text || '|' || variant_label from search_products(p_query => '$P5NAME') where id = 5;")"
+check "el filtro 'solo en stock' usa la suma de las opciones" "1" \
+  "$(as_anon "select count(*) from search_products(p_query => 'Alfombra con opciones', p_in_stock_only => true);")"
+check "las columnas nuevas no son un hueco: la etiqueta se acota a 30" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_variant_label_check"' \
+  "$(as_user "$ADMIN" "update hub_parts set variant_label = repeat('x', 31) where id = 99911;")"
+
+echo "   (las puertas)"
+check "queda una sola create_order" "1" "select count(*) from pg_proc where proname = 'create_order';"
+check "queda una sola search_products" "1" "select count(*) from pg_proc where proname = 'search_products';"
+check "anon no invoca el trigger de sincronizacion" "$(denied product_variants_sync)" "$(as_anon 'select product_variants_sync();')"
+check "ni un usuario" "$(denied product_variants_sync)" "$(as_user "$USER_A" 'select product_variants_sync();')"
+check "anon sigue pudiendo crear pedidos y buscar" "true|true" \
+  "select has_function_privilege('anon', 'public.create_order(text,text,text,text,text,jsonb,text,text,text,text,text,text,boolean,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.search_products(text,text,bigint,bigint,integer,numeric,numeric,boolean,text,integer,integer)', 'execute')::text;"
+check "anon no invoca set_order_status" "$(denied set_order_status)" "$(as_anon "select * from set_order_status('$ORD_VAR', 'paid');")"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1493,8 +1620,8 @@ echo "→ Camino de actualizacion de la 0022: la base real ya tiene pedidos al m
 CHECK_DB=upgrade check "antes de migrar hay pedidos y ninguna columna de descuento" "true|0" \
   "select ((select count(*) from orders) > 0)::text || '|' || (select count(*) from information_schema.columns where table_name = 'orders' and column_name = 'discount');"
 UP_TOTALS="$(SCALAR_DB=upgrade scalar "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;")"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0022_coupons.sql upgrade
+apply supabase/migrations/0022_coupons.sql upgrade
 echo "   (aplicada dos veces, con pedidos dentro)"
 CHECK_DB=upgrade check "los pedidos viejos conservan su total" "$UP_TOTALS" \
   "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;"
@@ -1507,6 +1634,30 @@ CHECK_DB=upgrade check "la tabla de cupones existe y anon no la lee" "ERROR:  pe
   "$(as_anon 'select count(*) from coupons;')"
 CHECK_DB=upgrade check "un cupon creado despues de migrar se aplica al pedido" "true" \
   "insert into coupons (code, discount_type, discount_value) values ('ACTUALIZA', 'percent', 10); $(as_anon "select (discount > 0)::text from create_order('w@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'ACTUALIZA');")"
+
+echo "→ Camino de actualizacion de la 0023: la base real ya tiene piezas y pedidos al migrar"
+# Las piezas y los pedidos anteriores no tienen opciones: tienen que quedar igual (sin
+# opciones, con el mismo stock) y create_order() tiene que seguir aceptando la llamada de
+# antes, que es lo que hace un frontend que todavia no se ha actualizado.
+CHECK_DB=upgrade check "antes de migrar no existe product_variants" "0" \
+  "select count(*) from information_schema.tables where table_name = 'product_variants';"
+UP_STOCK="$(SCALAR_DB=upgrade scalar "select string_agg(id || '=' || stock, ',' order by id) from hub_parts;")"
+UP_TOTALS23="$(SCALAR_DB=upgrade scalar "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;")"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con piezas y pedidos dentro)"
+CHECK_DB=upgrade check "ninguna pieza tiene opciones y el stock no se movio" "0|$UP_STOCK" \
+  "select (select count(*) from hub_parts where has_variants) || '|' || (select string_agg(id || '=' || stock, ',' order by id) from hub_parts);"
+CHECK_DB=upgrade check "los pedidos viejos conservan su total y sus lineas no tienen opcion" "$UP_TOTALS23|0" \
+  "select (select string_agg(order_number || '=' || total, ',' order by order_number) from orders) || '|' || (select count(*) from order_items where variant_id is not null);"
+CHECK_DB=upgrade check "queda una sola create_order y una sola search_products" "1|1" \
+  "select (select count(*) from pg_proc where proname = 'create_order') || '|' || (select count(*) from pg_proc where proname = 'search_products');"
+CHECK_DB=upgrade check "la llamada de antes (sin opciones) sigue funcionando" "0.00" \
+  "$(as_anon "select discount from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+CHECK_DB=upgrade check "search_products ya devuelve has_variants" "false" \
+  "$(as_anon "select has_variants::text from search_products(p_limit => 1);")"
+CHECK_DB=upgrade check "una opcion creada despues de migrar suma al producto" "true|3" \
+  "insert into product_variants (product_id, name, stock) values (1, 'Unica', 3); select has_variants::text || '|' || stock from hub_parts where id = 1;"
 
 # --- Resumen ------------------------------------------------------------------
 

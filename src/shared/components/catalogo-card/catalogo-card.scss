@@ -170,6 +170,14 @@
         border-radius: 10px;
     }
 
+    &__options{
+        padding: 2px 8px;
+        font-weight: 700;
+        color: var(--text-strong);
+        background-color: rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+    }
+
     &__prices{
         display: flex;
         flex-direction: column;

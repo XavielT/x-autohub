@@ -46,6 +46,13 @@ export interface ProductModel {
   fitmentType: ProductFitmentType;
   installable: boolean;
   installationServiceId: number | null;
+  /**
+   * Tiene opciones activas (color, talla…). Si es true, `stock` ya es la suma del stock de
+   * las opciones y al comprar hay que elegir una (ver `ProductVariantModel`).
+   */
+  hasVariants: boolean;
+  /** Cómo se llama la opción ("Color", "Talla"). Vacío si no tiene. */
+  variantLabel: string;
   /** Especificaciones como pares clave/valor. jsonb no conserva el orden de carga. */
   specs: Record<string, string>;
   soldCount: number;
@@ -55,6 +62,20 @@ export interface ProductModel {
   isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/**
+ * Una opción de un producto (color, talla…) con su propio stock. Comparte el precio del
+ * producto: si algo cuesta distinto, es otro producto.
+ */
+export interface ProductVariantModel {
+  id: number;
+  productId: number;
+  name: string;
+  sku: string | null;
+  stock: number;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 /** Una categoría del árbol. Dos niveles como máximo. */

@@ -13,11 +13,14 @@
         </div>
       } @else {
         <div class="cart-modal__items">
-          @for (item of cartService.items(); track item.part.id) {
+          @for (item of cartService.items(); track item.part.id + ':' + (item.variant?.id ?? 0)) {
             <div class="cart-modal__item">
               <img class="cart-modal__item-img" [src]="item.part.imgUrl" [alt]="item.part.name" />
               <div class="cart-modal__item-info">
                 <span class="cart-modal__item-name">{{ item.part.name }}</span>
+                @if (item.variant) {
+                  <span class="cart-modal__item-variant">{{ item.part.variantLabel || 'Opción' }}: {{ item.variant.name }}</span>
+                }
                 <span class="cart-modal__item-brand">{{ item.part.brand }}</span>
                 <span class="cart-modal__item-price">RD$ {{ item.part.price * item.quantity | number:'1.0-0' }}</span>
                 <span class="cart-modal__item-avail" [attr.data-kind]="availability(item).kind">
@@ -25,7 +28,7 @@
                 </span>
                 @if (exceedsStock(item)) {
                   <span class="cart-modal__item-warn" role="alert">
-                    {{ item.part.stock > 0 ? 'Pides más de lo que hay. Ajusta la cantidad.' : 'Se agotó. Quítala para continuar.' }}
+                    {{ stockOf(item) > 0 ? 'Pides más de lo que hay. Ajusta la cantidad.' : 'Se agotó. Quítala para continuar.' }}
                   </span>
                 }
               </div>
@@ -37,7 +40,7 @@
                         [disabled]="!canAddMore(item)" (click)="changeQuantity(item, 1)">+</button>
               </div>
               <button class="cart-modal__item-remove" [attr.aria-label]="'Quitar ' + item.part.name"
-                      (click)="removeItem(item.part.id)">✕</button>
+                      (click)="removeItem(item)">✕</button>
             </div>
           }
         </div>

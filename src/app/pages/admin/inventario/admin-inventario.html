@@ -176,11 +176,19 @@
               </select>
             </label>
             @if (partForm.controls.fulfillment.value === 'stock') {
-              <label class="adm-inv__field">
-                <span>Existencias</span>
-                <input type="number" inputmode="numeric" formControlName="stock" min="0" step="1" />
-                @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
-              </label>
+              @if (hasActiveVariants()) {
+                <p class="adm-inv__field adm-inv__note">
+                  <span>Existencias</span>
+                  <strong>{{ variantsStock() }}</strong>
+                  <small>La suma de las opciones de abajo: se cambian ahi, una por una.</small>
+                </p>
+              } @else {
+                <label class="adm-inv__field">
+                  <span>Existencias</span>
+                  <input type="number" inputmode="numeric" formControlName="stock" min="0" step="1" />
+                  @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+                </label>
+              }
             } @else {
               <label class="adm-inv__field">
                 <span>Dias de entrega</span>
@@ -191,6 +199,15 @@
                 }
               </label>
             }
+
+            <h4 class="adm-inv__section">Opciones <small>(color, talla…)</small></h4>
+            <label class="adm-inv__field adm-inv__field--full">
+              <span>Que se elige <small>(por ejemplo "Color" o "Talla"; vacio = "Opcion")</small></span>
+              <input type="text" formControlName="variantLabel" [attr.maxlength]="variantLabelMax" placeholder="Color" />
+            </label>
+            <div class="adm-inv__field adm-inv__field--full">
+              <app-variant-editor [(variants)]="variants" />
+            </div>
 
             <h4 class="adm-inv__section">Compatibilidad</h4>
             <label class="adm-inv__field adm-inv__field--full">
@@ -440,10 +457,15 @@
                              [attr.aria-label]="'Precio de ' + part.name" />
                     </td>
                     <td>
-                      <input type="number" min="0" step="1" class="adm-inv__input adm-inv__input--sm"
-                             [value]="part.stock" [disabled]="savingId() === 'p' + part.id"
-                             (change)="savePartField(part, 'stock', $event)"
-                             [attr.aria-label]="'Existencias de ' + part.name" />
+                      @if (part.hasVariants) {
+                        <strong>{{ part.stock }}</strong>
+                        <span class="adm-inv__sub">Suma de opciones: se edita en "Editar"</span>
+                      } @else {
+                        <input type="number" min="0" step="1" class="adm-inv__input adm-inv__input--sm"
+                               [value]="part.stock" [disabled]="savingId() === 'p' + part.id"
+                               (change)="savePartField(part, 'stock', $event)"
+                               [attr.aria-label]="'Existencias de ' + part.name" />
+                      }
                       @if (part.fulfillment === 'on_order') {
                         <span class="adm-inv__sub">Bajo pedido</span>
                       } @else if (part.stock === 0) {

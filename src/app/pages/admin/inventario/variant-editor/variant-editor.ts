@@ -1,0 +1,76 @@
+import { ChangeDetectionStrategy, Component, computed, model, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { VariantDraft } from '../../../../../shared/models/admin-inventory.model';
+import { VARIANT_NAME_MAX, activeVariantStock } from '../../../../../shared/utils/variant-rules';
+
+/**
+ * Las opciones de un producto (color, talla…), cada una con su propio stock.
+ *
+ * Comparten el precio del producto: si algo cuesta distinto, es otro producto. Una opción
+ * que ya tuvo pedidos no se puede borrar de verdad (el pedido apunta a ella); al guardar se
+ * apaga en su lugar, y el formulario padre lo avisa.
+ *
+ * La lista es un `model()`: el formulario padre la lee y la guarda con el producto
+ * (`AdminCatalogService.saveVariants`). Este componente no guarda nada por su cuenta.
+ */
+@Component({
+  selector: 'app-variant-editor',
+  imports: [FormsModule],
+  templateUrl: './variant-editor.html',
+  styleUrl: './variant-editor.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class VariantEditor {
+  readonly variants = model<VariantDraft[]>([]);
+
+  readonly nameMax = VARIANT_NAME_MAX;
+  readonly newName = signal('');
+  readonly error = signal('');
+
+  /** Lo que sumará el stock del producto: las opciones activas. */
+  readonly total = computed(() => activeVariantStock(this.variants()));
+
+  add(): void {
+    const name = this.newName().trim();
+    if (!name) {
+      this.error.set('Escribe el nombre de la opción (por ejemplo "Negro").');
+      return;
+    }
+    if (name.length > VARIANT_NAME_MAX) {
+      this.error.set(`El nombre es muy largo (máximo ${VARIANT_NAME_MAX} caracteres).`);
+      return;
+    }
+    if (this.variants().some((v) => v.name.trim().toLowerCase() === name.toLowerCase())) {
+      this.error.set(`Ya hay una opción llamada "${name}".`);
+      return;
+    }
+
+    this.variants.update((list) => [...list, { id: null, name, sku: '', stock: 0, isActive: true }]);
+    this.error.set('');
+    this.newName.set('');
+  }
+
+  /** Cambia un campo de la fila `index` sin tocar las demás. */
+  patch(index: number, change: Partial<VariantDraft>): void {
+    this.variants.update((list) => list.map((v, i) => (i === index ? { ...v, ...change } : v)));
+  }
+
+  setStock(index: number, value: number | string | null): void {
+    const n = Number(value);
+    this.patch(index, { stock: Number.isFinite(n) && value !== '' && value !== null ? Math.max(0, Math.floor(n)) : 0 });
+  }
+
+  move(index: number, delta: -1 | 1): void {
+    const target = index + delta;
+    this.variants.update((list) => {
+      if (target < 0 || target >= list.length) return list;
+      const next = [...list];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  remove(index: number): void {
+    this.variants.update((list) => list.filter((_, i) => i !== index));
+  }
+}

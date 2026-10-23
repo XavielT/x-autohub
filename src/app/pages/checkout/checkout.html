@@ -39,10 +39,10 @@
         <div class="checkout__alert" role="alert">
           <strong>Hay piezas con menos existencias de las que pides.</strong>
           <ul>
-            @for (issue of stockIssues(); track issue.part.id) {
+            @for (issue of stockIssues(); track issue.part.id + ':' + (issue.variant?.id ?? 0)) {
               <li>
                 <span>
-                  {{ issue.part.name }}:
+                  {{ issue.part.name }}{{ issue.variant ? ' (' + issue.variant.name + ')' : '' }}:
                   @if (issue.available > 0) {
                     pides {{ issue.quantity }} y solo quedan {{ issue.available }}.
                   } @else {
@@ -281,11 +281,14 @@
           <h2 id="checkout-summary-heading" class="checkout__section-title">Resumen del pedido</h2>
 
           <ul class="checkout__lines">
-            @for (line of lines(); track line.item.part.id) {
+            @for (line of lines(); track line.item.part.id + ':' + (line.item.variant?.id ?? 0)) {
               <li class="checkout__line">
                 <img class="checkout__line-img" [src]="line.item.part.imgUrl" [alt]="line.item.part.name" />
                 <div class="checkout__line-info">
                   <span class="checkout__line-name">{{ line.item.part.name }}</span>
+                  @if (line.item.variant) {
+                    <span class="checkout__line-brand">{{ line.item.part.variantLabel || 'Opción' }}: {{ line.item.variant.name }}</span>
+                  }
                   <span class="checkout__line-brand">{{ line.item.part.brand }}</span>
                   <span class="checkout__line-qty">Cantidad: {{ line.item.quantity }}</span>
                   <span class="checkout__line-avail" [attr.data-kind]="line.availability.kind">{{ line.availability.short }}</span>

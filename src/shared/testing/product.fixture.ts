@@ -30,6 +30,8 @@ export function makeProduct(overrides: Partial<ProductModel> = {}): ProductModel
     fitmentType: 'universal',
     installable: false,
     installationServiceId: null,
+    hasVariants: false,
+    variantLabel: '',
     specs: {},
     soldCount: 0,
     ...overrides,

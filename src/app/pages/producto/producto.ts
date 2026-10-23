@@ -8,7 +8,12 @@ import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-
 import { Reviews } from '../../../shared/components/reviews/reviews';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
-import { ProductCategoryModel, ProductFitmentModel, ProductModel } from '../../../shared/models/product.model';
+import {
+  ProductCategoryModel,
+  ProductFitmentModel,
+  ProductModel,
+  ProductVariantModel,
+} from '../../../shared/models/product.model';
 import { ReviewStats } from '../../../shared/models/review.model';
 import { ServiceModel } from '../../../shared/models/service.model';
 import { CartService } from '../../../shared/services/cart.service';
@@ -70,6 +75,9 @@ export class Producto {
   readonly fitments = signal<ProductFitmentModel[]>([]);
   readonly fitmentLines = signal<FitmentLine[]>([]);
   readonly related = signal<ProductModel[]>([]);
+  /** Las opciones activas (color, talla…); vacío si el producto no las tiene. */
+  readonly variants = signal<ProductVariantModel[]>([]);
+  private readonly selectedVariantId = signal<number | null>(null);
   readonly isLoading = signal(true);
   /** Las estadísticas de las reseñas reales; el bloque de reseñas las avisa al cargarlas. */
   readonly reviewStats = signal<ReviewStats | null>(null);
@@ -93,9 +101,24 @@ export class Producto {
     return p ? (p.images?.length ? p.images : [p.imgUrl]) : [];
   });
 
+  /** La opción elegida, o `null` si no hay o el producto no tiene. */
+  readonly selectedVariant = computed(
+    () => this.variants().find((v) => v.id === this.selectedVariantId()) ?? null,
+  );
+
+  /** Cómo se llama lo que hay que elegir: "Color", "Talla"… */
+  readonly variantLabel = computed(() => this.product()?.variantLabel || 'Opción');
+
+  /** Falta elegir: el producto tiene opciones y todavía no se escogió ninguna. */
+  readonly needsVariant = computed(() => (this.product()?.hasVariants ?? false) && !this.selectedVariant());
+
+  /**
+   * Con una opción elegida, la disponibilidad es la de esa opción; sin elegir, la del
+   * producto (la suma de las opciones).
+   */
   readonly availability = computed(() => {
     const p = this.product();
-    return p ? availabilityOf(p) : undefined;
+    return p ? availabilityOf(p, this.selectedVariant()) : undefined;
   });
 
   readonly discount = computed(() => {
@@ -138,7 +161,8 @@ export class Producto {
     const origin = this.document.defaultView?.location.origin ?? 'https://xautohubrd.com';
     const vehicle = this.vehicleLabel();
     const ask = vehicle ? ` ¿Le sirve a mi ${vehicle}?` : '';
-    return storeWhatsAppLink(`Hola X AutoHub, me interesa ${p.name} (SKU ${p.sku}).${ask} ${origin}/tienda/p/${p.slug}`);
+    const option = this.selectedVariant() ? ` en ${this.selectedVariant()?.name}` : '';
+    return storeWhatsAppLink(`Hola X AutoHub, me interesa ${p.name}${option} (SKU ${p.sku}).${ask} ${origin}/tienda/p/${p.slug}`);
   });
 
   constructor() {
@@ -159,16 +183,20 @@ export class Producto {
                     product: of(product),
                     fitments: this.products.getFitments(product.id),
                     related: this.products.getRelated(product, 8),
+                    variants: product.hasVariants ? this.products.getVariants(product.id) : of([]),
                   })
-                : of({ product: undefined, fitments: [], related: [] }),
+                : of({ product: undefined, fitments: [], related: [], variants: [] }),
             ),
           );
         }),
         takeUntilDestroyed(),
       )
       .subscribe({
-        next: ({ product, fitments, related }) => {
+        next: ({ product, fitments, related, variants }) => {
           this.product.set(product);
+          // La opción elegida en el producto anterior no vale para este.
+          this.variants.set(variants);
+          this.selectedVariantId.set(null);
           // Las del producto anterior no valen para este: el bloque de reseñas las vuelve a avisar.
           this.reviewStats.set(null);
           this.fitments.set(fitments);
@@ -241,13 +269,31 @@ export class Producto {
     });
   }
 
+  /** Elegir una opción. Una agotada de inventario propio no se puede elegir. */
+  chooseVariant(variant: ProductVariantModel): void {
+    if (!this.isVariantAvailable(variant)) return;
+    this.selectedVariantId.set(variant.id);
+  }
+
+  /** ¿Se puede comprar esta opción? Lo bajo pedido nunca está agotado. */
+  isVariantAvailable(variant: ProductVariantModel): boolean {
+    return this.product()?.fulfillment === 'on_order' || variant.stock > 0;
+  }
+
   addToCart(): boolean {
     const product = this.product();
     if (!product || !this.availability()?.canBuy) return false;
 
+    // Un producto con opciones no se agrega sin elegir una: se dice cuál falta.
+    if (this.needsVariant()) {
+      this.toast.show(`Elige ${this.variantLabel().toLowerCase()} antes de agregarlo al carrito`, 'error');
+      return false;
+    }
+
     try {
-      this.cart.addToCart(product);
-      this.toast.show(`${product.name} agregado al carrito`);
+      if (!this.cart.addToCart(product, this.selectedVariant())) return false;
+      const option = this.selectedVariant() ? ` (${this.selectedVariant()?.name})` : '';
+      this.toast.show(`${product.name}${option} agregado al carrito`);
       return true;
     } catch {
       this.toast.show('No se pudo agregar el articulo', 'error');

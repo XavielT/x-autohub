@@ -28,22 +28,31 @@ describe('Checkout', () => {
     removeFromCart: ReturnType<typeof vi.fn>;
   };
 
-  function montar(lines: CartItem[] = [{ part: makeProduct({ id: 1, price: 1000 }), quantity: 2 }]) {
+  function montar(lines: CartItem[] = [{ part: makeProduct({ id: 1, price: 1000 }), quantity: 2, variant: null }]) {
     items = signal<CartItem[]>(lines);
     cart = {
       items,
       totalPrice: computed(() => items().reduce((acc, i) => acc + i.part.price * i.quantity, 0)),
       stockIssues: computed(() =>
         items()
-          .filter((i) => i.part.fulfillment === 'stock' && i.quantity > i.part.stock)
-          .map((i) => ({ part: i.part, quantity: i.quantity, available: i.part.stock })),
+          .filter((i) => i.part.fulfillment === 'stock' && i.quantity > (i.variant ? i.variant.stock : i.part.stock))
+          .map((i) => ({
+            part: i.part,
+            variant: i.variant,
+            quantity: i.quantity,
+            available: i.variant ? i.variant.stock : i.part.stock,
+          })),
       ),
       refresh: vi.fn(async () => undefined),
       clearCart: vi.fn(() => items.set([])),
-      setQuantity: vi.fn((id: number, q: number) =>
-        items.update((l) => l.map((i) => (i.part.id === id ? { ...i, quantity: q } : i))),
+      setQuantity: vi.fn((id: number, q: number, variantId: number | null = null) =>
+        items.update((l) =>
+          l.map((i) => (i.part.id === id && (i.variant?.id ?? null) === variantId ? { ...i, quantity: q } : i)),
+        ),
       ),
-      removeFromCart: vi.fn((id: number) => items.update((l) => l.filter((i) => i.part.id !== id))),
+      removeFromCart: vi.fn((id: number, variantId: number | null = null) =>
+        items.update((l) => l.filter((i) => !(i.part.id === id && (i.variant?.id ?? null) === variantId))),
+      ),
     };
 
     TestBed.configureTestingModule({
@@ -166,7 +175,7 @@ describe('Checkout', () => {
       expect(normal.c.hasInstallable()).toBe(false);
       TestBed.resetTestingModule();
 
-      const instalable = montar([{ part: makeProduct({ id: 2, installable: true, installationServiceId: 3 }), quantity: 1 }]);
+      const instalable = montar([{ part: makeProduct({ id: 2, installable: true, installationServiceId: 3 }), quantity: 1, variant: null }]);
       expect(instalable.c.hasInstallable()).toBe(true);
     });
 
@@ -312,8 +321,8 @@ describe('Checkout', () => {
 
     it('con piezas que piden más de lo que hay no confirma, y se arreglan desde el aviso', () => {
       const { c, fixture, el } = hastaConfirmar([
-        { part: makeProduct({ id: 1, name: 'Disco', stock: 1 }), quantity: 3 },
-        { part: makeProduct({ id: 2, name: 'Filtro', stock: 0 }), quantity: 1 },
+        { part: makeProduct({ id: 1, name: 'Disco', stock: 1 }), quantity: 3, variant: null },
+        { part: makeProduct({ id: 2, name: 'Filtro', stock: 0 }), quantity: 1, variant: null },
       ]);
       fixture.detectChanges();
 
@@ -324,16 +333,59 @@ describe('Checkout', () => {
       const [disco, filtro] = c.stockIssues();
       c.fixIssue(disco); // ajusta a lo que queda
       c.fixIssue(filtro); // agotada: se quita
-      expect(cart.setQuantity).toHaveBeenCalledWith(1, 1);
-      expect(cart.removeFromCart).toHaveBeenCalledWith(2);
+      expect(cart.setQuantity).toHaveBeenCalledWith(1, 1, null);
+      expect(cart.removeFromCart).toHaveBeenCalledWith(2, null);
 
       c.submitOrder();
       expect(create).toHaveBeenCalledTimes(1);
     });
 
+    describe('con opciones', () => {
+      const alfombra = () => makeProduct({ id: 8, name: 'Alfombras', hasVariants: true, variantLabel: 'Color', stock: 9 });
+      const opcion = (id: number, name: string, stock: number) => ({
+        id, productId: 8, name, sku: null, stock, sortOrder: id, isActive: true,
+      });
+
+      it('el resumen dice la opción de cada línea', () => {
+        const { fixture, el } = hastaConfirmar([
+          { part: alfombra(), quantity: 1, variant: opcion(1, 'Negro', 5) },
+          { part: alfombra(), quantity: 2, variant: opcion(2, 'Gris', 5) },
+        ]);
+        fixture.detectChanges();
+
+        const brands = [...el.querySelectorAll('.checkout__line-brand')].map((b) => b.textContent?.trim());
+        expect(brands).toContain('Color: Negro');
+        expect(brands).toContain('Color: Gris');
+      });
+
+      it('el aviso de existencias nombra la opción y se arregla solo en esa línea', () => {
+        const { c, fixture, el } = hastaConfirmar([
+          { part: alfombra(), quantity: 3, variant: opcion(1, 'Negro', 1) },
+          { part: alfombra(), quantity: 1, variant: opcion(2, 'Gris', 5) },
+        ]);
+        fixture.detectChanges();
+
+        expect(el.querySelector('.checkout__alert')?.textContent).toContain('Alfombras (Negro)');
+        c.fixIssue(c.stockIssues()[0]);
+
+        expect(cart.setQuantity).toHaveBeenCalledWith(8, 1, 1);
+        expect(c.stockIssues()).toEqual([]);
+      });
+
+      it('al confirmar se mandan las líneas con su opción', () => {
+        const negro = opcion(1, 'Negro', 5);
+        const { c } = hastaConfirmar([{ part: alfombra(), quantity: 2, variant: negro }]);
+
+        c.submitOrder();
+
+        const [, lines] = create.mock.calls[0];
+        expect(lines[0].variant).toEqual(negro);
+      });
+    });
+
     it('lo bajo pedido no cuenta como falta de stock', () => {
       const { c } = hastaConfirmar([
-        { part: makeProduct({ id: 1, fulfillment: 'on_order', leadTimeDays: 10, stock: 0 }), quantity: 2 },
+        { part: makeProduct({ id: 1, fulfillment: 'on_order', leadTimeDays: 10, stock: 0 }), quantity: 2, variant: null },
       ]);
 
       expect(c.stockIssues()).toEqual([]);
@@ -360,7 +412,7 @@ describe('Checkout', () => {
     });
 
     it('la instalación solo viaja si se pidió y hay algo que instalar', () => {
-      const { c } = hastaConfirmar([{ part: makeProduct({ id: 2, installable: true }), quantity: 1 }]);
+      const { c } = hastaConfirmar([{ part: makeProduct({ id: 2, installable: true }), quantity: 1, variant: null }]);
       c.wantsInstallation.set(true);
 
       c.submitOrder();

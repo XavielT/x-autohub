@@ -107,6 +107,46 @@
 
   // --- Comprar ------------------------------------------------------------------------
 
+  &__variants {
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  &__variants-title {
+    padding: 0;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-soft);
+
+    strong { color: #fff; }
+  }
+
+  &__variants-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  &__variant {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
+    cursor: pointer;
+
+    small { font-weight: 600; color: var(--text-soft); }
+
+    &:hover:not(.is-out):not(.is-selected) { border-color: var(--Hub); }
+    &.is-selected { color: var(--main); background-color: var(--Hub); border-color: var(--Hub); }
+    &.is-out { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+  }
+
   &__actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
   &__add,

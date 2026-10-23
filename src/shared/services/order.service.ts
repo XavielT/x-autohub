@@ -12,7 +12,7 @@ import {
 import { UserOrderModel } from '../models/user-order.model';
 import { CHECKOUT_SHIPPING_OPTIONS_MOCK } from '../data/checkout-options.mock';
 import { MOCK_ORDERS_STORAGE_KEY } from '../data/mock-orders-usage';
-import { CartItem } from './cart.service';
+import { CartItem, lineName, lineStock } from './cart.service';
 import { AuthService } from './auth.service';
 import { CouponService } from './coupon.service';
 import { StorageService } from './storage.service';
@@ -80,7 +80,7 @@ export class OrderService {
         p_address_line1: payload.addressLine1,
         p_shipping_option_id: payload.shippingOptionId,
         p_payment_method_id: payload.paymentMethodId,
-        p_items: items.map((i) => ({ part_id: i.part.id, quantity: i.quantity })),
+        p_items: items.map((i) => ({ part_id: i.part.id, quantity: i.quantity, variant_id: i.variant?.id ?? null })),
         p_contact_phone: payload.contactPhone || null,
         p_city: payload.city || null,
         p_postal_code: payload.postalCode || null,
@@ -219,14 +219,27 @@ export class OrderService {
       return throwError(() => new Error('Un pedido necesita al menos una pieza.'));
     }
 
-    for (const { part, quantity } of items) {
-      if (part.fulfillment !== 'stock') continue;
-      if (part.stock <= 0) {
-        return throwError(() => new Error(`Se agoto "${part.name}". Quitala del carrito para continuar.`));
+    for (const item of items) {
+      const { part, quantity, variant } = item;
+
+      // Las opciones, igual que `create_order()`: con opciones hay que elegir una.
+      if (part.hasVariants && !variant) {
+        return throwError(() => new Error(`Elige una opcion de "${part.name}" antes de comprarlo.`));
       }
-      if (quantity > part.stock) {
+      if (!part.hasVariants && variant) {
+        return throwError(() => new Error(`La opcion elegida de "${part.name}" ya no esta disponible.`));
+      }
+
+      if (part.fulfillment !== 'stock') continue;
+      const stock = lineStock(item);
+      // Con opción, el mensaje la nombra: "Alfombras (Negro)".
+      const label = variant ? `${part.name} (${variant.name})` : part.name;
+      if (stock <= 0) {
+        return throwError(() => new Error(`Se agoto "${label}". Quitala del carrito para continuar.`));
+      }
+      if (quantity > stock) {
         return throwError(
-          () => new Error(`De "${part.name}" solo quedan ${part.stock} y pediste ${quantity}. Ajusta la cantidad.`),
+          () => new Error(`De "${label}" solo quedan ${stock} y pediste ${quantity}. Ajusta la cantidad.`),
         );
       }
     }
@@ -271,7 +284,7 @@ export class OrderService {
       whatsappOpenedAt: null,
       paymentConfirmedAt: null,
       installationServiceId: items.find((i) => i.part.installable)?.part.installationServiceId ?? null,
-      items: items.map((i) => ({ name: i.part.name, unitPrice: i.part.price, quantity: i.quantity })),
+      items: items.map((i) => ({ name: lineName(i), unitPrice: i.part.price, quantity: i.quantity })),
       history: [{ fromStatus: null, toStatus: status, note: null, createdAt }],
     };
 

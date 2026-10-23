@@ -5,7 +5,9 @@ import { of } from 'rxjs';
 import { Producto } from './producto';
 import { ProductService } from '../../../shared/services/product.service';
 import { makeProduct } from '../../../shared/testing/product.fixture';
-import { ProductModel } from '../../../shared/models/product.model';
+import { ProductModel, ProductVariantModel } from '../../../shared/models/product.model';
+import { CartService } from '../../../shared/services/cart.service';
+import { ToastService } from '../../../shared/services/toast.service';
 
 /**
  * La ficha: el bloque de reseñas y el JSON-LD `Product` para los buscadores. Lo demás de
@@ -19,16 +21,22 @@ describe('Producto (/tienda/p/:slug)', () => {
 
   afterEach(() => document.head.querySelectorAll('script[data-ld]').forEach((el) => el.remove()));
 
-  async function montar(product: ProductModel | undefined) {
+  const toast = { show: vi.fn() };
+
+  async function montar(product: ProductModel | undefined, variants: ProductVariantModel[] = []) {
+    toast.show.mockClear();
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ slug: product?.slug ?? 'no-existe' })) } },
+        { provide: ToastService, useValue: toast },
         {
           provide: ProductService,
           useValue: {
             getBySlug: () => of(product),
             getFitments: () => of([]),
             getRelated: () => of([]),
+            getVariants: () => of(variants),
           },
         },
       ],
@@ -55,6 +63,83 @@ describe('Producto (/tienda/p/:slug)', () => {
     const { el } = await montar(makeProduct({ id: 2 }));
 
     expect(el.textContent).toContain('Aún no hay reseñas');
+  });
+
+  describe('opciones (color, talla…)', () => {
+    const alfombra = () =>
+      makeProduct({ id: 8, name: 'Alfombras', slug: 'alfombras-8', hasVariants: true, variantLabel: 'Color', stock: 8 });
+    const opcion = (id: number, name: string, stock: number): ProductVariantModel => ({
+      id, productId: 8, name, sku: null, stock, sortOrder: id, isActive: true,
+    });
+    const todas = () => [opcion(1, 'Negro', 5), opcion(2, 'Gris', 3), opcion(3, 'Beige', 0)];
+    const chips = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>('.prod__variant')];
+
+    it('un producto sin opciones no muestra el selector', async () => {
+      const { el } = await montar(makeProduct({ id: 2 }));
+
+      expect(el.querySelector('.prod__variants')).toBeNull();
+    });
+
+    it('ofrece cada opción con el nombre de lo que se elige, y la agotada se marca', async () => {
+      const { el } = await montar(alfombra(), todas());
+
+      expect(el.querySelector('.prod__variants-title')?.textContent?.trim()).toBe('Color');
+      expect(chips(el).map((c) => c.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Negro', 'Gris', 'Beige · Agotado']);
+      expect(chips(el)[2].classList.contains('is-out')).toBe(true);
+    });
+
+    it('sin elegir, "Agregar" no mete nada al carrito y pide elegir', async () => {
+      const { el } = await montar(alfombra(), todas());
+      const cart = TestBed.inject(CartService);
+
+      el.querySelector<HTMLButtonElement>('.prod__add')!.click();
+
+      expect(cart.items()).toEqual([]);
+      expect(toast.show).toHaveBeenCalledWith('Elige color antes de agregarlo al carrito', 'error');
+    });
+
+    it('elegir una opción la marca, la dice en el título y cambia la disponibilidad a la suya', async () => {
+      const { fixture, el } = await montar(alfombra(), todas());
+
+      chips(el)[1].click();
+      fixture.detectChanges();
+
+      expect(chips(el)[1].getAttribute('aria-checked')).toBe('true');
+      expect(el.querySelector('.prod__variants-title')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Color: Gris');
+      expect(el.querySelector('.prod__avail')?.textContent?.trim()).toBe('En stock: 3');
+    });
+
+    it('con la opción elegida se agrega al carrito con esa opción', async () => {
+      const { fixture, el } = await montar(alfombra(), todas());
+      const cart = TestBed.inject(CartService);
+
+      chips(el)[0].click();
+      fixture.detectChanges();
+      el.querySelector<HTMLButtonElement>('.prod__add')!.click();
+
+      expect(cart.items().map((i) => [i.part.id, i.variant?.name, i.quantity])).toEqual([[8, 'Negro', 1]]);
+      expect(toast.show).toHaveBeenCalledWith('Alfombras (Negro) agregado al carrito');
+    });
+
+    it('una opción agotada no se puede elegir', async () => {
+      const { fixture, el } = await montar(alfombra(), todas());
+
+      chips(el)[2].click();
+      fixture.detectChanges();
+
+      expect(chips(el)[2].getAttribute('aria-checked')).toBe('false');
+      expect(el.querySelector('.prod__variants-title')?.textContent?.trim()).toBe('Color');
+    });
+
+    it('el WhatsApp nombra la opción elegida', async () => {
+      const { fixture, el } = await montar(alfombra(), todas());
+
+      chips(el)[0].click();
+      fixture.detectChanges();
+
+      const href = decodeURIComponent(el.querySelector<HTMLAnchorElement>('.prod__ask')!.href);
+      expect(href).toContain('Alfombras en Negro');
+    });
   });
 
   describe('JSON-LD Product', () => {

@@ -125,6 +125,13 @@
         font-size: 12px;
     }
 
+    &__item-variant {
+        font-family: var(--font-body);
+        color: var(--text-strong);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
     &__item-price {
         font-family: var(--font-price);
         color: var(--Hub);

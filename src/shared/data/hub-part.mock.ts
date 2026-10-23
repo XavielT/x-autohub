@@ -1,6 +1,7 @@
 import { ProductFulfillment, ProductFitmentType, ProductModel } from "../models/product.model";
 import { slugify } from "../utils/slugify";
 import { LEGACY_CATEGORY_TO_SLUG, PRODUCT_CATEGORIES_MOCK } from "./product-category.mock";
+import { PRODUCT_VARIANT_LABELS_MOCK, variantStockOf } from "./product-variant.mock";
 
 /**
  * Los campos que tenía una pieza antes del pivote (migración 0017).
@@ -471,6 +472,8 @@ export const HUB_PART_MOCK: ProductModel[] = LEGACY_PARTS.map((part) => {
     if (!category) throw new Error(`La categoria ${part.category} no tiene mapeo`);
 
     const fulfillment = extra.fulfillment ?? "stock";
+    // Con opciones, el stock es la suma de las activas (lo mismo que hace el trigger).
+    const variantStock = variantStockOf(part.id);
     return {
         id: part.id,
         categoryId: category.id,
@@ -486,13 +489,15 @@ export const HUB_PART_MOCK: ProductModel[] = LEGACY_PARTS.map((part) => {
         price: part.price,
         compareAtPrice: extra.compareAtPrice ?? null,
         description: part.description,
-        stock: extra.stock,
+        stock: variantStock ?? extra.stock,
         isFeatured: extra.featured ?? false,
         fulfillment,
         leadTimeDays: fulfillment === "on_order" ? extra.leadTimeDays ?? null : null,
         fitmentType: extra.fitmentType,
         installable: extra.installationServiceId !== undefined,
         installationServiceId: extra.installationServiceId ?? null,
+        hasVariants: variantStock !== null,
+        variantLabel: PRODUCT_VARIANT_LABELS_MOCK[part.id] ?? "",
         specs: extra.specs ?? {},
         soldCount: extra.soldCount ?? 0,
         isTest: part.isTest ?? false,

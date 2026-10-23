@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { CartItem, CartService } from '../../services/cart.service';
+import { CartItem, CartService, lineStock } from '../../services/cart.service';
 import { availabilityOf } from '../../utils/product-availability';
 
 @Component({
@@ -17,25 +17,30 @@ export class CartModal {
 
   /** Lo que se dice de cada línea: en stock, bajo pedido (y cuándo llega) o agotado. */
   availability(item: CartItem) {
-    return availabilityOf(item.part);
+    return availabilityOf(item.part, item.variant);
+  }
+
+  /** Lo que queda de lo que pide la línea: de su opción si la tiene. */
+  stockOf(item: CartItem): number {
+    return lineStock(item);
   }
 
   /** ¿Se puede sumar otra unidad? En lo de inventario propio no pasa de lo que queda. */
   canAddMore(item: CartItem): boolean {
-    return item.part.fulfillment !== 'stock' || item.quantity < item.part.stock;
+    return item.part.fulfillment !== 'stock' || item.quantity < lineStock(item);
   }
 
   /** ¿Esta línea pide más de lo que hay? */
   exceedsStock(item: CartItem): boolean {
-    return item.part.fulfillment === 'stock' && item.quantity > item.part.stock;
+    return item.part.fulfillment === 'stock' && item.quantity > lineStock(item);
   }
 
   changeQuantity(item: CartItem, delta: 1 | -1): void {
-    this.cartService.setQuantity(item.part.id, item.quantity + delta);
+    this.cartService.setQuantity(item.part.id, item.quantity + delta, item.variant?.id ?? null);
   }
 
-  removeItem(partId: number): void {
-    this.cartService.removeFromCart(partId);
+  removeItem(item: CartItem): void {
+    this.cartService.removeFromCart(item.part.id, item.variant?.id ?? null);
   }
 
   clearCart(): void {

@@ -92,4 +92,50 @@ describe('CartModal', () => {
 
     expect(el.querySelector('.cart-modal__item-warn')?.textContent).toContain('Se agotó');
   });
+
+  describe('con opciones', () => {
+    const alfombra = makeProduct({ id: 8, name: 'Alfombras', hasVariants: true, variantLabel: 'Color', stock: 8 });
+    const opcion = (id: number, name: string, stock: number) => ({
+      id, productId: 8, name, sku: null, stock, sortOrder: id, isActive: true,
+    });
+
+    function abrirConOpciones(...variants: ReturnType<typeof opcion>[]) {
+      for (const v of variants) cart.addToCart(alfombra, v);
+      cart.toggleCart();
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('cada línea dice su opción ("Color: Negro")', () => {
+      const el = abrirConOpciones(opcion(1, 'Negro', 5), opcion(2, 'Gris', 5));
+
+      const lines = [...el.querySelectorAll('.cart-modal__item-variant')].map((l) => l.textContent?.trim());
+      expect(lines).toEqual(['Color: Negro', 'Color: Gris']);
+    });
+
+    it('la disponibilidad y el tope son los de la opción, no los del producto', () => {
+      const el = abrirConOpciones(opcion(1, 'Negro', 1));
+
+      expect(el.querySelector('.cart-modal__item-avail')?.textContent?.trim()).toBe('En stock: 1');
+      expect(el.querySelectorAll<HTMLButtonElement>('.cart-modal__qty-btn')[1].disabled).toBe(true);
+    });
+
+    it('quitar una opción deja la otra del mismo producto', () => {
+      const el = abrirConOpciones(opcion(1, 'Negro', 5), opcion(2, 'Gris', 5));
+
+      el.querySelectorAll<HTMLButtonElement>('.cart-modal__item-remove')[0].click();
+      fixture.detectChanges();
+
+      expect(cart.items().map((i) => i.variant?.name)).toEqual(['Gris']);
+    });
+
+    it('subir la cantidad de una no mueve la otra', () => {
+      const el = abrirConOpciones(opcion(1, 'Negro', 5), opcion(2, 'Gris', 5));
+
+      el.querySelectorAll<HTMLButtonElement>('.cart-modal__qty-btn')[3].click(); // "+" de la segunda
+      fixture.detectChanges();
+
+      expect(cart.items().map((i) => [i.variant?.name, i.quantity])).toEqual([['Negro', 1], ['Gris', 2]]);
+    });
+  });
 });

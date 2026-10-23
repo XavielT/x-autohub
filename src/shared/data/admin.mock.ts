@@ -184,13 +184,13 @@ export const ADMIN_ORDERS_MOCK: AdminOrderModel[] = [
 ];
 
 export const ADMIN_PARTS_MOCK: AdminPartModel[] = [
-  { id: 1, name: 'Disco ventilado GTR 355mm', brand: 'Brembo', categoryId: 6, sku: 'XAH-000001', fulfillment: 'stock', price: 12950, stock: 8, isActive: true, isTest: false },
-  { id: 2, name: 'Filtro de aire de alto flujo', brand: 'K&N', categoryId: 8, sku: 'XAH-000002', fulfillment: 'stock', price: 2850, stock: 24, isActive: true, isTest: false },
-  { id: 3, name: 'Kit Coilover Street Pro', brand: 'BC Racing', categoryId: 7, sku: 'XAH-000003', fulfillment: 'on_order', price: 32500, stock: 3, isActive: true, isTest: false },
-  { id: 4, name: 'Aceite sintetico 5W-30 5L', brand: 'Motul', categoryId: 8, sku: 'XAH-000004', fulfillment: 'stock', price: 2250, stock: 0, isActive: false, isTest: false },
+  { id: 1, name: 'Disco ventilado GTR 355mm', brand: 'Brembo', categoryId: 6, sku: 'XAH-000001', fulfillment: 'stock', price: 12950, stock: 8, hasVariants: false, isActive: true, isTest: false },
+  { id: 2, name: 'Filtro de aire de alto flujo', brand: 'K&N', categoryId: 8, sku: 'XAH-000002', fulfillment: 'stock', price: 2850, stock: 24, hasVariants: false, isActive: true, isTest: false },
+  { id: 3, name: 'Kit Coilover Street Pro', brand: 'BC Racing', categoryId: 7, sku: 'XAH-000003', fulfillment: 'on_order', price: 32500, stock: 3, hasVariants: false, isActive: true, isTest: false },
+  { id: 4, name: 'Aceite sintetico 5W-30 5L', brand: 'Motul', categoryId: 8, sku: 'XAH-000004', fulfillment: 'stock', price: 2250, stock: 0, hasVariants: false, isActive: false, isTest: false },
   // Mismo id que la pieza de prueba de HUB_PART_MOCK, para que marcar y
   // desmarcar desde el panel se corresponda con lo que se ve en el catalogo.
-  { id: 36, name: 'PRUEBA - Pieza de prueba', brand: 'X AutoHub', categoryId: 12, sku: 'XAH-000036', fulfillment: 'stock', price: 100, stock: 5, isActive: true, isTest: true },
+  { id: 36, name: 'PRUEBA - Pieza de prueba', brand: 'X AutoHub', categoryId: 12, sku: 'XAH-000036', fulfillment: 'stock', price: 100, stock: 5, hasVariants: false, isActive: true, isTest: true },
 ];
 
 export const ADMIN_VEHICLES_MOCK: AdminVehicleModel[] = [
