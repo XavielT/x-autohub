@@ -67,6 +67,11 @@ electricidad, aire acondicionado y diagnóstico. **No** mecánica pesada (motor,
 transmisión). Cotización por WhatsApp, agenda de citas en la web y galería de
 trabajos realizados.
 
+> **Hoy** (fase 5) `/servicios` trae el catálogo por categoría, cada servicio tiene su
+> página, se cotiza por WhatsApp (un formulario que solo redacta el mensaje) y se agenda
+> en tres pasos con un calendario; la cita nace por confirmar y la confirma el equipo.
+> Los precios los pone el taller: hasta entonces los servicios dicen "a cotizar".
+
 ### Vehículos
 
 Dos inventarios que **no se funden**, agrupados bajo un mismo menú:
@@ -128,8 +133,7 @@ de prueba. Diecisiete migraciones aplicadas.
   (buscador, categorías, ofertas, más vendidos, nuevos, taller, vehículos y
   comunidad). El hero con video pasó a la página de la Comunidad.
 
-**Lo que todavía no** (fases 5 a 7): la agenda de citas del taller, la PWA y las
-reseñas. Ver `docs/ROADMAP.md` para el orden.
+**Lo que todavía no** (fases 6 y 7): la PWA y las reseñas. Ver `docs/ROADMAP.md` para el orden.
 
 Sigue funcionando todo lo anterior: Auto Hub, Hub Market con moderación, carrito
 persistente y checkout de invitado o con cuenta (precios calculados en Postgres),

@@ -41,11 +41,12 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 16    | `supabase/migrations/0016_club_unsubscribe.sql` | Token de baja del club y su función             |
 | 17    | `supabase/migrations/0017_store_catalog.sql`   | Tienda: categorías, compatibilidad por vehículo, garaje y búsqueda |
 | 18    | `supabase/migrations/0018_orders_payment_flow.sql` | Pedidos: estados, stock, historial, comprobantes y cuentas |
-| 19    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 19    | `supabase/migrations/0019_services_booking.sql` | Taller: servicios, horario, citas y trabajos realizados |
+| 20    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
-> `status` (0012), `is_test` (0013), las columnas de la tienda (0017) y los métodos
-> de pago de la 0018 (que ya trae `card` y `mercadopago` desactivados). Y las dependencias entre migraciones son
+> `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
+> de pago de la 0018 y los servicios de la 0019 (por eso el seed ya no los trae) (que ya trae `card` y `mercadopago` desactivados). Y las dependencias entre migraciones son
 > reales: la **0012 usa `is_moderator_or_admin()`**, que crea la 0011, y la
 > **0013 rehace las políticas de select de 0002 y 0012** — aplicarla antes
 > dejaría a esas políticas sin el filtro de prueba, o directamente sin existir.
@@ -157,6 +158,10 @@ La clave anon es pública. La seguridad real está en RLS:
 | `profiles`                      | Todos               | Solo el propio                       |
 | `club_subscriptions`            | Solo admin          | Cualquiera puede insertar            |
 | `orders`, `order_items`         | Solo el dueño (y admin); un invitado lee el suyo con `get_order(id)` | Solo `create_order()`. El estado y el pago, solo `set_order_status()`, `attach_payment_proof()` y `mark_whatsapp_opened()` (un trigger lo exige) |
+| `services`                      | Los activos (el admin ve también los apagados) | Solo admin |
+| `service_availability`, `service_blackouts` | Todos (el horario es público) | Solo admin |
+| `service_appointments`          | El dueño de la cita y admin | Nadie: entran por `book_appointment()` y cambian por `set_appointment_status()` / `cancel_appointment()` |
+| `service_works`                 | Los publicados (el admin ve también los borradores) | Solo admin |
 | `order_status_history`          | El dueño del pedido y admin | Nadie: la llena un trigger           |
 | `product_categories`            | Todos (las activas; el admin ve también las ocultas) | Solo admin (`is_admin()`) |
 | `vehicle_makes`, `vehicle_models` | Todos           | Solo admin (`is_admin()`)            |
@@ -313,6 +318,7 @@ La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
 | ------- | -------------------------- |
 | `is_admin()`, `is_moderator_or_admin()`, `can_see_test_items()` | Las llaman las políticas RLS, y una política se evalúa con los permisos de quien consulta. Sin execute, **cada select anónimo falla**. |
 | `create_order(...)` | El checkout de invitado, a propósito desde 0002. |
+| `available_slots()`, `book_appointment()` | Se puede ver la agenda y agendar sin cuenta. `book_appointment()` valida todo por dentro (slot, tope por teléfono, vehículo, pedido). |
 | `get_order()`, `attach_payment_proof()`, `mark_whatsapp_opened()`, `order_accepts_proof()` | `/pedido/:id` es público por id (un uuid imposible de adivinar) y un invitado sube su comprobante sin cuenta. Ninguna devuelve datos personales. |
 | `get_site_stats()` | El home sin sesión. |
 
@@ -494,6 +500,55 @@ directo de `status` lo rechaza el trigger de `orders` **incluso a un admin**.
 - `ALTER TYPE ... ADD VALUE` no deja **usar** el valor en la misma transacción: nada
   de la migración lo referencia donde Postgres lo evalúe al crear el objeto.
 
+### Servicios, agenda y trabajos (migración 0019)
+
+Quinta fase del pivote (`docs/PIVOT-2026-10.md`, §4). Convierte las cuatro tarjetas de
+"Servicios" en un taller que vende, cotiza y agenda.
+
+**La hora es la de República Dominicana.** El taller abre "de 8:00 a 17:00" **en su
+hora**, no en la del servidor (UTC). Todo lo que convierte una fecha y una hora en un
+instante usa `America/Santo_Domingo` (sin horario de verano, siempre UTC-4); el
+navegador espeja la cuenta con el desfase fijo (`shared/utils/service-time.ts`) solo
+para el modo simulado y para mostrar las horas.
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `services` + `slug`, `category`, `price_from`, `duration_minutes`, `is_bookable`, `images`, `long_description` | El catálogo. `price_from` nulo = "a cotizar" |
+| `service_availability` | Cuándo abre el taller: día de la semana, horas, tamaño de la franja y **capacidad** (citas simultáneas) |
+| `service_blackouts` | Cierres (feriados, vacaciones): quitan las franjas que cubren |
+| `service_appointments` | Las citas (nacen `requested`). **Sin política de escritura**: es el mecanismo |
+| `available_slots(servicio, día)` | Las franjas libres con sus cupos. Nunca devuelve horas pasadas ni más allá de 90 días. `anon` la invoca |
+| `book_appointment(...)` | Agenda. **Revalida todo dentro de Postgres** y toma un bloqueo por franja para que dos personas no se lleven el último cupo. `anon` la invoca |
+| `set_appointment_status()` | Solo admin, en orden: `requested → confirmed`; `confirmed → in_progress · done · cancelled · no_show`; `in_progress → done · cancelled` |
+| `cancel_appointment()` | Solo el dueño, solo `requested`/`confirmed` y solo con **más de 24 horas** |
+| `my_appointments()` | "Mis citas" (`security invoker`) |
+| `service_works` + bucket `service-works` | Trabajos realizados, antes y después. Bucket público en lectura, escritura solo admin |
+
+**Decisiones que conviene conocer**
+
+- **La capacidad es del taller, no del servicio**, y una cita **ocupa solo su hora de
+  inicio**: `duration_minutes` es informativo. Un trabajo de tres horas no bloquea tres
+  franjas; el equipo lo confirma a mano.
+- **Un invitado puede agendar** (igual que puede comprar), así que `book_appointment()`
+  limita a **3 citas abiertas por teléfono**, comparando los **diez dígitos de la
+  derecha** ("+1 809 555 0134" y "809-555-0134" son el mismo número). Sin ese tope,
+  cualquiera llenaría la agenda desde la consola.
+- **Los diez servicios iniciales nacen sin precio** (a cotizar), y **el horario inicial es
+  de ejemplo** (`is_example`, el panel lo avisa). A diferencia de las cuentas bancarias de
+  la 0018, el horario de ejemplo **no se esconde**: una cita siempre pasa por
+  confirmación, así que el peor caso es que el equipo la mueva.
+- **Los cuatro servicios genéricos de antes se desactivan, no se borran** (Mantenimiento,
+  Reparación, Chequeo y Diagnóstico, Búsqueda y Revisión): el catálogo nuevo los cubre.
+  Mantienen su id, así que una pieza que apuntara a uno no se rompe.
+- **El seed ya no trae servicios**: nacen en la migración, como las categorías de la
+  0017. `hub_parts.installation_service_id` del seed apunta a los ids 1 a 10, que la
+  migración asigna en el mismo orden que `SERVICES_MOCK`.
+- **Las citas se guardan con el vehículo como texto**, además del `profile_vehicle_id`:
+  el del garaje puede cambiar o borrarse y la cita tiene que seguir diciendo de qué
+  vehículo era. `order_id` liga la cita con la instalación de un pedido.
+- **Una cita ajena y una que no existe se responden igual** ("Esa cita no existe"): no se
+  confirma cuáles hay.
+
 ### Datos privados del perfil (migración 0006)
 
 `email` y `phone` de `profiles` **no** son legibles con la clave anon ni con una
@@ -594,7 +649,7 @@ select public.set_user_role(
 
    Levanta un cluster temporal con `initdb` (sin sudo, sin Docker), aplica las
    migraciones y el seed **desde cero**, vuelve a aplicar la última (una
-   migración tiene que poder ejecutarse dos veces) y corre 214 comprobaciones de
+   migración tiene que poder ejecutarse dos veces) y corre 298 comprobaciones de
    seguridad y de comportamiento con sesiones simuladas: visibilidad pública,
    contenido de prueba, contadores, quién puede invocar cada función, los tres
    frenos de la escalada de privilegios, las tablas de la tienda (lectura pública

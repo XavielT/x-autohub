@@ -1,15 +1,17 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.2.0, la fase 4 del pivote). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.3.0, la fase 5 del pivote). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 4.** Ya existen el esquema de la
+> **El pivote de octubre de 2026 va por la fase 5.** Ya existen el esquema de la
 > tienda (fase 1), la cara nueva (fase 2: navbar con buscador y menú de
 > categorías, barra de pestañas, footer por pilares, home de tienda) y la tienda
 > de verdad (fase 3: `/tienda` con filtros, "mi vehículo", ficha por slug,
 > `/buscar` y el garaje en el perfil) y los pedidos (fase 4: checkout en tres
 > pasos, `/pedido/:id`, comprobante de transferencia o cierre por WhatsApp, "Mis
-> pedidos" y el panel). **Falta** la agenda de servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
+> pedidos" y el panel) y el taller (fase 5: catálogo de servicios, cotizar por WhatsApp,
+> agenda de citas, "Mis citas", trabajos realizados y las cuatro pestañas del taller
+> en el panel). **Falta** la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
 > se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
@@ -66,15 +68,16 @@ x-autohub/
     │   │   └── (sin uso desde la fase 2, se retiran en la fase 7:
     │   │        page-counter-overview, home-featured-vehicles,
     │   │        home-featured-catalog, home-news)
-    │   └── pages/                    Una carpeta por página (23)
+    │   └── pages/                    Una carpeta por página (26)
     │       ├── home/  auto-hub/  auto-hub-details/
     │       ├── tienda/  producto/  buscar/  checkout/  pedido/
     │       ├── hub-market/  car-details/  hub-market-part-details/
     │       ├── accessory-details/  publicar/
-    │       ├── servicios/  social-hub/  new-details/
-    │       ├── login/  registro/  perfil/ (con mi-garaje/)  baja/
-    │       ├── admin/  (moderacion, versiones, pedidos, inventario,
-    │       │            usuarios, ajustes). inventario/ trae además las pestañas
+    │       ├── servicios/  servicio/  cotizar/  agendar/  social-hub/  new-details/
+    │       ├── login/  registro/  perfil/ (con mi-garaje/ y mis-citas/)  baja/
+    │       ├── admin/  (moderacion, versiones, pedidos, taller, inventario,
+    │       │            usuarios, ajustes). taller/ trae las pestañas Citas,
+    │       │            Servicios, Disponibilidad y Trabajos. inventario/ trae además las pestañas
     │       │            Categorías y Marcas y modelos y los editores de
     │       │            compatibilidad y de especificaciones de la pieza
     │       └── terminos-condiciones/  not-found/
@@ -85,6 +88,7 @@ x-autohub/
     │   │   ├── search-box/  vehicle-form/  vehicle-picker-modal/  store-filters/
     │   │   ├── car-card/  autohub-card/  hub-market-card/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
+    │   │   ├── service-card/  service-works/
     │   │   ├── cart-modal/  toast/  club-channel/
     │   ├── ui/                    Presentacionales puros, sin dependencias
     │   │   ├── highlight-badge/  info-badge/  image-gallery/
@@ -95,7 +99,7 @@ x-autohub/
     │   │                          category-tree, contact (el WhatsApp de la tienda), test-visibility,
     │   │                          phone, whatsapp…
     │   ├── testing/               product.fixture.ts (un ProductModel para los specs)
-    │   └── services/              23 servicios, todos providedIn: 'root'
+    │   └── services/              26 servicios, todos providedIn: 'root'
     │
     ├── styles/
     │   ├── _auth-shell.scss       Parcial compartido por login y registro
@@ -208,10 +212,10 @@ intencional — el usuario nunca pierde la navegación.
 
 ## Rutas
 
-25 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
+28 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
 `title`, salvo dos que solo redirigen: `/catalogo` → `/tienda` (conserva los query
 params) y `/hub-part-details/:id` → `/tienda/p/:slug` (la resuelve
-`productIdRedirectGuard`, porque ese enlace se llegó a compartir); `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
+`productIdRedirectGuard`, porque ese enlace se llegó a compartir); `/admin` tiene además siete rutas hijas (`taller` trae cuatro pestañas propias). Ver `src/app/app.routes.ts`,
 que está agrupado por pilar y comentado.
 
 Protegidas por `authGuard`: `/publicar`, `/perfil`.
@@ -227,6 +231,18 @@ pueda compartir y recargar; el vehículo **no** viaja, es de quien mira. Siguen
 funcionando los enlaces viejos `?category=<texto>` y `?categoria=<slug>`
 (`legacy-categories.ts`). `/buscar?q=` separa lo de la tienda de lo que publica la
 comunidad en Hub Market.
+
+**El taller** (fase 5). `/servicios` es el catálogo agrupado por categoría, con los
+trabajos realizados (solo si ya hay publicados), una línea de lo que **no** se hace y
+dónde y cuándo se atiende; `/servicios/:slug` es el detalle. `cotizar` y `agendar` van
+**antes** de `:slug` en las rutas (si no, "agendar" se leería como un servicio).
+**Cotizar** no guarda nada: redacta el mensaje de WhatsApp (las fotos no se suben: se le
+dice al cliente que las mande por el chat). **Agendar** son tres pasos (servicio → día y
+hora → datos) con un calendario hecho a mano; las horas salen de `available_slots()` y
+`book_appointment()` las vuelve a validar. La cita nace `requested` y la confirma el
+equipo. Las horas son **siempre las de Santo Domingo** (`shared/utils/service-time.ts`).
+"Mis citas" vive en `/perfil#citas`; el panel (`/admin/taller/*`) trae la agenda, el
+catálogo, el horario con sus cierres y los trabajos. Ver `docs/BACKEND.md`.
 
 **El pedido** (fase 4). `/checkout` son tres pasos (Entrega → Pago → Confirmar) y los
 totales que muestra el último son una estimación: los de verdad los calcula
@@ -272,7 +288,7 @@ Decisiones que conviene conocer:
 
 ## Build
 
-- Bundle inicial: **641 kB** (~170 kB transferidos, medido el 2026-10-23; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
+- Bundle inicial: **644 kB** (~170 kB transferidos, medido el 2026-10-23; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
   página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
   porque el navbar necesita la sesión desde el primer render.
 - `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
@@ -285,7 +301,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 91 archivos, 781 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 111 archivos, 1031 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

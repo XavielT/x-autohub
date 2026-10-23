@@ -26,8 +26,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | hecha        |
 | 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | 2.0.0     | No               | hecha        |
 | 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | hecha        |
-| 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | **2.2.0** | 0018             | preparada    |
-| 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | pendiente    |
+| 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | hecha        |
+| 5    | Servicios: catálogo, cotización, agenda, trabajos                 | **2.3.0** | 0019             | preparada    |
 | 6    | PWA                                                               | 2.4.0     | No               | pendiente    |
 | 7    | Reseñas, SEO de producto, limpieza de código muerto               | 2.5.0     | 0020 (y 0021)    | pendiente    |
 
@@ -107,6 +107,33 @@ disponibilidad de cada línea y avisa cuando el stock bajó. 214 comprobaciones 
 de WhatsApp. Cotizar, agendar sin llamar y ver trabajos hechos es lo que
 convierte una visita en un cliente, y habilita la instalación de lo que se
 vende.
+
+**Hecho:** migración 0019 (servicios con slug, categoría, precio, duración e imágenes;
+horario del taller y cierres; citas; `available_slots()`, `book_appointment()`,
+`set_appointment_status()`, `cancel_appointment()`; trabajos y su bucket público);
+`/servicios` nueva, detalle, cotizar por WhatsApp y agendar en tres pasos; "Mis
+citas" en el perfil con la regla de 24 horas; el panel del taller (Citas, Servicios,
+Disponibilidad y Trabajos); la ficha de producto y `/pedido/:id` agendan la
+instalación de verdad. 298 comprobaciones en `verify-migrations.sh`.
+
+**Pendiente que dejó la fase:**
+- **Poner los precios.** Los diez servicios nacen **a cotizar** (`price_from` nulo):
+  "Desde RD$ X" es una promesa y la pone el taller desde el panel. Hasta entonces
+  el checkout y la ficha dicen "a cotizar".
+- **Revisar el horario de ejemplo** (lunes–viernes 8:00–17:00, sábado 8:00–13:00,
+  franjas de 60 min, 2 citas a la vez). Está marcado `is_example` y el panel lo
+  avisa; ya se puede agendar con él, y toda cita pasa por confirmación.
+- **Subir fotos reales de trabajos.** La base no trae ninguno: `/servicios` no pinta
+  la sección hasta que se publique el primero.
+- **Una cita ocupa solo su hora de inicio.** `duration_minutes` es informativo: un
+  trabajo de tres horas no bloquea tres franjas. Si hace falta, `available_slots()`
+  tendría que contar las franjas que cubre cada cita.
+- **No hay "cambiar la hora" de una cita** (ni el cliente ni el admin): se cancela y se
+  vuelve a agendar. Un invitado solo cancela por WhatsApp.
+- **Avisos al confirmar una cita** (correo o WhatsApp automático): hoy el cliente ve el
+  estado en "Mis citas" y el equipo escribe a mano.
+- **El panel edita un solo tramo por día** (no mañana y tarde por separado).
+- **Fotos de la cotización**: no se suben (no hay a dónde); se mandan por el chat.
 
 ### Fase 6 — PWA (2.4.0)
 
