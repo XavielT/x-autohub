@@ -189,15 +189,17 @@ ficha de producto y en el detalle de servicio, el JSON-LD `Product` y `Service`,
   recrear la función), así que la tarjeta no puede distinguir una estrella real de una
   sembrada. Si molesta, ese es el cambio.
 - **Una reseña de un pedido de invitado no se verifica** (no hay a quién atribuirlo).
-- **Assets sin ninguna referencia** (no se borraron; decide Xaviel): 27 archivos, ~137 KB.
-  Iconos: `auto-hub-icon`, `auto-icon`, `bag-icon`, `cart-hub-icon`, `chat-round-icon`,
-  `crowd-hub-icon`, `crowd-icon`, `home-hub2-icon`, `home-icon`, `market-hub-icon`,
-  `market-icon`, `network-hub-icon`, `network-icon`, `network2-hub-icon`, `network2-icon`,
-  `next-fat-icon`, `next-hub-fat-icon`, `next-hub-icon`, `next-icon`, `not-found-icon`,
-  `not-found-w-icon`, `services-icon`, `speedometer-icon`, `star-rounded-icon` (todos
-  `.svg` en `src/assets/icons/`), y las fotos `cars/corvette.jpg`, `cars/lambo-bg.jpg` y
-  `cars/porsche.jpg` en `src/assets/imgs/`. (Las dos `OFL.txt` de las fuentes son licencias:
-  se quedan.)
+- **Assets sin uso: borrados (2026-10-23).** Eran 17 archivos: 14 iconos `.svg` de
+  `src/assets/icons/` (`chat-round`, `home-hub2`, `market`, `market-hub`, `network`,
+  `network-hub`, `next`, `next-hub`, `next-fat`, `next-hub-fat`, `not-found`, `not-found-w`,
+  `speedometer`, `star-rounded`) y las fotos `cars/corvette.jpg`, `cars/lambo-bg.jpg` y
+  `cars/porsche.jpg`. **Ojo, la lista anterior de aquí traía 10 de más**: `home-icon`, `bag-icon`,
+  `cart-hub-icon`, `crowd-icon`, `crowd-hub-icon`, `auto-icon`, `auto-hub-icon`,
+  `network2-icon`, `network2-hub-icon` y `services-icon` **sí se usan**: el navbar y la barra de
+  pestañas arman el nombre en código (`assets/icons/${names[...]}.svg`) y un grep del nombre
+  completo no los ve. Antes de borrar un asset, busca también el nombre sin la extensión y
+  las plantillas de texto, y mira las tablas de la base. (Las dos `OFL.txt` de las fuentes son
+  licencias: se quedan.)
 
 ---
 
