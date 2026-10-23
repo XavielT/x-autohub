@@ -1,0 +1,60 @@
+<div class="cot">
+  <nav class="cot__crumb" aria-label="Navegación"><a routerLink="/servicios">← Servicios</a></nav>
+
+  <h1 class="cot__title">Cotizar por <span>WhatsApp</span></h1>
+  <p class="cot__lead">Cuéntanos qué necesitas y te armamos el mensaje. Se abre WhatsApp con todo escrito; tú solo lo envías.</p>
+
+  <form class="cot__form" (ngSubmit)="send()" novalidate>
+    <label class="cot__label">
+      <span>¿Qué servicio?</span>
+      <select class="cot__input" name="service" [ngModel]="serviceSlug()" (ngModelChange)="serviceSlug.set($event)">
+        <option value="">Otro / no sé</option>
+        @for (s of services(); track s.id) { <option [value]="s.slug">{{ s.title }}</option> }
+      </select>
+    </label>
+
+    <label class="cot__label">
+      <span>Tu vehículo</span>
+      <input class="cot__input" type="text" name="vehicle" [ngModel]="vehicle()" (ngModelChange)="vehicle.set($event)"
+             placeholder="Ej: Toyota Corolla 2015" autocomplete="off" />
+    </label>
+    @if (pickedVehicle() && vehicle() !== pickedVehicle()) {
+      <button type="button" class="cot__link" (click)="vehicle.set(pickedVehicle() ?? '')">Usar mi vehículo: {{ pickedVehicle() }}</button>
+    } @else if (!pickedVehicle()) {
+      <button type="button" class="cot__link" (click)="pickVehicle()">Elegir marca, modelo y año</button>
+    }
+
+    <label class="cot__label">
+      <span>¿Qué le pasa o qué necesitas?<span class="req" aria-hidden="true">*</span></span>
+      <textarea class="cot__input cot__textarea" name="details" rows="4" required [ngModel]="details()"
+                (ngModelChange)="details.set($event)" [class.is-invalid]="submitted() && missingDetails()"
+                placeholder="Ej: hace un ruido al frenar y el pedal se siente blando"></textarea>
+      @if (submitted() && missingDetails()) { <span class="field-error">Cuéntanos qué necesitas.</span> }
+    </label>
+
+    <label class="cot__label">
+      <span>Tu teléfono <small>(opcional)</small></span>
+      <input class="cot__input" type="tel" name="phone" inputmode="tel" [ngModel]="phone()"
+             (ngModelChange)="phone.set($event)" placeholder="809-000-1234" autocomplete="tel"
+             [class.is-invalid]="phoneInvalid()" />
+      @if (phoneInvalid()) { <span class="field-error">Escribe un teléfono válido (809, 829 o 849…).</span> }
+    </label>
+
+    <div class="cot__label">
+      <span>Fotos <small>(opcional, hasta {{ maxPhotos }})</small></span>
+      <input class="cot__file" type="file" accept="image/*" multiple (change)="onPhotos($event)" aria-describedby="cot-photos-note" />
+      <p id="cot-photos-note" class="cot__note">
+        <strong>Las fotos no se suben aquí.</strong> Cuando se abra WhatsApp, adjúntalas al chat.
+        @if (photoCount() > 0) { Ya dijimos que mandas {{ photoCount() }} en el mensaje. }
+      </p>
+    </div>
+
+    <section class="cot__preview" aria-labelledby="cot-preview">
+      <h2 id="cot-preview">Así queda tu mensaje</h2>
+      <pre>{{ message() }}</pre>
+    </section>
+
+    <button type="submit" class="cot__submit">Abrir WhatsApp con el mensaje</button>
+    <p class="cot__note">No guardamos lo que escribes aquí: esto solo redacta el mensaje.</p>
+  </form>
+</div>

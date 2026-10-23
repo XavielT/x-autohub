@@ -1,0 +1,28 @@
+<ul class="works">
+  @for (work of works(); track work.id) {
+    <li class="works__item">
+      @if (work.beforeImage || work.afterImage) {
+        <div class="works__photos" [class.works__photos--single]="!(work.beforeImage && work.afterImage)">
+          @if (work.beforeImage) {
+            <figure class="works__figure">
+              <img [src]="work.beforeImage" [alt]="'Antes: ' + work.title" loading="lazy" />
+              <figcaption>Antes</figcaption>
+            </figure>
+          }
+          @if (work.afterImage) {
+            <figure class="works__figure">
+              <img [src]="work.afterImage" [alt]="'Después: ' + work.title" loading="lazy" />
+              <figcaption>Después</figcaption>
+            </figure>
+          }
+        </div>
+      }
+      <h3 class="works__title">{{ work.title }}</h3>
+      @if (work.description) { <p class="works__desc">{{ work.description }}</p> }
+      <p class="works__meta">
+        @if (work.vehicleText) { <span>{{ work.vehicleText }}</span> }
+        <time [attr.datetime]="work.doneAt.toISOString()">{{ work.doneAt | date: 'MMM y' }}</time>
+      </p>
+    </li>
+  }
+</ul>

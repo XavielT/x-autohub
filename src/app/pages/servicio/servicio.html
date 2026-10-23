@@ -1,0 +1,65 @@
+<div class="svc">
+  <nav class="svc__crumb" aria-label="Navegación">
+    <a routerLink="/servicios">← Todos los servicios</a>
+  </nav>
+
+  @switch (state()) {
+    @case ('loading') { <p class="svc__state" role="status">Cargando el servicio…</p> }
+
+    @case ('missing') {
+      <div class="svc__state">
+        <h1>No encontramos este servicio</h1>
+        <p>Puede que ya no lo ofrezcamos. Mira lo que sí hacemos.</p>
+        <a class="svc__btn" routerLink="/servicios">Ver los servicios</a>
+      </div>
+    }
+
+    @case ('error') {
+      <div class="svc__state" role="alert">
+        <h1>No pudimos cargar el servicio</h1>
+        <p>Revisa tu conexión e inténtalo otra vez.</p>
+      </div>
+    }
+
+    @case ('ready') {
+      @if (service(); as s) {
+        <article class="svc__layout">
+          @if (s.images.length > 0) {
+            <app-image-gallery class="svc__gallery" [images]="s.images" [alt]="s.title" />
+          }
+
+          <div class="svc__info">
+            <p class="svc__cat">{{ categoryLabel() }}</p>
+            <h1 class="svc__title">{{ s.title }}</h1>
+            <p class="svc__lead">{{ s.description }}</p>
+
+            <p class="svc__facts">
+              <span class="svc__price">
+                @if (s.priceFrom !== null) { Desde RD$ {{ s.priceFrom | number:'1.0-0' }} } @else { A cotizar }
+              </span>
+              <span>Dura aprox. {{ duration() }}</span>
+            </p>
+
+            @if (s.longDescription) { <p class="svc__body">{{ s.longDescription }}</p> }
+
+            <div class="svc__actions">
+              @if (s.isBookable) {
+                <a class="svc__btn" routerLink="/servicios/agendar" [queryParams]="{ service: s.id }">Agendar</a>
+              }
+              <a class="svc__btn" [class.svc__btn--ghost]="s.isBookable" routerLink="/servicios/cotizar" [queryParams]="{ service: s.slug }">Cotizar</a>
+              <a class="svc__btn svc__btn--ghost" [href]="quoteLink()" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            </div>
+            <p class="svc__note">Te confirmamos el precio final antes de empezar.</p>
+          </div>
+        </article>
+
+        @if (works().length > 0) {
+          <section class="svc__works" aria-labelledby="svc-works">
+            <h2 id="svc-works">Trabajos de este tipo</h2>
+            <app-service-works [works]="works()" />
+          </section>
+        }
+      }
+    }
+  }
+</div>

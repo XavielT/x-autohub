@@ -1,0 +1,87 @@
+<section class="tl">
+  <header class="tl__head">
+    <h2 class="tl__title">Citas</h2>
+    <p class="tl__lead">
+      {{ appointments().length }} cita(s) · {{ pendingCount() }} por confirmar
+    </p>
+  </header>
+
+  <div class="tl__chips" role="group" aria-label="Qué citas ver">
+    @for (r of ranges; track r.value) {
+      <button type="button" class="tl__chip" [class.is-active]="range() === r.value" (click)="setRange(r.value)">
+        {{ r.label }}@if (r.value === 'pending' && pendingCount() > 0) { <strong> {{ pendingCount() }}</strong> }
+      </button>
+    }
+  </div>
+
+  @if (isLoading() && appointments().length === 0) {
+    <p class="tl__empty">Cargando las citas...</p>
+  } @else if (days().length === 0) {
+    <p class="tl__empty">
+      @switch (range()) {
+        @case ('pending') { No hay citas por confirmar. }
+        @case ('today') { No hay citas hoy. }
+        @case ('week') { No hay citas esta semana. }
+        @case ('past') { No hay citas pasadas. }
+        @default { No hay citas próximas. }
+      }
+    </p>
+  } @else {
+    @for (day of days(); track day.date) {
+      <h3 class="agenda__day">{{ day.label }}</h3>
+      <ul class="tl__list">
+        @for (a of day.items; track a.id) {
+          <li class="tl__card" [class.is-attention]="a.status === 'requested'">
+            <div class="tl__row">
+              <div>
+                <span class="tl__ref">#{{ a.number }}</span>
+                <strong class="agenda__time">{{ time(a) }}</strong>
+              </div>
+              <span class="tl__badge" [class.tl__badge--hub]="a.status === 'requested'"
+                    [class.tl__badge--info]="a.status === 'confirmed' || a.status === 'in_progress'"
+                    [class.tl__badge--ok]="a.status === 'done'"
+                    [class.tl__badge--bad]="a.status === 'cancelled' || a.status === 'no_show'">
+                {{ statusLabels[a.status] }}
+              </span>
+            </div>
+
+            <p class="tl__name">{{ a.serviceTitle }}</p>
+            <p class="tl__sub">
+              {{ a.contactName }} · {{ a.contactPhone }}
+              @if (a.vehicleText) { · {{ a.vehicleText }} }
+            </p>
+            @if (a.notes) { <p class="tl__sub">“{{ a.notes }}”</p> }
+
+            <p class="tl__badges">
+              @if (a.userId === null) { <span class="tl__badge">Invitado</span> }
+              @if (a.orderId) { <span class="tl__badge tl__badge--hub">Instalación de un pedido</span> }
+            </p>
+
+            @if (actionsFor(a).length > 0) {
+              <div class="tl__actions">
+                @for (action of actionsFor(a); track action.to) {
+                  <button type="button" class="tl__btn"
+                          [class.tl__btn--danger]="action.destructive"
+                          [class.tl__btn--confirm]="action.destructive && isConfirming(a, action)"
+                          [disabled]="savingId() !== null" (click)="act(a, action)">
+                    @if (savingId() === a.id) { Guardando… }
+                    @else if (action.destructive && isConfirming(a, action)) { Toca otra vez }
+                    @else { {{ action.label }} }
+                  </button>
+                }
+              </div>
+              <label class="tl__field agenda__note">
+                <span>Nota <small class="tl__muted">(la ve el cliente, opcional)</small></span>
+                <input class="tl__input" type="text" maxlength="200" [value]="noteOf(a.id)" (input)="setNote(a.id, $event)"
+                       placeholder="Ej: Trae la llave de seguridad de las llantas" />
+              </label>
+            }
+
+            @if (a.statusNote) { <p class="tl__sub">Nota: {{ a.statusNote }}</p> }
+            <p class="tl__sub"><a class="tl__link" [href]="whatsapp(a)" target="_blank" rel="noopener noreferrer">Escribirle por WhatsApp</a></p>
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

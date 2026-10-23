@@ -204,7 +204,7 @@ describe('bloques del home', () => {
       expect(quote.href).toContain('https://wa.me/18099539782?text=');
       expect(quote.textContent).toContain('Cotizar por WhatsApp');
       expect(el.querySelector('.hsb__book')?.textContent).toContain('Agendar cita');
-      expect(el.querySelector('.hsb__book')?.getAttribute('href')).toBe('/servicios');
+      expect(el.querySelector('.hsb__book')?.getAttribute('href')).toBe('/servicios/agendar');
       expect(el.querySelectorAll('.hsb__item').length).toBe(4);
     });
 

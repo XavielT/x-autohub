@@ -8,11 +8,11 @@ import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 import { ProductCategoryModel, ProductFitmentModel, ProductModel } from '../../../shared/models/product.model';
-import { ServiciosCardModel } from '../../../shared/models/servicios-card.model';
+import { ServiceModel } from '../../../shared/models/service.model';
 import { CartService } from '../../../shared/services/cart.service';
 import { CategoryService } from '../../../shared/services/category.service';
 import { ProductService } from '../../../shared/services/product.service';
-import { ServiciosCardService } from '../../../shared/services/servicios-card.service';
+import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { VehiclePickerService } from '../../../shared/services/vehicle-picker.service';
 import { VehicleService } from '../../../shared/services/vehicle.service';
@@ -52,7 +52,7 @@ export class Producto {
   private readonly router = inject(Router);
   private readonly products = inject(ProductService);
   private readonly categoryService = inject(CategoryService);
-  private readonly servicios = inject(ServiciosCardService);
+  private readonly serviceCatalog = inject(ServiceCatalogService);
   private readonly vehicles = inject(VehicleService);
   private readonly picker = inject(VehiclePickerService);
   private readonly cart = inject(CartService);
@@ -70,8 +70,8 @@ export class Producto {
   private readonly categories = toSignal(this.categoryService.getAll(), {
     initialValue: [] as ProductCategoryModel[],
   });
-  private readonly services = toSignal(this.servicios.getServicios(), {
-    initialValue: [] as ServiciosCardModel[],
+  private readonly services = toSignal(this.serviceCatalog.getServices(), {
+    initialValue: [] as ServiceModel[],
   });
 
   readonly vehicleLabel = this.vehicles.selectedLabel;
@@ -110,6 +110,18 @@ export class Producto {
   readonly installationService = computed(() => {
     const id = this.product()?.installationServiceId;
     return id === null || id === undefined ? undefined : this.services().find((s) => s.id === id);
+  });
+
+  /**
+   * A dónde lleva "Agendar la instalación": a la agenda con el servicio ya elegido.
+   * Si la pieza no tiene un servicio asociado (o está apagado) se cae a la lista del
+   * taller, que es mejor que una agenda sin servicio.
+   */
+  readonly installLink = computed<{ path: string[]; query: Record<string, number> | null }>(() => {
+    const service = this.installationService();
+    return service
+      ? { path: ['/servicios', 'agendar'], query: { service: service.id } }
+      : { path: ['/servicios'], query: null };
   });
 
   /** El mensaje de WhatsApp: qué producto es, su SKU y dónde verlo; y el vehículo si hay uno. */

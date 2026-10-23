@@ -275,12 +275,12 @@ describe('Pedido', () => {
   });
 
   describe('instalación y retiro', () => {
-    it('si pidió instalación, lo dice y lleva a /servicios con el servicio y el pedido', () => {
+    it('si pidió instalación, lo dice y lleva a la agenda con el servicio y el pedido', () => {
       const { el } = montar({ order: view({ wantsInstallation: true, installationServiceId: 7 }) });
 
       expect(el.textContent).toContain('Agenda la instalación');
-      const link = [...el.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent?.includes('Ver servicios'));
-      expect(link?.getAttribute('href')).toBe('/servicios?service=7&order=o-1');
+      const link = [...el.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent?.includes('Agendar la instalación'));
+      expect(link?.getAttribute('href')).toBe('/servicios/agendar?service=7&order=o-1');
     });
 
     it('no ofrece instalación si no la pidió, ni en un pedido cancelado', () => {

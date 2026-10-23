@@ -1,0 +1,6 @@
+@use '../../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.dsp__h3 { margin-top: 28px; font-size: 18px; }
+.dsp__list { margin-top: 14px; }

@@ -154,12 +154,11 @@
                 <section class="ped__card" aria-labelledby="ped-install">
                   <h2 id="ped-install" class="ped__h2">Agenda la instalación</h2>
                   <p class="ped__muted">
-                    Pediste que te instalemos lo que compraste. Pronto podrás agendar aquí mismo; por ahora escríbenos por WhatsApp
-                    y coordinamos la cita.
+                    Pediste que te instalemos lo que compraste. Elige el día y la hora que te sirvan.
                   </p>
                   <div class="ped__row">
-                    <a class="ped__btn" routerLink="/servicios"
-                       [queryParams]="{ service: o.installationServiceId, order: o.id }">Ver servicios</a>
+                    <a class="ped__btn" routerLink="/servicios/agendar"
+                       [queryParams]="{ service: o.installationServiceId, order: o.id }">Agendar la instalación</a>
                     <a class="ped__btn ped__btn--ghost" [href]="installationLink()" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
                   </div>
                 </section>

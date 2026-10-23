@@ -21,7 +21,14 @@ import {
 } from '../../shared/models/product.model';
 import { HubMarketItemModel } from '../../shared/models/hub-market-item.model';
 import { NewCardModel } from '../../shared/models/new-card.model';
-import { ServiciosCardModel } from '../../shared/models/servicios-card.model';
+import {
+  AdminAppointmentModel,
+  AppointmentModel,
+  AvailabilityRule,
+  Blackout,
+  ServiceModel,
+  ServiceWorkModel,
+} from '../../shared/models/service.model';
 import {
   SocialClubModel,
   SocialEventModel,
@@ -38,6 +45,7 @@ import {
   AutoHubVehicleRow,
   HubMarketItemRow,
   HubPartRow,
+  MyAppointmentRow,
   MyOrderRow,
   NewsRow,
   OrderViewJson,
@@ -46,7 +54,11 @@ import {
   ProductFitmentRow,
   ProfileRow,
   ProfileVehicleRow,
+  ServiceAppointmentRow,
+  ServiceAvailabilityRow,
+  ServiceBlackoutRow,
   ServiceRow,
+  ServiceWorkRow,
   ShippingOptionRow,
   SocialClubRow,
   SocialEventRow,
@@ -300,12 +312,96 @@ export function fromHubMarketItem(
   };
 }
 
-export function toService(row: ServiceRow): ServiciosCardModel {
+export function toService(row: ServiceRow): ServiceModel {
   return {
     id: row.id,
+    slug: row.slug,
     icon: row.icon,
     title: row.title,
     description: row.description,
+    longDescription: row.long_description,
+    category: row.category,
+    priceFrom: row.price_from === null ? null : Number(row.price_from),
+    durationMinutes: row.duration_minutes,
+    isBookable: row.is_bookable,
+    images: row.images ?? [],
+    sortOrder: row.sort_order,
+    isActive: row.is_active,
+  };
+}
+
+/** `08:00:00` → `08:00`. */
+const hhmm = (time: string): string => time.slice(0, 5);
+
+export function toAvailabilityRule(row: ServiceAvailabilityRow): AvailabilityRule {
+  return {
+    id: row.id,
+    weekday: row.weekday,
+    opensAt: hhmm(row.opens_at),
+    closesAt: hhmm(row.closes_at),
+    slotMinutes: row.slot_minutes,
+    capacity: row.capacity,
+    isExample: row.is_example,
+  };
+}
+
+export function toBlackout(row: ServiceBlackoutRow): Blackout {
+  return {
+    id: row.id,
+    startsAt: new Date(row.starts_at),
+    endsAt: new Date(row.ends_at),
+    reason: row.reason,
+  };
+}
+
+/** Una fila de `my_appointments()`. */
+export function toAppointment(row: MyAppointmentRow): AppointmentModel {
+  return {
+    id: row.id,
+    number: row.appointment_number,
+    serviceId: row.service_id,
+    serviceTitle: row.service_title,
+    serviceSlug: row.service_slug,
+    scheduledAt: new Date(row.scheduled_at),
+    status: row.status,
+    vehicleText: row.vehicle_text,
+    statusNote: row.status_note,
+    orderId: row.order_id,
+  };
+}
+
+/** Una fila de `service_appointments` con su servicio embebido (el panel). */
+export function toAdminAppointment(row: ServiceAppointmentRow): AdminAppointmentModel {
+  return {
+    id: row.id,
+    number: row.appointment_number,
+    serviceId: row.service_id,
+    serviceTitle: row.services?.title ?? 'Servicio',
+    serviceSlug: row.services?.slug ?? '',
+    scheduledAt: new Date(row.scheduled_at),
+    status: row.status,
+    vehicleText: row.vehicle_text,
+    statusNote: row.status_note,
+    orderId: row.order_id,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    notes: row.notes,
+    userId: row.user_id,
+  };
+}
+
+export function toServiceWork(row: ServiceWorkRow): ServiceWorkModel {
+  return {
+    id: row.id,
+    serviceId: row.service_id,
+    title: row.title,
+    description: row.description,
+    beforeImage: row.before_image,
+    afterImage: row.after_image,
+    vehicleText: row.vehicle_text,
+    // `date` llega como "2026-10-23": a mediodía, para que ningún huso lo cambie de día.
+    doneAt: new Date(`${row.done_at}T12:00:00`),
+    isPublished: row.is_published,
   };
 }
 

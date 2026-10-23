@@ -2,7 +2,7 @@ import { HUB_PART_MOCK } from './hub-part.mock';
 import { PRODUCT_FITMENTS_MOCK, PRODUCT_FITMENT_SEEDS } from './product-fitment.mock';
 import { LEGACY_CATEGORY_TO_SLUG, PRODUCT_CATEGORIES_MOCK } from './product-category.mock';
 import { VEHICLE_MAKES_MOCK, VEHICLE_MODELS_MOCK } from './vehicle.mock';
-import { SERVICIOS_CARD_MOCK } from './servicios-card.mock';
+import { SERVICES_MOCK } from './service.mock';
 
 /**
  * Coherencia de los mocks de la tienda.
@@ -48,7 +48,7 @@ describe('mocks de la tienda', () => {
     });
 
     it('una pieza es instalable solo si trae su servicio, y el servicio existe', () => {
-      const ids = new Set(SERVICIOS_CARD_MOCK.map((s) => s.id));
+      const ids = new Set(SERVICES_MOCK.map((s) => s.id));
       for (const p of HUB_PART_MOCK) {
         expect(p.installable).toBe(p.installationServiceId !== null);
         if (p.installationServiceId !== null) expect(ids.has(p.installationServiceId)).toBe(true);

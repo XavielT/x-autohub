@@ -1,0 +1,186 @@
+<div class="agd">
+  <nav class="agd__crumb" aria-label="Navegación"><a routerLink="/servicios">← Servicios</a></nav>
+
+  @if (booked(); as b) {
+    <!-- Confirmación -->
+    <section class="agd__card agd__done" aria-labelledby="agd-done">
+      <p class="agd__eyebrow">Cita registrada</p>
+      <h1 id="agd-done" class="agd__title">Cita <span>#{{ b.number }}</span></h1>
+      <p class="agd__when">{{ whenLabel() }}</p>
+      @if (service(); as s) { <p class="agd__muted">{{ s.title }}</p> }
+
+      <p class="agd__notice" role="status">
+        <strong>Por confirmar.</strong> El equipo revisa la agenda y te confirma por WhatsApp o llamada al
+        {{ contactPhone() }}.
+      </p>
+
+      <div class="agd__actions agd__actions--stack">
+        <button type="button" class="agd__btn" (click)="addToCalendar()">Agregar a mi calendario</button>
+        <a class="agd__btn agd__btn--wa" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer">Avisar por WhatsApp</a>
+        @if (auth.user()) { <a class="agd__btn agd__btn--ghost" routerLink="/perfil" fragment="citas">Ver mis citas</a> }
+        <button type="button" class="agd__link" (click)="reset()">Agendar otra cita</button>
+      </div>
+      @if (!auth.user()) {
+        <p class="agd__muted">Guarda el número de tu cita. Si necesitas cambiarla, escríbenos por WhatsApp.</p>
+      }
+    </section>
+  } @else {
+    <h1 class="agd__title">Agendar una <span>cita</span></h1>
+
+    @if (order(); as o) {
+      <p class="agd__order" role="note">
+        Instalación de tu pedido <strong>#{{ o.orderNumber }}</strong>
+        <span>{{ o.items.length }} {{ o.items.length === 1 ? 'pieza' : 'piezas' }}</span>
+      </p>
+    }
+
+    <ol class="agd__steps" aria-label="Pasos">
+      @for (label of stepLabels; track label; let i = $index) {
+        <li class="agd__step" [class.is-current]="step() === i + 1" [class.is-done]="step() > i + 1"
+            [attr.aria-current]="step() === i + 1 ? 'step' : null">
+          @if (step() > i + 1) {
+            <button type="button" class="agd__step-btn" (click)="jumpTo($any(i + 1))">
+              <span class="agd__num" aria-hidden="true">✓</span>{{ label }}
+            </button>
+          } @else {
+            <span class="agd__step-btn"><span class="agd__num" aria-hidden="true">{{ i + 1 }}</span>{{ label }}</span>
+          }
+        </li>
+      }
+    </ol>
+
+    <section class="agd__card">
+      @switch (step()) {
+        @case (1) {
+          <h2 class="agd__h2" data-step-heading tabindex="-1">1. ¿Qué necesitas?</h2>
+
+          @if (isLoadingServices()) {
+            <p class="agd__muted" role="status">Cargando los servicios…</p>
+          } @else {
+            <ul class="agd__services">
+              @for (s of services(); track s.id) {
+                <li>
+                  <label class="agd__service" [class.is-selected]="serviceId() === s.id">
+                    <input type="radio" name="service" [value]="s.id" [checked]="serviceId() === s.id" (change)="chooseService(s.id)" />
+                    <span class="agd__service-body">
+                      <span class="agd__service-title">{{ s.title }}</span>
+                      <span class="agd__muted">{{ s.description }}</span>
+                    </span>
+                    <span class="agd__service-meta">
+                      @if (s.priceFrom !== null) { Desde RD$ {{ s.priceFrom }} } @else { A cotizar }
+                    </span>
+                  </label>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        @case (2) {
+          <h2 class="agd__h2" data-step-heading tabindex="-1">2. Día y hora</h2>
+          @if (service(); as s) {
+            <p class="agd__muted">{{ s.title }} · dura aprox. {{ duration() }}</p>
+          }
+
+          <div class="agd__cal" role="group" aria-label="Calendario">
+            <div class="agd__cal-head">
+              <button type="button" class="agd__cal-nav" [disabled]="!canGoPrev()" (click)="shiftMonthBy(-1)" aria-label="Mes anterior">‹</button>
+              <strong class="agd__cal-label" aria-live="polite">{{ month().label }}</strong>
+              <button type="button" class="agd__cal-nav" [disabled]="!canGoNext()" (click)="shiftMonthBy(1)" aria-label="Mes siguiente">›</button>
+            </div>
+            <div class="agd__cal-grid agd__cal-grid--head" aria-hidden="true">
+              @for (h of weekdayHeaders; track $index) { <span>{{ h }}</span> }
+            </div>
+            @for (week of month().weeks; track $index) {
+              <div class="agd__cal-grid">
+                @for (d of week; track $index) {
+                  @if (d.date; as date) {
+                    <button type="button" class="agd__day" [class.is-today]="d.isToday" [class.is-selected]="selectedDate() === date"
+                            [disabled]="d.disabled || isClosedDay(date)" [attr.aria-pressed]="selectedDate() === date" (click)="pickDay(date)">
+                      {{ d.day }}
+                    </button>
+                  } @else {
+                    <span></span>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          @if (selectedDate()) {
+            <h3 class="agd__h3">Horas libres, {{ selectedDayLabel() }}</h3>
+            @if (isLoadingSlots()) {
+              <p class="agd__muted" role="status">Buscando horas…</p>
+            } @else if (slotsError()) {
+              <p class="agd__error" role="alert">No pudimos leer las horas. Inténtalo otra vez.</p>
+            } @else if (slots().length === 0) {
+              <p class="agd__muted">No hay horas libres ese día. Prueba con otro.</p>
+            } @else {
+              <ul class="agd__slots">
+                @for (slot of slots(); track slot.at.getTime()) {
+                  <li>
+                    <button type="button" class="agd__slot" [class.is-selected]="isSelected(slot)" [attr.aria-pressed]="isSelected(slot)"
+                            (click)="pickSlot(slot)">
+                      {{ timeLabel(slot) }}
+                      @if (slot.remaining === 1) { <small>queda 1</small> }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          } @else {
+            <p class="agd__muted">Elige un día para ver las horas.</p>
+          }
+        }
+
+        @case (3) {
+          <h2 class="agd__h2" data-step-heading tabindex="-1">3. Tus datos</h2>
+          <p class="agd__summary">{{ service()?.title }} · {{ whenLabel() }}</p>
+
+          <label class="agd__label">
+            <span>Nombre<span class="req" aria-hidden="true">*</span></span>
+            <input class="agd__input" type="text" name="name" autocomplete="name" [ngModel]="contactName()"
+                   (ngModelChange)="contactName.set($event)" [class.is-invalid]="invalid('name')" />
+            @if (invalid('name')) { <span class="field-error">Escribe tu nombre.</span> }
+          </label>
+
+          <label class="agd__label">
+            <span>Teléfono<span class="req" aria-hidden="true">*</span></span>
+            <input class="agd__input" type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="809-000-1234"
+                   [ngModel]="contactPhone()" (ngModelChange)="contactPhone.set($event)" [class.is-invalid]="invalid('phone')" />
+            @if (invalid('phone')) { <span class="field-error">Escribe un teléfono válido (809, 829 o 849…).</span> }
+          </label>
+
+          <label class="agd__label">
+            <span>Vehículo<span class="req" aria-hidden="true">*</span></span>
+            <input class="agd__input" type="text" name="vehicle" placeholder="Ej: Toyota Corolla 2015" autocomplete="off"
+                   [ngModel]="vehicle()" (ngModelChange)="vehicle.set($event)" [class.is-invalid]="invalid('vehicle')" />
+            @if (invalid('vehicle')) { <span class="field-error">Dinos qué vehículo es.</span> }
+          </label>
+          @if (pickedVehicle() && vehicle() !== pickedVehicle()) {
+            <button type="button" class="agd__link" (click)="vehicle.set(pickedVehicle() ?? '')">Usar mi vehículo: {{ pickedVehicle() }}</button>
+          } @else if (!pickedVehicle()) {
+            <button type="button" class="agd__link" (click)="pickVehicle()">Elegir marca, modelo y año</button>
+          }
+
+          <label class="agd__label">
+            <span>¿Algo que debamos saber? <small>(opcional)</small></span>
+            <textarea class="agd__input agd__textarea" name="notes" rows="3" maxlength="500" [ngModel]="notes()"
+                      (ngModelChange)="notes.set($event)" placeholder="Ej: se prende la luz del motor"></textarea>
+          </label>
+        }
+      }
+
+      <div class="agd__actions">
+        @if (step() > 1) { <button type="button" class="agd__btn agd__btn--ghost" (click)="back()" [disabled]="isBooking()">← Atrás</button> }
+        @if (step() < 3) {
+          <button type="button" class="agd__btn" (click)="next()">Continuar →</button>
+        } @else {
+          <button type="button" class="agd__btn" (click)="confirm()" [disabled]="isBooking()">
+            {{ isBooking() ? 'Agendando…' : 'Confirmar la cita' }}
+          </button>
+        }
+      </div>
+    </section>
+  }
+</div>

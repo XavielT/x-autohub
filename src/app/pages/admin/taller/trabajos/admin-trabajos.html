@@ -1,0 +1,85 @@
+<section class="tl">
+  <header class="tl__head tl__row">
+    <div>
+      <h2 class="tl__title">Trabajos</h2>
+      <p class="tl__lead">Antes y después de lo que ya hiciste. Solo lo publicado sale en /servicios.</p>
+    </div>
+    @if (!draft()) { <button type="button" class="tl__btn tl__btn--small" (click)="newWork()">+ Nuevo trabajo</button> }
+  </header>
+
+  @if (draft(); as d) {
+    <form class="tl__card" (submit)="$event.preventDefault(); save()" novalidate>
+      <h3 class="tl__name">{{ d.id === null ? 'Nuevo trabajo' : 'Editar: ' + d.title }}</h3>
+
+      <div class="tl__form">
+        <label class="tl__field tl__field--wide"><span>Título</span>
+          <input class="tl__input" type="text" maxlength="120" [value]="d.title" (input)="setText('title', $event)" placeholder="Ej: Cambio de discos y pastillas" /></label>
+        <label class="tl__field tl__field--wide"><span>Qué se hizo</span>
+          <textarea class="tl__input tl__input--area" [value]="d.description" (input)="setText('description', $event)"></textarea></label>
+        <label class="tl__field"><span>Servicio</span>
+          <select class="tl__input" (change)="setService($event)">
+            <option value="" [selected]="d.serviceId === null">Sin servicio</option>
+            @for (s of services(); track s.id) { <option [value]="s.id" [selected]="d.serviceId === s.id">{{ s.title }}</option> }
+          </select></label>
+        <label class="tl__field"><span>Vehículo</span>
+          <input class="tl__input" type="text" maxlength="120" [value]="d.vehicleText" (input)="setText('vehicleText', $event)" placeholder="Toyota Corolla 2015" /></label>
+        <label class="tl__field"><span>Fecha</span>
+          <input class="tl__input" type="date" [value]="d.doneAt" (input)="setText('doneAt', $event)" /></label>
+
+        <div class="tl__field">
+          <span>Foto del antes <small class="tl__muted">(opcional)</small></span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onPhoto('before', $event)" />
+          @if (beforePreview(); as src) {
+            <img class="tl__thumb" [src]="src" alt="Antes" />
+            <button type="button" class="tl__btn tl__btn--danger tl__btn--small" (click)="removePhoto('before')">Quitar</button>
+          }
+        </div>
+        <div class="tl__field">
+          <span>Foto del después <small class="tl__muted">(hace falta para publicar)</small></span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onPhoto('after', $event)" />
+          @if (afterPreview(); as src) {
+            <img class="tl__thumb" [src]="src" alt="Después" />
+            <button type="button" class="tl__btn tl__btn--danger tl__btn--small" (click)="removePhoto('after')">Quitar</button>
+          }
+        </div>
+
+        <label class="tl__field tl__field--check tl__field--wide">
+          <input type="checkbox" [checked]="d.isPublished" (change)="setPublished($event)" />
+          Publicar (que se vea en /servicios)
+        </label>
+      </div>
+
+      <div class="tl__actions">
+        <button type="button" class="tl__btn tl__btn--ghost" (click)="cancel()" [disabled]="isSaving()">Cancelar</button>
+        <button type="submit" class="tl__btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  } @else if (isLoading()) {
+    <p class="tl__empty">Cargando los trabajos...</p>
+  } @else if (works().length === 0) {
+    <p class="tl__empty">Todavía no hay trabajos. Cuando publiques el primero, aparece la sección "Trabajos realizados" en /servicios.</p>
+  } @else {
+    <ul class="tl__list">
+      @for (w of works(); track w.id) {
+        <li class="tl__card" [class.is-off]="!w.isPublished">
+          <div class="tl__row">
+            <span class="tl__name">{{ w.title }}</span>
+            <span class="tl__badge" [class.tl__badge--ok]="w.isPublished">{{ w.isPublished ? 'Publicado' : 'Borrador' }}</span>
+          </div>
+          <p class="tl__sub">
+            {{ serviceTitle(w.serviceId) }} · {{ w.doneAt | date: 'd MMM y' }}
+            @if (w.vehicleText) { · {{ w.vehicleText }} }
+          </p>
+          @if (w.afterImage) { <img class="tl__thumb" [src]="w.afterImage" alt="" /> }
+          <div class="tl__actions">
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="edit(w)">Editar</button>
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="togglePublished(w)">{{ w.isPublished ? 'Despublicar' : 'Publicar' }}</button>
+            <button type="button" class="tl__btn tl__btn--danger" [class.tl__btn--confirm]="confirmDeleteId() === w.id" (click)="remove(w)">
+              {{ confirmDeleteId() === w.id ? 'Toca otra vez para borrar' : 'Borrar' }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -1,0 +1,137 @@
+// Estilos compartidos de las cuatro pestañas del taller en el panel (Citas, Servicios,
+// Disponibilidad y Trabajos). Se usan con:
+//
+//   @use '../../../../styles/admin-taller' as *;
+//   @include taller-base;
+//
+// Todo pensado para el teléfono: una columna, botones de 44–48 px y campos de 16 px
+// (debajo de eso Safari en iPhone hace zoom al enfocar un campo).
+
+@mixin taller-base {
+  .tl { font-family: var(--font-body); }
+
+  .tl__head { margin-bottom: 16px; }
+  .tl__title { margin: 0; font-family: var(--font-brand); font-size: 22px; }
+  .tl__lead { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); }
+  .tl__empty { padding: 28px; border-radius: 14px; background-color: var(--main-light); text-align: center; color: var(--text-soft); }
+  .tl__muted { color: var(--text-soft); font-size: 13px; }
+  .tl__error { color: #ff8d8f; font-size: 14px; }
+
+  .tl__warn {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--Hub);
+    border-radius: 10px;
+    background-color: var(--Hub-translucid);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .tl__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+
+  .tl__chip {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--text-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+    &.is-active { background-color: var(--Hub); border-color: var(--Hub); color: #1a1a1a; font-weight: 700; }
+  }
+
+  .tl__list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+  .tl__card {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background-color: var(--main-light);
+
+    &.is-attention { box-shadow: 0 0 0 1px var(--Hub); }
+    &.is-off { opacity: 0.65; }
+  }
+
+  .tl__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+  .tl__name { font-family: var(--font-brand); font-size: 16px; }
+  .tl__ref { font-family: var(--font-brand2); font-size: 14px; color: var(--Hub); }
+  .tl__sub { margin: 6px 0 0; font-size: 13px; color: var(--text-soft); overflow-wrap: anywhere; }
+
+  .tl__badge {
+    padding: 3px 9px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-soft);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+
+    &--hub { background-color: var(--Hub-translucid); color: var(--Hub); }
+    &--ok { background-color: rgba(70, 190, 120, 0.18); color: #7fdca4; }
+    &--info { background-color: rgba(80, 150, 255, 0.18); color: #8fb8ff; }
+    &--bad { background-color: rgba(229, 72, 77, 0.18); color: #ff8d8f; }
+  }
+
+  .tl__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+
+  .tl__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+  .tl__btn {
+    flex: 1 1 180px;
+    min-height: 48px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #1a1a1a;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+    &:disabled { opacity: 0.55; cursor: default; }
+    &--ghost { background: transparent; border: 1px solid var(--Hub); color: var(--Hub); }
+    &--danger { background: transparent; border: 1px solid rgba(229, 72, 77, 0.6); color: #ff8d8f; }
+    &--confirm { background-color: #e5484d; border-color: #e5484d; color: #fff; }
+    &--small { flex: 0 0 auto; min-height: 44px; }
+  }
+
+  .tl__link { color: var(--Hub); font-size: 14px; }
+
+  .tl__form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+  .tl__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-soft);
+
+    &--wide { grid-column: 1 / -1; }
+    &--check { flex-direction: row; align-items: center; gap: 10px; min-height: 44px; color: var(--text-strong); font-size: 14px; }
+
+    input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--Hub); }
+  }
+
+  .tl__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: inherit;
+    font-family: var(--font-body);
+    font-size: 16px;
+
+    &:focus { outline: none; border-color: var(--Hub); }
+    &--area { padding: 10px 12px; min-height: 96px; resize: vertical; }
+  }
+
+  .tl__thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background-color: #111; }
+}

@@ -1,0 +1,101 @@
+<section class="tl">
+  <header class="tl__head">
+    <h2 class="tl__title">Disponibilidad</h2>
+    <p class="tl__lead">Cuándo abre el taller y cuántas citas atiende a la vez. Horas de Santo Domingo.</p>
+  </header>
+
+  @if (isExample()) {
+    <p class="tl__warn" role="status">
+      Este horario es de <strong>ejemplo</strong>. Los clientes ya pueden agendar con él: revísalo y guárdalo con el
+      tuyo. Una cita siempre pasa por tu confirmación.
+    </p>
+  }
+  @if (hasSplitShifts()) {
+    <p class="tl__warn" role="status">
+      Algún día tiene más de un tramo (por ejemplo mañana y tarde). Aquí solo se edita el primero; los demás no se tocan.
+    </p>
+  }
+
+  @if (isLoading()) {
+    <p class="tl__empty">Cargando el horario...</p>
+  } @else {
+    <ul class="tl__list">
+      @for (d of days(); track d.weekday) {
+        <li class="tl__card" [class.is-off]="!d.open">
+          <label class="tl__field tl__field--check">
+            <input type="checkbox" [checked]="d.open" (change)="setOpen(d.weekday, $event)" />
+            <strong>{{ weekdayName(d.weekday) }}</strong>
+            @if (!d.open) { <span class="tl__muted">cerrado</span> }
+          </label>
+
+          @if (d.open) {
+            <div class="tl__form">
+              <label class="tl__field">
+                <span>Abre</span>
+                <input class="tl__input" type="time" [value]="d.opensAt" (input)="setTime(d.weekday, 'opensAt', $event)" />
+              </label>
+              <label class="tl__field">
+                <span>Cierra</span>
+                <input class="tl__input" type="time" [value]="d.closesAt" (input)="setTime(d.weekday, 'closesAt', $event)" />
+              </label>
+              <label class="tl__field">
+                <span>Franja (minutos)</span>
+                <select class="tl__input" (change)="setSlot(d.weekday, $event)">
+                  @for (m of slotOptions; track m) { <option [value]="m" [selected]="d.slotMinutes === m">{{ m }}</option> }
+                </select>
+              </label>
+              <label class="tl__field">
+                <span>Citas a la vez</span>
+                <input class="tl__input" type="number" min="1" inputmode="numeric" [value]="d.capacity" (input)="setCapacity(d.weekday, $event)" />
+              </label>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    <div class="tl__actions">
+      <button type="button" class="tl__btn" [disabled]="isSaving()" (click)="saveWeek()">
+        {{ isSaving() ? 'Guardando…' : 'Guardar la semana' }}
+      </button>
+    </div>
+    @if (openDays() === 0) { <p class="tl__warn">Con todos los días cerrados no se podrá agendar ninguna cita.</p> }
+
+    <h3 class="tl__title dsp__h3">Cierres</h3>
+    <p class="tl__lead">Feriados, vacaciones o un día que el taller no abre: esas horas dejan de ofrecerse.</p>
+
+    <form class="tl__card" (submit)="$event.preventDefault(); addBlackout()">
+      <div class="tl__form">
+        <label class="tl__field"><span>Desde (día)</span>
+          <input class="tl__input" type="date" [value]="closeFromDate()" (input)="setClose('closeFromDate', $event)" /></label>
+        <label class="tl__field"><span>Desde (hora)</span>
+          <input class="tl__input" type="time" [value]="closeFromTime()" (input)="setClose('closeFromTime', $event)" /></label>
+        <label class="tl__field"><span>Hasta (día)</span>
+          <input class="tl__input" type="date" [value]="closeToDate()" (input)="setClose('closeToDate', $event)" /></label>
+        <label class="tl__field"><span>Hasta (hora)</span>
+          <input class="tl__input" type="time" [value]="closeToTime()" (input)="setClose('closeToTime', $event)" /></label>
+        <label class="tl__field tl__field--wide"><span>Motivo</span>
+          <input class="tl__input" type="text" maxlength="120" placeholder="Ej: Feriado, vacaciones" [value]="closeReason()" (input)="setClose('closeReason', $event)" /></label>
+      </div>
+      <div class="tl__actions">
+        <button type="submit" class="tl__btn" [disabled]="isAddingClose()">{{ isAddingClose() ? 'Agregando…' : 'Agregar el cierre' }}</button>
+      </div>
+    </form>
+
+    @if (blackouts().length > 0) {
+      <ul class="tl__list dsp__list">
+        @for (b of blackouts(); track b.id) {
+          <li class="tl__card tl__row">
+            <div>
+              <strong>{{ b.startsAt | date: 'd MMM y, h:mm a' }} → {{ b.endsAt | date: 'd MMM y, h:mm a' }}</strong>
+              @if (b.reason) { <p class="tl__sub">{{ b.reason }}</p> }
+            </div>
+            <button type="button" class="tl__btn tl__btn--danger tl__btn--small" (click)="removeBlackout(b)">Quitar</button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="tl__muted">No hay cierres cargados.</p>
+    }
+  }
+</section>

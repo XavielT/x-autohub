@@ -1,0 +1,25 @@
+<article class="scard">
+  <img class="scard__icon" [src]="service().icon" alt="" aria-hidden="true" width="40" height="40" />
+
+  <h3 class="scard__title">
+    <a [routerLink]="['/servicios', service().slug]">{{ service().title }}</a>
+  </h3>
+  <p class="scard__desc">{{ service().description }}</p>
+
+  <p class="scard__meta">
+    <span class="scard__price">
+      @if (service().priceFrom !== null) {
+        Desde RD$ {{ service().priceFrom | number:'1.0-0' }}
+      } @else {
+        A cotizar
+      }
+    </span>
+    <span class="scard__duration">{{ duration() }}</span>
+  </p>
+
+  @if (service().isBookable) {
+    <a class="scard__btn" routerLink="/servicios/agendar" [queryParams]="{ service: service().id }">Agendar</a>
+  } @else {
+    <a class="scard__btn scard__btn--ghost" routerLink="/servicios/cotizar" [queryParams]="{ service: service().slug }">Cotizar</a>
+  }
+</article>

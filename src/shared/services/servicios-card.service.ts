@@ -1,26 +1,19 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
-import { SupabaseService } from '../../core/supabase/supabase.service';
-import { toService } from '../../core/supabase/mappers';
-import { unwrap } from '../../core/supabase/supabase-error';
-import { ServiciosCardModel } from '../models/servicios-card.model';
-import { SERVICIOS_CARD_MOCK } from '../data/servicios-card.mock';
+import { Observable } from 'rxjs';
+import { ServiceModel } from '../models/service.model';
+import { ServiceCatalogService } from './service-catalog.service';
 
+/**
+ * @deprecated Usa `ServiceCatalogService`. Con la fase 5 los servicios dejaron de ser
+ * cuatro tarjetas y el servicio se movió; este queda como fachada para no romper a
+ * quien todavía lo inyecta (el banner del home, el selector de instalación del panel).
+ * Se retira en la fase 7. No tiene lógica propia.
+ */
 @Injectable({ providedIn: 'root' })
 export class ServiciosCardService {
-  private readonly supabase = inject(SupabaseService);
+  private readonly catalog = inject(ServiceCatalogService);
 
-  getServicios(): Observable<ServiciosCardModel[]> {
-    if (this.supabase.shouldUseMockData()) {
-      return of(SERVICIOS_CARD_MOCK);
-    }
-
-    return from(
-      this.supabase.db
-        .from('services')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true }),
-    ).pipe(map((res) => unwrap(res).map(toService)));
+  getServicios(): Observable<ServiceModel[]> {
+    return this.catalog.getServices();
   }
 }

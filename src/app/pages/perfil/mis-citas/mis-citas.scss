@@ -1,0 +1,59 @@
+.citas {
+  font-family: var(--font-body);
+
+  &__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  &__title { margin: 0; font-family: var(--font-brand); font-size: 1.2rem; }
+  &__new { color: var(--Hub); font-family: var(--font-brand); font-weight: 700; text-decoration: none; &:hover { text-decoration: underline; } }
+
+  &__empty { margin: 0; padding: 18px; border-radius: 12px; background-color: var(--secondary); color: var(--main-ultra-light); a { color: var(--Hub); } }
+  &__muted { margin: 6px 0 0; font-size: 13px; color: var(--main-ultra-light); }
+
+  &__list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+  &__item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px 14px;
+    align-items: start;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background-color: var(--secondary);
+    font-size: 14px;
+  }
+
+  &__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  &__num { font-family: var(--font-brand2); font-size: 13px; color: var(--Hub); }
+  &__service { color: #fff; font-family: var(--font-brand); text-decoration: none; &:hover { color: var(--Hub); } }
+  &__when::first-letter { text-transform: uppercase; }
+  &__note { font-size: 13px; color: var(--Hub); overflow-wrap: anywhere; }
+
+  &__status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+
+    &[data-status='requested'] { background-color: rgba(var(--Hub-rgb), 0.18); color: var(--tertiary-soft); }
+    &[data-status='confirmed'], &[data-status='in_progress'] { background-color: rgba(80, 150, 255, 0.18); color: #8fb8ff; }
+    &[data-status='done'] { background-color: rgba(70, 190, 120, 0.18); color: #7fdca4; }
+    &[data-status='cancelled'], &[data-status='no_show'] { background-color: rgba(229, 72, 77, 0.18); color: #ff8d8f; }
+  }
+
+  &__cancel {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    border: 1px solid rgba(229, 72, 77, 0.6);
+    border-radius: 8px;
+    background: transparent;
+    color: #ff8d8f;
+    font-family: var(--font-brand);
+    font-weight: 700;
+    cursor: pointer;
+
+    &.is-confirm { background-color: #e5484d; border-color: #e5484d; color: #fff; }
+    &:disabled { opacity: 0.55; cursor: default; }
+  }
+}

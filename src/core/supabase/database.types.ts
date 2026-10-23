@@ -35,6 +35,27 @@ export type OrderStatus =
 /** Cómo recibe el cliente el pedido. Migración 0018. */
 export type OrderFulfillmentDb = 'shipping' | 'pickup';
 
+/** La categoría de un servicio del taller. Migración 0019. */
+export type ServiceCategoryDb =
+  | 'instalacion'
+  | 'mantenimiento'
+  | 'mecanica'
+  | 'electrico'
+  | 'aire_acondicionado'
+  | 'diagnostico';
+
+/**
+ * El ciclo de una cita (migración 0019):
+ * `requested → confirmed → in_progress → done`, y `cancelled` / `no_show`.
+ */
+export type AppointmentStatusDb =
+  | 'requested'
+  | 'confirmed'
+  | 'in_progress'
+  | 'done'
+  | 'cancelled'
+  | 'no_show';
+
 /** Cómo se cumple un producto: de inventario propio o bajo pedido. Migración 0017. */
 export type ProductFulfillmentDb = 'stock' | 'on_order';
 
@@ -268,6 +289,82 @@ export type ServiceRow = {
   description: string;
   sort_order: number;
   is_active: boolean;
+  /** Migración 0019. */
+  slug: string;
+  category: ServiceCategoryDb;
+  /** Nulo = a cotizar. */
+  price_from: number | null;
+  duration_minutes: number;
+  is_bookable: boolean;
+  images: string[];
+  long_description: string;
+}
+
+/** Cuándo abre el taller. `weekday` 0 = domingo … 6 = sábado. Migración 0019. */
+export type ServiceAvailabilityRow = {
+  id: number;
+  weekday: number;
+  /** `HH:MM:SS`, hora de Santo Domingo. */
+  opens_at: string;
+  closes_at: string;
+  slot_minutes: number;
+  capacity: number;
+  is_example: boolean;
+}
+
+export type ServiceBlackoutRow = {
+  id: number;
+  starts_at: string;
+  ends_at: string;
+  reason: string;
+}
+
+/** Una cita. Solo se lee: entra por `book_appointment()`. Migración 0019. */
+export type ServiceAppointmentRow = {
+  id: string;
+  appointment_number: number;
+  user_id: string | null;
+  service_id: number;
+  order_id: string | null;
+  profile_vehicle_id: number | null;
+  vehicle_text: string | null;
+  contact_name: string;
+  contact_phone: string;
+  scheduled_at: string;
+  status: AppointmentStatusDb;
+  notes: string | null;
+  status_note: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Presente solo cuando el select incluye `services(...)`. */
+  services?: { title: string; slug: string } | null;
+}
+
+export type ServiceWorkRow = {
+  id: number;
+  service_id: number | null;
+  title: string;
+  description: string;
+  before_image: string | null;
+  after_image: string | null;
+  vehicle_text: string | null;
+  done_at: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+/** Una fila de `my_appointments()` (migración 0019). */
+export type MyAppointmentRow = {
+  id: string;
+  appointment_number: number;
+  service_id: number;
+  service_title: string;
+  service_slug: string;
+  scheduled_at: string;
+  status: AppointmentStatusDb;
+  vehicle_text: string | null;
+  status_note: string | null;
+  order_id: string | null;
 }
 
 export type NewsRow = {
@@ -530,6 +627,15 @@ type OrderItemRelationships = [
     referencedColumns: ['id'];
   },
 ];
+type ServiceAppointmentRelationships = [
+  {
+    foreignKeyName: 'service_appointments_service_id_fkey';
+    columns: ['service_id'];
+    isOneToOne: false;
+    referencedRelation: 'services';
+    referencedColumns: ['id'];
+  },
+];
 type OrderStatusHistoryRelationships = [
   {
     foreignKeyName: 'order_status_history_order_id_fkey';
@@ -617,6 +723,35 @@ export type Database = {
         Row: ServiceRow;
         Insert: Insert<ServiceRow, 'icon' | 'title' | 'description'>;
         Update: Partial<ServiceRow>;
+        Relationships: [];
+      };
+      service_availability: {
+        Row: ServiceAvailabilityRow;
+        Insert: Insert<ServiceAvailabilityRow, 'weekday' | 'opens_at' | 'closes_at'>;
+        Update: Partial<ServiceAvailabilityRow>;
+        Relationships: [];
+      };
+      service_blackouts: {
+        Row: ServiceBlackoutRow;
+        Insert: Insert<ServiceBlackoutRow, 'starts_at' | 'ends_at'>;
+        Update: Partial<ServiceBlackoutRow>;
+        Relationships: [];
+      };
+      /**
+       * Citas (migración 0019). **Sin Insert ni Update desde el navegador**: no
+       * tienen política de escritura; entran por `book_appointment()` y cambian
+       * por `set_appointment_status()` y `cancel_appointment()`.
+       */
+      service_appointments: {
+        Row: ServiceAppointmentRow;
+        Insert: never;
+        Update: never;
+        Relationships: ServiceAppointmentRelationships;
+      };
+      service_works: {
+        Row: ServiceWorkRow;
+        Insert: Insert<ServiceWorkRow, 'title'>;
+        Update: Partial<ServiceWorkRow>;
         Relationships: [];
       };
       news: {
@@ -886,6 +1021,51 @@ export type Database = {
         }[];
       };
       /**
+       * Las horas libres de un día, en hora de Santo Domingo, con los cupos que
+       * quedan. Nunca devuelve horas pasadas. `anon` la invoca (migración 0019).
+       */
+      available_slots: {
+        Args: { p_service_id: number; p_date: string };
+        Returns: { slot_at: string; remaining: number }[];
+      };
+      /**
+       * Agenda una cita (nace `requested`). Revalida el slot y el tope de 3 citas
+       * abiertas por teléfono dentro de Postgres. `anon` la invoca.
+       */
+      book_appointment: {
+        Args: {
+          p_service_id: number;
+          p_scheduled_at: string;
+          p_contact_name: string;
+          p_contact_phone: string;
+          p_vehicle_text?: string | null;
+          p_profile_vehicle_id?: number | null;
+          p_order_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: {
+          id: string;
+          appointment_number: number;
+          service_id: number;
+          scheduled_at: string;
+          status: AppointmentStatusDb;
+        }[];
+      };
+      /** Solo admin, en orden (migración 0019). */
+      set_appointment_status: {
+        Args: { p_id: string; p_to: AppointmentStatusDb; p_note?: string | null };
+        Returns: { id: string; appointment_number: number; status: AppointmentStatusDb }[];
+      };
+      /** El dueño cancela la suya, con más de 24 horas de anticipación. */
+      cancel_appointment: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      my_appointments: {
+        Args: Record<string, never>;
+        Returns: MyAppointmentRow[];
+      };
+      /**
        * Mueve un pedido al siguiente estado válido. Solo admin; el orden lógico
        * se comprueba dentro de Postgres (migración 0018).
        */
@@ -931,6 +1111,8 @@ export type Database = {
       news_scope: NewsScope;
       order_status: OrderStatus;
       order_fulfillment: OrderFulfillmentDb;
+      service_category: ServiceCategoryDb;
+      appointment_status: AppointmentStatusDb;
       product_fulfillment: ProductFulfillmentDb;
       product_fitment_type: ProductFitmentTypeDb;
     };

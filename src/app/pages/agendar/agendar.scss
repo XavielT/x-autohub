@@ -1,0 +1,238 @@
+.agd {
+  box-sizing: border-box;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__crumb { margin-bottom: 16px; a { color: var(--main-ultra-light); text-decoration: none; &:hover { color: var(--Hub); } } }
+  &__title { margin: 0 0 14px; font-family: var(--font-brand); font-size: clamp(1.6rem, 4vw, 2.2rem); span { color: var(--Hub); } }
+  &__eyebrow { margin: 0 0 4px; font-family: var(--font-brand); font-size: 13px; color: var(--Hub); text-transform: uppercase; letter-spacing: 0.06em; }
+  &__muted { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--main-ultra-light); }
+  &__error { margin: 8px 0 0; color: #ff8d8f; font-size: 14px; }
+
+  &__order {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-left: 3px solid var(--Hub);
+    border-radius: 0 10px 10px 0;
+    background-color: #1a1a1a;
+    font-size: 14px;
+
+    span { color: var(--main-ultra-light); }
+  }
+
+  &__steps { display: flex; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
+
+  &__step {
+    flex: 1;
+    min-width: 0;
+    padding-top: 10px;
+    border-top: 3px solid #2e2e2e;
+    font-family: var(--font-brand);
+    font-size: 13px;
+    color: var(--main-ultra-light);
+
+    &.is-done { border-top-color: var(--Hub); }
+    &.is-current { border-top-color: var(--Hub); color: #fff; font-weight: 700; }
+  }
+
+  &__step-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+
+  button.agd__step-btn { cursor: pointer; }
+
+  &__num {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #2e2e2e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  &__step.is-done &__num, &__step.is-current &__num { background-color: var(--Hub); color: #000; }
+
+  &__card { padding: 20px; background-color: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 14px; }
+  &__h2 { margin: 0 0 12px; font-family: var(--font-brand); font-size: 1.1rem; &:focus { outline: none; } }
+  &__h3 { margin: 20px 0 10px; font-family: var(--font-brand); font-size: 0.95rem; color: var(--Hub); &::first-letter { text-transform: uppercase; } }
+
+  // Paso 1
+  &__services { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+  &__service {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 56px;
+    padding: 14px;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+    background-color: var(--secondary);
+    cursor: pointer;
+
+    input { margin-top: 4px; accent-color: var(--Hub); }
+    &.is-selected { border-color: var(--Hub); box-shadow: 0 0 0 1px rgba(255, 179, 0, 0.15); }
+  }
+
+  &__service-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  &__service-title { font-family: var(--font-brand); font-weight: 700; }
+  &__service-meta { font-family: var(--font-price); font-size: 13px; color: var(--Hub); white-space: nowrap; align-self: center; }
+
+  // Paso 2: el calendario hecho a mano
+  &__cal { margin: 14px 0 0; }
+  &__cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  &__cal-label { font-family: var(--font-brand); text-transform: capitalize; }
+
+  &__cal-nav {
+    width: 44px;
+    height: 44px;
+    border: 1px solid #2e2e2e;
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.3; cursor: default; }
+    &:hover:not(:disabled) { border-color: var(--Hub); }
+  }
+
+  &__cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 4px;
+
+    &--head { font-size: 12px; text-align: center; color: var(--main-ultra-light); }
+  }
+
+  &__day {
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: var(--secondary);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 15px;
+    cursor: pointer;
+
+    &:disabled { background: transparent; color: #555; cursor: default; }
+    &.is-today { border-color: var(--main-ultra-light); }
+    &.is-selected { background-color: var(--Hub); color: #000; font-weight: 700; }
+    &:hover:not(:disabled):not(.is-selected) { border-color: var(--Hub); }
+  }
+
+  &__slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+  &__slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid #2e2e2e;
+    border-radius: 8px;
+    background-color: var(--secondary);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 15px;
+    cursor: pointer;
+
+    small { font-size: 11px; color: var(--Hub); }
+    &.is-selected { border-color: var(--Hub); background-color: var(--Hub); color: #000; small { color: #000; } }
+    &:hover:not(.is-selected) { border-color: var(--Hub); }
+  }
+
+  // Paso 3
+  &__summary { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; background-color: var(--secondary); font-size: 14px; }
+  &__label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-family: var(--font-brand); font-size: 13px; color: #c4c4c4; small { font-weight: 400; color: var(--main-ultra-light); } }
+
+  &__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--main-light);
+    color: #fff;
+    font-family: var(--font-body);
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-size: 16px;
+
+    &:focus { outline: none; box-shadow: 0 0 0 2px var(--Hub-translucid); }
+    &.is-invalid { box-shadow: 0 0 0 2px #ff6b6b; }
+  }
+
+  &__textarea { resize: vertical; min-height: 88px; }
+
+  &__link { min-height: 44px; margin: -6px 0 8px; padding: 0; border: none; background: none; color: var(--Hub); font-family: var(--font-body); font-size: 14px; text-decoration: underline; cursor: pointer; }
+
+  &__actions {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-top: 22px;
+
+    @media (min-width: 560px) { flex-direction: row; justify-content: space-between; }
+
+    &--stack { flex-direction: column; }
+  }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 26px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #000;
+    font-family: var(--font-btns, var(--font-brand));
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+    &:disabled { opacity: 0.6; cursor: default; }
+    &--ghost { background: transparent; border: 1px solid var(--Hub); color: var(--Hub); }
+    &--wa { background-color: #25d366; }
+  }
+
+  // Confirmación
+  &__done { text-align: center; }
+  &__when { margin: 4px 0 0; font-family: var(--font-brand); font-size: 1.15rem; &::first-letter { text-transform: uppercase; } }
+
+  &__notice {
+    margin: 18px 0;
+    padding: 12px 14px;
+    border: 1px solid var(--Hub);
+    border-radius: 10px;
+    background-color: var(--Hub-translucid);
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+  }
+}

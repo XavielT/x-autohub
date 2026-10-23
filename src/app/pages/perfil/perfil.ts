@@ -17,6 +17,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { LocationSelect } from '../../../shared/ui/location-select/location-select';
 import { MiGaraje } from './mi-garaje/mi-garaje';
+import { MisCitas } from './mis-citas/mis-citas';
 import {
   HubMarketItemModel,
   PublicationStatus,
@@ -42,7 +43,7 @@ import {
  */
 @Component({
   selector: 'app-perfil',
-  imports: [DatePipe, DecimalPipe, ReactiveFormsModule, RouterLink, HubMarketCard, LocationSelect, MiGaraje],
+  imports: [DatePipe, DecimalPipe, ReactiveFormsModule, RouterLink, HubMarketCard, LocationSelect, MiGaraje, MisCitas],
   templateUrl: './perfil.html',
   styleUrl: './perfil.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

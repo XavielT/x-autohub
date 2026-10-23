@@ -1,0 +1,84 @@
+.cot {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__crumb { margin-bottom: 16px; a { color: var(--main-ultra-light); text-decoration: none; &:hover { color: var(--Hub); } } }
+  &__title { margin: 0 0 6px; font-family: var(--font-brand); font-size: clamp(1.6rem, 4vw, 2.2rem); span { color: #25d366; } }
+  &__lead { margin: 0 0 20px; color: var(--main-ultra-light); line-height: 1.5; }
+
+  &__form { display: flex; flex-direction: column; gap: 14px; }
+
+  &__label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: var(--font-brand);
+    font-size: 13px;
+    color: #c4c4c4;
+
+    small { font-weight: 400; color: var(--main-ultra-light); }
+  }
+
+  &__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--main-light);
+    color: #fff;
+    font-family: var(--font-body);
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-size: 16px;
+
+    &:focus { outline: none; box-shadow: 0 0 0 2px var(--Hub-translucid); }
+    &.is-invalid { box-shadow: 0 0 0 2px #ff6b6b; }
+  }
+
+  &__textarea { resize: vertical; min-height: 110px; }
+
+  &__file { color: var(--main-ultra-light); font-size: 14px; }
+  &__note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--main-ultra-light); strong { color: #fff; } }
+
+  &__link {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--Hub);
+    font-family: var(--font-body);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &__preview {
+    padding: 14px;
+    border: 1px dashed #2e2e2e;
+    border-radius: 10px;
+    background-color: #151515;
+
+    h2 { margin: 0 0 8px; font-family: var(--font-brand); font-size: 0.85rem; color: var(--Hub); text-transform: uppercase; letter-spacing: 0.05em; }
+    pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+  }
+
+  &__submit {
+    min-height: 56px;
+    border: none;
+    border-radius: 12px;
+    background-color: #25d366;
+    color: #000;
+    font-family: var(--font-btns, var(--font-brand));
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover { filter: brightness(1.08); }
+  }
+}

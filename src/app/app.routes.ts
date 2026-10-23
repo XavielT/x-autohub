@@ -121,6 +121,23 @@ export const routes: Routes = [
     title: `Servicios de taller | ${BRAND}`,
     loadComponent: () => import('./pages/servicios/servicios').then((m) => m.Servicios),
   },
+  // `cotizar` y `agendar` van **antes** de `:slug`: si no, "agendar" se leeria como el
+  // slug de un servicio.
+  {
+    path: 'servicios/cotizar',
+    title: `Cotizar un servicio | ${BRAND}`,
+    loadComponent: () => import('./pages/cotizar/cotizar').then((m) => m.Cotizar),
+  },
+  {
+    path: 'servicios/agendar',
+    title: `Agendar una cita | ${BRAND}`,
+    loadComponent: () => import('./pages/agendar/agendar').then((m) => m.Agendar),
+  },
+  {
+    path: 'servicios/:slug',
+    title: `Servicio de taller | ${BRAND}`,
+    loadComponent: () => import('./pages/servicio/servicio').then((m) => m.Servicio),
+  },
   {
     path: 'social-hub',
     title: `Comunidad — Clubes y eventos | ${BRAND}`,
@@ -196,6 +213,44 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/pedidos/admin-pedidos').then((m) => m.AdminPedidos),
+      },
+      // El taller: cuatro pestañas (citas, servicios, disponibilidad, trabajos). El padre
+      // y **cada hija** llevan `adminGuard`: un moderador no abre ninguna.
+      {
+        path: 'taller',
+        title: `Taller | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin/taller/admin-taller').then((m) => m.AdminTaller),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'citas' },
+          {
+            path: 'citas',
+            title: `Citas | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () => import('./pages/admin/taller/citas/admin-citas').then((m) => m.AdminCitas),
+          },
+          {
+            path: 'servicios',
+            title: `Servicios del taller | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () =>
+              import('./pages/admin/taller/servicios/admin-servicios').then((m) => m.AdminServicios),
+          },
+          {
+            path: 'disponibilidad',
+            title: `Disponibilidad | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () =>
+              import('./pages/admin/taller/disponibilidad/admin-disponibilidad').then((m) => m.AdminDisponibilidad),
+          },
+          {
+            path: 'trabajos',
+            title: `Trabajos realizados | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () =>
+              import('./pages/admin/taller/trabajos/admin-trabajos').then((m) => m.AdminTrabajos),
+          },
+        ],
       },
       {
         path: 'inventario',

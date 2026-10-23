@@ -11,9 +11,6 @@ const FEATURED = 4;
 /**
  * El banner del taller: dos botones (cotizar por WhatsApp, agendar cita) y los
  * primeros servicios del catálogo.
- *
- * Provisional: "Agendar cita" lleva a `/servicios` hasta que la fase 5 traiga la
- * agenda de verdad; el botón ya está donde va a vivir.
  */
 @Component({
   selector: 'app-home-services-banner',

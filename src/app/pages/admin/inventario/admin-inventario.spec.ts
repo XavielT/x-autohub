@@ -36,7 +36,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
 
     expect(c.parts().length).toBe(5);
     expect(c.categories().length).toBe(12);
-    expect(c.services().length).toBe(4);
+    expect(c.services().length).toBe(10);
     expect(c.isLoading()).toBe(false);
   });
 

@@ -1,21 +1,71 @@
-<div class="servicios">
-    <div class="servicios__header">
-        <div class="servicios__title">
-            <h2>Servicios <span class="servicios__title-highlight">Hub</span></h2>
-            <span class="servicios__title-description">Mantenimiento, Reparacion, Chequeo, Revision de
-                vehiculos...</span>
-        </div>
+<div class="srv">
+  <header class="srv__hero">
+    <h1 class="srv__title">El <span>taller</span> de X AutoHub</h1>
+    <p class="srv__lead">Instalamos lo que compras, mantenemos tu carro al día y lo diagnosticamos. Cotiza por WhatsApp o agenda tu cita.</p>
+    <div class="srv__cta">
+      <a class="srv__btn srv__btn--wa" [href]="quoteLink" target="_blank" rel="noopener noreferrer">
+        <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+        Cotizar por WhatsApp
+      </a>
+      <a class="srv__btn" routerLink="/servicios/agendar">Agendar cita</a>
     </div>
-    <div class="servicios__content">
-        <div class="servicios__content-header">
-            <h2><span>¿</span>En que te ayudamos hoy<span>?</span></h2>
-        </div>
-        <div class="servicios__content-grid">
-            @for (servicio of servicios(); track servicio.id){
-            <app-servicios-card [serviciosCard]="servicio"></app-servicios-card>
+  </header>
+
+  @if (isLoading()) {
+    <p class="srv__state" role="status">Cargando los servicios…</p>
+  } @else if (hasError()) {
+    <p class="srv__state" role="alert">No pudimos cargar los servicios. Revisa tu conexión e inténtalo otra vez.</p>
+  } @else {
+    @for (group of groups(); track group.category) {
+      <section class="srv__section" [attr.aria-labelledby]="'cat-' + group.category">
+        <h2 class="srv__h2" [id]="'cat-' + group.category">{{ group.label }}</h2>
+        <ul class="srv__grid">
+          @for (service of group.services; track service.id) {
+            <li><app-service-card [service]="service" /></li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (works().length > 0) {
+      <section class="srv__section" aria-labelledby="srv-works">
+        <h2 class="srv__h2" id="srv-works">Trabajos realizados</h2>
+        <app-service-works [works]="works()" />
+      </section>
+    }
+
+    <p class="srv__nope">
+      <strong>Lo que no hacemos:</strong> mecánica pesada (motor y transmisión). Para eso te decimos con quién ir.
+    </p>
+  }
+
+  <section class="srv__contact" aria-labelledby="srv-contact">
+    <h2 class="srv__h2" id="srv-contact">Dónde y cuándo</h2>
+    <div class="srv__contact-grid">
+      <div>
+        <h3>Ubicación</h3>
+        @if (pickup(); as p) {
+          <p>{{ p.address }}</p>
+        } @else {
+          <p>Te confirmamos la dirección por WhatsApp al agendar.</p>
+        }
+      </div>
+      <div>
+        <h3>Horario</h3>
+        @if (hours().length > 0) {
+          <ul class="srv__hours">
+            @for (line of hours(); track line.days) {
+              <li><span>{{ line.days }}</span>&ngsp;<span>{{ line.hours }}</span></li>
             }
-        </div>
-        <a class="servicios__link" href="https://wa.me/18099539782?text=Hola%20X%20AutoHub,%20Quiero%20solicitar%20el%20servicio%20de" target="_blank" rel="noopener noreferrer"
-            rel="noopener noreferrer"><img src="assets/icons/chat-round-icon.svg" /> Solicitar Servicio por Whatsapp</a>
+          </ul>
+        } @else {
+          <p>Escríbenos y te decimos.</p>
+        }
+      </div>
+      <div>
+        <h3>Contacto</h3>
+        <p><a [href]="quoteLink" target="_blank" rel="noopener noreferrer">WhatsApp {{ phone }}</a></p>
+      </div>
     </div>
+  </section>
 </div>

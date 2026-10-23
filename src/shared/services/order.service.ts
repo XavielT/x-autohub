@@ -232,7 +232,7 @@ export class OrderService {
     const status = 'awaiting_payment' as const;
 
     const view: OrderView = {
-      id: `demo-${Date.now()}`,
+      id: `demo-${Date.now()}-${orderNumber}`,
       orderNumber,
       status,
       fulfillment: payload.fulfillment,

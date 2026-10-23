@@ -114,6 +114,53 @@ describe('rutas de la tienda', () => {
     }
   });
 
+  it('el taller (/admin/taller) y cada una de sus pestañas llevan adminGuard', () => {
+    const admin = routes.find((r) => r.path === 'admin');
+    const taller = (admin!.children ?? []).find((child) => child.path === 'taller')!;
+
+    expect(taller.canActivate).toEqual([adminGuard]);
+
+    const pestañas = (taller.children ?? []).filter((child) => child.path);
+    expect(pestañas.map((p) => p.path)).toEqual(['citas', 'servicios', 'disponibilidad', 'trabajos']);
+    for (const pestaña of pestañas) {
+      expect(pestaña.canActivate, `La pestaña '${pestaña.path}' del taller no declara adminGuard`).toEqual([adminGuard]);
+    }
+  });
+
+  it('/admin/taller aterriza en las citas', () => {
+    const admin = routes.find((r) => r.path === 'admin');
+    const taller = (admin!.children ?? []).find((child) => child.path === 'taller')!;
+
+    expect((taller.children ?? []).find((child) => child.path === '')?.redirectTo).toBe('citas');
+  });
+
+  it('/servicios/cotizar y /servicios/agendar van ANTES de /servicios/:slug', () => {
+    const paths = routes.map((r) => r.path);
+
+    expect(paths.indexOf('servicios/cotizar')).toBeGreaterThan(-1);
+    expect(paths.indexOf('servicios/agendar')).toBeGreaterThan(-1);
+    // Si el comodín por slug fuera primero, "agendar" se leería como un servicio.
+    expect(paths.indexOf('servicios/cotizar')).toBeLessThan(paths.indexOf('servicios/:slug'));
+    expect(paths.indexOf('servicios/agendar')).toBeLessThan(paths.indexOf('servicios/:slug'));
+  });
+
+  it('las rutas del taller cargan páginas distintas y tienen titulo', async () => {
+    const pages = await Promise.all(
+      ['servicios', 'servicios/cotizar', 'servicios/agendar', 'servicios/:slug'].map(async (path) => {
+        const r = route(path)!;
+        expect(r.title, `Falta el titulo de '${path}'`).toBeTruthy();
+        return r.loadComponent!();
+      }),
+    );
+
+    expect(new Set(pages).size).toBe(4);
+  });
+
+  it('/pedido/:id existe y es publica (sin guard: el id es la llave)', () => {
+    expect(route('pedido/:id')).toBeDefined();
+    expect(route('pedido/:id')!.canActivate).toBeUndefined();
+  });
+
   it('/social-hub sigue siendo la ruta de la Comunidad, con el nombre nuevo en el titulo', () => {
     expect(route('social-hub')?.title).toBe('Comunidad — Clubes y eventos | X AutoHub');
   });

@@ -1,0 +1,39 @@
+<section class="citas" id="citas" aria-labelledby="citas-title">
+  <header class="citas__head">
+    <h2 id="citas-title" class="citas__title">Mis citas</h2>
+    <a class="citas__new" routerLink="/servicios/agendar">+ Agendar</a>
+  </header>
+
+  @if (isLoading()) {
+    <p class="citas__empty" role="status">Cargando tus citas…</p>
+  } @else if (hasError()) {
+    <p class="citas__empty" role="alert">No pudimos leer tus citas. Inténtalo más tarde.</p>
+  } @else if (list().length === 0) {
+    <p class="citas__empty">Todavía no tienes citas. <a routerLink="/servicios">Mira los servicios del taller</a>.</p>
+  } @else {
+    <ul class="citas__list">
+      @for (a of list(); track a.id) {
+        <li class="citas__item">
+          <div class="citas__main">
+            <span class="citas__num">#{{ a.number }}</span>
+            <a class="citas__service" [routerLink]="['/servicios', a.serviceSlug]">{{ a.serviceTitle }}</a>
+            <span class="citas__when">{{ when(a) }}</span>
+            @if (a.vehicleText) { <span class="citas__muted">{{ a.vehicleText }}</span> }
+            @if (a.statusNote) { <span class="citas__note">“{{ a.statusNote }}”</span> }
+          </div>
+          <span class="citas__status" [attr.data-status]="a.status">{{ statusLabel(a) }}</span>
+
+          @if (canCancel(a)) {
+            <button type="button" class="citas__cancel" [class.is-confirm]="confirming() === a.id"
+                    [disabled]="cancelling() !== null" (click)="cancel(a)">
+              @if (cancelling() === a.id) { Cancelando… }
+              @else if (confirming() === a.id) { Toca otra vez para cancelar }
+              @else { Cancelar la cita }
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    <p class="citas__muted">Se puede cancelar con más de {{ cancelHours }} horas de anticipación. Si falta menos, escríbenos por WhatsApp.</p>
+  }
+</section>

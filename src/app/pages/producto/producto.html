@@ -84,8 +84,11 @@
         @if (p.installable) {
           <p class="prod__install">
             <strong>Instalación disponible</strong>
-            @if (installationService(); as s) { · {{ s.title }} }
-            <a routerLink="/servicios">Ver el taller</a>
+            @if (installationService(); as s) {
+              · {{ s.title }}
+              @if (s.priceFrom !== null) { desde RD$ {{ s.priceFrom | number:'1.0-0' }} } @else { · a cotizar }
+            }
+            <a [routerLink]="installLink().path" [queryParams]="installLink().query">Agendar la instalación</a>
           </p>
         }
 

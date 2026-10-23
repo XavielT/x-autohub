@@ -23,7 +23,6 @@ export { PRODUCT_FITMENT_SEEDS } from './src/shared/data/product-fitment.mock';
 export { PRODUCT_CATEGORIES_MOCK } from './src/shared/data/product-category.mock';
 export { HUB_MARKET_ITEMS_MOCK } from './src/shared/data/hub-market-item.mock';
 export { NEWS_MOCK } from './src/shared/data/new-card.mock';
-export { SERVICIOS_CARD_MOCK } from './src/shared/data/servicios-card.mock';
 export { SOCIAL_POSTS_MOCK, SOCIAL_CLUBS_MOCK, SOCIAL_EVENTS_MOCK } from './src/shared/data/social-hub.mock';
 export { CHECKOUT_SHIPPING_OPTIONS_MOCK, CHECKOUT_PAYMENT_METHODS_MOCK } from './src/shared/data/checkout-options.mock';
 `;
@@ -122,17 +121,10 @@ try {
   );
 
   // --- Servicios ------------------------------------------------------------
-  // Antes que el catálogo: hub_parts.installation_service_id apunta aquí.
-  parts.push('\n-- Servicios del taller\n');
-  parts.push(
-    table(
-      'services',
-      ['id', 'icon', 'title', 'description', 'sort_order'],
-      m.SERVICIOS_CARD_MOCK.map((s, idx) => [
-        sql(s.id), sql(s.icon), sql(s.title), sql(s.description), sql(idx),
-      ]),
-    ),
-  );
+  // Ya **no** se siembran aquí: el catálogo de servicios y el horario nacen en la
+  // migración 0019 (como las categorías en la 0017). hub_parts.installation_service_id
+  // apunta a esos ids (1 a 10), que la migración asigna en el mismo orden que
+  // `SERVICES_MOCK`.
 
   // --- Catálogo -------------------------------------------------------------
   // El slug y el sku se escriben a propósito (el trigger de 0017 daría los mismos
@@ -287,7 +279,6 @@ try {
     'hub_parts': m.HUB_PART_MOCK.length,
     'product_fitments': m.PRODUCT_FITMENT_SEEDS.length,
     'hub_market_items': m.HUB_MARKET_ITEMS_MOCK.length,
-    'services': m.SERVICIOS_CARD_MOCK.length,
     'news': m.NEWS_MOCK.length,
     'social_clubs': m.SOCIAL_CLUBS_MOCK.length,
     'social_posts': m.SOCIAL_POSTS_MOCK.length,

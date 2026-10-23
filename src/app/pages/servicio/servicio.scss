@@ -1,0 +1,58 @@
+.svc {
+  box-sizing: border-box;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 16px calc(80px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__crumb { margin-bottom: 18px; a { color: var(--main-ultra-light); text-decoration: none; &:hover { color: var(--Hub); } } }
+
+  &__state { padding: 56px 0; text-align: center; color: var(--main-ultra-light); h1 { color: #fff; font-family: var(--font-brand); } }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+
+    @media (min-width: 860px) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  }
+
+  &__cat { margin: 0 0 4px; font-family: var(--font-brand); font-size: 13px; color: var(--Hub); text-transform: uppercase; letter-spacing: 0.06em; }
+  &__title { margin: 0 0 6px; font-family: var(--font-brand); font-size: clamp(1.6rem, 4vw, 2.2rem); }
+  &__lead { margin: 0 0 14px; font-size: 16px; color: var(--main-ultra-light); }
+
+  &__facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 18px;
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: var(--main-ultra-light);
+  }
+
+  &__price { font-family: var(--font-price); font-size: 1.3rem; font-weight: 700; color: var(--Hub); }
+  &__body { margin: 0 0 18px; font-size: 15px; line-height: 1.6; }
+  &__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  &__note { margin: 10px 0 0; font-size: 13px; color: var(--main-ultra-light); }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 24px;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #000;
+    font-family: var(--font-btns, var(--font-brand));
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover { filter: brightness(1.1); }
+    &--ghost { background: transparent; border: 1px solid var(--Hub); color: var(--Hub); }
+  }
+
+  &__works { margin-top: 36px; h2 { margin: 0 0 14px; font-family: var(--font-brand); font-size: 1.3rem; } }
+}

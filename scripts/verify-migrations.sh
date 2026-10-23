@@ -853,6 +853,189 @@ check "los numeros de pedido no se repiten" "t" "select count(*) = count(distinc
 check "todo pedido tiene su primera fila de historial" "t" \
   "select count(*) = (select count(distinct order_id) from order_status_history) from orders;"
 
+
+echo "→ Servicios y citas: catalogo, horario, agenda y trabajos (migracion 0019)"
+check "el catalogo inicial trae 10 servicios activos, todos a cotizar" "10|10" \
+  "select count(*) || '|' || count(*) filter (where price_from is null) from services where is_active;"
+check "cubre las seis categorias" "6" "select count(distinct category) from services;"
+check "anon lee el catalogo activo" "10" "$(as_anon 'select count(*) from services;')"
+check "anon no escribe servicios" 'ERROR:  new row violates row-level security policy for table "services"' \
+  "$(as_anon "insert into services (icon, title, description) values ('x', 'Hackeado', 'x');")"
+check "un update de anon no cambia nada" "0" \
+  "$(as_anon "update services set title = 'Hackeado'; select count(*) from services where title = 'Hackeado';")"
+check "un servicio nuevo sin slug lo recibe del titulo" "servicio-nuevo-de-prueba" \
+  "$(as_user "$ADMIN" "insert into services (icon, title, description) values ('x', 'Servicio nuevo de prueba', 'x') returning slug;")"
+check "el slug no se repite" 'ERROR:  duplicate key value violates unique constraint "services_slug_key"' \
+  "$(as_user "$ADMIN" "insert into services (icon, title, description, slug) values ('x', 'Otro', 'x', 'frenos');")"
+check "un precio negativo se rechaza" \
+  'ERROR:  new row for relation "services" violates check constraint "services_price_from_check"' \
+  "$(as_user "$ADMIN" "update services set price_from = -1 where id = 1;")"
+
+echo "   (horario del taller)"
+check "anon lee el horario: seis dias, todos de ejemplo" "6|6" \
+  "$(as_anon "select count(*) || '|' || count(*) filter (where is_example) from service_availability;")"
+check "anon no cambia el horario" 'ERROR:  new row violates row-level security policy for table "service_availability"' \
+  "$(as_anon "insert into service_availability (weekday, opens_at, closes_at) values (0, '00:00', '23:00');")"
+check "ni los cierres" 'ERROR:  new row violates row-level security policy for table "service_blackouts"' \
+  "$(as_anon "insert into service_blackouts (starts_at, ends_at) values (now(), now() + interval '1 day');")"
+check "un horario que cierra antes de abrir se rechaza" \
+  'ERROR:  new row for relation "service_availability" violates check constraint "service_availability_hours"' \
+  "$(as_user "$ADMIN" "insert into service_availability (weekday, opens_at, closes_at) values (0, '10:00', '09:00');")"
+
+echo "   (available_slots: las horas libres, en hora de Santo Domingo)"
+MONDAY="$(scalar "select (current_date + 7 + ((1 - extract(dow from current_date)::int + 7) % 7))::date;")"
+TUESDAY="$(scalar "select ('$MONDAY'::date + 1);")"
+SATURDAY="$(scalar "select ('$MONDAY'::date + 5);")"
+SUNDAY="$(scalar "select ('$MONDAY'::date + 6);")"
+check "un lunes tiene 9 franjas (8:00 a 16:00), con 2 cupos cada una" "9|2" \
+  "$(as_anon "select count(*) || '|' || min(remaining) from available_slots(1, '$MONDAY');")"
+check "la primera abre a las 8:00 de Santo Domingo, que son las 12:00 UTC" "12:00" \
+  "$(as_anon "select to_char(min(slot_at) at time zone 'UTC', 'HH24:MI') from available_slots(1, '$MONDAY');")"
+check "el sabado cierra a la 1: 5 franjas" "5" "$(as_anon "select count(*) from available_slots(1, '$SATURDAY');")"
+check "el domingo el taller no abre" "0" "$(as_anon "select count(*) from available_slots(1, '$SUNDAY');")"
+check "nunca devuelve horas que ya pasaron" "0" \
+  "$(as_anon "select count(*) from available_slots(1, (now() at time zone 'America/Santo_Domingo')::date - 1);")"
+check "ni un dia mas alla de 90 dias" "0" "$(as_anon "select count(*) from available_slots(1, current_date + 200);")"
+check "un servicio que no existe no tiene horas" "0" "$(as_anon "select count(*) from available_slots(99999, '$MONDAY');")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update services set is_bookable = false where id = 2;
+SQL
+check "uno que no se agenda tampoco" "0" "$(as_anon "select count(*) from available_slots(2, '$MONDAY');")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update services set is_bookable = true where id = 2;
+SQL
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into service_blackouts (starts_at, ends_at, reason)
+values (('$TUESDAY 08:00')::timestamp at time zone 'America/Santo_Domingo',
+        ('$TUESDAY 10:00')::timestamp at time zone 'America/Santo_Domingo', 'Cierre de prueba');
+SQL
+check "un cierre quita las franjas que cubre (2 de 9)" "7" "$(as_anon "select count(*) from available_slots(1, '$TUESDAY');")"
+
+echo "   (book_appointment: valida todo dentro de Postgres)"
+slot() { scalar "select slot_at from available_slots(1, '$MONDAY') order by slot_at offset $1 limit 1;"; }
+SLOT0="$(slot 0)"; SLOT1="$(slot 1)"; SLOT2="$(slot 2)"; SLOT3="$(slot 3)"; SLOT4="$(slot 4)"
+book() { echo "select * from book_appointment(1, '$1', '$2', '$3', p_vehicle_text => 'Toyota Corolla 2015'${4:-});"; }
+
+APPT1="$(scalar "$(as_anon "select id from book_appointment(1, '$SLOT0', 'Cliente Uno', '809-555-0134', p_vehicle_text => 'Toyota Corolla 2015');")")"
+check "un invitado agenda: la cita nace requested" "requested" "select status from service_appointments where id = '$APPT1';"
+check "con su numero legible, desde 2001" "t" "select appointment_number >= 2001 from service_appointments where id = '$APPT1';"
+check "guarda el vehiculo como texto" "Toyota Corolla 2015" "select vehicle_text from service_appointments where id = '$APPT1';"
+check "un invitado no tiene user_id" "" "select coalesce(user_id::text, '') from service_appointments where id = '$APPT1';"
+check "la franja pasa de 2 cupos a 1" "1" \
+  "$(as_anon "select remaining from available_slots(1, '$MONDAY') where slot_at = '$SLOT0';")"
+APPT2="$(scalar "$(as_anon "select id from book_appointment(1, '$SLOT0', 'Cliente Dos', '829-555-0199');")")"
+check "con capacidad 2, una segunda persona entra a la misma hora" "requested" "select status from service_appointments where id = '$APPT2';"
+check "una tercera ya no: la franja esta llena" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "$(book "$SLOT0" 'Cliente Tres' '849-555-0111')")"
+check "y la franja llena deja de aparecer" "0" \
+  "$(as_anon "select count(*) from available_slots(1, '$MONDAY') where slot_at = '$SLOT0';")"
+check "una hora que ya paso se rechaza" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "$(book "$(scalar "select date_trunc('hour', now()) - interval '1 day';")" 'Cliente' '809-555-0134')")"
+check "una hora que no es una franja (8:30) tambien" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "$(book "$(scalar "select '$SLOT0'::timestamptz + interval '30 minutes';")" 'Cliente' '809-555-0134')")"
+check "un domingo no abre" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "$(book "$(scalar "select ('$SUNDAY 10:00')::timestamp at time zone 'America/Santo_Domingo';")" 'Cliente' '809-555-0134')")"
+check "dentro de un cierre tampoco" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "$(book "$(scalar "select ('$TUESDAY 08:00')::timestamp at time zone 'America/Santo_Domingo';")" 'Cliente' '809-555-0134')")"
+check "un servicio que no se agenda se rechaza" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+  "$(as_anon "select * from book_appointment(99999, '$SLOT1', 'Cliente', '809-555-0134');")"
+check "sin nombre no se agenda" "ERROR:  Escribe tu nombre." "$(as_anon "$(book "$SLOT1" ' ' '809-555-0134')")"
+check "un telefono corto tampoco" "ERROR:  Escribe un telefono valido: lo usamos para confirmar tu cita." \
+  "$(as_anon "$(book "$SLOT1" 'Cliente' '12345')")"
+check "un pedido que no existe se rechaza" "ERROR:  Ese pedido no existe." \
+  "$(as_anon "$(book "$SLOT1" 'Cliente' '809-555-0134' ", p_order_id => '00000000-0000-0000-0000-000000000000'")")"
+
+echo "   (tope por telefono)"
+as_anon_book() { scalar "$(as_anon "select id from book_appointment(1, '$1', 'Cliente Uno', '809-555-0134');")" >/dev/null; }
+as_anon_book "$SLOT1"; as_anon_book "$SLOT2"
+check "con 3 citas abiertas, la cuarta se rechaza" \
+  "ERROR:  Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas." \
+  "$(as_anon "$(book "$SLOT3" 'Cliente Uno' '(809) 555-0134')")"
+check "el tope cuenta el telefono, no como lo escribieron" "3" \
+  "select count(*) from service_appointments where right(regexp_replace(contact_phone, '\D', '', 'g'), 10) = '8095550134';"
+check "ni con el codigo de pais por delante" \
+  "ERROR:  Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas." \
+  "$(as_anon "$(book "$SLOT3" 'Cliente Uno' '+1 809 555 0134')")"
+
+echo "   (quien ve y quien escribe las citas)"
+check "anon no lee citas" "0" "$(as_anon 'select count(*) from service_appointments;')"
+check "anon no inserta una cita a mano" 'ERROR:  new row violates row-level security policy for table "service_appointments"' \
+  "$(as_anon "insert into service_appointments (service_id, contact_name, contact_phone, scheduled_at) values (1, 'x', '8095550000', now() + interval '3 days');")"
+GARAGE_A="$(scalar "select id from profile_vehicles where user_id = '$USER_A' limit 1;")"
+APPT_A="$(scalar "$(as_user "$USER_A" "select id from book_appointment(1, '$SLOT4', 'Usuario A', '8095550001', p_profile_vehicle_id => $GARAGE_A, p_vehicle_text => 'Toyota Corolla 2015');")")"
+check "una cita con sesion queda a nombre de su dueño" "$USER_A" "select user_id from service_appointments where id = '$APPT_A';"
+check "con su vehiculo del garaje" "$GARAGE_A" "select profile_vehicle_id from service_appointments where id = '$APPT_A';"
+check "el dueño ve la suya" "1" "$(as_user "$USER_A" 'select count(*) from service_appointments;')"
+check "otro usuario no ve ninguna" "0" "$(as_user "$USER_B" 'select count(*) from service_appointments;')"
+check "un admin las ve todas" "5" "$(as_user "$ADMIN" 'select count(*) from service_appointments;')"
+check "my_appointments trae las del usuario" "1" "$(as_user "$USER_A" 'select count(*) from my_appointments();')"
+check "y no las de otro" "0" "$(as_user "$USER_B" 'select count(*) from my_appointments();')"
+check "anon no invoca my_appointments" "$(denied my_appointments)" "$(as_anon 'select count(*) from my_appointments();')"
+check "no se agenda con el vehiculo del garaje de otro" "ERROR:  Ese vehiculo no es de tu garaje." \
+  "$(as_user "$USER_B" "select * from book_appointment(1, '$SLOT4', 'Usuario B', '8095550002', p_profile_vehicle_id => $GARAGE_A);")"
+check "ni un admin cambia el estado con un update directo: no hay politica" "requested" \
+  "$(as_user "$ADMIN" "update service_appointments set status = 'confirmed' where id = '$APPT1'; select status from service_appointments where id = '$APPT1';")"
+
+echo "   (estados de la cita: solo set_appointment_status(), solo un admin, en orden)"
+check "anon no invoca set_appointment_status" "$(denied set_appointment_status)" \
+  "$(as_anon "select * from set_appointment_status('$APPT1', 'confirmed');")"
+check "un usuario normal recibe 42501" "ERROR:  Solo un administrador puede cambiar el estado de las citas." \
+  "$(as_user "$USER_A" "select * from set_appointment_status('$APPT_A', 'confirmed');")"
+check "de requested no se salta a done" "ERROR:  Una cita requested no puede pasar a done." \
+  "$(as_user "$ADMIN" "select * from set_appointment_status('$APPT1', 'done');")"
+check "un estado inventado se rechaza" "ERROR:  Estado no valido: volando." \
+  "$(as_user "$ADMIN" "select * from set_appointment_status('$APPT1', 'volando');")"
+check "una cita que no existe tambien" "ERROR:  Esa cita no existe." \
+  "$(as_user "$ADMIN" "select * from set_appointment_status('00000000-0000-0000-0000-000000000000', 'confirmed');")"
+check "un admin la confirma, con una nota que el cliente ve" "confirmed" \
+  "$(as_user "$ADMIN" "select status from set_appointment_status('$APPT1', 'confirmed', 'Te esperamos');")"
+check "la nota queda guardada" "Te esperamos" "select status_note from service_appointments where id = '$APPT1';"
+check "confirmed → done" "done" "$(as_user "$ADMIN" "select status from set_appointment_status('$APPT1', 'done');")"
+check "una cita hecha ya no se mueve" "ERROR:  Una cita done no puede pasar a cancelled." \
+  "$(as_user "$ADMIN" "select * from set_appointment_status('$APPT1', 'cancelled');")"
+check "una cita hecha ya no ocupa cupo: queda uno libre" "1" \
+  "$(as_anon "select remaining from available_slots(1, '$MONDAY') where slot_at = '$SLOT0';")"
+
+echo "   (cancelar: solo la propia, solo con mas de 24 horas)"
+check "anon no invoca cancel_appointment" "$(denied cancel_appointment)" "$(as_anon "select cancel_appointment('$APPT_A');")"
+check "otro usuario no puede cancelar la ajena" "ERROR:  Esa cita no existe." \
+  "$(as_user "$USER_B" "select cancel_appointment('$APPT_A');")"
+check "ni la de un invitado" "ERROR:  Esa cita no existe." \
+  "$(as_user "$USER_A" "select cancel_appointment('$APPT2');")"
+check "el dueño cancela la suya, con mas de 24 horas" "cancelled|Cancelada por el cliente" \
+  "$(as_user "$USER_A" "select cancel_appointment('$APPT_A'); select status || '|' || status_note from service_appointments where id = '$APPT_A';")"
+check "y la franja se libera" "t" \
+  "$(as_anon "select exists (select 1 from available_slots(1, '$MONDAY') where slot_at = '$SLOT4');")"
+check "cancelar dos veces se rechaza" "ERROR:  Esta cita ya no se puede cancelar." \
+  "$(as_user "$USER_A" "select cancel_appointment('$APPT_A');")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into service_appointments (id, user_id, service_id, contact_name, contact_phone, scheduled_at)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '$USER_A', 1, 'Usuario A', '8095550001', now() + interval '10 hours');
+SQL
+check "con menos de 24 horas no se puede" \
+  "ERROR:  Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp." \
+  "$(as_user "$USER_A" "select cancel_appointment('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');")"
+
+echo "   (trabajos realizados y su bucket)"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into service_works (service_id, title, is_published) values (1, 'Publicado', true), (null, 'Borrador', false);
+SQL
+check "anon ve solo los publicados" "Publicado" "$(as_anon "select string_agg(title, ',') from service_works;")"
+check "un admin ve tambien los borradores" "2" "$(as_user "$ADMIN" 'select count(*) from service_works;')"
+check "anon no escribe trabajos" 'ERROR:  new row violates row-level security policy for table "service_works"' \
+  "$(as_anon "insert into service_works (title, is_published) values ('Hackeado', true);")"
+check "ni un usuario normal" 'ERROR:  new row violates row-level security policy for table "service_works"' \
+  "$(as_user "$USER_A" "insert into service_works (title, is_published) values ('Hackeado', true);")"
+check "un admin si" "" "$(as_user "$ADMIN" "insert into service_works (title) values ('Nuevo');")"
+check "el bucket es publico y de 5 MB" "true|5242880" \
+  "select public::text || '|' || file_size_limit from storage.buckets where id = 'service-works';"
+check "anon no sube fotos de trabajos" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('service-works', 'x/a.jpg');")"
+check "ni un usuario normal" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_user "$USER_A" "insert into storage.objects (bucket_id, name) values ('service-works', 'x/a.jpg');")"
+check "un admin si" "" "$(as_user "$ADMIN" "insert into storage.objects (bucket_id, name) values ('service-works', 'x/a.jpg');")"
+check "y las fotos las ve cualquiera" "1" "$(as_anon "select count(*) from storage.objects where bucket_id = 'service-works';")"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -928,8 +1111,8 @@ insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111
 set request.jwt.claim.role = 'service_role';
 update profiles set role = 'admin' where id = '11111111-1111-1111-1111-111111111111';
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0018_orders_payment_flow.sql upgrade
+apply supabase/migrations/0018_orders_payment_flow.sql upgrade
 echo "   (aplicada dos veces, con pedidos dentro)"
 CHECK_DB=upgrade check "los pedidos viejos reciben su numero en el orden en que se hicieron" \
   "Antiguo Tres=1001,Antiguo Uno=1002,Antiguo Dos=1003" \
@@ -951,6 +1134,33 @@ CHECK_DB=upgrade check "y queda en el historial desde ahi" "1" \
   "select count(*) from order_status_history;"
 CHECK_DB=upgrade check "el siguiente pedido es el 1004" "1004" \
   "$(as_anon "select order_number from create_order('n@x.com', 'Nuevo', 'Calle', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+
+
+echo "→ Camino de actualizacion de la 0019: la base real ya tiene los cuatro servicios de antes"
+# La base real tiene cuatro servicios genericos (icono, titulo, descripcion) y ningun
+# slug. La migracion les pone slug y categoria, los desactiva (el catalogo nuevo los
+# cubre) y agrega el resto, sin tocar sus ids: una pieza puede apuntar a uno.
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into services (icon, title, description, sort_order) values
+  ('assets/icons/maintenance-hub-icon.svg', 'Mantenimiento', 'Preventivo y correctivo para tu vehiculo.', 0),
+  ('assets/icons/repair-hub-icon.svg', 'Reparacion', 'Especialistas en mecanica avanzada y Performance.', 1),
+  ('assets/icons/medical-scanner-hub-icon.svg', 'Chequeo y Diagnostico', 'Analisis computarizado.', 2),
+  ('assets/icons/search-check-hub-icon.svg', 'Busqueda y Revision', 'Te ayudamos a encontrar y verificar tu proximo vehiculo.', 3);
+update hub_parts set installable = true, installation_service_id = 1 where id = (select min(id) from hub_parts);
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con servicios dentro)"
+CHECK_DB=upgrade check "los cuatro de antes conservan su id y reciben slug y categoria" \
+  "mantenimiento:mantenimiento,reparacion:mecanica,chequeo-y-diagnostico:diagnostico,busqueda-y-revision:diagnostico" \
+  "select string_agg(slug || ':' || category, ',' order by id) from services where id <= 4;"
+CHECK_DB=upgrade check "y se desactivan: el catalogo nuevo los cubre" "0" \
+  "select count(*) from services where id <= 4 and is_active;"
+CHECK_DB=upgrade check "el catalogo nuevo queda activo, sin duplicarse al volver a aplicar" "10|14" \
+  "select count(*) filter (where is_active) || '|' || count(*) from services;"
+CHECK_DB=upgrade check "una pieza que apuntaba a un servicio viejo sigue apuntandole" "Mantenimiento" \
+  "select s.title from hub_parts p join services s on s.id = p.installation_service_id where p.installable;"
+CHECK_DB=upgrade check "el horario de ejemplo no se duplica al volver a aplicar" "6" "select count(*) from service_availability;"
 
 # --- Resumen ------------------------------------------------------------------
 

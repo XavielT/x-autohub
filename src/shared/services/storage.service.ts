@@ -134,7 +134,7 @@ export class StorageService {
    */
   uploadInventoryImages(
     files: File[],
-    kind: 'piezas' | 'vehiculos' | 'noticias',
+    kind: 'piezas' | 'vehiculos' | 'noticias' | 'servicios',
   ): Observable<string[]> {
     if (files.length === 0) return of([]);
 
@@ -143,6 +143,16 @@ export class StorageService {
     }
 
     return forkJoin(files.map((file) => this.uploadOne(file, kind, 'inventory')));
+  }
+
+  /**
+   * Sube una foto de un trabajo realizado (antes o después) al bucket público
+   * `service-works`, que solo un admin puede escribir (migración 0019). Devuelve su URL
+   * pública.
+   */
+  uploadServiceWorkImage(file: File): Observable<string> {
+    if (this.supabase.shouldUseMockData()) return this.toDataUrl(file);
+    return this.uploadOne(file, 'trabajos', 'service-works');
   }
 
   /**
@@ -191,7 +201,7 @@ export class StorageService {
   private uploadOne(
     file: File,
     folder: string,
-    bucket: 'listings' | 'avatars' | 'inventory',
+    bucket: 'listings' | 'avatars' | 'inventory' | 'service-works',
   ): Observable<string> {
     const path = `${folder}/${this.uniqueName(file.name)}`;
 

@@ -1,0 +1,111 @@
+<section class="tl">
+  <header class="tl__head tl__row">
+    <div>
+      <h2 class="tl__title">Servicios</h2>
+      <p class="tl__lead">{{ services().length }} servicio(s). Lo que sale en /servicios y se puede agendar.</p>
+    </div>
+    @if (!draft()) { <button type="button" class="tl__btn tl__btn--small" (click)="newService()">+ Nuevo servicio</button> }
+  </header>
+
+  @if (draft(); as d) {
+    <form class="tl__card" (submit)="$event.preventDefault(); save()" novalidate>
+      <h3 class="tl__name">{{ d.id === null ? 'Nuevo servicio' : 'Editar: ' + d.title }}</h3>
+
+      <div class="tl__form">
+        <label class="tl__field tl__field--wide">
+          <span>Nombre</span>
+          <input class="tl__input" type="text" name="title" [value]="d.title" (input)="setText('title', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Categoría</span>
+          <select class="tl__input" name="category" [value]="d.category" (change)="setCategory($event)">
+            @for (c of categories; track c) { <option [value]="c" [selected]="d.category === c">{{ categoryLabels[c] }}</option> }
+          </select>
+        </label>
+        <label class="tl__field">
+          <span>Icono</span>
+          <select class="tl__input" name="icon" [value]="d.icon" (change)="setText('icon', $event)">
+            @for (i of icons; track i.value) { <option [value]="i.value" [selected]="d.icon === i.value">{{ i.label }}</option> }
+          </select>
+        </label>
+        <label class="tl__field tl__field--wide">
+          <span>Descripción corta</span>
+          <input class="tl__input" type="text" name="description" maxlength="140" [value]="d.description" (input)="setText('description', $event)" />
+        </label>
+        <label class="tl__field tl__field--wide">
+          <span>Descripción larga <small class="tl__muted">(la ve quien abre el servicio)</small></span>
+          <textarea class="tl__input tl__input--area" name="longDescription" [value]="d.longDescription" (input)="setText('longDescription', $event)"></textarea>
+        </label>
+        <label class="tl__field">
+          <span>Desde RD$ <small class="tl__muted">(vacío = a cotizar)</small></span>
+          <input class="tl__input" type="number" name="price" min="0" step="50" inputmode="numeric" [value]="d.priceFrom ?? ''" (input)="setPrice($event)" />
+        </label>
+        <label class="tl__field">
+          <span>Duración (minutos)</span>
+          <input class="tl__input" type="number" name="duration" min="5" step="5" inputmode="numeric" [value]="d.durationMinutes" (input)="setNumber('durationMinutes', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Orden</span>
+          <input class="tl__input" type="number" name="sortOrder" step="10" inputmode="numeric" [value]="d.sortOrder" (input)="setNumber('sortOrder', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Dirección (slug) <small class="tl__muted">(vacío = del nombre)</small></span>
+          <input class="tl__input" type="text" name="slug" [value]="d.slug" (input)="setText('slug', $event)" />
+        </label>
+        <label class="tl__field tl__field--check">
+          <input type="checkbox" name="isBookable" [checked]="d.isBookable" (change)="setFlag('isBookable', $event)" />
+          Se puede agendar
+        </label>
+        <label class="tl__field tl__field--check">
+          <input type="checkbox" name="isActive" [checked]="d.isActive" (change)="setFlag('isActive', $event)" />
+          Visible en el sitio
+        </label>
+
+        <div class="tl__field tl__field--wide">
+          <span>Fotos <small class="tl__muted">(opcional)</small></span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple [disabled]="isUploading()" (change)="onImages($event)" />
+          @if (isUploading()) { <span class="tl__muted" role="status">Subiendo…</span> }
+          @if (d.images.length > 0) {
+            <ul class="tl__list svc-thumbs">
+              @for (img of d.images; track img; let i = $index) {
+                <li>
+                  <img class="tl__thumb" [src]="img" alt="" />
+                  <button type="button" class="tl__btn tl__btn--danger tl__btn--small" (click)="removeImage(i)">Quitar</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <div class="tl__actions">
+        <button type="button" class="tl__btn tl__btn--ghost" (click)="cancel()" [disabled]="isSaving()">Cancelar</button>
+        <button type="submit" class="tl__btn" [disabled]="isSaving() || isUploading()">{{ isSaving() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  } @else if (isLoading()) {
+    <p class="tl__empty">Cargando los servicios...</p>
+  } @else {
+    <ul class="tl__list">
+      @for (s of services(); track s.id) {
+        <li class="tl__card" [class.is-off]="!s.isActive">
+          <div class="tl__row">
+            <span class="tl__name">{{ s.title }}</span>
+            <span class="tl__badge" [class.tl__badge--ok]="s.isActive" [class.tl__badge--bad]="!s.isActive">
+              {{ s.isActive ? 'Visible' : 'Apagado' }}
+            </span>
+          </div>
+          <p class="tl__sub">
+            {{ categoryLabels[s.category] }} ·
+            @if (s.priceFrom !== null) { desde RD$ {{ s.priceFrom | number:'1.0-0' }} } @else { a cotizar } ·
+            {{ duration(s.durationMinutes) }} · {{ s.isBookable ? 'se agenda' : 'solo cotiza' }}
+          </p>
+          <div class="tl__actions">
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="edit(s)">Editar</button>
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="toggleActive(s)">{{ s.isActive ? 'Apagar' : 'Encender' }}</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

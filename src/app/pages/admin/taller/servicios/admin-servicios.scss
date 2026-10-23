@@ -1,0 +1,5 @@
+@use '../../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.svc-thumbs { flex-direction: row; flex-wrap: wrap; li { display: flex; flex-direction: column; gap: 6px; } }
