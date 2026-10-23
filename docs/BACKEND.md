@@ -47,7 +47,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 22    | `supabase/migrations/0022_coupons.sql`         | Cupones y descuentos: tabla, `validate_coupon()` y `create_order()` con cupón |
 | 23    | `supabase/migrations/0023_product_variants.sql` | Variantes de producto (color, talla…): tabla con stock propio, trigger que suma, `create_order()`, `set_order_status()` y `search_products()` |
 | 24    | `supabase/migrations/0024_push_subscriptions.sql` | Notificaciones push: los dispositivos de cada usuario y `register_push_subscription()` |
-| 25    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 25    | `supabase/migrations/0025_variant_images.sql`  | Foto por opción: `product_variants.image_url` |
+| 26    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -491,6 +492,12 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 **Decisiones que conviene conocer**
 
+- **Foto por opción (migración 0025).** `product_variants.image_url` apunta a **una de las fotos del producto**
+  (`hub_parts.images`); el panel ofrece esas, no sube otras, así no hay un segundo sitio donde borrar fotos de
+  Storage. Al elegir la opción, la ficha salta a esa foto, y el carrito y el checkout la usan en su línea. La base
+  no puede exigir que la URL esté dentro del arreglo del producto: si el equipo quita esa foto, la opción queda
+  apuntando a una URL que la galería no encuentra y la ficha lo trata como "sin foto propia". Nula o de 1 a 2048
+  caracteres (un check). **Primero la migración, después el frontend** (el frontend nuevo la pide en sus `select`).
 - **Una sola dimensión.** Una opción es un nombre ("Rojo", "Talla M", "Rojo / M"). Una matriz real (color ×
   talla, con stock por celda) es otro proyecto, y casi todo accesorio es una cosa o la otra.
 - **Las opciones comparten el precio del producto.** La tarjeta, el JSON-LD y los cupones hablan de un solo

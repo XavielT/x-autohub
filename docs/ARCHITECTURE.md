@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0024 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0025 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -281,7 +281,8 @@ revisar cuando las fotos reales estén en Storage.
 | `CartItem.variant` | `shared/services/cart.service.ts` | Una línea del carrito es la pareja **producto + opción**: el mismo producto en dos colores son dos líneas. `addToCart()` devuelve `false` si el producto tiene opciones y no se eligió una. `lineStock()` y `lineName()` dicen el stock y el nombre de una línea |
 | `availabilityOf(producto, opción?)` | `shared/utils/product-availability.ts` | Con opción, las existencias son las de la opción; sin ella, la suma |
 | La ficha | `pages/producto` | Selector de opciones (`role="radiogroup"`); la agotada se marca y no se puede elegir; "Agregar" sin elegir pide elegir |
-| La tarjeta | `shared/components/catalogo-card` | Con opciones dice "Elige color" y el botón lleva a la ficha en vez de agregar |
+| La tarjeta | `shared/components/catalogo-card` | Con opciones dice "Elige color" y el botón abre, dentro de la propia tarjeta, la lista para elegir ahí mismo. Las opciones se piden al abrirla (una sola vez), no al pintar la tarjeta: 24 tarjetas no hacen 24 consultas |
+| `<app-image-gallery [focus]>` | `shared/ui/image-gallery` | La foto a la que saltar (la de la opción elegida). Una foto que no está entre las de la galería, o nula, no la mueve; cambiar de producto sí vuelve a la primera |
 | `AdminCatalogService.getVariants()` / `saveVariants()` | `shared/services` | Lo del panel. `saveVariants` **no borra y reinserta** (una opción tiene identidad): compara con lo que había al abrir el formulario y solo toca lo que cambió, así que el stock de una opción no se pisa si alguien compró mientras estaba abierto |
 | `<app-variant-editor>` | `pages/admin/inventario/variant-editor` | La lista editable: nombre, existencias, SKU, "se ofrece", subir/bajar y quitar |
 | `variant-rules.ts` | `shared/utils` | Las reglas de la lista (nombre, repetidos, stock entero, SKU) para avisar antes de ir a la red |
@@ -403,7 +404,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 127 archivos, 1327 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 127 archivos, 1344 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

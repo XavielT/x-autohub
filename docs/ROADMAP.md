@@ -232,7 +232,10 @@ push" en `docs/BACKEND.md`.
 
 ---
 
-## Variantes de producto (2.7.0) ✅
+## Variantes de producto (2.7.0 y 2.9.0) ✅
+
+**2.9.0 (el pulido):** cada opción puede apuntar a una de las fotos del producto y la ficha salta a ella al elegir; el
+carrito y el checkout usan esa foto; y la tarjeta deja elegir la opción ahí mismo, sin abrir la ficha.
 
 Hecho: un producto con opciones (color, talla…), cada una con su propio stock; la ficha, la tarjeta, el
 carrito, el checkout y el pedido las dicen, y el panel las edita (`product_variants`, migración 0023). El
@@ -244,10 +247,10 @@ stock del producto es la suma de las opciones activas. Ver "Variantes de product
   es otro proyecto, y casi todo accesorio es una cosa o la otra.
 - **Precio por opción.** Todas comparten el precio del producto: la tarjeta, el JSON-LD y los cupones hablan
   de uno solo. Si una talla cuesta distinto, es otro producto.
-- **Fotos por opción.** La galería es del producto; que cambie al elegir un color pide una imagen por
-  opción en la tabla y en el formulario.
 - **Reseñas por opción.** Las reseñas son del producto.
-- **Elegir la opción desde la tarjeta.** Hoy el botón lleva a la ficha.
+- **Subir una foto directamente a una opción.** Hoy cada opción elige una de las fotos del producto (2.9.0); una
+  foto que solo exista para una opción habría que cargarla primero en el producto.
+- **Varias fotos por opción.** Hoy es una; la galería salta a ella y deja las demás del producto.
 
 ---
 
