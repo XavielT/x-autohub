@@ -13,6 +13,8 @@
 
   @if (isLoading()) {
     <p class="srv__state" role="status">Cargando los servicios…</p>
+  } @else if (hasError() && !online.isOnline()) {
+    <app-offline-state (retry)="loadServices()" />
   } @else if (hasError()) {
     <p class="srv__state" role="alert">No pudimos cargar los servicios. Revisa tu conexión e inténtalo otra vez.</p>
   } @else {

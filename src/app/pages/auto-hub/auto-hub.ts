@@ -3,10 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
 import { AutohubCard } from '../../../shared/components/autohub-card/autohub-card';
+import { OfflineState } from '../../../shared/components/offline-state/offline-state';
+import { OnlineService } from '../../../shared/services/online.service';
 
 @Component({
   selector: 'app-auto-hub',
-  imports: [FormsModule, AutohubCard],
+  imports: [FormsModule, AutohubCard, OfflineState],
   templateUrl: './auto-hub.html',
   styleUrl: './auto-hub.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -16,7 +18,10 @@ export class AutoHub implements OnInit {
 
   private readonly allAutos = signal<AutoHubModel[]>([]);
 
+  protected readonly online = inject(OnlineService);
+
   readonly isLoading = signal(true);
+  readonly hasError = signal(false);
   readonly searchQuery = signal('');
 
   /** Se recalcula solo cuando cambia el inventario o la búsqueda. */
@@ -32,12 +37,23 @@ export class AutoHub implements OnInit {
   });
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  /** También es el "Reintentar" del estado sin conexión. */
+  load(): void {
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
     this.autoHubService.getAll().subscribe({
       next: (autos) => {
         this.allAutos.set(autos);
         this.isLoading.set(false);
       },
-      error: () => this.isLoading.set(false),
+      error: () => {
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
     });
   }
 }

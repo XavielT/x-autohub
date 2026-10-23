@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { ServiceCard } from '../../../shared/components/service-card/service-card';
 import { ServiceWorks } from '../../../shared/components/service-works/service-works';
 import {
@@ -11,6 +12,7 @@ import {
   ServiceWorkModel,
 } from '../../../shared/models/service.model';
 import { PickupAddress } from '../../../shared/models/order.model';
+import { OnlineService } from '../../../shared/services/online.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { SiteSettingsService } from '../../../shared/services/site-settings.service';
 import { STORE_PHONE_DISPLAY, storeWhatsAppLink } from '../../../shared/utils/contact';
@@ -31,7 +33,7 @@ interface CategoryGroup {
  */
 @Component({
   selector: 'app-servicios',
-  imports: [RouterLink, ServiceCard, ServiceWorks],
+  imports: [RouterLink, ServiceCard, ServiceWorks, OfflineState],
   templateUrl: './servicios.html',
   styleUrl: './servicios.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +41,7 @@ interface CategoryGroup {
 export class Servicios implements OnInit {
   private readonly catalog = inject(ServiceCatalogService);
   private readonly settings = inject(SiteSettingsService);
+  protected readonly online = inject(OnlineService);
 
   readonly services = signal<ServiceModel[]>([]);
   readonly works = signal<ServiceWorkModel[]>([]);
@@ -62,6 +65,23 @@ export class Servicios implements OnInit {
   readonly hours = computed(() => summarizeHours(this.rules()));
 
   ngOnInit(): void {
+    this.loadServices();
+
+    // Lo demás es complemento: si falla, la página sigue con lo que tiene.
+    this.catalog.getWorks().subscribe({ next: (w) => this.works.set(w), error: () => undefined });
+    this.catalog.getAvailability().subscribe({ next: (r) => this.rules.set(r), error: () => undefined });
+    this.settings.getPickupAddress().subscribe({
+      // Una dirección de ejemplo no se le enseña a nadie como si fuera la real.
+      next: (a) => this.pickup.set(a && !a.isExample ? a : null),
+      error: () => undefined,
+    });
+  }
+
+  /** También es el "Reintentar" del estado sin conexión. */
+  loadServices(): void {
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
     this.catalog.getServices().subscribe({
       next: (services) => {
         this.services.set(services);
@@ -71,15 +91,6 @@ export class Servicios implements OnInit {
         this.hasError.set(true);
         this.isLoading.set(false);
       },
-    });
-
-    // Lo demás es complemento: si falla, la página sigue con lo que tiene.
-    this.catalog.getWorks().subscribe({ next: (w) => this.works.set(w), error: () => undefined });
-    this.catalog.getAvailability().subscribe({ next: (r) => this.rules.set(r), error: () => undefined });
-    this.settings.getPickupAddress().subscribe({
-      // Una dirección de ejemplo no se le enseña a nadie como si fuera la real.
-      next: (a) => this.pickup.set(a && !a.isExample ? a : null),
-      error: () => undefined,
     });
   }
 }

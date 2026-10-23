@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map } from 'rxjs';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
+import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { StoreFiltersPanel } from '../../../shared/components/store-filters/store-filters';
 import {
   ProductCategoryModel,
@@ -12,6 +13,7 @@ import {
   ProductSort,
 } from '../../../shared/models/product.model';
 import { CategoryService } from '../../../shared/services/category.service';
+import { OnlineService } from '../../../shared/services/online.service';
 import { ProductService } from '../../../shared/services/product.service';
 import { VehiclePickerService } from '../../../shared/services/vehicle-picker.service';
 import { VehicleService } from '../../../shared/services/vehicle.service';
@@ -46,7 +48,7 @@ export const PAGE_SIZE = 24;
  */
 @Component({
   selector: 'app-tienda',
-  imports: [CatalogoCard, StoreFiltersPanel, RouterLink],
+  imports: [CatalogoCard, StoreFiltersPanel, RouterLink, OfflineState],
   templateUrl: './tienda.html',
   styleUrl: './tienda.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +61,7 @@ export class Tienda {
   private readonly vehicles = inject(VehicleService);
   private readonly picker = inject(VehiclePickerService);
   private readonly pageTitle = inject(Title);
+  protected readonly online = inject(OnlineService);
 
   readonly sortOptions = SORT_OPTIONS;
   readonly helpLink = storeWhatsAppLink('Hola X AutoHub, tengo una duda sobre la compatibilidad de una pieza');

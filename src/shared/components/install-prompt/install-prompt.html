@@ -1,0 +1,19 @@
+@if (mode(); as m) {
+  <aside class="ip" role="region" aria-label="Instalar la app">
+    <img class="ip__icon" src="icon-192.png" alt="" width="40" height="40" />
+
+    <div class="ip__text">
+      <strong class="ip__title">Instala X AutoHub en tu teléfono</strong>
+      @if (m === 'ios') {
+        <span class="ip__hint">Toca <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>.</span>
+      } @else {
+        <span class="ip__hint">Entra desde un ícono, como una app.</span>
+      }
+    </div>
+
+    @if (m === 'native') {
+      <button type="button" class="ip__btn" (click)="install()">Instalar</button>
+    }
+    <button type="button" class="ip__close" aria-label="Ahora no" (click)="dismiss()">×</button>
+  </aside>
+}

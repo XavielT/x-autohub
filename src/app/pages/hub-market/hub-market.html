@@ -37,12 +37,16 @@
   </div>
 
   @if (filteredItems().length === 0) {
-    <p class="hub-market__empty">
-      @if (isLoading()) {
-        Cargando publicaciones...
-      } @else {
-        No encontramos resultados para tu busqueda.
-      }
-    </p>
+    @if (hasError() && !online.isOnline()) {
+      <app-offline-state (retry)="load()" />
+    } @else {
+      <p class="hub-market__empty">
+        @if (isLoading()) {
+          Cargando publicaciones...
+        } @else {
+          No encontramos resultados para tu busqueda.
+        }
+      </p>
+    }
   }
 </section>

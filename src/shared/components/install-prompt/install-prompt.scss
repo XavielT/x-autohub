@@ -1,0 +1,59 @@
+// Solo en el teléfono: en escritorio el navegador ya trae su ícono de instalar.
+:host { display: none; }
+
+@media (max-width: 900px) {
+  :host { display: block; }
+}
+
+// Justo encima de la barra de pestañas (60px + área segura del iPhone), por debajo
+// del carrito (100) y del selector de vehículo (95), como la propia barra (90).
+.ip {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 8px);
+  z-index: 89;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 10px 12px;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+  background-color: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 4px solid var(--Hub);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+
+  &__icon { flex-shrink: 0; border-radius: 8px; }
+  &__text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+  &__title { font-family: var(--font-brand); font-size: 14px; line-height: 1.25; }
+  &__hint { font-size: 12px; line-height: 1.35; color: var(--text-soft, #c4c4c4); }
+
+  &__btn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--Hub);
+    color: #1a1a1a;
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--text-soft, #c4c4c4);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+}

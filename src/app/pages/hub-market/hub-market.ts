@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
+import { OfflineState } from '../../../shared/components/offline-state/offline-state';
+import { OnlineService } from '../../../shared/services/online.service';
 
 interface HubMarketCategoryOption {
   value: 'all' | HubMarketCategory;
@@ -11,7 +13,7 @@ interface HubMarketCategoryOption {
 
 @Component({
   selector: 'app-hub-market',
-  imports: [FormsModule, HubMarketCard],
+  imports: [FormsModule, HubMarketCard, OfflineState],
   templateUrl: './hub-market.html',
   styleUrl: './hub-market.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,7 +23,10 @@ export class HubMarket implements OnInit {
 
   private readonly allItems = signal<HubMarketItemModel[]>([]);
 
+  protected readonly online = inject(OnlineService);
+
   readonly isLoading = signal(true);
+  readonly hasError = signal(false);
   readonly searchQuery = signal('');
   readonly selectedCategory = signal<HubMarketCategoryOption['value']>('all');
 
@@ -51,12 +56,23 @@ export class HubMarket implements OnInit {
   });
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  /** También es el "Reintentar" del estado sin conexión. */
+  load(): void {
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
     this.hubMarketService.getAll().subscribe({
       next: (items) => {
         this.allItems.set(items);
         this.isLoading.set(false);
       },
-      error: () => this.isLoading.set(false),
+      error: () => {
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
     });
   }
 

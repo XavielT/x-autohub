@@ -1,0 +1,7 @@
+@if (updates.updateReady()) {
+  <div class="ut" role="status">
+    <span class="ut__text">Hay una versión nueva<span aria-hidden="true"> · </span></span>
+    <button type="button" class="ut__btn" (click)="updates.apply()">Actualizar</button>
+    <button type="button" class="ut__close" aria-label="Más tarde" (click)="updates.dismiss()">×</button>
+  </div>
+}

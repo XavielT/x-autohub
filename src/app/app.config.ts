@@ -1,8 +1,9 @@
-import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localeEsDO from '@angular/common/locales/es-DO';
+import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { httpErrorInterceptor } from '../core/http/http-error.interceptor';
@@ -27,5 +28,11 @@ export const appConfig: ApplicationConfig = {
     // una pasarela de pago). Los errores de la base se traducen en
     // core/supabase/supabase-error.ts.
     provideHttpClient(withFetch(), withInterceptors([httpErrorInterceptor])),
+    // Solo en producción: en desarrollo un service worker serviría archivos viejos.
+    // Espera 30 s de estabilidad para no competir con la primera carga.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };

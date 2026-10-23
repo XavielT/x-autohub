@@ -1,0 +1,27 @@
+.off {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__title { margin: 0; font-family: var(--font-brand); font-size: 1.2rem; }
+  &__text { margin: 0; font-size: 14px; color: var(--text-soft, #c4c4c4); }
+
+  &__btn {
+    min-height: 48px;
+    margin-top: 8px;
+    padding: 0 24px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #1a1a1a;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}

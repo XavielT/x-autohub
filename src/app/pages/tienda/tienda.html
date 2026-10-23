@@ -45,7 +45,9 @@
     </aside>
 
     <div class="tienda__main">
-      @if (hasError()) {
+      @if (hasError() && !online.isOnline()) {
+        <app-offline-state (retry)="retry()" />
+      } @else if (hasError()) {
         <div class="tienda__state" role="alert">
           <h2>No pudimos cargar los productos</h2>
           <p>Revisa tu conexión e inténtalo otra vez.</p>

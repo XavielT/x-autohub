@@ -1,0 +1,48 @@
+// Arriba y no abajo: abajo ya viven la barra de pestañas, el banner de instalar y
+// los avisos de siempre. Por encima del navbar y del carrito.
+.ut {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 24px);
+  padding: 4px 4px 4px 16px;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: #fff;
+  background-color: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 4px solid var(--Hub);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+
+  &__text { white-space: nowrap; }
+
+  &__btn {
+    min-height: 44px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: var(--Hub);
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  &__close {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    color: var(--text-soft, #c4c4c4);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+}

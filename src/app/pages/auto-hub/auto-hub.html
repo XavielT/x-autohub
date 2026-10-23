@@ -19,6 +19,8 @@
             <div class="empty-state">
                 @if (isLoading()) {
                     <h4>Cargando vehiculos...</h4>
+                } @else if (hasError() && !online.isOnline()) {
+                    <app-offline-state (retry)="load()" />
                 } @else {
                     <h4>Upss, No hay articulos para mostrar</h4>
                     <img src="assets/icons/not-found-hub-icon.svg"/>
