@@ -38,6 +38,7 @@ import {
   CheckoutPaymentMethodOption,
   CheckoutShippingOption,
 } from '../../shared/models/checkout.model';
+import { ReviewModel, ReviewStats } from '../../shared/models/review.model';
 import { UserModel } from '../../shared/models/user.model';
 import { OrderView } from '../../shared/models/order.model';
 import { UserOrderModel } from '../../shared/models/user-order.model';
@@ -54,6 +55,7 @@ import {
   ProductFitmentRow,
   ProfileRow,
   ProfileVehicleRow,
+  ReviewRow,
   ServiceAppointmentRow,
   ServiceAvailabilityRow,
   ServiceBlackoutRow,
@@ -134,7 +136,7 @@ export function toAutoHubVehicle(row: AutoHubVehicleRow): AutoHubModel {
  * Fila de `hub_parts` (o de `search_products()`, que trae las mismas columnas) a
  * `ProductModel`. El nombre de la tabla no cambió con el pivote; el del modelo sí.
  */
-export function toProduct(row: Omit<HubPartRow, 'search_vector'>): ProductModel {
+export function toProduct(row: Omit<HubPartRow, 'search_vector' | 'stars_seed' | 'review_count'>): ProductModel {
   return {
     id: row.id,
     category: row.category ?? '',
@@ -166,9 +168,6 @@ export function toProduct(row: Omit<HubPartRow, 'search_vector'>): ProductModel 
     updatedAt: new Date(row.updated_at),
   };
 }
-
-/** @deprecated Usa `toProduct`. Se retira en la fase 7. */
-export const toHubPart = toProduct;
 
 /**
  * `specs` es jsonb y la ficha solo muestra pares de texto. Un valor que no sea
@@ -529,5 +528,40 @@ export function toUserOrder(row: MyOrderRow): UserOrderModel {
     paymentMethodId: row.payment_method_id,
     hasProof: row.has_proof,
     wantsInstallation: row.wants_installation,
+  };
+}
+
+/** Una fila de `reviews` (con `profiles(display_name)` si el select lo trajo). */
+export function toReview(row: ReviewRow): ReviewModel {
+  return {
+    id: row.id,
+    target: row.target_type,
+    targetId: row.target_id,
+    userId: row.user_id,
+    authorName: row.profiles?.display_name?.trim() || 'Cliente',
+    rating: row.rating,
+    comment: row.comment,
+    isVerifiedPurchase: row.is_verified_purchase,
+    createdAt: new Date(row.created_at),
+  };
+}
+
+/**
+ * La fila de `review_stats()`. `numeric` llega como número o como texto según el
+ * cliente, y los conteos (`count(*)::int`) como número.
+ */
+export function toReviewStats(row: {
+  total: number;
+  average: number;
+  c1: number;
+  c2: number;
+  c3: number;
+  c4: number;
+  c5: number;
+}): ReviewStats {
+  return {
+    total: Number(row.total),
+    average: Number(row.average),
+    distribution: { 1: Number(row.c1), 2: Number(row.c2), 3: Number(row.c3), 4: Number(row.c4), 5: Number(row.c5) },
   };
 }

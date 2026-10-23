@@ -119,9 +119,7 @@
     }
 
     <section class="prod__section">
-      <h2>Reseñas</h2>
-      <!-- TODO (fase 7): reseñas verificadas. Hasta entonces el bloque existe vacío. -->
-      <p class="prod__muted">Aún no hay reseñas.</p>
+      <app-reviews target="product" [targetId]="p.id" (statsChange)="reviewStats.set($event)" />
     </section>
 
     @if (related().length > 0) {

@@ -3,8 +3,7 @@
  *
  * `ProductModel` es la pieza o accesorio de la tienda propia. Vive en la tabla
  * `hub_parts`, que no se renombró (ver `supabase/migrations/0017_store_catalog.sql`);
- * el mapper hace la traducción. `HubPartModel` sigue existiendo como alias
- * deprecado para no romper imports mientras el resto del código migra.
+ * el mapper hace la traducción.
  */
 
 /** De inventario propio o bajo pedido (dropshipping). */
@@ -19,7 +18,7 @@ export type ProductFitmentType = 'universal' | 'specific';
 
 export interface ProductModel {
   id: number;
-  /** Categoría de texto de la tienda anterior al pivote. Se elimina en la fase 7. */
+  /** Categoría de texto de la tienda anterior al pivote. Sigue leyéndose (ver `docs/ROADMAP.md`). */
   category: string;
   /** Categoría del árbol nuevo. Nula en filas que aún no se han clasificado. */
   categoryId: number | null;
@@ -30,6 +29,11 @@ export interface ProductModel {
   shortDescription: string;
   imgUrl: string;
   images?: string[];
+  /**
+   * El promedio de las reseñas reales si las hay; si no, las estrellas sembradas de
+   * antes de las reseñas (`hub_parts.stars_seed`). Para saber cuántas reseñas hay de
+   * verdad hay que preguntarle a `ReviewService.getStats()`.
+   */
   starsRating: number;
   price: number;
   /** Precio anterior. Nulo = sin oferta; si existe, es mayor que `price`. */

@@ -54,5 +54,6 @@
     &--ghost { background: transparent; border: 1px solid var(--Hub); color: var(--Hub); }
   }
 
+  &__reviews { margin-top: 36px; }
   &__works { margin-top: 36px; h2 { margin: 0 0 14px; font-family: var(--font-brand); font-size: 1.3rem; } }
 }

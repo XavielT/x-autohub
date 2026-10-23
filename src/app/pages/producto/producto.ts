@@ -5,12 +5,15 @@ import { Meta, Title } from '@angular/platform-browser';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
+import { Reviews } from '../../../shared/components/reviews/reviews';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 import { ProductCategoryModel, ProductFitmentModel, ProductModel } from '../../../shared/models/product.model';
+import { ReviewStats } from '../../../shared/models/review.model';
 import { ServiceModel } from '../../../shared/models/service.model';
 import { CartService } from '../../../shared/services/cart.service';
 import { CategoryService } from '../../../shared/services/category.service';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { ProductService } from '../../../shared/services/product.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -19,6 +22,7 @@ import { VehicleService } from '../../../shared/services/vehicle.service';
 import { availabilityOf } from '../../../shared/utils/product-availability';
 import { compatibilityOf } from '../../../shared/utils/product-compat';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
+import { productJsonLd } from '../../../shared/utils/structured-data';
 
 /** El `description` que trae `index.html`: el que vuelve al salir de una ficha. */
 const DEFAULT_DESCRIPTION =
@@ -42,7 +46,7 @@ export interface FitmentLine {
  */
 @Component({
   selector: 'app-producto',
-  imports: [DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge],
+  imports: [DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge, Reviews],
   templateUrl: './producto.html',
   styleUrl: './producto.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,12 +64,15 @@ export class Producto {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly document = inject(DOCUMENT);
+  private readonly jsonLd = inject(JsonLdService);
 
   readonly product = signal<ProductModel | undefined>(undefined);
   readonly fitments = signal<ProductFitmentModel[]>([]);
   readonly fitmentLines = signal<FitmentLine[]>([]);
   readonly related = signal<ProductModel[]>([]);
   readonly isLoading = signal(true);
+  /** Las estadísticas de las reseñas reales; el bloque de reseñas las avisa al cargarlas. */
+  readonly reviewStats = signal<ReviewStats | null>(null);
 
   private readonly categories = toSignal(this.categoryService.getAll(), {
     initialValue: [] as ProductCategoryModel[],
@@ -135,7 +142,10 @@ export class Producto {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.meta.updateTag({ name: 'description', content: DEFAULT_DESCRIPTION }));
+    inject(DestroyRef).onDestroy(() => {
+      this.meta.updateTag({ name: 'description', content: DEFAULT_DESCRIPTION });
+      this.jsonLd.set('product', null);
+    });
 
     this.route.paramMap
       .pipe(
@@ -159,6 +169,8 @@ export class Producto {
       .subscribe({
         next: ({ product, fitments, related }) => {
           this.product.set(product);
+          // Las del producto anterior no valen para este: el bloque de reseñas las vuelve a avisar.
+          this.reviewStats.set(null);
           this.fitments.set(fitments);
           this.related.set(related);
           this.isLoading.set(false);
@@ -169,6 +181,19 @@ export class Producto {
           this.isLoading.set(false);
         },
       });
+
+    // JSON-LD Product. Un producto de prueba no se anuncia a los buscadores.
+    effect(() => {
+      const product = this.product();
+      const availability = this.availability();
+      const stats = this.reviewStats();
+      untracked(() =>
+        this.jsonLd.set(
+          'product',
+          product && availability && !product.isTest ? productJsonLd(product, { availability, stats }) : null,
+        ),
+      );
+    });
 
     // Los nombres de la marca y el modelo de cada fila de compatibilidad.
     effect(() => {

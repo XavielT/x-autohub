@@ -1036,6 +1036,129 @@ check "ni un usuario normal" 'ERROR:  new row violates row-level security policy
 check "un admin si" "" "$(as_user "$ADMIN" "insert into storage.objects (bucket_id, name) values ('service-works', 'x/a.jpg');")"
 check "y las fotos las ve cualquiera" "1" "$(as_anon "select count(*) from storage.objects where bucket_id = 'service-works';")"
 
+echo "→ Resenas: autor, compra verificada, estrellas y borrado (migracion 0020)"
+# Escenario, por encima de RLS: stock de sobra para la pieza 5, y un pedido
+# entregado de USER_A con esa pieza. USER_B tiene un pedido de la misma pieza **sin
+# entregar**: no cuenta como compra.
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set stock = 100, is_active = true where id = 5;
+SQL
+ORD_RA="$(scalar "$(as_user "$USER_A" "select id from create_order('a@x.com', 'Usuario A', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550001', p_province => 'Santiago');")")"
+ORD_RB="$(scalar "$(as_user "$USER_B" "select id from create_order('b@x.com', 'Usuario B', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550002', p_province => 'Santiago');")")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+update orders set status = 'delivered' where id = '$ORD_RA';
+SQL
+check "los pedidos de la prueba quedaron a nombre de sus dueños" "$USER_A|$USER_B" \
+  "select (select user_id from orders where id = '$ORD_RA') || '|' || (select user_id from orders where id = '$ORD_RB');"
+
+echo "   (las estrellas sembradas)"
+check "toda pieza sembrada conserva sus estrellas como stars_seed" "0" \
+  "select count(*) from hub_parts where stars_seed <> stars_rating;"
+check "y ninguna empieza con reseñas" "0" "select count(*) from hub_parts where review_count <> 0;"
+STARS5="$(scalar 'select stars_rating from hub_parts where id = 5;')"
+
+echo "   (quien lee y quien escribe)"
+review() { echo "insert into reviews (target_type, target_id, user_id, rating, comment) values ('$1', $2, '$3', $4, '$5') returning is_verified_purchase;"; }
+check "anon no escribe reseñas" "ERROR:  permission denied for table reviews" \
+  "$(as_anon "$(review product 5 "$USER_A" 5 'Hackeada')")"
+check "nadie escribe a nombre de otro" 'ERROR:  new row violates row-level security policy for table "reviews"' \
+  "$(as_user "$USER_B" "$(review product 5 "$USER_A" 5 'Suplantada')")"
+check "una calificacion de 0 se rechaza" 'ERROR:  new row for relation "reviews" violates check constraint "reviews_rating_check"' \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 0 'x')")"
+check "y una de 6 tambien" 'ERROR:  new row for relation "reviews" violates check constraint "reviews_rating_check"' \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 6 'x')")"
+LONG="$(printf 'x%.0s' $(seq 1 1001))"
+check "un comentario de mas de 1000 caracteres se rechaza" 'ERROR:  new row for relation "reviews" violates check constraint "reviews_comment_check"' \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 5 "$LONG")")"
+check "un producto que no existe no se reseña" "ERROR:  Ese producto no existe." \
+  "$(as_user "$USER_A" "$(review product 99999 "$USER_A" 5 'x')")"
+check "ni un servicio que no existe" "ERROR:  Ese servicio no existe." \
+  "$(as_user "$USER_A" "$(review service 99999 "$USER_A" 5 'x')")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set is_active = false where id = 5;
+SQL
+check "un producto apagado tampoco" "ERROR:  Ese producto no existe." \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 5 'x')")"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set is_active = true where id = 5;
+SQL
+
+echo "   (compra verificada: la calcula Postgres, no el navegador)"
+check "con un pedido entregado de esa pieza, la reseña sale verificada" "t" \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 5 '  Excelente, quedo perfecto  ')")"
+check "el comentario se guarda sin espacios sobrantes" "Excelente, quedo perfecto" \
+  "select comment from reviews where user_id = '$USER_A' and target_type = 'product';"
+check "con un pedido sin entregar, no" "f" \
+  "$(as_user "$USER_B" "$(review product 5 "$USER_B" 3 'Regular')")"
+check "pedir la etiqueta a mano no la da: se pisa" "f" \
+  "$(as_user "$USER_B" "insert into reviews (target_type, target_id, user_id, rating, is_verified_purchase) values ('service', 1, '$USER_B', 4, true) returning is_verified_purchase;")"
+check "una persona sin ningun pedido, tampoco" "0" \
+  "select count(*) from reviews where user_id = '$ADMIN' and is_verified_purchase;"
+check "una reseña por persona y objetivo" 'ERROR:  duplicate key value violates unique constraint "reviews_one_per_user"' \
+  "$(as_user "$USER_A" "$(review product 5 "$USER_A" 1 'Otra vez')")"
+check "pero la misma persona puede reseñar otro objetivo" "f" \
+  "$(as_user "$USER_A" "$(review service 1 "$USER_A" 4 'Buen taller')")"
+
+echo "   (una cita hecha verifica la reseña del servicio)"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into service_appointments (user_id, service_id, contact_name, contact_phone, scheduled_at, status)
+values ('$USER_B', 2, 'Usuario B', '8095550002', now() - interval '2 days', 'done'),
+       ('$USER_A', 3, 'Usuario A', '8095550001', now() + interval '3 days', 'confirmed');
+SQL
+check "con una cita done de ese servicio, verificada" "t" \
+  "$(as_user "$USER_B" "$(review service 2 "$USER_B" 5 'Rapidos')")"
+check "con una cita solo confirmada, no" "f" \
+  "$(as_user "$USER_A" "$(review service 3 "$USER_A" 5 'Aun no fui')")"
+check "sin ninguna cita de ese servicio, no" "f" \
+  "$(as_user "$USER_A" "$(review service 4 "$USER_A" 2 'Sin cita')")"
+
+echo "   (lectura publica y estadisticas)"
+check "anon lee las reseñas" "7" "$(as_anon 'select count(*) from reviews;')"
+check "y las estadisticas de un producto: total, promedio y distribucion" "2|4.0|0|0|1|0|1" \
+  "$(as_anon "select total || '|' || average || '|' || c1 || '|' || c2 || '|' || c3 || '|' || c4 || '|' || c5 from review_stats('product', 5);")"
+check "un objetivo sin reseñas da ceros, no un error" "0|0|0|0|0|0|0" \
+  "$(as_anon "select total || '|' || average || '|' || c1 || '|' || c2 || '|' || c3 || '|' || c4 || '|' || c5 from review_stats('product', 4);")"
+check "el promedio y el contador quedan en la pieza" "4.0|2" \
+  "select stars_rating || '|' || review_count from hub_parts where id = 5;"
+check "las estrellas sembradas no se pisan" "$STARS5" "select stars_seed from hub_parts where id = 5;"
+check "las reseñas de servicio no tocan las piezas" "0" \
+  "select count(*) from hub_parts where review_count <> 0 and id <> 5;"
+
+echo "   (no hay UPDATE, y se borra poco)"
+check "nadie edita una reseña, ni la suya" "ERROR:  permission denied for table reviews" \
+  "$(as_user "$USER_A" "update reviews set rating = 1 where user_id = '$USER_A';")"
+check "ni un admin" "ERROR:  permission denied for table reviews" \
+  "$(as_user "$ADMIN" "update reviews set is_verified_purchase = true;")"
+check "anon no borra" "ERROR:  permission denied for table reviews" "$(as_anon 'delete from reviews;')"
+check "un usuario no borra la reseña de otro" "4" \
+  "$(as_user "$USER_B" "delete from reviews where user_id = '$USER_A'; select count(*) from reviews where user_id = '$USER_A';")"
+check "el autor borra la suya, y las estrellas se recalculan" "5.0|1" \
+  "$(as_user "$USER_B" "delete from reviews where user_id = '$USER_B' and target_type = 'product'; select stars_rating || '|' || review_count from hub_parts where id = 5;")"
+check "un admin borra cualquiera (moderacion)" "0|$STARS5" \
+  "$(as_user "$ADMIN" "delete from reviews where user_id = '$USER_A' and target_type = 'product'; select review_count || '|' || stars_rating from hub_parts where id = 5;")"
+check "sin reseñas, la pieza vuelve a sus estrellas sembradas" "$STARS5|0" \
+  "select stars_rating || '|' || review_count from hub_parts where id = 5;"
+
+echo "   (si se borra el producto o el servicio, se van sus reseñas)"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into hub_parts (id, category, name, brand, img_url, price, stock) values (99901, 'x', 'Pieza efimera', 'X', 'x.jpg', 100, 1);
+insert into services (id, icon, title, description) values (99901, 'x', 'Servicio efimero', 'x');
+insert into reviews (target_type, target_id, user_id, rating) values ('product', 99901, '$USER_A', 4), ('service', 99901, '$USER_A', 4);
+SQL
+check "antes de borrar hay dos" "2" "select count(*) from reviews where target_id = 99901;"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+delete from hub_parts where id = 99901;
+delete from services where id = 99901;
+SQL
+check "despues, ninguna" "0" "select count(*) from reviews where target_id = 99901;"
+
+echo "   (las funciones de trigger no se llaman a mano; review_stats si, desde anon)"
+check "anon no invoca reviews_prepare" "$(denied reviews_prepare)" "$(as_anon 'select reviews_prepare();')"
+check "ni un usuario" "$(denied reviews_sync_product)" "$(as_user "$USER_A" 'select reviews_sync_product();')"
+check "anon si llama a review_stats" "0" "$(as_anon "select total from review_stats('service', 10);")"
+check "ningun producto sin reseñas se aparta de sus estrellas sembradas" "0" \
+  "select count(*) from hub_parts where review_count = 0 and stars_rating <> stars_seed;"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1148,8 +1271,8 @@ insert into services (icon, title, description, sort_order) values
   ('assets/icons/search-check-hub-icon.svg', 'Busqueda y Revision', 'Te ayudamos a encontrar y verificar tu proximo vehiculo.', 3);
 update hub_parts set installable = true, installation_service_id = 1 where id = (select min(id) from hub_parts);
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0019_services_booking.sql upgrade
+apply supabase/migrations/0019_services_booking.sql upgrade
 echo "   (aplicada dos veces, con servicios dentro)"
 CHECK_DB=upgrade check "los cuatro de antes conservan su id y reciben slug y categoria" \
   "mantenimiento:mantenimiento,reparacion:mecanica,chequeo-y-diagnostico:diagnostico,busqueda-y-revision:diagnostico" \
@@ -1161,6 +1284,30 @@ CHECK_DB=upgrade check "el catalogo nuevo queda activo, sin duplicarse al volver
 CHECK_DB=upgrade check "una pieza que apuntaba a un servicio viejo sigue apuntandole" "Mantenimiento" \
   "select s.title from hub_parts p join services s on s.id = p.installation_service_id where p.installable;"
 CHECK_DB=upgrade check "el horario de ejemplo no se duplica al volver a aplicar" "6" "select count(*) from service_availability;"
+
+echo "→ Camino de actualizacion de la 0020: la base real ya tiene piezas con estrellas sembradas"
+# Antes de la 0020, `stars_rating` era el dato sembrado. La migracion lo copia a
+# `stars_seed` una sola vez; si se volviera a aplicar con reseñas reales ya dentro, no
+# puede tomar un promedio por sembrado.
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set stars_rating = case when id % 2 = 0 then 4.5 else 0 end;
+SQL
+apply "$LAST_MIGRATION" upgrade
+CHECK_DB=upgrade check "las piezas con estrellas las copian a stars_seed, las demas quedan en 0" "4.5|0.0" \
+  "select (select max(stars_seed) from hub_parts where id % 2 = 0) || '|' || (select max(stars_seed) from hub_parts where id % 2 = 1);"
+CHECK_DB=upgrade check "todas empiezan con 0 reseñas" "0" "select count(*) from hub_parts where review_count <> 0;"
+UP_PART="$(SCALAR_DB=upgrade scalar 'select min(id) from hub_parts where id % 2 = 0;')"
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into reviews (target_type, target_id, user_id, rating) values ('product', $UP_PART, '11111111-1111-1111-1111-111111111111', 2);
+SQL
+CHECK_DB=upgrade check "una reseña real reemplaza a las estrellas sembradas por el promedio" "2.0|1|4.5" \
+  "select stars_rating || '|' || review_count || '|' || stars_seed from hub_parts where id = $UP_PART;"
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada otra vez, con una reseña real dentro)"
+CHECK_DB=upgrade check "el promedio real no se toma por sembrado" "2.0|1|4.5" \
+  "select stars_rating || '|' || review_count || '|' || stars_seed from hub_parts where id = $UP_PART;"
+CHECK_DB=upgrade check "y al quedarse sin reseñas, vuelve a las sembradas" "4.5|0" \
+  "delete from reviews; select stars_rating || '|' || review_count from hub_parts where id = $UP_PART;"
 
 # --- Resumen ------------------------------------------------------------------
 

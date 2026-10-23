@@ -1,15 +1,19 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap, tap } from 'rxjs';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
+import { Reviews } from '../../../shared/components/reviews/reviews';
 import { ServiceWorks } from '../../../shared/components/service-works/service-works';
 import { SERVICE_CATEGORY_LABELS, ServiceModel, ServiceWorkModel } from '../../../shared/models/service.model';
+import { ReviewStats } from '../../../shared/models/review.model';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { formatDuration } from '../../../shared/utils/format-duration';
+import { serviceJsonLd } from '../../../shared/utils/structured-data';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -19,7 +23,7 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
  */
 @Component({
   selector: 'app-servicio',
-  imports: [DecimalPipe, RouterLink, ImageGallery, ServiceWorks],
+  imports: [DecimalPipe, RouterLink, ImageGallery, ServiceWorks, Reviews],
   templateUrl: './servicio.html',
   styleUrl: './servicio.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,10 +33,13 @@ export class Servicio {
   private readonly catalog = inject(ServiceCatalogService);
   private readonly title = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly jsonLd = inject(JsonLdService);
 
   readonly state = signal<LoadState>('loading');
   readonly service = signal<ServiceModel | undefined>(undefined);
   readonly works = signal<ServiceWorkModel[]>([]);
+  /** Las estadísticas de las reseñas reales; el bloque de reseñas las avisa al cargarlas. */
+  readonly reviewStats = signal<ReviewStats | null>(null);
 
   readonly categoryLabel = computed(() => {
     const s = this.service();
@@ -47,6 +54,15 @@ export class Servicio {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.jsonLd.set('service', null));
+
+    // JSON-LD Service. Sin precio ("a cotizar") no declara oferta.
+    effect(() => {
+      const service = this.service();
+      const stats = this.reviewStats();
+      untracked(() => this.jsonLd.set('service', service ? serviceJsonLd(service, { stats }) : null));
+    });
+
     this.route.paramMap
       .pipe(
         tap(() => this.state.set('loading')),
@@ -56,6 +72,8 @@ export class Servicio {
       .subscribe({
         next: (service) => {
           this.service.set(service);
+          // Las del servicio anterior no valen para este: el bloque de reseñas las vuelve a avisar.
+          this.reviewStats.set(null);
           this.state.set(service ? 'ready' : 'missing');
           this.title.setTitle(service ? `${service.title} — Taller | X AutoHub` : 'Servicio no encontrado | X AutoHub');
 

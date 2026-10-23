@@ -1,0 +1,99 @@
+<section class="rv" aria-labelledby="rv-title">
+  <h2 id="rv-title" class="rv__title">Reseñas</h2>
+
+  @if (isLoading()) {
+    <p class="rv__muted" role="status">Cargando las reseñas…</p>
+  } @else if (hasError()) {
+    <p class="rv__muted" role="alert">No pudimos cargar las reseñas. Inténtalo otra vez en un momento.</p>
+  } @else if (stats().total === 0) {
+    <p class="rv__muted">Aún no hay reseñas. Sé la primera persona en escribir una.</p>
+  } @else {
+    <div class="rv__summary">
+      <div class="rv__score">
+        <strong class="rv__avg">{{ stats().average | number:'1.1-1' }}</strong>
+        <span class="rv__stars" role="img" [attr.aria-label]="'Promedio de ' + stats().average + ' de 5 estrellas'">{{ starsText(stats().average) }}</span>
+        <span class="rv__count">{{ stats().total }} {{ stats().total === 1 ? 'reseña' : 'reseñas' }}</span>
+      </div>
+
+      <ul class="rv__bars" aria-label="Cuántas reseñas hay de cada calificación">
+        @for (star of distributionRows; track star) {
+          <li class="rv__bar-row">
+            <span class="rv__bar-label">{{ star }} ★</span>
+            <span class="rv__bar" aria-hidden="true"><span class="rv__bar-fill" [style.width.%]="percent(star)"></span></span>
+            <span class="rv__bar-count">{{ stats().distribution[star] }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <ul class="rv__list">
+      @for (r of list(); track r.id) {
+        <li class="rv__item">
+          <div class="rv__head">
+            <span class="rv__stars" role="img" [attr.aria-label]="r.rating + ' de 5 estrellas'">{{ starsText(r.rating) }}</span>
+            <strong class="rv__author">{{ r.authorName }}</strong>
+            @if (r.isVerifiedPurchase) { <span class="rv__badge">Compra verificada</span> }
+            <time class="rv__date" [attr.datetime]="r.createdAt.toISOString()">{{ r.createdAt | date:'d MMM y' }}</time>
+          </div>
+          @if (r.comment) { <p class="rv__comment">{{ r.comment }}</p> }
+          @if (canDelete(r)) {
+            <button type="button" class="rv__delete" [class.is-confirm]="confirmingId() === r.id" (click)="remove(r)">
+              {{ confirmingId() === r.id ? '¿Seguro? Toca otra vez para borrar' : (r.userId === auth.user()?.id ? 'Borrar mi reseña' : 'Borrar (moderación)') }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (remaining() > 0) {
+      <button type="button" class="rv__more" [disabled]="isLoadingMore()" (click)="loadMore()">
+        {{ isLoadingMore() ? 'Cargando…' : 'Ver más reseñas (' + remaining() + ')' }}
+      </button>
+    }
+  }
+
+  <!-- Escribir una reseña -->
+  <div class="rv__write">
+    <h3 class="rv__subtitle">Escribe tu reseña</h3>
+
+    @if (!auth.isLoggedIn()) {
+      <p class="rv__muted">
+        <a routerLink="/login" [queryParams]="loginLink()">Inicia sesión</a> para escribir una reseña.
+      </p>
+    } @else {
+      @if (mine()) {
+        <p class="rv__notice" role="status">
+          Ya escribiste una reseña de esto. Solo se permite una por persona; si quieres cambiarla, bórrala arriba y escribe otra.
+        </p>
+      } @else {
+        <p class="rv__hint">{{ verifiedHint() }}</p>
+      }
+
+      <form class="rv__form" (submit)="$event.preventDefault(); submit()" novalidate>
+        <fieldset class="rv__fieldset" [disabled]="mine() !== null || isSending()">
+          <legend class="rv__legend">Tu calificación</legend>
+          <div class="rv__rate">
+            @for (n of stars; track n) {
+              <label class="rv__star" [class.is-on]="n <= rating()">
+                <input type="radio" name="rv-rating" [value]="n" [checked]="rating() === n" (change)="setRating(n)" />
+                <span aria-hidden="true">★</span>
+                <span class="rv__sr">{{ n }} {{ n === 1 ? 'estrella' : 'estrellas' }}</span>
+              </label>
+            }
+          </div>
+
+          <label class="rv__label">
+            <span>Tu comentario <small>(opcional)</small></span>
+            <textarea class="rv__input" name="rv-comment" rows="4" [attr.maxlength]="commentMax" [value]="comment()" (input)="setComment($event)"
+                      placeholder="Cuéntanos qué tal te fue"></textarea>
+            <small class="rv__counter">{{ comment().length }}/{{ commentMax }}</small>
+          </label>
+
+          @if (formError()) { <p class="rv__error" role="alert">{{ formError() }}</p> }
+
+          <button type="submit" class="rv__submit">{{ isSending() ? 'Publicando…' : 'Publicar reseña' }}</button>
+        </fieldset>
+      </form>
+    }
+  </div>
+</section>

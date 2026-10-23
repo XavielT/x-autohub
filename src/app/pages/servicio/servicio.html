@@ -59,6 +59,10 @@
             <app-service-works [works]="works()" />
           </section>
         }
+
+        <section class="svc__reviews">
+          <app-reviews target="service" [targetId]="s.id" (statsChange)="reviewStats.set($event)" />
+        </section>
       }
     }
   }

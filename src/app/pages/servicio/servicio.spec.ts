@@ -85,4 +85,62 @@ describe('Servicio (/servicios/:slug)', () => {
     expect(el.textContent).toContain('No encontramos este servicio');
     expect(el.querySelector('a[href="/servicios"].svc__btn')).not.toBeNull();
   });
+
+  describe('reseñas y JSON-LD Service', () => {
+    const ld = (): Record<string, unknown> | null => {
+      const script = document.head.querySelector('script[data-ld="service"]');
+      return script ? JSON.parse(script.textContent ?? '{}') : null;
+    };
+
+    afterEach(() => document.head.querySelectorAll('script[data-ld]').forEach((el) => el.remove()));
+
+    async function listo(slug: string) {
+      const m = montar(slug);
+      await m.fixture.whenStable();
+      m.fixture.detectChanges();
+      await m.fixture.whenStable();
+      m.fixture.detectChanges();
+      return m;
+    }
+
+    it('el detalle trae el bloque de reseñas del servicio', async () => {
+      const { el } = await listo('instalacion-de-accesorios');
+
+      expect(el.querySelector('app-reviews')).not.toBeNull();
+      expect(el.querySelector('.rv__count')?.textContent?.trim()).toBe('1 reseña');
+    });
+
+    it('un servicio con precio declara la oferta en DOP', async () => {
+      await listo('frenos');
+
+      expect(ld()).toMatchObject({
+        '@type': 'Service',
+        name: 'Frenos',
+        url: 'https://xautohubrd.com/servicios/frenos',
+        offers: { priceCurrency: 'DOP', price: '2500.00' },
+      });
+    });
+
+    it('"A cotizar" no declara oferta: no es un precio', async () => {
+      await listo('suspension');
+
+      expect(ld()).not.toHaveProperty('offers');
+    });
+
+    it('sin reseñas no hay aggregateRating; con reseñas reales sí', async () => {
+      await listo('frenos');
+      expect(ld()).not.toHaveProperty('aggregateRating');
+
+      TestBed.resetTestingModule();
+      document.head.querySelectorAll('script[data-ld]').forEach((el) => el.remove());
+      await listo('instalacion-de-accesorios');
+      expect(ld()?.['aggregateRating']).toMatchObject({ ratingValue: 5, reviewCount: 1 });
+    });
+
+    it('un servicio que no existe no deja JSON-LD', async () => {
+      await listo('no-existe');
+
+      expect(ld()).toBeNull();
+    });
+  });
 });

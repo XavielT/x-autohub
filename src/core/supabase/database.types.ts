@@ -35,6 +35,29 @@ export type OrderStatus =
 /** Cómo recibe el cliente el pedido. Migración 0018. */
 export type OrderFulfillmentDb = 'shipping' | 'pickup';
 
+/** A qué se refiere una reseña. Migración 0020. */
+export type ReviewTargetDb = 'product' | 'service';
+
+/**
+ * Una reseña de un producto o de un servicio (migración 0020).
+ *
+ * `is_verified_purchase` **la calcula Postgres** al insertar (pedido `delivered` con
+ * ese producto, o cita `done` con ese servicio): lo que mande el navegador se pisa.
+ * No hay UPDATE.
+ */
+export type ReviewRow = {
+  id: number;
+  target_type: ReviewTargetDb;
+  target_id: number;
+  user_id: string;
+  rating: number;
+  comment: string;
+  is_verified_purchase: boolean;
+  created_at: string;
+  /** Presente solo cuando el select incluye `profiles(display_name)`. */
+  profiles?: { display_name: string } | null;
+}
+
 /** La categoría de un servicio del taller. Migración 0019. */
 export type ServiceCategoryDb =
   | 'instalacion'
@@ -135,7 +158,7 @@ export type HubPartRow = {
   /**
    * Categoría de texto de la tienda anterior al pivote. Nula en los productos
    * nuevos que solo traen `category_id` (un trigger la rellena con la categoría
-   * raíz). Se elimina en la fase 7 (migración 0021).
+   * raíz). Sigue en pie: la tienda y el panel todavía la leen (ver `docs/ROADMAP.md`).
    */
   category: string | null;
   name: string;
@@ -169,6 +192,17 @@ export type HubPartRow = {
   specs: Record<string, SettingValue>;
   sold_count: number;
   updated_at: string;
+  // --- Migración 0020 (reseñas) ---
+  /**
+   * Las estrellas de antes de las reseñas (dato sembrado). `stars_rating` vuelve a
+   * este valor si el producto se queda sin reseñas.
+   */
+  stars_seed: number;
+  /**
+   * Cuántas reseñas reales tiene; lo mantiene un trigger. Mayor que 0 = `stars_rating`
+   * es un promedio real y no el sembrado.
+   */
+  review_count: number;
   /**
    * Columna generada para la búsqueda de texto. Solo la lee la base: no viene
    * en los `select` que piden columnas y no se escribe nunca.
@@ -645,6 +679,16 @@ type OrderStatusHistoryRelationships = [
     referencedColumns: ['id'];
   },
 ];
+type ReviewRelationships = [
+  {
+    foreignKeyName: 'reviews_user_id_fkey';
+    columns: ['user_id'];
+    isOneToOne: false;
+    referencedRelation: 'profiles';
+    referencedColumns: ['id'];
+  },
+];
+
 type SocialPostRelationships = [
   {
     foreignKeyName: 'social_posts_author_id_fkey';
@@ -747,6 +791,17 @@ export type Database = {
         Insert: never;
         Update: never;
         Relationships: ServiceAppointmentRelationships;
+      };
+      /**
+       * Reseñas (migración 0020). Lee cualquiera; escribe el autor (con la
+       * compra verificada calculada por un trigger); borran el autor o el admin.
+       * **Sin Update**: ni política ni permiso.
+       */
+      reviews: {
+        Row: ReviewRow;
+        Insert: Insert<ReviewRow, 'target_type' | 'target_id' | 'user_id' | 'rating'>;
+        Update: never;
+        Relationships: ReviewRelationships;
       };
       service_works: {
         Row: ServiceWorkRow;
@@ -1021,6 +1076,14 @@ export type Database = {
         }[];
       };
       /**
+       * Promedio (1 decimal) y cuántas reseñas hay de cada estrella (`c1`…`c5`) de un
+       * producto o un servicio. La puede llamar un invitado (migración 0020).
+       */
+      review_stats: {
+        Args: { p_target_type: ReviewTargetDb; p_target_id: number };
+        Returns: { total: number; average: number; c1: number; c2: number; c3: number; c4: number; c5: number }[];
+      };
+      /**
        * Las horas libres de un día, en hora de Santo Domingo, con los cupos que
        * quedan. Nunca devuelve horas pasadas. `anon` la invoca (migración 0019).
        */
@@ -1115,6 +1178,7 @@ export type Database = {
       appointment_status: AppointmentStatusDb;
       product_fulfillment: ProductFulfillmentDb;
       product_fitment_type: ProductFitmentTypeDb;
+      review_target: ReviewTargetDb;
     };
     CompositeTypes: Record<string, never>;
   };

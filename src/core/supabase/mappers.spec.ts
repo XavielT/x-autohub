@@ -1,13 +1,14 @@
 import {
   toAutoHubVehicle,
   toHubMarketItem,
-  toHubPart,
   toNews,
   toProduct,
   toProductCategory,
   toProductFitment,
   toOrderView,
   toProfileVehicle,
+  toReview,
+  toReviewStats,
   toSocialPost,
   toUserOrder,
   toSpecs,
@@ -20,6 +21,7 @@ import {
   HubMarketItemRow,
   HubPartRow,
   NewsRow,
+  ReviewRow,
   SearchProductRow,
   SocialPostRow,
 } from './database.types';
@@ -175,6 +177,8 @@ describe('mappers', () => {
       img_url: 'disco.jpg',
       images: [],
       stars_rating: 4.9,
+      stars_seed: 4.9,
+      review_count: 0,
       price: 12950,
       description: 'Alto rendimiento',
       stock: 25,
@@ -229,13 +233,40 @@ describe('mappers', () => {
       expect(toProduct({ ...row, category: null }).category).toBe('');
     });
 
-    it('toHubPart sigue siendo el mismo mapper, para quien aun lo importa', () => {
-      expect(toHubPart).toBe(toProduct);
-    });
-
     it('lee una fila de search_products() igual que una de hub_parts', () => {
       const found: SearchProductRow = { ...row, total_count: 12 };
       expect(toProduct(found).slug).toBe('disco-gtr-1');
+    });
+  });
+
+  describe('reseñas', () => {
+    const row: ReviewRow = {
+      id: 7,
+      target_type: 'product',
+      target_id: 5,
+      user_id: 'uuid-1',
+      rating: 4,
+      comment: 'Bien',
+      is_verified_purchase: true,
+      created_at: '2026-10-01T12:00:00Z',
+      profiles: { display_name: 'Ana' },
+    };
+
+    it('toReview mapea la fila, con el nombre del perfil', () => {
+      const r = toReview(row);
+      expect(r).toMatchObject({ id: 7, target: 'product', targetId: 5, userId: 'uuid-1', rating: 4, authorName: 'Ana', isVerifiedPurchase: true });
+      expect(r.createdAt.toISOString()).toBe('2026-10-01T12:00:00.000Z');
+    });
+
+    it('un perfil sin nombre (o sin embed) sale como "Cliente"', () => {
+      expect(toReview({ ...row, profiles: null }).authorName).toBe('Cliente');
+      expect(toReview({ ...row, profiles: { display_name: '  ' } }).authorName).toBe('Cliente');
+      expect(toReview({ ...row, profiles: undefined }).authorName).toBe('Cliente');
+    });
+
+    it('toReviewStats convierte el numeric (que llega como texto) y arma la distribucion', () => {
+      const stats = toReviewStats({ total: 3, average: '4.3' as unknown as number, c1: 0, c2: 0, c3: 1, c4: 1, c5: 1 });
+      expect(stats).toEqual({ total: 3, average: 4.3, distribution: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 1 } });
     });
   });
 
