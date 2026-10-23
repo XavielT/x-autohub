@@ -142,11 +142,13 @@ npx ng test --watch=false              # lo mismo, explícito
 npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 ./scripts/verify-migrations.sh          # las migraciones contra un Postgres de verdad
+node scripts/verify-webpush.mjs         # el cifrado y la firma de Web Push
+node scripts/verify-send-push.mjs       # el handler de send-push, con una base de mentira
 ```
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 480 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 498 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -187,7 +189,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 124 archivos, 1298 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 127 archivos, 1327 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -240,6 +242,12 @@ Cosas que ya causaron un bug. No las repitas:
   base real que nada pierde su única copia del dato (la 0021 lo hace con un `raise
   exception` previo). Una función con columnas de salida explícitas, como
   `search_products()`, hay que borrarla y crearla de nuevo.
+- **La clave privada VAPID no va en el repositorio, nunca.** La pública está en `environment.vapidPublicKey`; la
+  privada es solo un secreto de la Edge Function `send-push`. Si se pierde o se cambia, toca generar otro par y
+  volver a activar los avisos en cada dispositivo (una suscripción solo sirve con la clave con la que se creó).
+  Los avisos los dispara el **panel** después de un cambio de estado, no la base: un cambio de estado hecho por otro
+  camino no avisa. Y `send-push` recibe solo un id: el texto sale de la base, no del navegador. Las funciones de
+  `supabase/functions` no se compilan con la app ni se prueban con `ng test`; por eso existen los dos scripts de arriba.
 - **Las estrellas de un producto no prueban que haya reseñas.** `hub_parts.stars_rating`
   es el dato sembrado hasta que entra la primera reseña real (entonces es el promedio), y
   `ProductModel.starsRating` no distingue una cosa de la otra. Para "¿hay opiniones de

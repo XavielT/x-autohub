@@ -205,14 +205,30 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 - **Pasarela de tarjeta (Azul/CardNet vía función serverless).** Hoy se paga por
   transferencia o se cierra por WhatsApp; la tarjeta convierte más, pero exige una
   función que no filtre la clave del comercio, conciliación y el manejo de contracargos.
-- **Notificaciones push.** La PWA ya es instalable; falta avisar "tu pedido salió" o "tu
-  cita se confirmó" (hoy el equipo escribe a mano). Pide una Edge Function y un permiso
-  explícito del usuario.
 - **Inventario multi-almacén** y **facturación con NCF.** Solo tienen sentido con más de un
   punto de venta y con volumen que obligue a facturar.
 - **Renderizado en servidor** (o prerender) para el SEO: hoy el JSON-LD y el contenido los
   pone JavaScript. Es un proyecto aparte.
 - **Trabajo nuevo en Social Hub**, que sigue sin desarrollarse a propósito.
+
+---
+
+## Notificaciones push (2.8.0) ✅
+
+Hecho: la sección "Avisos en este dispositivo" del perfil, la tabla `push_subscriptions`, la Edge Function
+`send-push` y el aviso automático cuando el equipo cambia el estado de un pedido o una cita. Ver "Notificaciones
+push" en `docs/BACKEND.md`.
+
+**Lo que queda fuera, a propósito (y por qué):**
+
+- **Que lo dispare la base y no el panel.** Hoy un cambio de estado hecho fuera del panel no avisa. Un trigger con
+  `pg_net` lo resolvería, pero guarda un secreto en la base y no se puede probar en `verify-migrations.sh`.
+- **Avisos a invitados.** Un pedido sin cuenta no tiene dueño; avisarle pediría pedir el permiso en el checkout y
+  atar la suscripción al pedido.
+- **Avisos de marketing** (ofertas, el club). Es otro permiso y otra conversación: hoy solo son avisos de lo que
+  el cliente ya pidió.
+- **Reintentos.** Si el servicio de push falla (un 500), el aviso se pierde; no hay cola.
+- **Elegir qué avisar** (solo pedidos, solo citas). Hoy es todo o nada por dispositivo.
 
 ---
 

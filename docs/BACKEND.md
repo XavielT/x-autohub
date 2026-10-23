@@ -46,7 +46,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 21    | `supabase/migrations/0021_drop_legacy.sql`     | Se retiran `hub_parts.category` y el contador del home |
 | 22    | `supabase/migrations/0022_coupons.sql`         | Cupones y descuentos: tabla, `validate_coupon()` y `create_order()` con cupón |
 | 23    | `supabase/migrations/0023_product_variants.sql` | Variantes de producto (color, talla…): tabla con stock propio, trigger que suma, `create_order()`, `set_order_status()` y `search_products()` |
-| 23    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 24    | `supabase/migrations/0024_push_subscriptions.sql` | Notificaciones push: los dispositivos de cada usuario y `register_push_subscription()` |
+| 25    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -510,6 +511,65 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 - **Orden de despliegue: primero la migración, después el frontend.** `create_order()` conserva su firma, así
   que el frontend anterior sigue funcionando (ningún producto tiene opciones hasta que el equipo cree la
   primera), pero el frontend nuevo pide `has_variants` y `variant_label`, que antes no existían.
+
+### Notificaciones push (migración 0024)
+
+Avisar al cliente cuando su pedido sale o su cita se confirma, sin que el equipo le escriba a mano.
+Web Push: llega al teléfono o a la computadora donde la persona los activó en su perfil
+("Avisos en este dispositivo").
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `push_subscriptions` | Una fila por dispositivo: el `endpoint` (la URL del servicio de push de Google, Mozilla o Apple, único) y las claves `p256dh` y `auth`. Cada quien ve y borra solo las suyas; **no hay política de insert ni de update** |
+| `register_push_subscription()` | La única forma de guardar un dispositivo. Si ese `endpoint` estaba a nombre de otra cuenta (alguien cerró sesión y entró otra persona), la fila cambia de dueño, y pone un tope de 10 dispositivos por cuenta |
+| `supabase/functions/send-push` | La Edge Function que avisa. Recibe `{ kind: 'order' | 'appointment', id }`, comprueba que quien llama es admin (le pregunta `is_admin()` a la base con **su** sesión), lee el pedido o la cita, arma el texto y lo manda a los dispositivos del dueño |
+| `supabase/functions/send-push/webpush.mjs` | La criptografía de Web Push (cifrado aes128gcm y firma VAPID) con solo WebCrypto y `fetch`, sin `npm:web-push` |
+| `PushService` / `<app-avisos>` | El lado del navegador: activar y desactivar, y `notify()`, que llama a la función desde el panel |
+
+**Cómo fluye:** el admin cambia el estado de un pedido o una cita (`set_order_status()` /
+`set_appointment_status()`) → si salió bien, el panel llama a `send-push` con el id → la función avisa →
+el service worker de Angular muestra la notificación y, al tocarla, abre `/pedido/:id` (o `/perfil`).
+
+**Decisiones que conviene conocer**
+
+- **Solo cuentas.** Un pedido o una cita de invitado no tiene dueño, así que no hay a quién avisar.
+- **El navegador no dice qué se avisa.** Solo manda el id; el texto, el destinatario y el enlace salen de la
+  base y de la función. Aunque alguien tuviera la sesión de un admin, no puede escribirle a un tercero lo que quiera.
+- **Los estados que avisan** — pedidos: pagado, preparando, enviado, listo para retirar, entregado y cancelado;
+  citas: confirmada, en curso, lista y cancelada. Los demás (esperando pago, solicitada, no se presentó) no.
+- **Lo dispara el panel, no la base.** Si el admin cambia el estado y cierra la pestaña antes de que salga la
+  llamada, ese aviso se pierde; el estado sí queda. Un trigger con `pg_net` lo haría independiente del navegador,
+  pero obliga a guardar un secreto en la base y no se puede probar en `verify-migrations.sh` (Postgres sin
+  `pg_net`). Si algún día se cambian estados fuera del panel (un webhook de pago), ahí toca.
+- **Un dispositivo que ya no existe se borra solo:** el servicio de push responde 404 o 410 y la función borra la fila.
+- **iPhone y iPad:** iOS solo manda avisos a una app **instalada** en la pantalla de inicio (iOS 16.4 o más).
+  En Safari sin instalar, la sección de avisos lo explica en vez de ofrecer un botón que no funcionaría.
+- **Sin las claves la función no falla:** responde `not-configured` y el panel sigue igual.
+- **Orden de despliegue:** migración → función (con sus secretos) → frontend. El frontend anterior no sabe nada de esto.
+
+**Puesta en marcha (una sola vez)**
+
+1. Las claves VAPID son un par de curva P-256. La **pública** va en `environment.vapidPublicKey` (ya está, en los
+   dos `environment`); la **privada** solo como secreto de la función y **nunca** en este repositorio:
+
+   ```bash
+   supabase secrets set \
+     VAPID_PUBLIC_KEY=<la publica> \
+     VAPID_PRIVATE_KEY=<la privada> \
+     VAPID_SUBJECT=mailto:equipo@xautohubrd.com \
+     --project-ref <ref>
+   supabase functions deploy send-push --project-ref <ref>
+   ```
+
+   (Si cambias de claves, hay que volver a activar los avisos en cada dispositivo: una suscripción solo sirve con la
+   clave pública con la que se creó.)
+2. Probarlo: entra con tu cuenta en un teléfono (en iPhone, con la app instalada), activa los avisos en tu perfil,
+   haz un pedido, y desde el panel (con otra sesión) muévelo a "Pagado".
+
+**Cómo se prueba sin desplegar:** `node scripts/verify-webpush.mjs` (el cifrado y la firma, descifrando como lo
+haría el navegador) y `node scripts/verify-send-push.mjs` (el handler completo con una base y un servicio de push
+de mentira: quién puede llamarla, qué texto sale, invitados, dispositivos caídos, sin claves). **No sustituyen una
+prueba en un dispositivo real**: ninguna de las dos habla con Google, Mozilla o Apple.
 
 ### Pedidos, pago y comprobantes (migración 0018)
 

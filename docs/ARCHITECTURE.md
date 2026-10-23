@@ -12,7 +12,7 @@ estructura, actualiza este archivo en el mismo commit.
 > pedidos" y el panel) y el taller (fase 5: catálogo de servicios, cotizar por WhatsApp,
 > agenda de citas, "Mis citas", trabajos realizados y las cuatro pestañas del taller
 > en el panel) y la PWA (fase 6: instalable, caché del shell y aviso de versión nueva). y, en la fase 7, las reseñas verificadas, el SEO de producto (JSON-LD, sitemap, robots) y la
-> limpieza del código muerto. Lo que sigue (pasarela de tarjeta, push) está en
+> limpieza del código muerto. Lo que sigue (pasarela de tarjeta) está en
 > `docs/ROADMAP.md`; el plan original, en `docs/PIVOT-2026-10.md`.
 
 ## Estructura de carpetas
@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0023 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0024 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -258,6 +258,20 @@ revisar cuando las fotos reales estén en Storage.
 - `vercel.json` fija `buildCommand: npm run build` para que el `prebuild` (el sitemap)
   corra también en Vercel.
 
+## Notificaciones push
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `PushService` | `shared/services/push.service.ts` | `state` (`unsupported`, `needs-install`, `blocked`, `off`, `on`), `enable()`, `disable()` y `notify(kind, id)`. `SwPush` es opcional: en desarrollo y en las pruebas no hay service worker. Si guardar el dispositivo falla, deshace la suscripción del navegador |
+| `<app-avisos>` | `pages/perfil/avisos` | "Avisos en este dispositivo". No se pinta donde no se pueden activar; en iPhone sin instalar sí, para explicar qué falta |
+| `AdminService.setOrderStatus()` / `AdminServicesService.setAppointmentStatus()` | `shared/services` | Tras un cambio de estado que **salió bien**, llaman a `push.notify()`. Nunca hacen fallar el cambio |
+| `send-push` + `webpush.mjs` | `supabase/functions/send-push` | La Edge Function y la criptografía de Web Push. No se compilan con la app |
+| `environment.vapidPublicKey` | `src/environments` | La clave pública VAPID. La privada es un secreto de la función |
+
+- El service worker de Angular ya sabe mostrar el aviso y abrir la ruta al tocarlo (`data.onActionClick`): no hay código propio
+  para eso. El formato del mensaje lo arma `send-push`.
+- Dos scripts prueban lo que `ng test` no ve: `scripts/verify-webpush.mjs` y `scripts/verify-send-push.mjs`.
+
 ## Variantes de producto (color, talla…)
 
 | Pieza | Dónde | Qué hace |
@@ -346,7 +360,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 
 ## Base de datos
 
-24 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
+25 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
@@ -356,6 +370,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
 | Comercio             | `shipping_options`, `payment_methods`, `orders`, `order_items` |
+| Avisos               | `push_subscriptions` (dispositivos con notificaciones; se escribe solo con `register_push_subscription()`) |
 | Opciones             | `product_variants` (color, talla…; cada una con su stock, y el del producto es la suma de las activas) |
 | Cupones              | `coupons` (solo admin; los pedidos guardan `discount`, `coupon_id` y una copia de `coupon_code`) |
 | Reseñas              | `reviews` (de productos y servicios; la compra verificada la calcula un trigger) |
@@ -388,7 +403,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 124 archivos, 1298 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 127 archivos, 1327 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.
