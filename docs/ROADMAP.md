@@ -25,8 +25,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | 0    | Documentación del pivote                                          | 1.4.0     | No               | hecha        |
 | 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | hecha        |
 | 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | 2.0.0     | No               | hecha        |
-| 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | **2.1.0** | No               | preparada    |
-| 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | pendiente    |
+| 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | hecha        |
+| 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | **2.2.0** | 0018             | preparada    |
 | 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | pendiente    |
 | 6    | PWA                                                               | 2.4.0     | No               | pendiente    |
 | 7    | Reseñas, SEO de producto, limpieza de código muerto               | 2.5.0     | 0020 (y 0021)    | pendiente    |
@@ -77,6 +77,29 @@ funcionando. Se borraron las páginas `catalogo` y `hub-part-details`.
 **Por qué:** hoy el checkout ofrece una tarjeta que no existe. Sin pasarela, el
 flujo real es transferencia con comprobante o cierre por WhatsApp, y alguien
 tiene que poder marcar `paid` en dos toques desde el teléfono, o no se hará.
+
+**Hecho:** migración 0018 (estados, historial, `create_order()` con stock,
+`set_order_status()`, comprobantes en un bucket privado, `get_order()`, `my_orders()`);
+checkout en tres pasos; `/pedido/:id` con línea de tiempo y pago por transferencia
+o WhatsApp; "Mis pedidos" en el perfil; panel de pedidos para el teléfono; cuentas
+bancarias y dirección de retiro editables en `/admin/ajustes`; el carrito dice la
+disponibilidad de cada línea y avisa cuando el stock bajó. 214 comprobaciones en
+`verify-migrations.sh`.
+
+**Pendiente que dejó la fase:**
+- **Cargar las cuentas bancarias y la dirección de retiro reales** desde
+  `/admin/ajustes`. Nacen como ejemplo y el sitio no las muestra: hasta entonces la
+  transferencia funciona pidiendo los datos por WhatsApp.
+- **Progreso de la subida del comprobante.** `supabase-js` no da progreso de subida
+  (usa `fetch`); hoy la página deshabilita el botón y muestra una barra
+  indeterminada. Con `XMLHttpRequest` o una URL firmada de subida habría porcentaje.
+- **Correos transaccionales** (confirmación de pedido, pago confirmado): hoy el
+  cliente se entera por `/pedido/:id` o por WhatsApp.
+- **El precio de la instalación** sigue sin mostrarse en el checkout hasta la fase 5.
+- **Cancelación por el cliente** y **reembolsos**: no hay; lo cancela un admin.
+- **Un pedido por WhatsApp no tiene comprobante**: el pago lo acuerda el equipo y lo
+  marca `paid`. Si quieren comprobante también ahí, es un cambio en
+  `order_accepts_proof()`.
 
 ### Fase 5 — Servicios: catálogo, cotización, agenda y trabajos (2.3.0)
 

@@ -54,11 +54,11 @@ universales **y** piezas por modelo con compatibilidad. Se cobra por
 transferencia con comprobante o cerrando el pedido por WhatsApp (sin pasarela de
 tarjeta en esta ronda). Se entrega por envío nacional o retiro en el taller.
 
-> **Hoy** (fase 3) `/tienda` ya filtra por categoría, marca, precio, stock y
-> vehículo, cada pieza tiene su ficha con compatibilidad y disponibilidad, y el
-> carrito y el checkout (precios calculados en Postgres) siguen como estaban;
-> `/catalogo` redirige a la tienda. El checkout por transferencia llega por
-> fases: ver `docs/ROADMAP.md`.
+> **Hoy** (fase 4) `/tienda` filtra por categoría, marca, precio, stock y vehículo,
+> cada pieza tiene su ficha con compatibilidad y disponibilidad, y se compra en tres
+> pasos: el pedido queda registrado, se paga por transferencia (subiendo el
+> comprobante) o por WhatsApp, y el cliente sigue su estado en `/pedido/:id`.
+> `/catalogo` redirige a la tienda.
 
 ### Servicios
 
@@ -128,8 +128,7 @@ de prueba. Diecisiete migraciones aplicadas.
   (buscador, categorías, ofertas, más vendidos, nuevos, taller, vehículos y
   comunidad). El hero con video pasó a la página de la Comunidad.
 
-**Lo que todavía no** (fases 4 a 7): el checkout
-por transferencia con comprobante, la agenda de citas del taller, la PWA y las
+**Lo que todavía no** (fases 5 a 7): la agenda de citas del taller, la PWA y las
 reseñas. Ver `docs/ROADMAP.md` para el orden.
 
 Sigue funcionando todo lo anterior: Auto Hub, Hub Market con moderación, carrito

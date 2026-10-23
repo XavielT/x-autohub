@@ -40,10 +40,12 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 15    | `supabase/migrations/0015_admin_function_grants.sql` | `anon` deja de poder invocar las funciones de admin |
 | 16    | `supabase/migrations/0016_club_unsubscribe.sql` | Token de baja del club y su función             |
 | 17    | `supabase/migrations/0017_store_catalog.sql`   | Tienda: categorías, compatibilidad por vehículo, garaje y búsqueda |
-| 18    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 18    | `supabase/migrations/0018_orders_payment_flow.sql` | Pedidos: estados, stock, historial, comprobantes y cuentas |
+| 19    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
-> `status` (0012), `is_test` (0013) y las columnas de la tienda (0017). Y las dependencias entre migraciones son
+> `status` (0012), `is_test` (0013), las columnas de la tienda (0017) y los métodos
+> de pago de la 0018 (que ya trae `card` y `mercadopago` desactivados). Y las dependencias entre migraciones son
 > reales: la **0012 usa `is_moderator_or_admin()`**, que crea la 0011, y la
 > **0013 rehace las políticas de select de 0002 y 0012** — aplicarla antes
 > dejaría a esas políticas sin el filtro de prueba, o directamente sin existir.
@@ -154,7 +156,8 @@ La clave anon es pública. La seguridad real está en RLS:
 | `social_posts`                  | Todos               | Solo el autor                        |
 | `profiles`                      | Todos               | Solo el propio                       |
 | `club_subscriptions`            | Solo admin          | Cualquiera puede insertar            |
-| `orders`, `order_items`         | Solo el dueño       | Cualquiera puede crear el suyo       |
+| `orders`, `order_items`         | Solo el dueño (y admin); un invitado lee el suyo con `get_order(id)` | Solo `create_order()`. El estado y el pago, solo `set_order_status()`, `attach_payment_proof()` y `mark_whatsapp_opened()` (un trigger lo exige) |
+| `order_status_history`          | El dueño del pedido y admin | Nadie: la llena un trigger           |
 | `product_categories`            | Todos (las activas; el admin ve también las ocultas) | Solo admin (`is_admin()`) |
 | `vehicle_makes`, `vehicle_models` | Todos           | Solo admin (`is_admin()`)            |
 | `product_fitments`              | Todos, pero **solo los de un producto que quien consulta pueda ver** (el `exists` sobre `hub_parts` aplica RLS) | Solo admin |
@@ -310,6 +313,7 @@ La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
 | ------- | -------------------------- |
 | `is_admin()`, `is_moderator_or_admin()`, `can_see_test_items()` | Las llaman las políticas RLS, y una política se evalúa con los permisos de quien consulta. Sin execute, **cada select anónimo falla**. |
 | `create_order(...)` | El checkout de invitado, a propósito desde 0002. |
+| `get_order()`, `attach_payment_proof()`, `mark_whatsapp_opened()`, `order_accepts_proof()` | `/pedido/:id` es público por id (un uuid imposible de adivinar) y un invitado sube su comprobante sin cuenta. Ninguna devuelve datos personales. |
 | `get_site_stats()` | El home sin sesión. |
 
 > El idiom completo para una función nueva son **tres** líneas:
@@ -425,6 +429,71 @@ do nothing`): la mezcla de ofertas, bajo pedido y compatibilidad de los mocks
 solo llega a una base nueva. Para la real, el catálogo se carga desde el panel
 (Inventario → Piezas, Categorías, Marcas y modelos).
 
+### Pedidos, pago y comprobantes (migración 0018)
+
+Cuarta fase del pivote (`docs/PIVOT-2026-10.md`, §3 y §4). Sin pasarela de tarjeta:
+se paga por **transferencia con comprobante** o cerrando el pedido por
+**WhatsApp**, y el pedido existe en la base **antes** de pagar, así que no se
+pierde.
+
+**El ciclo de un pedido**
+
+```
+awaiting_payment → paid → preparing → shipped | ready_for_pickup → delivered
+       ↘ cancelled (hasta que la pieza sale: awaiting_payment, paid, preparing)
+```
+
+`pending` queda como estado técnico de los pedidos anteriores a 0018 (se pueden
+mover). El orden es **estricto** y lo hace cumplir `set_order_status()` dentro de
+Postgres; el panel solo ofrece los botones que la base aceptaría
+(`shared/utils/order-status.ts` es el espejo, fijado por su spec). Un `update`
+directo de `status` lo rechaza el trigger de `orders` **incluso a un admin**.
+
+**Qué trae**
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `orders` + `order_number`, `fulfillment_type`, `province`, `payment_proof_url`, `payment_confirmed_at`, `whatsapp_opened_at`, `wants_installation`, `updated_at` | El número legible (#1042, desde 1001), envío o retiro, y lo del pago |
+| `order_items.stock_deducted` | Cuánto stock descontó cada línea. Es **exactamente** lo que se devuelve al cancelar |
+| `order_status_history` | Quién cambió qué y cuándo, con una nota que **ve el cliente**. La llena un trigger |
+| `create_order()` (13 parámetros) | Valida y **descuenta** el stock de lo de inventario propio (bloquea las filas en orden de id), no toca lo bajo pedido, exige teléfono, provincia si es envío, y deja el pedido en `awaiting_payment`. Devuelve `id, order_number, subtotal, shipping_price, total`: lo que calculó Postgres |
+| `set_order_status()` | El único camino para cambiar el estado. Solo admin. Al cancelar devuelve el stock, una sola vez |
+| `get_order(id)` | El pedido de `/pedido/:id`, sin correo, teléfono ni dirección |
+| `my_orders()` | "Mis pedidos" (`security invoker`) |
+| `attach_payment_proof()`, `mark_whatsapp_opened()` | Lo único que un invitado puede escribir de su pedido |
+| Bucket `payment-proofs` | **Privado**, 10 MB, imagen o PDF. Sube el invitado (con el id del pedido en la ruta) o el dueño; leen el dueño y un admin |
+| `payment_methods` | `card` y `mercadopago` desactivados (no borrados); se agrega `whatsapp` |
+| `site_settings`: `bank_accounts`, `pickup_address` | Las cuentas para transferir y la dirección de retiro, editables desde `/admin/ajustes` |
+
+**Decisiones que conviene conocer**
+
+- **`payment_proof_url` guarda la RUTA del archivo**, no una URL: el bucket es
+  privado. El panel pide una URL firmada de diez minutos cuando la necesita. Una
+  restricción obliga a que la ruta empiece por el id del pedido.
+- **Un pedido por transferencia solo acepta comprobante mientras espera el pago**,
+  y solo si no es de otra persona (`order_accepts_proof()`, que además tolera una
+  carpeta que no sea uuid sin romper la política).
+- **Las cuentas y la dirección nacen como EJEMPLO**, marcadas `is_example`. El sitio
+  público **no las muestra** como reales: cae a "te enviamos los datos por
+  WhatsApp". Mientras nadie las reemplace en `/admin/ajustes`, la transferencia
+  funciona por WhatsApp. Un cliente que transfiere a una cuenta inventada es peor
+  que uno que espera. `site_settings` se lee en público, así que las cuentas
+  reales también son públicas (lo mismo que se le da a un cliente).
+- **`create_order()` cambió de firma y de retorno.** Dejar viva la de diez
+  parámetros haría que PostgREST respondiera `PGRST203` a cualquier llamada con los
+  diez, así que se retiró. Entre aplicar la migración y desplegar el frontend
+  nuevo, un navegador con el JavaScript viejo no puede confirmar un pedido: **se
+  aplica y se despliega seguido**.
+- **Los mensajes de error de estas funciones llegan al cliente** (SQLSTATE
+  `22023`, que `translateDbError` ya no esconde): "De 'Disco' solo quedan 1 y pediste
+  2. Ajusta la cantidad.".
+- **Los pedidos anteriores a 0018** se numeran en el orden en que se hicieron, se
+  conservan en su estado y tienen `stock_deducted = 0`: nunca descontaron stock,
+  así que cancelarlos no inventa existencias. `verify-migrations.sh` lo ejercita
+  en la segunda base.
+- `ALTER TYPE ... ADD VALUE` no deja **usar** el valor en la misma transacción: nada
+  de la migración lo referencia donde Postgres lo evalúe al crear el objeto.
+
 ### Datos privados del perfil (migración 0006)
 
 `email` y `phone` de `profiles` **no** son legibles con la clave anon ni con una
@@ -525,7 +594,7 @@ select public.set_user_role(
 
    Levanta un cluster temporal con `initdb` (sin sudo, sin Docker), aplica las
    migraciones y el seed **desde cero**, vuelve a aplicar la última (una
-   migración tiene que poder ejecutarse dos veces) y corre 114 comprobaciones de
+   migración tiene que poder ejecutarse dos veces) y corre 214 comprobaciones de
    seguridad y de comportamiento con sesiones simuladas: visibilidad pública,
    contenido de prueba, contadores, quién puede invocar cada función, los tres
    frenos de la escalada de privilegios, las tablas de la tienda (lectura pública
@@ -824,8 +893,10 @@ las fotos reales del inventario propio a Storage, actualiza esas filas.
 
 ## Lo que todavía no está
 
-- **Pasarela de pago.** `orders` se crea con estado `pending`; no hay cobro. Los
-  métodos de pago son informativos.
+- **Pasarela de pago.** No hay cobro en línea: se paga por transferencia (con
+  comprobante) o por WhatsApp, y alguien confirma el pago a mano con
+  `set_order_status()`. La tarjeta y Mercado Pago existen desactivadas en
+  `payment_methods`.
 - **Correos transaccionales.** Confirmación de pedido, aviso de publicación.
   Mismo camino que el correo de bienvenida del club, que ya está hecho (ver la
   sección de arriba): una Edge Function con Resend.

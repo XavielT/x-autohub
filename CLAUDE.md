@@ -99,11 +99,12 @@ está en `docs/PIVOT-2026-10.md` y manda sobre `docs/VISION.md` y
 | **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
 
 > **El pivote se entrega por fases** (ver `docs/ROADMAP.md`). Mientras una fase
-> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 3) ya están el
+> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 4) ya están el
 > navbar, la barra de pestañas, el footer y el home nuevos, la tienda con filtros
 > y "mi vehículo" (`/tienda`, `/tienda/c/:slug`, `/tienda/p/:slug`), `/buscar` y el
-> garaje en el perfil; `/catalogo` y `/hub-part-details/:id` solo redirigen. El
-> checkout nuevo, las citas y la PWA no existen. No documentes ni
+> garaje en el perfil, el checkout en tres pasos con `/pedido/:id` (transferencia con
+> comprobante o WhatsApp) y el panel de pedidos; `/catalogo` y
+> `/hub-part-details/:id` solo redirigen. Las citas del taller y la PWA no existen. No documentes ni
 > asumas como existente lo que una fase posterior va a construir.
 
 > **Auto Hub y Hub Market están separados a propósito.** Auto Hub son los carros
@@ -142,7 +143,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 114 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 214 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -183,7 +184,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 85 archivos, 658 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 91 archivos, 781 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.

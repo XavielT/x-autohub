@@ -1,14 +1,15 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.1.0, la fase 3 del pivote). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.2.0, la fase 4 del pivote). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 3.** Ya existen el esquema de la
+> **El pivote de octubre de 2026 va por la fase 4.** Ya existen el esquema de la
 > tienda (fase 1), la cara nueva (fase 2: navbar con buscador y menú de
 > categorías, barra de pestañas, footer por pilares, home de tienda) y la tienda
 > de verdad (fase 3: `/tienda` con filtros, "mi vehículo", ficha por slug,
-> `/buscar` y el garaje en el perfil). **Falta** el checkout por transferencia,
-> la agenda de servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
+> `/buscar` y el garaje en el perfil) y los pedidos (fase 4: checkout en tres
+> pasos, `/pedido/:id`, comprobante de transferencia o cierre por WhatsApp, "Mis
+> pedidos" y el panel). **Falta** la agenda de servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
 > se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
@@ -65,9 +66,9 @@ x-autohub/
     │   │   └── (sin uso desde la fase 2, se retiran en la fase 7:
     │   │        page-counter-overview, home-featured-vehicles,
     │   │        home-featured-catalog, home-news)
-    │   └── pages/                    Una carpeta por página (22)
+    │   └── pages/                    Una carpeta por página (23)
     │       ├── home/  auto-hub/  auto-hub-details/
-    │       ├── tienda/  producto/  buscar/  checkout/
+    │       ├── tienda/  producto/  buscar/  checkout/  pedido/
     │       ├── hub-market/  car-details/  hub-market-part-details/
     │       ├── accessory-details/  publicar/
     │       ├── servicios/  social-hub/  new-details/
@@ -207,7 +208,7 @@ intencional — el usuario nunca pierde la navegación.
 
 ## Rutas
 
-24 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
+25 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
 `title`, salvo dos que solo redirigen: `/catalogo` → `/tienda` (conserva los query
 params) y `/hub-part-details/:id` → `/tienda/p/:slug` (la resuelve
 `productIdRedirectGuard`, porque ese enlace se llegó a compartir); `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
@@ -226,6 +227,16 @@ pueda compartir y recargar; el vehículo **no** viaja, es de quien mira. Siguen
 funcionando los enlaces viejos `?category=<texto>` y `?categoria=<slug>`
 (`legacy-categories.ts`). `/buscar?q=` separa lo de la tienda de lo que publica la
 comunidad en Hub Market.
+
+**El pedido** (fase 4). `/checkout` son tres pasos (Entrega → Pago → Confirmar) y los
+totales que muestra el último son una estimación: los de verdad los calcula
+`create_order()` en Postgres y los muestra `/pedido/:id`. Esa página es **pública por
+id** (el uuid es la llave; `get_order()` no devuelve nada personal) y pide a los
+buscadores que no la indexen. Muestra la línea de tiempo (`order-status.ts`),
+y según el pago: las cuentas y "Subir comprobante" (transferencia; bucket privado
+`payment-proofs`) o el botón que abre WhatsApp con el pedido ya escrito. "Mis
+pedidos" vive en `/perfil#pedidos`. El panel (`/admin/pedidos`) ofrece solo los
+botones de estado que `set_order_status()` aceptaría. Ver `docs/BACKEND.md`.
 
 **Compatibilidad** (`product-compat.ts`): un universal sirve siempre; uno
 específico solo con un fitment que cubra el vehículo; uno específico **sin**
@@ -261,18 +272,20 @@ Decisiones que conviene conocer:
 
 ## Build
 
-- Bundle inicial: **636 kB** (~169 kB transferidos, medido el 2026-10-23; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
+- Bundle inicial: **641 kB** (~170 kB transferidos, medido el 2026-10-23; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
   página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
   porque el navbar necesita la sesión desde el primer render.
 - `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
   792 KB.
 - Budgets en `angular.json`: inicial 700 kB warning / 1 MB error; estilo por
-  componente 8 kB / 16 kB (el default de 4 kB es irreal para páginas completas).
+  componente 12 kB / 16 kB (el default de 4 kB es irreal para páginas completas; el
+  aviso subió de 8 a 12 kB en la fase 4 porque el checkout de tres pasos pesa
+  ~10.8 kB de CSS. Si otra página lo pasa, partir sus estilos antes que subirlo).
 - Producción sustituye `environment.ts` por `environment.production.ts`.
 
 ## Pruebas
 
-- 85 archivos, 658 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 91 archivos, 781 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.
