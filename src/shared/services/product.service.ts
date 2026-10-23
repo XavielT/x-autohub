@@ -324,7 +324,7 @@ export class ProductService {
     return from(
       this.supabase.db
         .from('product_variants')
-        .select('id, product_id, name, sku, stock, sort_order, is_active, created_at')
+        .select('id, product_id, name, sku, stock, sort_order, is_active, created_at, image_url')
         .eq('is_active', true)
         .in('product_id', [...productIds])
         .order('sort_order', { ascending: true })

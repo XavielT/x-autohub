@@ -114,6 +114,8 @@ export interface VariantDraft {
   name: string;
   /** Opcional. Vacío = sin SKU propio. */
   sku: string;
+  /** Una de las fotos del producto que se enseña al elegir la opción. Vacío = sin foto propia. */
+  imageUrl: string;
   stock: number;
   /** Apagada = no se ofrece, pero se conserva (si ya tuvo pedidos no se puede borrar). */
   isActive: boolean;

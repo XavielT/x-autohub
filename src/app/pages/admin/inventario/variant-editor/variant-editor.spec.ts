@@ -3,7 +3,7 @@ import { VariantEditor } from './variant-editor';
 import { VariantDraft } from '../../../../../shared/models/admin-inventory.model';
 
 const v = (name: string, stock = 1, over: Partial<VariantDraft> = {}): VariantDraft => ({
-  id: null, name, sku: '', stock, isActive: true, ...over,
+  id: null, name, sku: '', imageUrl: '', stock, isActive: true, ...over,
 });
 
 describe('VariantEditor', () => {
@@ -28,7 +28,7 @@ describe('VariantEditor', () => {
 
     c.add();
 
-    expect(c.variants()).toEqual([{ id: null, name: 'Negro', sku: '', stock: 0, isActive: true }]);
+    expect(c.variants()).toEqual([{ id: null, name: 'Negro', sku: '', imageUrl: '', stock: 0, isActive: true }]);
     expect(c.newName()).toBe('');
     expect(c.error()).toBe('');
   });
@@ -101,6 +101,47 @@ describe('VariantEditor', () => {
 
     expect(el.querySelectorAll('.var__item').length).toBe(2);
     expect(el.querySelector('.var__total strong')?.textContent).toBe('5');
+  });
+
+  describe('foto de la opción', () => {
+    const fotos = ['assets/imgs/a.jpg', 'assets/imgs/b.jpg'];
+
+    it('sin fotos en el producto no ofrece el selector', () => {
+      const { el } = montar([v('Negro')]);
+
+      expect(el.querySelector('.var__item select')).toBeNull();
+    });
+
+    it('con fotos, cada opción elige una (o ninguna)', () => {
+      const { fixture, c, el } = montar([v('Negro'), v('Gris')]);
+      fixture.componentRef.setInput('images', fotos);
+      fixture.detectChanges();
+
+      const selects = el.querySelectorAll<HTMLSelectElement>('.var__item select');
+      expect(selects.length).toBe(2);
+      expect([...selects[0].options].map((o) => o.textContent?.trim())).toEqual(['Sin foto propia', 'Foto 1', 'Foto 2']);
+
+      c.patch(1, { imageUrl: fotos[1] });
+      expect(c.variants().map((x) => x.imageUrl)).toEqual(['', fotos[1]]);
+    });
+
+    it('una foto que el producto ya no tiene se sigue viendo, para poder cambiarla', () => {
+      const { fixture, el } = montar([v('Negro', 1, { imageUrl: 'assets/imgs/vieja.jpg' })]);
+      fixture.componentRef.setInput('images', fotos);
+      fixture.detectChanges();
+
+      const labels = [...el.querySelectorAll<HTMLSelectElement>('.var__item select')[0].options].map((o) => o.textContent?.trim());
+      expect(labels).toContain('Foto que ya no está en el producto');
+    });
+
+    it('una opción nueva nace sin foto', () => {
+      const { c } = montar();
+      c.newName.set('Rojo');
+
+      c.add();
+
+      expect(c.variants()[0].imageUrl).toBe('');
+    });
   });
 
   it('una fila apagada se ve apagada', () => {

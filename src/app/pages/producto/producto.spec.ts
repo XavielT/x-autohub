@@ -131,6 +131,24 @@ describe('Producto (/tienda/p/:slug)', () => {
       expect(el.querySelector('.prod__variants-title')?.textContent?.trim()).toBe('Color');
     });
 
+    it('al elegir una opción con foto, la galería salta a esa foto', async () => {
+      const fotos = ['assets/imgs/a.jpg', 'assets/imgs/b.jpg', 'assets/imgs/c.jpg'];
+      const { fixture, el } = await montar(
+        { ...alfombra(), images: fotos, imgUrl: fotos[0] },
+        [{ ...opcion(1, 'Negro', 5), imageUrl: fotos[2] }, opcion(2, 'Gris', 3)],
+      );
+      expect(el.querySelector('.gal__img')?.getAttribute('src')).toBe(fotos[0]);
+
+      chips(el)[0].click();
+      fixture.detectChanges();
+      expect(el.querySelector('.gal__img')?.getAttribute('src')).toBe(fotos[2]);
+
+      // Una opción sin foto propia deja la galería donde estaba.
+      chips(el)[1].click();
+      fixture.detectChanges();
+      expect(el.querySelector('.gal__img')?.getAttribute('src')).toBe(fotos[2]);
+    });
+
     it('el WhatsApp nombra la opción elegida', async () => {
       const { fixture, el } = await montar(alfombra(), todas());
 

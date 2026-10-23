@@ -1467,6 +1467,24 @@ check "borrar la cuenta borra sus dispositivos" "0" \
 check "la funcion no la invoca anon, y si un usuario con sesion" "false|true" \
   "select has_function_privilege('anon', 'public.register_push_subscription(text,text,text,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.register_push_subscription(text,text,text,text)', 'execute')::text;"
 
+echo "→ Foto por opcion (migracion 0025)"
+check "una opcion nace sin foto" "t" \
+  "select (image_url is null) from product_variants limit 1;"
+check "un admin le pone una foto" "assets/imgs/hub-parts/a.jpg" \
+  "$(as_user "$ADMIN" "update product_variants set image_url = 'assets/imgs/hub-parts/a.jpg' where id = $VAR_NEGRO returning image_url;")"
+check "la foto no cambia el stock del producto ni de la opcion (el trigger sigue sumando)" "t" \
+  "select (stock = (select coalesce(sum(v.stock), 0) from product_variants v where v.product_id = hub_parts.id and v.is_active)) from hub_parts where id = 99911;"
+check "anon la lee con el resto de la opcion" "assets/imgs/hub-parts/a.jpg" \
+  "$(as_anon "select image_url from product_variants where id = $VAR_NEGRO;")"
+check "un usuario normal no la cambia (0 filas)" "0" \
+  "$(as_user "$USER_A" "with u as (update product_variants set image_url = 'x' where id = $VAR_NEGRO returning 1) select count(*) from u;")"
+check "una foto vacia no vale: es nula o es una URL" 'ERROR:  new row for relation "product_variants" violates check constraint "product_variants_image_url_check"' \
+  "$(as_user "$ADMIN" "update product_variants set image_url = '' where id = $VAR_NEGRO;")"
+check "ni una de mas de 2048 caracteres" 'ERROR:  new row for relation "product_variants" violates check constraint "product_variants_image_url_check"' \
+  "$(as_user "$ADMIN" "update product_variants set image_url = repeat('x', 2049) where id = $VAR_NEGRO;")"
+check "quitarla la deja nula" "t" \
+  "$(as_user "$ADMIN" "update product_variants set image_url = null where id = $VAR_NEGRO returning (image_url is null);")"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1707,11 +1725,26 @@ CHECK_DB=upgrade check "una opcion creada despues de migrar suma al producto" "t
 echo "→ Camino de actualizacion de la 0024: la base real ya tiene usuarios al migrar"
 CHECK_DB=upgrade check "antes de migrar no existe push_subscriptions" "0" \
   "select count(*) from information_schema.tables where table_name = 'push_subscriptions';"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0024_push_subscriptions.sql upgrade
+apply supabase/migrations/0024_push_subscriptions.sql upgrade
 echo "   (aplicada dos veces, con usuarios dentro)"
 CHECK_DB=upgrade check "la tabla queda vacia y la funcion existe una sola vez" "0|1" \
   "select (select count(*) from push_subscriptions) || '|' || (select count(*) from pg_proc where proname = 'register_push_subscription');"
+
+echo "→ Camino de actualizacion de la 0025: la base real ya tiene opciones al migrar"
+# Las opciones que ya existian no tienen foto: tienen que quedar igual, con image_url nulo.
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into product_variants (product_id, name, stock) values (1, 'Anterior', 2) on conflict do nothing;
+SQL
+CHECK_DB=upgrade check "antes de migrar no existe image_url" "0" \
+  "select count(*) from information_schema.columns where table_name = 'product_variants' and column_name = 'image_url';"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con opciones dentro)"
+CHECK_DB=upgrade check "las opciones de antes siguen ahi, sin foto" "true|0" \
+  "select (count(*) > 0)::text || '|' || count(image_url) from product_variants;"
+CHECK_DB=upgrade check "y una foto se guarda despues de migrar" "assets/imgs/x.jpg" \
+  "update product_variants set image_url = 'assets/imgs/x.jpg' where name = 'Anterior'; select image_url from product_variants where name = 'Anterior';"
 
 # --- Resumen ------------------------------------------------------------------
 

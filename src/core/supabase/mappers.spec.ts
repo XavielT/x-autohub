@@ -263,8 +263,24 @@ describe('mappers', () => {
           sort_order: 1,
           is_active: true,
           created_at: '2026-10-01T00:00:00Z',
+          image_url: null,
         }),
-      ).toEqual({ id: 3, productId: 8, name: 'Negro', sku: 'ALF-NEG', stock: 8, sortOrder: 1, isActive: true });
+      ).toEqual({ id: 3, productId: 8, name: 'Negro', sku: 'ALF-NEG', stock: 8, sortOrder: 1, isActive: true, imageUrl: null });
+    });
+
+    it('la foto de la opción llega tal cual', () => {
+      const v = toProductVariant({
+        id: 5,
+        product_id: 8,
+        name: 'Rojo',
+        sku: null,
+        stock: 2,
+        sort_order: 3,
+        is_active: true,
+        created_at: '2026-10-01T00:00:00Z',
+        image_url: 'assets/imgs/hub-parts/alfombras-rojas.jpg',
+      });
+      expect(v.imageUrl).toBe('assets/imgs/hub-parts/alfombras-rojas.jpg');
     });
 
     it('un sku nulo se queda nulo', () => {
@@ -277,6 +293,7 @@ describe('mappers', () => {
         sort_order: 2,
         is_active: false,
         created_at: '2026-10-01T00:00:00Z',
+          image_url: null,
       });
       expect(v.sku).toBeNull();
       expect(v.isActive).toBe(false);

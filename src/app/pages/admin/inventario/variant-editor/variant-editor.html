@@ -20,6 +20,21 @@
             <input type="text" maxlength="40" [ngModel]="v.sku"
                    (ngModelChange)="patch($index, { sku: $event })" [ngModelOptions]="{ standalone: true }" />
           </label>
+          @if (images().length > 0 || v.imageUrl) {
+            <label class="var__field">
+              <span>Foto <small>(opcional)</small></span>
+              <select [ngModel]="v.imageUrl" (ngModelChange)="patch($index, { imageUrl: $event })"
+                      [ngModelOptions]="{ standalone: true }">
+                <option value="">Sin foto propia</option>
+                @for (url of images(); track url; let i = $index) {
+                  <option [value]="url">Foto {{ i + 1 }}</option>
+                }
+                @if (v.imageUrl && !images().includes(v.imageUrl)) {
+                  <option [value]="v.imageUrl">{{ photoLabel(v.imageUrl) }}</option>
+                }
+              </select>
+            </label>
+          }
           <label class="var__check">
             <input type="checkbox" [ngModel]="v.isActive"
                    (ngModelChange)="patch($index, { isActive: $event })" [ngModelOptions]="{ standalone: true }" />

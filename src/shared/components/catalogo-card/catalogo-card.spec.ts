@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
 
 import { CatalogoCard } from './catalogo-card';
+import { throwError } from 'rxjs';
 import { CartService } from '../../services/cart.service';
+import { ProductService } from '../../services/product.service';
 import { HUB_PART_MOCK } from '../../data/hub-part.mock';
 import { makeProduct } from '../../testing/product.fixture';
 
@@ -47,15 +48,84 @@ describe('CatalogoCard', () => {
       expect(el.querySelector('.hub-part-card__options')?.textContent?.trim()).toBe('Elige opción');
     });
 
-    it('el botón no agrega nada al carrito: lleva a la ficha, donde se elige', async () => {
-      const { el } = await montar();
+    const chips = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>('.hub-part-card__chip')];
+
+    it('el botón no agrega nada: abre el selector con las opciones del producto', async () => {
+      const { fixture, el } = await montar();
       const cart = TestBed.inject(CartService);
-      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
       el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!.click();
+      fixture.detectChanges();
 
       expect(cart.items()).toEqual([]);
-      expect(navigate).toHaveBeenCalledWith(['/tienda', 'p', 'alfombras-8']);
+      expect(el.querySelector('.hub-part-card__chooser-title')?.textContent?.trim()).toBe('Elige color');
+      expect(chips(el).map((c) => c.textContent?.trim())).toEqual(['Negro', 'Gris', 'Beige']);
+      expect(el.querySelector('.hub-part-card__cart-button')?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('elegir una opción la agrega al carrito con esa opción y cierra el selector', async () => {
+      const { fixture, el } = await montar();
+      const cart = TestBed.inject(CartService);
+      el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!.click();
+      fixture.detectChanges();
+
+      chips(el)[1].click();
+      fixture.detectChanges();
+
+      expect(cart.items().map((i) => [i.part.id, i.variant?.name, i.quantity])).toEqual([[8, 'Gris', 1]]);
+      expect(el.querySelector('.hub-part-card__chooser')).toBeNull();
+    });
+
+    it('"Cancelar" cierra el selector sin agregar nada', async () => {
+      const { fixture, el } = await montar();
+      const cart = TestBed.inject(CartService);
+      el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!.click();
+      fixture.detectChanges();
+
+      el.querySelector<HTMLButtonElement>('.hub-part-card__chooser-close')!.click();
+      fixture.detectChanges();
+
+      expect(el.querySelector('.hub-part-card__chooser')).toBeNull();
+      expect(cart.items()).toEqual([]);
+    });
+
+    it('una opción agotada no se puede elegir', async () => {
+      const { fixture, el } = await montar();
+      const cart = TestBed.inject(CartService);
+      el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!.click();
+      fixture.detectChanges();
+      fixture.componentInstance.variants.update((list) => list.map((v, i) => (i === 0 ? { ...v, stock: 0 } : v)));
+      fixture.detectChanges();
+
+      chips(el)[0].click();
+      fixture.detectChanges();
+
+      expect(chips(el)[0].classList.contains('is-out')).toBe(true);
+      expect(cart.items()).toEqual([]);
+    });
+
+    it('las opciones se piden una sola vez, aunque se abra y se cierre', async () => {
+      const { fixture, el } = await montar();
+      const products = TestBed.inject(ProductService);
+      const spy = vi.spyOn(products, 'getVariants');
+      const button = el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!;
+
+      button.click(); fixture.detectChanges();
+      button.click(); fixture.detectChanges();
+      button.click(); fixture.detectChanges();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('si no se pueden cargar, lo dice y ofrece abrir el producto', async () => {
+      const { fixture, el } = await montar();
+      vi.spyOn(TestBed.inject(ProductService), 'getVariants').mockReturnValue(throwError(() => new Error('sin red')));
+
+      el.querySelector<HTMLButtonElement>('.hub-part-card__cart-button')!.click();
+      fixture.detectChanges();
+
+      expect(el.querySelector('.hub-part-card__chooser-note')?.textContent).toContain('No pudimos cargar');
+      expect(el.querySelector('.hub-part-card__chooser-link')?.getAttribute('href')).toBe('/tienda/p/alfombras-8');
     });
 
     it('un producto sin opciones se agrega directo, como siempre', async () => {

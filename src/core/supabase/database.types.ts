@@ -252,6 +252,8 @@ export type ProductVariantRow = {
   sort_order: number;
   is_active: boolean;
   created_at: string;
+  /** Una de las fotos del producto que se enseña al elegir la opción. Migración 0025. */
+  image_url: string | null;
 }
 
 /**

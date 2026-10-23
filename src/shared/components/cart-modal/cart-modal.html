@@ -15,7 +15,7 @@
         <div class="cart-modal__items">
           @for (item of cartService.items(); track item.part.id + ':' + (item.variant?.id ?? 0)) {
             <div class="cart-modal__item">
-              <img class="cart-modal__item-img" [src]="item.part.imgUrl" [alt]="item.part.name" />
+              <img class="cart-modal__item-img" [src]="item.variant?.imageUrl || item.part.imgUrl" [alt]="item.part.name" />
               <div class="cart-modal__item-info">
                 <span class="cart-modal__item-name">{{ item.part.name }}</span>
                 @if (item.variant) {

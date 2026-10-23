@@ -206,7 +206,7 @@
               <input type="text" formControlName="variantLabel" [attr.maxlength]="variantLabelMax" placeholder="Color" />
             </label>
             <div class="adm-inv__field adm-inv__field--full">
-              <app-variant-editor [(variants)]="variants" />
+              <app-variant-editor [(variants)]="variants" [images]="existingImages()" />
             </div>
 
             <h4 class="adm-inv__section">Compatibilidad</h4>

@@ -325,14 +325,14 @@ export class AdminCatalogService {
       return of(
         PRODUCT_VARIANTS_MOCK.filter((v) => v.productId === productId)
           .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
-          .map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? '', stock: v.stock, isActive: v.isActive })),
+          .map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? '', imageUrl: v.imageUrl ?? '', stock: v.stock, isActive: v.isActive })),
       );
     }
 
     return from(
       this.supabase.db
         .from('product_variants')
-        .select('id, name, sku, stock, is_active')
+        .select('id, name, sku, stock, is_active, image_url')
         .eq('product_id', productId)
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true }),
@@ -342,6 +342,7 @@ export class AdminCatalogService {
           id: v.id,
           name: v.name,
           sku: v.sku ?? '',
+          imageUrl: v.image_url ?? '',
           stock: v.stock,
           isActive: v.is_active,
         })),
@@ -390,6 +391,7 @@ export class AdminCatalogService {
           id: v.id ?? ++this.mockVariantSeq,
           name: v.name,
           sku: v.sku,
+          imageUrl: v.imageUrl,
           stock: v.stock,
           isActive: v.isActive,
         })),
@@ -404,6 +406,7 @@ export class AdminCatalogService {
         !before ||
         before.name !== v.name ||
         before.sku !== v.sku ||
+        before.imageUrl !== v.imageUrl ||
         before.stock !== v.stock ||
         before.isActive !== v.isActive ||
         baselineOrder.get(v.id) !== v.sortOrder
@@ -440,6 +443,7 @@ export class AdminCatalogService {
             .update({
               name: v.name,
               sku: v.sku || null,
+              image_url: v.imageUrl || null,
               stock: v.stock,
               is_active: v.isActive,
               sort_order: v.sortOrder,
@@ -456,6 +460,7 @@ export class AdminCatalogService {
                   product_id: productId,
                   name: v.name,
                   sku: v.sku || null,
+                  image_url: v.imageUrl || null,
                   stock: v.stock,
                   is_active: v.isActive,
                   sort_order: v.sortOrder,

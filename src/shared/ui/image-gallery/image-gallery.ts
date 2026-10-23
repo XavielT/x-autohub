@@ -25,6 +25,11 @@ import { ChangeDetectionStrategy, Component, computed, effect, input, signal, un
 export class ImageGallery {
   readonly images = input.required<readonly string[]>();
   readonly alt = input('');
+  /**
+   * Una foto a la que saltar (la de la opción elegida). Si no está entre las de la galería, o es
+   * nula, no hace nada: la galería se queda donde estaba.
+   */
+  readonly focus = input<string | null>(null);
 
   readonly index = signal(0);
   readonly isZoomed = signal(false);
@@ -42,6 +47,15 @@ export class ImageGallery {
       });
     });
   }
+
+  // Va aparte del efecto de arriba: cambiar de opción no es cambiar de producto, y no debe volver a la primera.
+  private readonly focusEffect = effect(() => {
+    const target = this.focus();
+    const images = this.images();
+    if (!target) return;
+    const found = images.indexOf(target);
+    if (found >= 0) untracked(() => this.index.set(found));
+  });
 
   select(index: number): void {
     if (index >= 0 && index < this.images().length) this.index.set(index);

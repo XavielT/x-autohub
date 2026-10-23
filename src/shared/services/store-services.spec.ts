@@ -461,7 +461,7 @@ describe('servicios de la tienda (mock)', () => {
       const base = await firstValueFrom(catalog().getVariants(8));
       const lista = [
         { ...base[2], stock: 9 },
-        { id: null, name: 'Rojo', sku: '', stock: 1, isActive: true },
+        { id: null, name: 'Rojo', sku: '', imageUrl: '', stock: 1, isActive: true },
       ];
 
       const r = await firstValueFrom(catalog().saveVariants(8, lista, base));
@@ -472,12 +472,26 @@ describe('servicios de la tienda (mock)', () => {
       expect(despues[1].id).not.toBeNull();
     });
 
+    it('la foto de una opción se guarda y se vuelve a leer, y quitarla la deja vacía', async () => {
+      const base = await firstValueFrom(catalog().getVariants(8));
+      expect(base.every((x) => x.imageUrl === '')).toBe(true);
+
+      await firstValueFrom(
+        catalog().saveVariants(8, base.map((x, i) => (i === 0 ? { ...x, imageUrl: 'assets/imgs/negro.jpg' } : x)), base),
+      );
+      const con = await firstValueFrom(catalog().getVariants(8));
+      expect(con.map((x) => x.imageUrl)).toEqual(['assets/imgs/negro.jpg', '', '']);
+
+      await firstValueFrom(catalog().saveVariants(8, con.map((x) => ({ ...x, imageUrl: '' })), con));
+      expect((await firstValueFrom(catalog().getVariants(8))).every((x) => x.imageUrl === '')).toBe(true);
+    });
+
     it('una lista con problemas no se guarda y dice cuál es', async () => {
       expect(
         await errorOf(
           catalog().saveVariants(8, [
-            { id: null, name: 'A', sku: '', stock: 1, isActive: true },
-            { id: null, name: 'a', sku: '', stock: 1, isActive: true },
+            { id: null, name: 'A', sku: '', imageUrl: '', stock: 1, isActive: true },
+            { id: null, name: 'a', sku: '', imageUrl: '', stock: 1, isActive: true },
           ], []),
         ),
       ).toBe('Hay dos opciones llamadas "a".');

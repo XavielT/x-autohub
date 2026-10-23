@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 
 import { CartModal } from './cart-modal';
 import { CartService } from '../../services/cart.service';
+import { ProductVariantModel } from '../../models/product.model';
 import { makeProduct } from '../../testing/product.fixture';
 
 describe('CartModal', () => {
@@ -95,11 +96,11 @@ describe('CartModal', () => {
 
   describe('con opciones', () => {
     const alfombra = makeProduct({ id: 8, name: 'Alfombras', hasVariants: true, variantLabel: 'Color', stock: 8 });
-    const opcion = (id: number, name: string, stock: number) => ({
+    const opcion = (id: number, name: string, stock: number): ProductVariantModel => ({
       id, productId: 8, name, sku: null, stock, sortOrder: id, isActive: true,
     });
 
-    function abrirConOpciones(...variants: ReturnType<typeof opcion>[]) {
+    function abrirConOpciones(...variants: ProductVariantModel[]) {
       for (const v of variants) cart.addToCart(alfombra, v);
       cart.toggleCart();
       fixture.detectChanges();
@@ -118,6 +119,13 @@ describe('CartModal', () => {
 
       expect(el.querySelector('.cart-modal__item-avail')?.textContent?.trim()).toBe('En stock: 1');
       expect(el.querySelectorAll<HTMLButtonElement>('.cart-modal__qty-btn')[1].disabled).toBe(true);
+    });
+
+    it('la línea usa la foto de su opción, y si no tiene, la del producto', () => {
+      const el = abrirConOpciones({ ...opcion(1, 'Negro', 5), imageUrl: 'assets/imgs/negro.jpg' }, opcion(2, 'Gris', 5));
+
+      const srcs = [...el.querySelectorAll('.cart-modal__item-img')].map((i) => i.getAttribute('src'));
+      expect(srcs).toEqual(['assets/imgs/negro.jpg', alfombra.imgUrl]);
     });
 
     it('quitar una opción deja la otra del mismo producto', () => {

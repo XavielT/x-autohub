@@ -75,4 +75,51 @@ describe('ImageGallery', () => {
     expect(c.index()).toBe(0);
     expect(c.isZoomed()).toBe(false);
   });
+
+  describe('foto enfocada (la de la opción elegida)', () => {
+    it('salta a esa foto', () => {
+      const { fixture, c } = montar();
+
+      fixture.componentRef.setInput('focus', fotos[2]);
+      fixture.detectChanges();
+
+      expect(c.index()).toBe(2);
+    });
+
+    it('cambiar de opción mueve la galería, y volver a una sin foto la deja donde estaba', () => {
+      const { fixture, c } = montar();
+      fixture.componentRef.setInput('focus', fotos[1]);
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('focus', null);
+      fixture.detectChanges();
+      expect(c.index()).toBe(1);
+
+      fixture.componentRef.setInput('focus', fotos[2]);
+      fixture.detectChanges();
+      expect(c.index()).toBe(2);
+    });
+
+    it('una foto que no está en la galería no hace nada', () => {
+      const { fixture, c } = montar();
+      c.select(1);
+
+      fixture.componentRef.setInput('focus', 'assets/imgs/otra.jpg');
+      fixture.detectChanges();
+
+      expect(c.index()).toBe(1);
+    });
+
+    it('si cambian las fotos (otro producto), vuelve a la primera', () => {
+      const { fixture, c } = montar();
+      fixture.componentRef.setInput('focus', fotos[2]);
+      fixture.detectChanges();
+
+      fixture.componentRef.setInput('focus', null);
+      fixture.componentRef.setInput('images', ['assets/imgs/x.jpg', 'assets/imgs/y.jpg']);
+      fixture.detectChanges();
+
+      expect(c.index()).toBe(0);
+    });
+  });
 });

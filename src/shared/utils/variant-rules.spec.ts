@@ -2,7 +2,7 @@ import { VariantDraft } from '../models/admin-inventory.model';
 import { activeVariantStock, validateVariantDrafts } from './variant-rules';
 
 const v = (name: string, stock = 1, over: Partial<VariantDraft> = {}): VariantDraft => ({
-  id: null, name, sku: '', stock, isActive: true, ...over,
+  id: null, name, sku: '', imageUrl: '', stock, isActive: true, ...over,
 });
 
 describe('variant-rules', () => {

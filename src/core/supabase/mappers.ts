@@ -184,6 +184,7 @@ export function toProductVariant(row: ProductVariantRow): ProductVariantModel {
     stock: row.stock,
     sortOrder: row.sort_order,
     isActive: row.is_active,
+    imageUrl: row.image_url,
   };
 }
 

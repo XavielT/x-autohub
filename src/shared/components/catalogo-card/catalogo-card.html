@@ -1,4 +1,25 @@
 <div class="hub-part-card" [class.is-out]="!availability().canBuy">
+    @if (choosing()) {
+        <div class="hub-part-card__chooser" role="dialog" [attr.aria-label]="'Elige ' + variantNoun() + ' de ' + hubPart().name">
+            <p class="hub-part-card__chooser-title">Elige {{ variantNoun() }}</p>
+            @if (loadingVariants()) {
+                <p class="hub-part-card__chooser-note">Un momento…</p>
+            } @else if (variantsFailed() || variants().length === 0) {
+                <p class="hub-part-card__chooser-note">No pudimos cargar las opciones. Ábrelo para verlas.</p>
+                <a class="hub-part-card__chooser-link" [routerLink]="['/tienda', 'p', hubPart().slug]">Ver el producto</a>
+            } @else {
+                <div class="hub-part-card__chooser-list" role="group" [attr.aria-label]="variantNoun()">
+                    @for (v of variants(); track v.id) {
+                        <button type="button" class="hub-part-card__chip" [class.is-out]="!isVariantAvailable(v)"
+                                [attr.aria-disabled]="!isVariantAvailable(v)" (click)="pick(v)">
+                            {{ v.name }}@if (!isVariantAvailable(v)) {<small> · Agotado</small>}
+                        </button>
+                    }
+                </div>
+            }
+            <button type="button" class="hub-part-card__chooser-close" (click)="toggleChooser()">Cancelar</button>
+        </div>
+    }
     <div class="hub-part-card__top">
         @if (discount() > 0) {
             <span class="hub-part-card__off">-{{ discount() }}%</span>
@@ -42,7 +63,8 @@
             type="button"
             class="hub-part-card__cart-button"
             [disabled]="!availability().canBuy"
-            [attr.aria-label]="!availability().canBuy ? hubPart().name + ' esta agotado' : hubPart().hasVariants ? 'Elegir ' + (hubPart().variantLabel || 'opción').toLowerCase() + ' de ' + hubPart().name : 'Agregar ' + hubPart().name + ' al carrito'"
+            [attr.aria-label]="!availability().canBuy ? hubPart().name + ' esta agotado' : hubPart().hasVariants ? 'Elegir ' + variantNoun() + ' de ' + hubPart().name : 'Agregar ' + hubPart().name + ' al carrito'"
+            [attr.aria-expanded]="hubPart().hasVariants ? choosing() : null"
             (click)="addToCart()">
             <img src="assets/icons/cart-icon.svg" alt="" />
         </button>

@@ -76,6 +76,11 @@ export interface ProductVariantModel {
   stock: number;
   sortOrder: number;
   isActive: boolean;
+  /**
+   * Una de las fotos del producto que la ficha enseña al elegir esta opción. Nula = sin foto
+   * propia. Puede faltar en un carrito guardado antes de que existiera, así que se lee con `||`.
+   */
+  imageUrl?: string | null;
 }
 
 /** Una categoría del árbol. Dos niveles como máximo. */

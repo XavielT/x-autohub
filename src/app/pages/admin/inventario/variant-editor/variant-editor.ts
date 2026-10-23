@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { VariantDraft } from '../../../../../shared/models/admin-inventory.model';
 import { VARIANT_NAME_MAX, activeVariantStock } from '../../../../../shared/utils/variant-rules';
@@ -22,6 +22,11 @@ import { VARIANT_NAME_MAX, activeVariantStock } from '../../../../../shared/util
 })
 export class VariantEditor {
   readonly variants = model<VariantDraft[]>([]);
+  /**
+   * Las fotos del producto, para que cada opción elija una. Las que se acaban de elegir en el
+   * formulario todavía no están subidas: aparecen aquí cuando el producto se guarda.
+   */
+  readonly images = input<readonly string[]>([]);
 
   readonly nameMax = VARIANT_NAME_MAX;
   readonly newName = signal('');
@@ -29,6 +34,12 @@ export class VariantEditor {
 
   /** Lo que sumará el stock del producto: las opciones activas. */
   readonly total = computed(() => activeVariantStock(this.variants()));
+
+  /** El nombre corto de una foto para el selector: "Foto 2". */
+  photoLabel(url: string): string {
+    const index = this.images().indexOf(url);
+    return index >= 0 ? `Foto ${index + 1}` : 'Foto que ya no está en el producto';
+  }
 
   add(): void {
     const name = this.newName().trim();
@@ -45,7 +56,7 @@ export class VariantEditor {
       return;
     }
 
-    this.variants.update((list) => [...list, { id: null, name, sku: '', stock: 0, isActive: true }]);
+    this.variants.update((list) => [...list, { id: null, name, sku: '', imageUrl: '', stock: 0, isActive: true }]);
     this.error.set('');
     this.newName.set('');
   }

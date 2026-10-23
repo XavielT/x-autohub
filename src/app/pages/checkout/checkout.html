@@ -283,7 +283,7 @@
           <ul class="checkout__lines">
             @for (line of lines(); track line.item.part.id + ':' + (line.item.variant?.id ?? 0)) {
               <li class="checkout__line">
-                <img class="checkout__line-img" [src]="line.item.part.imgUrl" [alt]="line.item.part.name" />
+                <img class="checkout__line-img" [src]="line.item.variant?.imageUrl || line.item.part.imgUrl" [alt]="line.item.part.name" />
                 <div class="checkout__line-info">
                   <span class="checkout__line-name">{{ line.item.part.name }}</span>
                   @if (line.item.variant) {

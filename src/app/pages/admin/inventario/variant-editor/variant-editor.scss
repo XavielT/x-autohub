@@ -41,6 +41,7 @@
 
     small { color: var(--text-soft); }
 
+    select,
     input {
       font-family: var(--font-body);
       // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
