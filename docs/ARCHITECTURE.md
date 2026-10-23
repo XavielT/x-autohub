@@ -1,6 +1,6 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.5.0, la fase 7 del pivote: **el pivote está completo**). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.5.2; el pivote está completo desde la 2.5.0). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
 > **El pivote de octubre de 2026 está completo (fase 7).** Ya existen el esquema de la
@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0020 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0021 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -349,7 +349,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 117 archivos, 1132 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 117 archivos, 1131 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

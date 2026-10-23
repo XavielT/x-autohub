@@ -146,7 +146,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 343 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 355 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -187,7 +187,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 117 archivos, 1132 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 117 archivos, 1131 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -212,6 +212,18 @@ Cosas que ya causaron un bug. No las repitas:
   meses en Trebuchet MS. Un 200 no prueba nada: revisa
   `[...document.fonts].map(f => f.family + ':' + f.status)` y exige `loaded`,
   no `error`.
+- **Un trigger BEFORE por fila que devuelve `new` en un DELETE cancela el borrado, sin
+  error.** En un DELETE `new` es nulo, y devolver nulo en un BEFORE salta la operación. El
+  guard de `site_settings` (0014) lo hacía y ningún DELETE sobre esa tabla funcionaba, ni el
+  de una migración; se vio con `verify-migrations.sh` y lo arregló la 0021. Si un trigger
+  cubre `delete`, devuelve `old` en ese caso.
+- **Para quitar una columna que el frontend lee o escribe, el frontend va primero.** Con la
+  columna ya borrada, los `select` que la piden y los `insert`/`update` que la mandan
+  fallan hasta que se despliega el cambio. Se despliega el frontend sin la columna (que
+  funciona con ella o sin ella) y después se migra. Y antes de borrar, comprobar contra la
+  base real que nada pierde su única copia del dato (la 0021 lo hace con un `raise
+  exception` previo). Una función con columnas de salida explícitas, como
+  `search_products()`, hay que borrarla y crearla de nuevo.
 - **Las estrellas de un producto no prueban que haya reseñas.** `hub_parts.stars_rating`
   es el dato sembrado hasta que entra la primera reseña real (entonces es el promedio), y
   `ProductModel.starsRating` no distingue una cosa de la otra. Para "¿hay opiniones de

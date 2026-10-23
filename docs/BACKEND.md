@@ -43,7 +43,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 18    | `supabase/migrations/0018_orders_payment_flow.sql` | Pedidos: estados, stock, historial, comprobantes y cuentas |
 | 19    | `supabase/migrations/0019_services_booking.sql` | Taller: servicios, horario, citas y trabajos realizados |
 | 20    | `supabase/migrations/0020_reviews.sql`         | Reseñas de productos y servicios, con compra verificada |
-| 21    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 21    | `supabase/migrations/0021_drop_legacy.sql`     | Se retiran `hub_parts.category` y el contador del home |
+| 22    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -324,7 +325,6 @@ La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
 | `create_order(...)` | El checkout de invitado, a propósito desde 0002. |
 | `available_slots()`, `book_appointment()` | Se puede ver la agenda y agendar sin cuenta. `book_appointment()` valida todo por dentro (slot, tope por teléfono, vehículo, pedido). |
 | `get_order()`, `attach_payment_proof()`, `mark_whatsapp_opened()`, `order_accepts_proof()` | `/pedido/:id` es público por id (un uuid imposible de adivinar) y un invitado sube su comprobante sin cuenta. Ninguna devuelve datos personales. |
-| `get_site_stats()` | El home sin sesión. |
 
 > El idiom completo para una función nueva son **tres** líneas:
 >
@@ -334,63 +334,43 @@ La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
 > grant  execute on function f() to authenticated;
 > ```
 
-### Ajustes del sitio y contadores (migración 0014)
+### Ajustes del sitio (migraciones 0014 y 0021)
 
-> **Estado desde la fase 7:** el contador del home y su interruptor en `/admin/ajustes`
-> ya no existen (el pivote reemplazó ese home). La función `get_site_stats()` y la fila
-> `stats_mode` de más abajo siguen en la base, sin que nada las lea; `site_settings` hoy
-> vive de `bank_accounts` y `pickup_address` (0018). Lo que sigue describe cómo se
-> diseñó, y las comprobaciones de `verify-migrations.sh` lo siguen cubriendo.
+**`site_settings`** — clave/valor, `value` en `jsonb`. Hoy dos claves, las dos de la fase 4
+(migración 0018), cada una con un `check` que exige su forma:
 
-Dos cosas que la sección de contadores del home necesita: un ajuste que diga qué
-números mostrar, y una función que los cuente.
+| Clave            | Forma    | Qué hace                                  |
+| ---------------- | -------- | ----------------------------------------- |
+| `bank_accounts`  | arreglo  | Las cuentas a las que transfiere el cliente |
+| `pickup_address` | objeto   | Dónde retira su pedido el cliente         |
 
-**`site_settings`** — clave/valor, `value` en `jsonb`. Hoy una sola clave:
+> Hasta la fase 6 había una tercera, `stats_mode`, y la función `get_site_stats()`, que
+> alimentaban el contador del home ("Vehículos · Piezas · Miembros"). El pivote quitó ese
+> contador y la migración **0021** borró las dos cosas (y el interruptor de
+> `/admin/ajustes` se había ido antes).
 
-| Clave        | Valores                 | Qué hace                                            |
-| ------------ | ----------------------- | --------------------------------------------------- |
-| `stats_mode` | `"showcase"` \| `"real"` | Si el home muestra los números de impresión o los reales |
-
-La lee **cualquiera**, incluido `anon`: el home tiene que funcionar sin sesión.
-La escritura no tiene política **a propósito** — sin política RLS niega, así que
-no hay `update` desde el navegador que pueda tocarla. El único camino es:
+La lee **cualquiera**, incluido `anon`: el sitio tiene que funcionar sin sesión. La escritura
+no tiene política **a propósito** — sin política RLS niega, así que no hay `update` desde el
+navegador que pueda tocarla. El único camino es:
 
 ```sql
-select * from set_site_setting('stats_mode', '"real"');
+select * from set_site_setting('pickup_address', '{"address": "…", "hours": "…"}');
 ```
 
-`security definer`, comprueba `is_admin()` dentro de Postgres, y solo cambia
-claves que ya existen (un ajuste nuevo nace en una migración, con su `check`).
-Un moderador no entra: los ajustes del sitio no son moderación de contenido.
+`security definer`, comprueba `is_admin()` dentro de Postgres, y solo cambia claves que ya
+existen (un ajuste nuevo nace en una migración, con su `check`). Un moderador no entra: los
+ajustes del sitio no son moderación de contenido.
 
-Hay además un trigger, `guard_site_settings_write`, que hoy no protege de nada:
-está para el día en que alguien agregue una política de escritura "para editar
-los ajustes desde el Table Editor" y reabra el agujero sin darse cuenta. Misma
-defensa en profundidad que el congelado de 0005.
+Hay además un trigger, `guard_site_settings_write`, que bloquea a `anon` y `authenticated`
+por nombre (no "todo lo que no sea service_role": ver la trampa de las migraciones en
+`CLAUDE.md`) salvo dentro de `set_site_setting()`. Defensa en profundidad, como el congelado
+de 0005.
 
-**`get_site_stats()`** — los tres contadores en una llamada:
-
-```sql
-select * from get_site_stats();
---  vehicles | parts | members
--- ----------+-------+---------
---        10 |    35 |       2
-```
-
-Es `security definer` por **miembros**: contar `profiles` con la clave anon es
-imposible a propósito. Devuelve **solo números**, ninguna fila. Y como
-`security definer` se salta RLS, las condiciones de visibilidad van escritas
-dentro de la función: `is_available`/`is_active`, `status = 'aprobado'`, y nada
-de `is_test`. Eso es deliberado — los contadores dicen lo mismo a todo el mundo.
-Sin ello, un admin (que por RLS ve el contenido de prueba y lo pendiente) leería
-en el home unos números que ningún visitante ve.
-
-> **Si cambian las políticas de select de 0013, hay que cambiar esta función.**
-> Es el precio de saltarse RLS a propósito, y está anotado también dentro del
-> SQL.
-
-El ajuste se cambia desde `/admin/ajustes`, que enseña los dos modos con sus
-números al lado antes de tocar nada.
+**Un trigger BEFORE que devuelve `new` en un DELETE cancela el borrado, sin error.** En un
+DELETE `new` es nulo, y devolver nulo en un trigger BEFORE por fila salta la operación en
+silencio. Ese era el guard de la 0014: ningún DELETE sobre `site_settings` hacía nada, ni el
+de una migración. Se descubrió con `verify-migrations.sh` al intentar borrar `stats_mode`, y
+la 0021 lo corrige (`if tg_op = 'DELETE' then return old; end if;`).
 
 ### La tienda (migración 0017)
 
@@ -417,9 +397,10 @@ renombra `hub_parts`: la extiende. En el código los modelos se llaman
   Mejor eso que mentir. Con un vehículo elegido, `search_products()` devuelve los
   universales y los específicos con un fitment que lo cubra; **un específico sin
   fitments nunca aparece**.
-- **`hub_parts.category` (texto) sigue vivo y ya no es `not null`.** `/catalogo`
-  todavía filtra por él. Un trigger lo rellena con la categoría raíz cuando se
-  crea una pieza con `category_id` y sin texto. Se elimina en la fase 7.
+- **`hub_parts.category` (texto): la 0017 la dejó viva "una fase más" y la 0021 la
+  borró.** Un trigger la rellenaba con la categoría raíz de `category_id` para que
+  `/catalogo` no perdiera los productos nuevos; `/catalogo` ya solo redirige. Hoy la única
+  clasificación es `category_id`.
 - **`slug` y `sku` los pone un trigger si vienen vacíos** (`nombre-<id>` y
   `XAH-000123`); después son `not null` y únicos. El id al final del slug es lo
   que garantiza la unicidad sin reintentos; el admin puede editarlo.
@@ -597,9 +578,26 @@ nadie: no hay a quién atribuirlo.
   migración nueva (no se puede con `create or replace`).
 - La migración **se puede aplicar dos veces**: el backfill de `stars_seed` solo toca filas
   sin sembrar y sin reseñas, así que repetirla no toma un promedio real por sembrado.
-- **Restos del contador del home:** la fila `stats_mode` de `site_settings` y la función
-  `get_site_stats()` (0014) siguen en la base pero **ya nada las lee**: el contador se fue
-  con el pivote. Quitarlas es una migración futura (ver `docs/ROADMAP.md`).
+
+### Limpieza de lo que dejó el pivote (migración 0021)
+
+Borra `hub_parts.category` (el texto de la tienda anterior, con su índice), `get_site_stats()`
+y la fila `stats_mode`. Tres cosas que conviene saber si vas a hacer algo parecido:
+
+- **Una comprobación previa protege la clasificación.** Si alguna pieza tuviera `category`
+  pero no `category_id`, la migración se detiene con un mensaje: borrar la columna destruiría
+  la única clasificación que esa pieza tiene. En producción las 35 piezas tenían
+  `category_id`, y `verify-migrations.sh` prueba las dos ramas (con una pieza sin clasificar
+  aborta y no toca nada; clasificada, sigue).
+- **`search_products()` se recrea.** Devuelve columnas explícitas, `category` era una de ellas
+  y no se puede quitar con `create or replace`: se borra la función y se crea de nuevo (con sus
+  permisos otra vez, porque se pierden). Es el momento en que añadir `review_count` sería
+  barato.
+- **Primero el frontend, después la migración.** El frontend anterior pedía `category` en sus
+  `select` y mandaba `category: null` al guardar un producto desde el panel; con la columna
+  ya borrada esas llamadas fallan. El nuevo funciona igual con la columna presente o ausente,
+  así que se despliega primero y se migra después. Quien tenga el panel abierto desde antes
+  verá el aviso de "versión nueva" y tendrá que recargar para guardar.
 
 ### Datos privados del perfil (migración 0006)
 
@@ -724,11 +722,11 @@ select public.set_user_role(
 
 ### Regenerar el seed
 
-> `site_settings` **no** está en el seed, y no es un olvido: la fila
-> `stats_mode` la siembra la migración 0014 con `on conflict do nothing`. Si
-> estuviera en el seed, regenerarlo devolvería el contador a `showcase` y
-> desharía en silencio la elección del admin. El seed es contenido de demo, no
-> configuración.
+> `site_settings` **no** está en el seed, y no es un olvido: las filas
+> `bank_accounts` y `pickup_address` las siembra la migración 0018 con `on conflict do
+> nothing`. Si estuvieran en el seed, regenerarlo devolvería las cuentas y la dirección al
+> valor de ejemplo y desharía en silencio lo que el admin cargó. El seed es contenido de
+> demo, no configuración.
 
 
 Si cambias un mock y quieres que la base refleje lo mismo:

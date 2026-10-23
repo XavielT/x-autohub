@@ -175,19 +175,14 @@ ficha de producto y en el detalle de servicio, el JSON-LD `Product` y `Service`,
   borrarlas después (botón "Borrar (moderación)"). Si llega spam, el siguiente paso es
   un estado `pending`, no un cambio de esta migración.
 - **Una reseña no se edita**, se borra y se escribe otra (decisión de la 0020).
-- **`hub_parts.category` (texto) NO se eliminó, y no hay migración 0021.** El plan lo
-  condicionaba a que ningún `select` la leyera, y la leen `product.service` y
-  `admin.service`; además `hub_parts_fill_defaults()` (0017) la rellena y el mock
-  la usa para asignar la categoría nueva. Para quitarla: dejar de seleccionarla, quitarla
-  de `ProductModel` y del mapper, reescribir esa función, y recién entonces
-  `alter table hub_parts drop column category`. Es irreversible: se hace a propósito.
-- **Restos del contador del home en la base:** la fila `stats_mode` de `site_settings` y la
-  función `get_site_stats()` (0014) siguen ahí sin que nada las lea. Candidatas a la misma
-  migración que quite `category`.
+- **`hub_parts.category` y los restos del contador del home: eliminados** (migración 0021,
+  versión 2.5.2). Se quitaron la columna, `get_site_stats()` y la fila `stats_mode`; el
+  plan lo condicionaba a que ningún `select` la leyera y para eso hubo que quitarla antes del
+  frontend (ver "Limpieza de lo que dejó el pivote" en `docs/BACKEND.md`).
 - **Las tarjetas muestran `stars_rating`**, que sin reseñas es el valor sembrado de antes.
   `search_products()` no devuelve `review_count` (columnas explícitas: añadirlo obliga a
-  recrear la función), así que la tarjeta no puede distinguir una estrella real de una
-  sembrada. Si molesta, ese es el cambio.
+  recrear la función, como se hizo en la 0021 para quitar `category`), así que la tarjeta no
+  puede distinguir una estrella real de una sembrada. Si molesta, ese es el cambio.
 - **Una reseña de un pedido de invitado no se verifica** (no hay a quién atribuirlo).
 - **Assets sin uso: borrados (2026-10-23).** Eran 17 archivos: 14 iconos `.svg` de
   `src/assets/icons/` (`chat-round`, `home-hub2`, `market`, `market-hub`, `network`,
