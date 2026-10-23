@@ -78,9 +78,8 @@ con taller propio. Alrededor están los vehículos (oficiales y de la comunidad)
 la comunidad automotriz, pero el pilar principal es la tienda.
 
 La frase que lo resume desde el pivote: *"Todo lo que tu carro necesita, en un
-solo lugar: accesorios, piezas y taller, en RD."* (El `<title>`, la ruta
-del home y el login todavía dicen *"El hub central de los autos en RD"*; eso
-cambia en la fase 2.)
+solo lugar: accesorios, piezas y taller, en RD."* (Desde la fase 2 el `<title>`,
+la ruta del home y el login lo dicen así.)
 
 La interfaz está **100% en español dominicano**. Ver `docs/VISION.md` para el
 detalle del producto.
@@ -100,8 +99,10 @@ está en `docs/PIVOT-2026-10.md` y manda sobre `docs/VISION.md` y
 | **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
 
 > **El pivote se entrega por fases** (ver `docs/ROADMAP.md`). Mientras una fase
-> no esté desplegada, el código sigue siendo el anterior: hoy la tienda vive en
-> `/catalogo` y el navbar todavía muestra los cinco pilares. No documentes ni
+> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 2) ya están el
+> navbar, la barra de pestañas, el footer y el home nuevos, y `/catalogo` redirige
+> a `/tienda`; pero `/tienda` y `/buscar` siguen siendo la página del catálogo de
+> antes (fase 3), y el checkout, las citas y la PWA no existen. No documentes ni
 > asumas como existente lo que una fase posterior va a construir.
 
 > **Auto Hub y Hub Market están separados a propósito.** Auto Hub son los carros
@@ -181,7 +182,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 75 archivos, 497 pruebas, todo verde (cifra al 22/10/2026)
+npm test        # 81 archivos, 632 pruebas, todo verde (cifra al 22/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.

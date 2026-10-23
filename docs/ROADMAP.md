@@ -23,8 +23,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | Fase | Qué entrega                                                       | Versión   | Toca `supabase/` | Estado       |
 | ---- | ----------------------------------------------------------------- | --------- | ---------------- | ------------ |
 | 0    | Documentación del pivote                                          | 1.4.0     | No               | hecha        |
-| 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | preparada    |
-| 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | **2.0.0** | No               | pendiente    |
+| 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | hecha        |
+| 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | **2.0.0** | No               | preparada    |
 | 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | pendiente    |
 | 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | pendiente    |
 | 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | pendiente    |
@@ -265,14 +265,13 @@ contacto es por WhatsApp), de modo que el `CartLineItem` con `source:
 'catalogo' | 'hub-market'` que proponía este punto **ya no hace falta**; basta
 con que el carrito hable de `ProductModel`.
 
-### Enlaces del footer que no llevan a nada
+### ~~Enlaces del footer que no llevan a nada~~ ✅ **resuelto en la fase 2**
 
-`Privacidad`, `Contacto` y `Reportar problema` son `href="#"`. Un enlace que no
-lleva a ningún lado es peor que no tenerlo. Hay que crear las tres páginas o
-quitar los enlaces hasta que existan.
-
-**Por qué:** la fase 2 reescribe el footer; si no se decide ahí, el `href="#"`
-sobrevive al rediseño.
+El footer nuevo no trae `Privacidad`, `Contacto` ni `Reportar problema`: no hay
+nada detrás de ellos y un enlace que no lleva a ningún lado es peor que no tenerlo.
+Contacto pasó a ser la línea de WhatsApp (809-953-9782). **Pendiente:** si hace
+falta una página de privacidad (hay formularios que recogen correos y teléfonos),
+es un trabajo aparte y legal, no de interfaz.
 
 ### Route params como inputs
 
@@ -292,11 +291,12 @@ afirmaba que todos lo tenían; tampoco era cierto.)
 
 ### Cargar `supabase-js` bajo demanda
 
-El cliente pesa ~200 KB y hoy va en el bundle inicial (**585 kB** en total,
-**154 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
-sesión desde el primer render. El presupuesto de `angular.json` es 600 kB de
-aviso: queda poco margen y el pivote va a sumar navbar, buscador y barra
-inferior al bundle inicial.
+El cliente pesa ~200 KB y hoy va en el bundle inicial (**630 kB** en total,
+**167 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
+sesión desde el primer render. La fase 2 sumó 45 kB al shell (navbar, buscador,
+barra de pestañas, footer) y por eso el presupuesto de aviso de `angular.json`
+subió de 600 a 700 kB; el error sigue en 1 MB. Esta es la palanca que queda si
+el margen se acaba: sacar `supabase-js` del bundle inicial.
 
 Un `await import('@supabase/supabase-js')` dentro de `SupabaseService` lo sacaría
 del chunk inicial, a costa de volver asíncrono el getter `db` y, con él, todos los
@@ -339,8 +339,9 @@ chasis, combustible, tracción. Todos esos campos ya existen en `AutoHubModel`.
 
 `citroen-c3-flying.mp4` sigue en `src/assets/videos/` (792 KB en disco; la
 versión anterior de este punto decía 2.5 MB) y lo usa `home-welcome` con
-`autoplay`. La fase 2 lo muda a `/social-hub`. Falta agregarle un `poster` (un
-frame exportado a JPEG) para que se vea algo de inmediato.
+`autoplay`. La fase 2 lo mudó a `/social-hub` (la Comunidad), donde ya no es lo
+primero que carga el sitio. Sigue faltando un `poster` (un frame exportado a
+JPEG) para que se vea algo de inmediato.
 
 ### Layout de Auto Hub
 

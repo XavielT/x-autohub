@@ -1,10 +1,11 @@
 # X AutoHub
 
-**El hub central de los autos en RD.** Plataforma web para la comunidad automotriz
-dominicana: compra y venta de vehículos, catálogo de piezas, servicios de taller y
-comunidad.
+**Todo lo que tu carro necesita, en un solo lugar: accesorios, piezas y taller, en RD.**
+Tienda en línea de accesorios y piezas para vehículos en República Dominicana, con
+taller propio; además, vehículos (oficiales y de la comunidad) y comunidad
+automotriz. El plan vigente está en [`docs/PIVOT-2026-10.md`](docs/PIVOT-2026-10.md).
 
-🔗 **En vivo: [xautohubrd.com](https://xautohubrd.com)** · v1.0.0
+🔗 **En vivo: [xautohubrd.com](https://xautohubrd.com)** · v2.0.0
 
 Angular 21 · TypeScript 5.9 · SCSS · Supabase · Vitest
 

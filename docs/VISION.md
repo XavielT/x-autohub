@@ -54,9 +54,11 @@ universales **y** piezas por modelo con compatibilidad. Se cobra por
 transferencia con comprobante o cerrando el pedido por WhatsApp (sin pasarela de
 tarjeta en esta ronda). Se entrega por envío nacional o retiro en el taller.
 
-> **Hoy** la tienda es `/catalogo` (17 categorías de texto, carrito y checkout
-> con precios calculados en Postgres). `/tienda` y todo lo de arriba llega por
-> fases: ver `docs/ROADMAP.md`. `/catalogo` redirigirá a `/tienda`.
+> **Hoy** (fase 2) `/tienda` es todavía la página del catálogo de antes, con carrito
+> y checkout de precios calculados en Postgres; `/catalogo` ya redirige a ella.
+> El buscador, el menú de categorías y el home de tienda ya existen. Lo demás
+> (filtros por vehículo, ficha, checkout por transferencia) llega por fases: ver
+> `docs/ROADMAP.md`.
 
 ### Servicios
 
@@ -110,20 +112,28 @@ pivote.** Cambia la estructura, no la identidad.
 - No es un taller de mecánica pesada: motor y transmisión quedan fuera.
 - No cobra con tarjeta todavía. Transferencia o WhatsApp.
 
-## Estado actual (2026-10-22, v1.3.7)
+## Estado actual (2026-10-22, v2.0.0)
 
 El sitio está en vivo en `xautohubrd.com` (Vercel, desde la v1.0.0), con
 Supabase como backend (Postgres, Auth y Storage). Todo el contenido publicado es
-de prueba.
+de prueba. Diecisiete migraciones aplicadas.
 
-Lo que funciona hoy: los cinco pilares anteriores al pivote (Auto Hub, Hub
-Market, Catálogo, Servicios, Social Hub) con su página, registro e inicio de
-sesión, publicación de clasificados con moderación, carrito persistente y
-checkout de invitado o con cuenta (precios calculados en Postgres), perfil con
-"mis publicaciones", y un panel de administración (moderación, versiones,
-pedidos, inventario, usuarios, ajustes). Dieciséis migraciones aplicadas.
+**Lo que el pivote ya trae** (fases 0 a 2):
 
-**El pivote todavía no existe en el código.** El navbar, el home y las rutas
-siguen siendo los de los cinco pilares. Esta documentación se adelanta a
-propósito para que cada fase tenga un destino escrito. Ver `docs/ROADMAP.md`
-para el orden.
+- El esquema de la tienda: categorías, ficha de producto con oferta, stock o bajo
+  pedido, compatibilidad por vehículo, garaje de cada usuario y búsqueda sin
+  acentos; y el panel para cargarlo desde el teléfono.
+- La cara nueva: navbar con buscador y menú de categorías, barra de pestañas en el
+  teléfono, footer por pilares, el selector "Mi vehículo", y un home de tienda
+  (buscador, categorías, ofertas, más vendidos, nuevos, taller, vehículos y
+  comunidad). El hero con video pasó a la página de la Comunidad.
+
+**Lo que todavía no** (fases 3 a 7): la tienda con filtros por vehículo y la ficha
+de producto (`/tienda` sigue siendo la página del catálogo de antes), el checkout
+por transferencia con comprobante, la agenda de citas del taller, la PWA y las
+reseñas. Ver `docs/ROADMAP.md` para el orden.
+
+Sigue funcionando todo lo anterior: Auto Hub, Hub Market con moderación, carrito
+persistente y checkout de invitado o con cuenta (precios calculados en Postgres),
+registro e inicio de sesión, perfil con "mis publicaciones", y el panel de
+administración (moderación, versiones, pedidos, inventario, usuarios, ajustes).

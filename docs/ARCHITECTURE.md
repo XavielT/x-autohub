@@ -1,14 +1,15 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-22** (v1.5.0, la fase 1 del pivote). Si cambias la estructura,
-actualiza este archivo en el mismo commit.
+Estado real del proyecto al **2026-10-22** (v2.0.0, la fase 2 del pivote). Si cambias la
+estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 1.** Ya existe el esquema de la
-> tienda (migración 0017: categorías, compatibilidad por vehículo, garaje,
-> búsqueda), sus servicios y el panel para cargarla; **no** existe todavía nada
-> de lo que ve el visitante (home nuevo, `/tienda`, checkout por transferencia,
-> agenda de servicios, PWA). Eso está en `docs/PIVOT-2026-10.md`, y la
-> estructura final se documenta aquí al cerrar la fase 7, no antes.
+> **El pivote de octubre de 2026 va por la fase 2.** Ya existen el esquema de la
+> tienda (fase 1) y la cara nueva: navbar con buscador y menú de categorías,
+> barra de pestañas en el teléfono, footer por pilares, home de tienda y selector
+> de vehículo. **Falta** la tienda de verdad (`/tienda` sigue siendo la página del
+> catálogo de antes: fase 3), el checkout por transferencia, la agenda de
+> servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
+> se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
 
@@ -51,15 +52,19 @@ x-autohub/
     │       └── http-error.interceptor.ts    Errores de HttpClient → toast
     │
     ├── app/
-    │   ├── app.ts / app.html         Shell: navbar, outlet, cart, toast, footer
+    │   ├── app.ts / app.html         Shell: navbar, outlet, footer, cart, selector de
+    │   │                             vehículo (@defer), toast y barra de pestañas
     │   ├── app.config.ts             Providers raíz, LOCALE_ID es-DO
     │   ├── app.routes.ts             ⭐ Todas las rutas, lazy + títulos + guards
-    │   ├── components/               Secciones que solo usa el Home
-    │   │   ├── home-welcome/             Hero con video de fondo
-    │   │   ├── page-counter-overview/    Contadores (280+ vehículos, etc.)
-    │   │   ├── home-featured-vehicles/   Últimos vehículos de Hub Market
-    │   │   ├── home-featured-catalog/    Grid de categorías del catálogo
-    │   │   └── home-news/                Noticias
+    │   ├── components/               Los bloques del home, y el hero de la Comunidad
+    │   │   ├── home-search/ home-categories/ home-vehicle-picker/
+    │   │   ├── home-offers/ home-bestsellers/ home-new-arrivals/  (usan home-product-row)
+    │   │   ├── home-services-banner/ home-trust-strip/
+    │   │   ├── home-vehicles/ home-community/
+    │   │   ├── home-welcome/             Hero con video: ahora abre /social-hub
+    │   │   └── (sin uso desde la fase 2, se retiran en la fase 7:
+    │   │        page-counter-overview, home-featured-vehicles,
+    │   │        home-featured-catalog, home-news)
     │   └── pages/                    Una carpeta por página (21)
     │       ├── home/  auto-hub/  auto-hub-details/
     │       ├── catalogo/  hub-part-details/  checkout/
@@ -74,8 +79,9 @@ x-autohub/
     │       └── terminos-condiciones/  not-found/
     │
     ├── shared/                Reutilizable entre páginas
-    │   ├── components/            13 componentes con lógica o datos
-    │   │   ├── navbar/  footer/  logo-hub/
+    │   ├── components/            Componentes con lógica o datos
+    │   │   ├── navbar/  mobile-tab-bar/  footer/  logo-hub/
+    │   │   ├── search-box/  vehicle-form/  vehicle-picker-modal/
     │   │   ├── car-card/  autohub-card/  hub-market-card/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
     │   │   ├── cart-modal/  toast/  club-channel/
@@ -85,14 +91,16 @@ x-autohub/
     │   ├── models/                Interfaces de los modelos (product.model.ts: la tienda)
     │   ├── data/                  Mocks (*.mock.ts), locations, showcase-stats
     │   ├── utils/                 slugify, product-search (la búsqueda en memoria),
-    │   │                          category-tree, test-visibility, phone, whatsapp…
+    │   │                          category-tree, contact (el WhatsApp de la tienda), test-visibility,
+    │   │                          phone, whatsapp…
     │   ├── testing/               product.fixture.ts (un ProductModel para los specs)
-    │   └── services/              22 servicios, todos providedIn: 'root'
+    │   └── services/              23 servicios, todos providedIn: 'root'
     │
     ├── styles/
     │   ├── _auth-shell.scss       Parcial compartido por login y registro
     │   ├── _forms.scss            Parcial de formularios
-    │   └── _whatsapp-btn.scss     Botón de WhatsApp compartido
+    │   ├── _whatsapp-btn.scss     Botón de WhatsApp compartido
+    │   └── _home-section.scss     Mixin del estilo común de los bloques del home
     │
     └── assets/
         ├── fonts/                 5 carpetas: Chakra-Petch, Orbitron,
@@ -183,11 +191,15 @@ El patrón es siempre el mismo: signal privado `_x`, expuesto como
 persiste en todas las rutas:
 
 ```html
-<header><app-navbar/></header>
-<router-outlet/>
-<app-cart-modal/>   <!-- panel lateral, controlado por CartService.isOpen -->
-<app-toast/>        <!-- notificaciones -->
-<app-footer/>
+<header><app-navbar/></header>             <!-- sticky: el buscador y el carrito siempre a mano -->
+<div class="app-content">                 <!-- padding-bottom en el teléfono, por la barra de pestañas -->
+  <router-outlet/>
+  <app-footer/>
+</div>
+<app-cart-modal/>                         <!-- panel lateral, controlado por CartService.isOpen -->
+@defer (when pickerOpen()) { <app-vehicle-picker-modal/> }   <!-- se descarga al abrirlo -->
+<app-toast/>                              <!-- notificaciones -->
+<app-mobile-tab-bar/>                     <!-- solo ≤ 900 px: Inicio · Categorías · Buscar · Carrito · Cuenta -->
 ```
 
 Implicación: login y registro **también** se ven con navbar y footer. Es
@@ -195,8 +207,8 @@ intencional — el usuario nunca pierde la navegación.
 
 ## Rutas
 
-20 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
-`title`; `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
+22 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
+`title` (salvo el redirect `/catalogo` → `/tienda`, que conserva los query params); `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
 que está agrupado por pilar y comentado.
 
 Protegidas por `authGuard`: `/publicar`, `/perfil`.
@@ -235,18 +247,18 @@ Decisiones que conviene conocer:
 
 ## Build
 
-- Bundle inicial: **585 kB** (~154 kB transferidos, medido el 2026-10-22; el límite de aviso es 600 kB). Cada
+- Bundle inicial: **630 kB** (~167 kB transferidos, medido el 2026-10-22; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
   página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
   porque el navbar necesita la sesión desde el primer render.
 - `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
   792 KB.
-- Budgets en `angular.json`: inicial 600 kB warning / 1 MB error; estilo por
+- Budgets en `angular.json`: inicial 700 kB warning / 1 MB error; estilo por
   componente 8 kB / 16 kB (el default de 4 kB es irreal para páginas completas).
 - Producción sustituye `environment.ts` por `environment.production.ts`.
 
 ## Pruebas
 
-- 75 archivos, 497 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
+- 81 archivos, 632 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.
