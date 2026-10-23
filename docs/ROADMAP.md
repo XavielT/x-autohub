@@ -149,8 +149,6 @@ Libre y no como una página, sin cachear precios ni stock.
 - Instalar en un Android y en un iPhone, y abrir sin red: tiene que verse el shell.
 - Las fotos de Storage probablemente no se cachean (ver "La PWA" en
   `docs/ARCHITECTURE.md`); revisarlo cuando haya fotos reales ahí.
-- El logo original (`brand/xh-logo.png`) trae un destello pequeño en la esquina inferior
-  derecha que se ve en los iconos; limpiar el original y regenerar.
 
 ### Fase 7 — Reseñas, SEO y limpieza (2.5.0)
 
