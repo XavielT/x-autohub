@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SocialHubService } from '../../../shared/services/social-hub.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { SocialHubTab } from '../../../shared/models/social-hub.model';
+import { HomeWelcome } from '../../components/home-welcome/home-welcome';
+import { ClubChannel } from '../../../shared/components/club-channel/club-channel';
 
 interface TabOption {
   value: SocialHubTab;
@@ -13,7 +15,7 @@ interface TabOption {
 
 @Component({
   selector: 'app-social-hub',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink, HomeWelcome, ClubChannel],
   templateUrl: './social-hub.html',
   styleUrl: './social-hub.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,8 +38,20 @@ export class SocialHub {
   readonly clubs = toSignal(this.socialHub.getClubs(), { initialValue: [] });
   readonly events = toSignal(this.socialHub.getEvents(), { initialValue: [] });
 
+  /** Las pestañas: es donde aterrizan los botones del hero. */
+  private readonly tabsAnchor = viewChild<ElementRef<HTMLElement>>('tabsAnchor');
+
   selectTab(tab: SocialHubTab): void {
     this.activeTab.set(tab);
+  }
+
+  /**
+   * Los botones del hero ("Ver clubes", "Ver eventos"): cambian a esa pestaña y
+   * bajan hasta ella. Son anclas dentro de la página, no rutas.
+   */
+  showTab(tab: SocialHubTab): void {
+    this.selectTab(tab);
+    this.tabsAnchor()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** "hace 3 dias" en vez de una fecha absoluta, que lee mejor en un feed. */

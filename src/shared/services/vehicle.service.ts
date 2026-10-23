@@ -61,6 +61,13 @@ export class VehicleService {
   /** El vehículo elegido, o `null`. Lo que filtra la tienda. */
   readonly selected = this._selected.asReadonly();
 
+  private readonly _selectedLabel = signal<string | null>(null);
+  /**
+   * El vehículo elegido con nombre ("Toyota Corolla 2015"), o `null`. Es lo que
+   * dice el chip "Mi vehículo" del navbar; `selected` solo trae ids.
+   */
+  readonly selectedLabel = this._selectedLabel.asReadonly();
+
   /** El garaje en modo mock: no hay tabla, y no tiene que sobrevivir a la sesión. */
   private mockGarage: ProfileVehicleModel[] = [];
   private mockGarageSeq = 1;
@@ -70,6 +77,12 @@ export class VehicleService {
     effect(() => {
       const user = this.auth.user();
       untracked(() => this.syncWithSession(user?.id ?? null));
+    });
+
+    // El nombre se vuelve a resolver cada vez que cambia el vehículo elegido.
+    effect(() => {
+      const vehicle = this._selected();
+      untracked(() => this.resolveLabel(vehicle));
     });
   }
 
@@ -154,6 +167,39 @@ export class VehicleService {
   }
 
   // --- Internos --------------------------------------------------------------------
+
+  /**
+   * Busca los nombres de la marca y el modelo. Si la lectura falla o el vehículo
+   * ya no existe (una marca borrada, un id viejo en localStorage) la etiqueta
+   * queda nula y el chip vuelve a decir "Elige tu vehículo": mejor eso que un
+   * "Marca 7".
+   */
+  private resolveLabel(vehicle: SelectedVehicle | null): void {
+    if (vehicle === null) {
+      this._selectedLabel.set(null);
+      return;
+    }
+
+    this.getMakes().subscribe({
+      next: (makes) => {
+        const make = makes.find((m) => m.id === vehicle.makeId);
+        if (!make) {
+          this._selectedLabel.set(null);
+          return;
+        }
+        this.getModels(make.id).subscribe({
+          next: (models) => {
+            // Si mientras tanto eligieron otro, esta respuesta ya no vale.
+            if (this._selected() !== vehicle) return;
+            const model = models.find((m) => m.id === vehicle.modelId);
+            this._selectedLabel.set(model ? `${make.name} ${model.name} ${vehicle.year}` : null);
+          },
+          error: () => this._selectedLabel.set(null),
+        });
+      },
+      error: () => this._selectedLabel.set(null),
+    });
+  }
 
   private writeGuestVehicle(vehicle: SelectedVehicle): void {
     try {

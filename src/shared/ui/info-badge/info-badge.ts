@@ -9,4 +9,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class InfoBadge {
   readonly text = input.required<string>();
+  /**
+   * Versión de etiqueta: más chica y con el texto tal como se escribió (la normal
+   * lo pasa a "Capitalize Cada Palabra"). Es para ir encima de una tarjeta.
+   */
+  readonly compact = input(false);
 }

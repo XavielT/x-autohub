@@ -1,0 +1,29 @@
+.trust {
+  padding: 22px 25px;
+  background-color: var(--main);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item { display: flex; align-items: center; gap: 12px; }
+
+  &__icon { flex: none; width: 28px; height: 28px; }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-body);
+
+    strong { font-size: 14px; color: #fff; }
+    small { font-size: 13px; color: var(--text-soft); }
+  }
+}

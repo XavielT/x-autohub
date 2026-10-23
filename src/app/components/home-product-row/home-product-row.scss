@@ -1,0 +1,49 @@
+@use '../../../styles/home-section' as *;
+@include home-section;
+
+.hrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 330px);
+  justify-content: center;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  // Una sola fila con scroll horizontal; cada tarjeta se detiene al deslizar.
+  &--carousel {
+    display: flex;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+
+    .hrow__item { flex: none; scroll-snap-align: start; }
+  }
+
+  &__deal {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-soft);
+
+    s { color: var(--text-soft); }
+  }
+
+  &__off {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 2px 8px;
+    font-weight: 800;
+    color: #fff;
+    background-color: var(--primary);
+    border-radius: 6px;
+  }
+}
+
+// En el teléfono las tarjetas de 330px no caben dos por fila: una columna.
+@media (max-width: 760px) {
+  .hrow:not(.hrow--carousel) { grid-template-columns: minmax(0, 330px); }
+}

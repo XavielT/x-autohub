@@ -1,5 +1,8 @@
 <div class="hub-market-card">
     <div class="hub-market-card__top">
+        <!-- Lo de Hub Market lo publica la comunidad, no X AutoHub: la etiqueta lo
+             separa de la tienda oficial, que ahora vive en la misma pagina web. -->
+        <span class="hub-market-card__community"><app-info-badge text="De la comunidad" [compact]="true" /></span>
         <a class="hub-market-card__image-link" [routerLink]="itemLink()">
             @if (isDataUrl()) {
                 <!-- src plano: NgOptimizedImage lanza con data URLs y se lleva la

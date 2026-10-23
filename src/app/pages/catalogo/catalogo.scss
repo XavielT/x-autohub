@@ -219,7 +219,33 @@
 }
 
 @media (max-width: 1023px) {
-    .catalogo {
+    .catalogo__active-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding: 0 30px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-soft);
+
+    strong { color: var(--Hub); }
+}
+
+.catalogo__active-filter-clear {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    cursor: pointer;
+
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+}
+
+.catalogo {
         padding: 20px;
 
         &__header {

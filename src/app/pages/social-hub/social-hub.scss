@@ -63,6 +63,9 @@ $surface-line: #2e2e2e;
   }
 
   &__tabs {
+    // La barra de arriba es fija: sin esto, al bajar desde el hero las pestañas
+    // quedan tapadas por ella.
+    scroll-margin-top: 80px;
     display: flex;
     gap: 8px;
     margin-bottom: 28px;

@@ -395,6 +395,107 @@ describe('servicios de la tienda (mock)', () => {
     });
   });
 
+  describe('ProductService: lo que pide el home', () => {
+    const products = () => TestBed.inject(ProductService);
+
+    it('las ofertas son los productos con precio anterior, y solo esos', async () => {
+      const offers = await firstValueFrom(products().getOffers());
+
+      expect(offers.length).toBe(6);
+      expect(offers.every((p) => p.compareAtPrice !== null && p.compareAtPrice > p.price)).toBe(true);
+    });
+
+    it('respeta el limite', async () => {
+      expect((await firstValueFrom(products().getOffers(2))).length).toBe(2);
+      expect((await firstValueFrom(products().getBestSellers(3))).length).toBe(3);
+      expect((await firstValueFrom(products().getNewArrivals(5))).length).toBe(5);
+    });
+
+    it('los mas vendidos van de mayor a menor y solo entran los que vendieron algo', async () => {
+      const best = await firstValueFrom(products().getBestSellers(100));
+      const sold = best.map((p) => p.soldCount);
+
+      expect(sold).toEqual([...sold].sort((a, b) => b - a));
+      expect(sold.every((n) => n > 0)).toBe(true);
+      expect(best[0].id).toBe(4); // el aceite, con 210
+    });
+
+    it('lo nuevo empieza por el ultimo que se cargo', async () => {
+      const fresh = await firstValueFrom(products().getNewArrivals(3));
+      // Misma fecha en el mock: desempata el id mayor. La pieza 36 es de prueba y no se ve.
+      expect(fresh.map((p) => p.id)).toEqual([35, 34, 33]);
+    });
+
+    it('un admin ve en lo nuevo la pieza de prueba, un visitante no', async () => {
+      expect((await firstValueFrom(products().getNewArrivals(1)))[0].id).toBe(35);
+
+      user.set({ ...BASE, role: 'admin', isAdmin: true });
+      expect((await firstValueFrom(products().getNewArrivals(1)))[0].id).toBe(36);
+    });
+  });
+
+  describe('HubMarketService.getLatestVehicles', () => {
+    it('devuelve tres vehiculos aprobados, el mas reciente primero, sin las pendientes', async () => {
+      const { HubMarketService } = await import('./hub-market.service');
+      const latest = await firstValueFrom(TestBed.inject(HubMarketService).getLatestVehicles());
+
+      expect(latest.length).toBe(3);
+      expect(latest.every((i) => i.category === 'vehiculos')).toBe(true);
+      const dates = latest.map((i) => i.createdAt ?? '');
+      expect(dates).toEqual([...dates].sort().reverse());
+    });
+
+    it('respeta el limite', async () => {
+      const { HubMarketService } = await import('./hub-market.service');
+      expect((await firstValueFrom(TestBed.inject(HubMarketService).getLatestVehicles(1))).length).toBe(1);
+    });
+  });
+
+  describe('VehicleService.selectedLabel', () => {
+    const vehicles = () => TestBed.inject(VehicleService);
+
+    it('sin vehiculo no hay etiqueta', () => {
+      expect(vehicles().selectedLabel()).toBeNull();
+    });
+
+    it('con vehiculo dice marca, modelo y ano', () => {
+      vehicles().select({ makeId: make('toyota').id, modelId: model('toyota', 'corolla').id, year: 2015 });
+      TestBed.tick();
+
+      expect(vehicles().selectedLabel()).toBe('Toyota Corolla 2015');
+    });
+
+    it('se actualiza al cambiar de vehiculo y se borra al quitarlo', () => {
+      vehicles().select({ makeId: make('toyota').id, modelId: model('toyota', 'corolla').id, year: 2015 });
+      TestBed.tick();
+      vehicles().select({ makeId: make('honda').id, modelId: model('honda', 'civic').id, year: 2018 });
+      TestBed.tick();
+      expect(vehicles().selectedLabel()).toBe('Honda Civic 2018');
+
+      vehicles().clear();
+      TestBed.tick();
+      expect(vehicles().selectedLabel()).toBeNull();
+    });
+
+    it('un vehiculo guardado con ids que ya no existen deja la etiqueta nula, no "Marca 7"', () => {
+      localStorage.setItem(GUEST_VEHICLE_KEY, JSON.stringify({ makeId: 9999, modelId: 1, year: 2015 }));
+      TestBed.tick();
+      expect(vehicles().selectedLabel()).toBeNull();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: AuthService, useValue: { user } },
+          { provide: ToastService, useValue: toast },
+        ],
+      });
+      localStorage.setItem(GUEST_VEHICLE_KEY, JSON.stringify({ makeId: make('toyota').id, modelId: 9999, year: 2015 }));
+      TestBed.inject(VehicleService);
+      TestBed.tick();
+      expect(TestBed.inject(VehicleService).selectedLabel()).toBeNull();
+    });
+  });
+
   describe('dedupeFitments', () => {
     it('conserva el orden y no toca los parecidos', () => {
       const a = { makeId: 1, modelId: null, yearFrom: null, yearTo: null };

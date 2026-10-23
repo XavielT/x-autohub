@@ -1,0 +1,13 @@
+<section class="trust" aria-label="Como compras en X AutoHub">
+  <ul class="trust__list">
+    @for (item of items; track item.title) {
+      <li class="trust__item">
+        <img class="trust__icon" [src]="item.icon" alt="" aria-hidden="true" width="28" height="28" />
+        <span class="trust__text">
+          <strong>{{ item.title }}</strong>
+          <small>{{ item.text }}</small>
+        </span>
+      </li>
+    }
+  </ul>
+</section>

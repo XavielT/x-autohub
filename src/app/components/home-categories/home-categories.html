@@ -1,0 +1,14 @@
+@if (categories().length > 0) {
+  <nav class="hcat" aria-label="Categorias de la tienda">
+    <ul class="hcat__list">
+      @for (c of categories(); track c.id) {
+        <li>
+          <a class="hcat__chip" routerLink="/tienda" [queryParams]="{ categoria: c.slug }">
+            <span class="hcat__icon" aria-hidden="true">{{ c.name.charAt(0) }}</span>
+            <span class="hcat__name">{{ c.name }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+}

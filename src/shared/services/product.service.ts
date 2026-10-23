@@ -26,6 +26,11 @@ import { searchProductsInMemory } from '../utils/product-search';
 const PRODUCT_COLUMNS =
   'id, category, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at';
 
+/** Más reciente primero; a igual fecha, el de id mayor (el último que se cargó). */
+function newestFirst(a: ProductModel, b: ProductModel): number {
+  return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0) || b.id - a.id;
+}
+
 /**
  * Productos de la tienda (la tabla `hub_parts`, que no se renombró).
  *
@@ -93,6 +98,71 @@ export class ProductService {
         };
       }),
     );
+  }
+
+  /**
+   * Productos con oferta (los que traen `compare_at_price`), los más recientes
+   * primero. Es la tira "Ofertas" del home.
+   */
+  getOffers(limit = 12): Observable<ProductModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        this.mockProducts()
+          .filter((p) => p.compareAtPrice !== null)
+          .sort(newestFirst)
+          .slice(0, limit),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .select(PRODUCT_COLUMNS)
+        .eq('is_active', true)
+        .not('compare_at_price', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    ).pipe(map((res) => unwrap(res).map(toProduct)));
+  }
+
+  /** Los más vendidos (`sold_count`), de mayor a menor. */
+  getBestSellers(limit = 8): Observable<ProductModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        this.mockProducts()
+          .filter((p) => p.soldCount > 0)
+          .sort((a, b) => b.soldCount - a.soldCount || a.id - b.id)
+          .slice(0, limit),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .select(PRODUCT_COLUMNS)
+        .eq('is_active', true)
+        .gt('sold_count', 0)
+        .order('sold_count', { ascending: false })
+        .order('id', { ascending: true })
+        .limit(limit),
+    ).pipe(map((res) => unwrap(res).map(toProduct)));
+  }
+
+  /** Lo último que entró al catálogo (`created_at`). */
+  getNewArrivals(limit = 8): Observable<ProductModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(this.mockProducts().sort(newestFirst).slice(0, limit));
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_parts')
+        .select(PRODUCT_COLUMNS)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit),
+    ).pipe(map((res) => unwrap(res).map(toProduct)));
   }
 
   getAll(): Observable<ProductModel[]> {

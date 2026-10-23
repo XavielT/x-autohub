@@ -15,7 +15,7 @@ const BRAND = 'X AutoHub';
 export const routes: Routes = [
   {
     path: '',
-    title: `${BRAND} — El hub central de los autos en RD`,
+    title: `${BRAND} — Todo lo que tu carro necesita`,
     loadComponent: () => import('./pages/home/home').then((m) => m.Home),
   },
 
@@ -32,10 +32,20 @@ export const routes: Routes = [
       import('./pages/auto-hub-details/auto-hub-details').then((m) => m.AutoHubDetails),
   },
 
-  // --- Catalogo: tienda propia de piezas (carrito + checkout) ---
+  // --- Tienda: accesorios y piezas de X AutoHub (carrito + checkout) ---
+  //
+  // Hoy `/tienda` y `/buscar` son la misma pagina (la del catalogo de antes); la
+  // fase 3 las convierte en la tienda de verdad. `/catalogo` redirige para no
+  // romper enlaces ya publicados, y el redirect conserva los query params.
   {
-    path: 'catalogo',
-    title: `Catalogo de piezas | ${BRAND}`,
+    path: 'tienda',
+    title: `Tienda — Accesorios y piezas | ${BRAND}`,
+    loadComponent: () => import('./pages/catalogo/catalogo').then((m) => m.Catalogo),
+  },
+  { path: 'catalogo', pathMatch: 'full', redirectTo: 'tienda' },
+  {
+    path: 'buscar',
+    title: `Buscar | ${BRAND}`,
     loadComponent: () => import('./pages/catalogo/catalogo').then((m) => m.Catalogo),
   },
   {
@@ -91,7 +101,7 @@ export const routes: Routes = [
   },
   {
     path: 'social-hub',
-    title: `Social Hub — Clubes y eventos | ${BRAND}`,
+    title: `Comunidad — Clubes y eventos | ${BRAND}`,
     loadComponent: () => import('./pages/social-hub/social-hub').then((m) => m.SocialHub),
   },
   {

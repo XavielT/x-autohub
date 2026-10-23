@@ -1,0 +1,36 @@
+<form class="vf" (ngSubmit)="submit()">
+  <label class="vf__field" [for]="idPrefix() + '-make'">
+    <span>Marca</span>
+    <select [id]="idPrefix() + '-make'" name="make" [ngModel]="makeId()"
+            (ngModelChange)="onMakeChange($event)">
+      <option [ngValue]="null">Elige la marca</option>
+      @for (m of makes(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
+    </select>
+  </label>
+
+  <label class="vf__field" [for]="idPrefix() + '-model'">
+    <span>Modelo</span>
+    <select [id]="idPrefix() + '-model'" name="model" [ngModel]="modelId()"
+            (ngModelChange)="modelId.set($event)"
+            [disabled]="makeId() === null || isLoadingModels()">
+      <option [ngValue]="null">
+        {{ makeId() === null ? 'Primero la marca' : (isLoadingModels() ? 'Cargando…' : 'Elige el modelo') }}
+      </option>
+      @for (m of models(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
+    </select>
+    @if (makeId() !== null && !isLoadingModels() && models().length === 0) {
+      <small class="vf__hint">Todavía no tenemos modelos de esta marca. Escríbenos por WhatsApp.</small>
+    }
+  </label>
+
+  <label class="vf__field" [for]="idPrefix() + '-year'">
+    <span>Año</span>
+    <select [id]="idPrefix() + '-year'" name="year" [ngModel]="year()"
+            (ngModelChange)="year.set($event)" [disabled]="modelId() === null">
+      <option [ngValue]="null">{{ modelId() === null ? 'Primero el modelo' : 'Elige el año' }}</option>
+      @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
+    </select>
+  </label>
+
+  <button type="submit" class="vf__submit" [disabled]="!isComplete()">{{ submitLabel() }}</button>
+</form>

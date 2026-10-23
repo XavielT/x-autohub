@@ -1,0 +1,51 @@
+<!-- Sin FormsModule a proposito: este componente vive en el shell (el navbar),
+     que va en el bundle inicial, y FormsModule pesa decenas de kB. Un campo y un
+     (input) alcanzan. -->
+<form class="sb" [class.sb--hero]="variant() === 'hero'" role="search" (submit)="onSubmit($event)">
+  <img class="sb__icon" src="assets/icons/search-icon.svg" alt="" aria-hidden="true" />
+  <input
+    class="sb__input"
+    type="search"
+    name="q"
+    autocomplete="off"
+    enterkeyhint="search"
+    role="combobox"
+    aria-label="Buscar en la tienda"
+    aria-autocomplete="list"
+    [attr.aria-expanded]="isOpen() && suggestions().length > 0"
+    [attr.aria-controls]="idPrefix() + '-list'"
+    [attr.aria-activedescendant]="activeIndex() >= 0 ? idPrefix() + '-opt-' + activeIndex() : null"
+    [placeholder]="placeholder()"
+    [value]="query()"
+    (input)="onInput($any($event.target).value)"
+    (keydown)="onKeydown($event)"
+    (focus)="isOpen.set(true)"
+  />
+  <button class="sb__submit" type="submit" aria-label="Buscar">Buscar</button>
+
+  @if (isOpen() && suggestions().length > 0) {
+    <ul class="sb__list" role="listbox" [id]="idPrefix() + '-list'">
+      @for (p of suggestions(); track p.id; let i = $index) {
+        <li
+          role="option"
+          class="sb__option"
+          [id]="idPrefix() + '-opt-' + i"
+          [class.sb__option--active]="i === activeIndex()"
+          [attr.aria-selected]="i === activeIndex()"
+          (mousedown)="$event.preventDefault()"
+          (click)="open(p)"
+        >
+          <img class="sb__thumb" [src]="p.imgUrl" alt="" width="40" height="40" loading="lazy" />
+          <span class="sb__text">
+            <span class="sb__name">{{ p.name }}</span>
+            <span class="sb__brand">{{ p.brand }}</span>
+          </span>
+          <span class="sb__price">RD$ {{ p.price | number:'1.0-0' }}</span>
+        </li>
+      }
+      <li class="sb__all" role="presentation">
+        <button type="button" class="sb__all-btn" (click)="seeAll()">Ver todos los resultados</button>
+      </li>
+    </ul>
+  }
+</form>

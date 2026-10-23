@@ -1,0 +1,76 @@
+@if (sheet() !== null) {
+  <div class="tabs__overlay" (click)="closeSheet()"></div>
+
+  <div class="tabs__sheet" role="dialog" aria-modal="true"
+       [attr.aria-label]="sheet() === 'categorias' ? 'Categorias de la tienda' : 'Mi cuenta y mas'">
+    @if (sheet() === 'categorias') {
+      <h3 class="tabs__sheet-title">Categorías</h3>
+      <a class="tabs__all" routerLink="/tienda" (click)="go()">Ver toda la tienda →</a>
+      @for (root of categoryTree(); track root.id) {
+        <div class="tabs__group">
+          <a class="tabs__root" routerLink="/tienda" [queryParams]="{ categoria: root.slug }" (click)="go()">{{ root.name }}</a>
+          @for (child of root.children; track child.id) {
+            <a class="tabs__child" routerLink="/tienda" [queryParams]="{ categoria: child.slug }" (click)="go()">{{ child.name }}</a>
+          }
+        </div>
+      }
+    } @else {
+      @if (isLoggedIn()) {
+        <a class="tabs__me" routerLink="/perfil" (click)="go()">
+          <span class="tabs__initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
+          <span><strong>{{ user()?.displayName }}</strong><small>Ver mi perfil</small></span>
+        </a>
+      } @else {
+        <div class="tabs__guest">
+          <a class="tabs__cta" routerLink="/login" (click)="go()">Entrar</a>
+          <a class="tabs__cta tabs__cta--ghost" routerLink="/registro" (click)="go()">Crear cuenta</a>
+        </div>
+      }
+
+      <button type="button" class="tabs__vehicle" [class.has-vehicle]="vehicleLabel()" (click)="openVehiclePicker()">
+        <span class="tabs__vehicle-label">Mi vehículo</span>
+        <span>{{ vehicleLabel() ?? 'Elige tu vehículo' }}</span>
+      </button>
+
+      <h4 class="tabs__section">Vehículos</h4>
+      <a class="tabs__link" routerLink="/auto-hub" (click)="go()">Auto Hub</a>
+      <a class="tabs__link" routerLink="/hub-market" (click)="go()">Hub Market</a>
+      <a class="tabs__link" routerLink="/publicar" (click)="go()">Publicar</a>
+
+      <h4 class="tabs__section">Más</h4>
+      <a class="tabs__link" routerLink="/servicios" (click)="go()">Servicios</a>
+      <a class="tabs__link" routerLink="/social-hub" (click)="go()">Comunidad</a>
+      @if (canModerate()) {
+        <a class="tabs__link" routerLink="/admin" (click)="go()">Panel de administración</a>
+      }
+      @if (isLoggedIn()) {
+        <button type="button" class="tabs__link tabs__link--button" (click)="logout()">Salir</button>
+      }
+    }
+  </div>
+}
+
+<nav class="tabs" aria-label="Navegacion del telefono">
+  <a class="tabs__tab" routerLink="/" [class.is-active]="activeTab() === 'inicio'" (click)="go()">
+    <img [src]="icon('inicio')" alt="" aria-hidden="true" />Inicio
+  </a>
+  <button type="button" class="tabs__tab" [class.is-active]="activeTab() === 'categorias'"
+          [attr.aria-expanded]="sheet() === 'categorias'" (click)="toggleSheet('categorias')">
+    <img [src]="icon('categorias')" alt="" aria-hidden="true" />Categorías
+  </button>
+  <a class="tabs__tab" routerLink="/buscar" [class.is-active]="activeTab() === 'buscar'" (click)="go()">
+    <img [src]="icon('buscar')" [class.tabs__invert]="activeTab() !== 'buscar'" alt="" aria-hidden="true" />Buscar
+  </a>
+  <button type="button" class="tabs__tab" [class.is-active]="activeTab() === 'carrito'"
+          [attr.aria-label]="cartCount() > 0 ? 'Carrito, ' + cartCount() + ' articulos' : 'Carrito'"
+          (click)="openCart()">
+    <span class="tabs__icon-wrap">
+      <img [src]="icon('carrito')" alt="" aria-hidden="true" />
+      @if (cartCount() > 0) { <span class="tabs__count">{{ cartCount() }}</span> }
+    </span>Carrito
+  </button>
+  <button type="button" class="tabs__tab" [class.is-active]="activeTab() === 'cuenta'"
+          [attr.aria-expanded]="sheet() === 'cuenta'" (click)="toggleSheet('cuenta')">
+    <img [src]="icon('cuenta')" alt="" aria-hidden="true" />Cuenta
+  </button>
+</nav>

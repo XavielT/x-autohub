@@ -1,0 +1,132 @@
+:host { display: block; min-width: 0; }
+
+.sb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 6px 0 14px;
+  font-family: var(--font-body);
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  transition: border-color 0.2s ease;
+
+  &:focus-within { border-color: var(--Hub); }
+
+  // El SVG de la lupa viene en trazo oscuro y el campo es oscuro: se invierte.
+  &__icon { width: 18px; height: 18px; flex: none; opacity: 0.7; filter: invert(1); }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    font-family: inherit;
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-size: 16px;
+    color: var(--text-strong);
+    background: transparent;
+    border: none;
+    outline: none;
+
+    &::placeholder { color: var(--text-soft); }
+    // El tache nativo de type=search choca con el botón.
+    &::-webkit-search-cancel-button { display: none; }
+  }
+
+  &__submit {
+    flex: none;
+    height: 34px;
+    padding: 0 14px;
+    font-family: var(--font-btns);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover { filter: brightness(1.1); }
+    &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  }
+
+  &__list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    // El campo del navbar es angosto: la lista se ensancha hacia la derecha para
+    // que el nombre de la pieza no se corte.
+    min-width: min(380px, calc(100vw - 24px));
+    z-index: 60;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    max-height: 70dvh;
+    overflow-y: auto;
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-strong);
+
+    &:hover,
+    &--active { background-color: rgba(255, 255, 255, 0.08); }
+  }
+
+  &__thumb { flex: none; width: 40px; height: 40px; object-fit: cover; border-radius: 6px; background: #2a2a2a; }
+
+  &__text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+
+  &__name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  &__brand { font-size: 12px; color: var(--text-soft); }
+
+  &__price { flex: none; font-family: var(--font-price); font-size: 13px; color: var(--Hub); }
+
+  &__all { padding: 4px; }
+
+  &__all-btn {
+    width: 100%;
+    min-height: 40px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--Hub);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  // El grande del home.
+  &--hero {
+    height: 60px;
+    padding-left: 20px;
+    border-radius: 14px;
+    background-color: rgba(0, 0, 0, 0.55);
+
+    .sb__icon { width: 22px; height: 22px; }
+    .sb__input { font-size: 18px; }
+    .sb__submit { height: 46px; padding: 0 24px; font-size: 16px; border-radius: 10px; }
+  }
+}
+
+@media (max-width: 560px) {
+  // En el teléfono el botón sobra: el Enter del teclado y la lupa de la barra
+  // de abajo hacen el mismo trabajo y el campo necesita el ancho.
+  .sb:not(.sb--hero) .sb__submit { display: none; }
+  .sb--hero { height: 54px; }
+  .sb--hero .sb__submit { padding: 0 16px; }
+}

@@ -1,0 +1,75 @@
+@use '../../../styles/home-section' as *;
+@include home-section;
+
+.hv {
+  &__doors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  &__door {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 160px;
+    padding: 24px;
+    color: #fff;
+    text-decoration: none;
+    background:
+      linear-gradient(135deg, rgba(255, 179, 0, 0.14), transparent 60%),
+      #1a1a1a;
+    border: 1px solid rgba(255, 179, 0, 0.35);
+    border-radius: 16px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+
+    &:hover { transform: translateY(-3px); border-color: var(--Hub); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+
+    // Hub Market se distingue de Auto Hub: es de la comunidad, no de la casa.
+    &--community {
+      background:
+        linear-gradient(135deg, rgba(255, 95, 0, 0.14), transparent 60%),
+        #1a1a1a;
+      border-color: rgba(255, 95, 0, 0.35);
+
+      &:hover { border-color: var(--primary); }
+    }
+  }
+
+  &__door-tag {
+    align-self: flex-start;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 12px;
+  }
+
+  &__door--community &__door-tag { color: #fff; background-color: var(--primary); }
+
+  &__door-title { font-family: var(--font-brand); font-size: 26px; }
+  &__door-text { font-size: 14px; color: var(--text-soft); }
+
+  &__latest-title {
+    max-width: 1100px;
+    margin: 28px auto 14px;
+    font-family: var(--font-brand);
+    font-size: 18px;
+    color: #fff;
+  }
+
+  &__latest {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    justify-items: center;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+  }
+}

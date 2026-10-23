@@ -1,0 +1,37 @@
+.hsearch {
+  padding: clamp(36px, 8vw, 84px) 25px;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 179, 0, 0.12), transparent 55%),
+    var(--main);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--font-highlight2);
+    font-style: italic;
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 1.1;
+    color: #fff;
+
+    span { color: var(--Hub); }
+  }
+
+  &__lead {
+    margin: 0 0 10px;
+    font-family: var(--font-body);
+    font-size: clamp(15px, 2.4vw, 18px);
+    color: var(--text-soft);
+  }
+
+  &__box { width: 100%; text-align: left; }
+}

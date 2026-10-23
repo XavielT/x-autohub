@@ -1,11 +1,23 @@
-<header>
+<header class="app-header">
   <app-navbar></app-navbar>
 </header>
 
-<router-outlet></router-outlet>
+<!-- El contenido y el footer comparten el padding de abajo: la barra de pestañas
+     del teléfono es fija y, sin él, taparía el final de cada página. -->
+<div class="app-content">
+  <router-outlet></router-outlet>
+
+  <app-footer></app-footer>
+</div>
 
 <app-cart-modal></app-cart-modal>
 
+<!-- Con @defer: el selector (y el FormsModule que trae) no va en el bundle inicial,
+     solo se descarga la primera vez que alguien lo abre. -->
+@defer (when pickerOpen()) {
+  <app-vehicle-picker-modal></app-vehicle-picker-modal>
+}
+
 <app-toast></app-toast>
 
-<app-footer></app-footer>
+<app-mobile-tab-bar></app-mobile-tab-bar>

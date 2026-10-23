@@ -59,3 +59,55 @@ describe('rutas de /admin', () => {
     expect(PARA_MODERADORES).toContain(redirect!.redirectTo!);
   });
 });
+
+/**
+ * La tienda y el cambio de nombre (pivote, fase 2).
+ *
+ * `/catalogo` ya estaba publicado y enlazado; pasa a `/tienda` y **no puede
+ * dejar de funcionar**. Estas pruebas fijan que el redirect existe, que es
+ * exacto (no se come `/catalogo-algo`) y que las rutas de detalle no se movieron.
+ */
+describe('rutas de la tienda', () => {
+  const route = (path: string) => routes.find((r) => r.path === path);
+
+  it('/catalogo redirige a /tienda con pathMatch full', () => {
+    const catalogo = route('catalogo');
+
+    expect(catalogo?.redirectTo).toBe('tienda');
+    expect(catalogo?.pathMatch).toBe('full');
+    // Un redirect no carga ni titula nada.
+    expect(catalogo?.loadComponent).toBeUndefined();
+  });
+
+  it('/tienda y /buscar existen, con su titulo', () => {
+    expect(route('tienda')?.title).toBe('Tienda — Accesorios y piezas | X AutoHub');
+    expect(route('buscar')?.title).toBe('Buscar | X AutoHub');
+    expect(route('tienda')?.loadComponent).toBeDefined();
+    expect(route('buscar')?.loadComponent).toBeDefined();
+  });
+
+  it('/tienda y /buscar cargan la misma pagina (hasta la fase 3)', async () => {
+    const tienda = await route('tienda')!.loadComponent!();
+    const buscar = await route('buscar')!.loadComponent!();
+
+    expect(tienda).toBe(buscar);
+  });
+
+  it('las rutas de detalle y el checkout siguen donde estaban', () => {
+    for (const path of ['hub-part-details/:id', 'checkout', 'car-details/:id', 'hub-market-part-details/:id']) {
+      expect(route(path), `Falta la ruta '${path}'`).toBeDefined();
+    }
+  });
+
+  it('/social-hub sigue siendo la ruta de la Comunidad, con el nombre nuevo en el titulo', () => {
+    expect(route('social-hub')?.title).toBe('Comunidad — Clubes y eventos | X AutoHub');
+  });
+
+  it('el home tiene el titulo del pivote', () => {
+    expect(route('')?.title).toBe('X AutoHub — Todo lo que tu carro necesita');
+  });
+
+  it('el comodin sigue de ultimo', () => {
+    expect(routes[routes.length - 1].path).toBe('**');
+  });
+});

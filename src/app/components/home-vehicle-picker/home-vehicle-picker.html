@@ -1,0 +1,24 @@
+<section class="hs hs--alt" aria-labelledby="hvp-title">
+  <div class="hvp">
+    <div class="hvp__copy">
+      <span class="hs__eyebrow">Mi vehículo</span>
+      <h2 id="hvp-title" class="hs__title">¿Le sirve a tu carro?</h2>
+      <p class="hvp__lead">Elige tu vehículo y te mostramos lo que le sirve, sin adivinar.</p>
+    </div>
+
+    <div class="hvp__card">
+      @if (label(); as current) {
+        <p class="hvp__current">
+          <span>Tu vehículo</span>
+          <strong>{{ current }}</strong>
+        </p>
+        <div class="hvp__actions">
+          <a class="hvp__cta" routerLink="/tienda">Ver la tienda</a>
+          <button type="button" class="hvp__ghost" (click)="clear()">Cambiar de vehículo</button>
+        </div>
+      } @else {
+        <app-vehicle-form idPrefix="hvp" submitLabel="Usar este vehículo" (chosen)="choose($event)" />
+      }
+    </div>
+  </div>
+</section>

@@ -1,34 +1,74 @@
 <footer class="footer">
-    <div class="footer__left">
-        <app-logo-hub></app-logo-hub>
-        <span class="footer__left-text">© 2026 X AutoHub. Todos los derechos reservados.</span>
+    <div class="footer__columns">
+        <nav class="footer__col" aria-label="Tienda">
+            <h4 class="footer__title">Tienda</h4>
+            <ul class="footer__list">
+                @for (root of categoryTree(); track root.id) {
+                    <li><a routerLink="/tienda" [queryParams]="{ categoria: root.slug }">{{ root.name }}</a></li>
+                }
+                <li><a class="footer__more" routerLink="/tienda">Ver toda la tienda</a></li>
+            </ul>
+        </nav>
+
+        <nav class="footer__col" aria-label="Servicios">
+            <h4 class="footer__title">Servicios</h4>
+            <ul class="footer__list">
+                <li><a routerLink="/servicios">Taller y mantenimiento</a></li>
+                <li><a [href]="quoteLink" target="_blank" rel="noopener noreferrer">Cotizar por WhatsApp</a></li>
+            </ul>
+        </nav>
+
+        <nav class="footer__col" aria-label="Vehiculos">
+            <h4 class="footer__title">Vehículos</h4>
+            <ul class="footer__list">
+                <li><a routerLink="/auto-hub">Auto Hub</a></li>
+                <li><a routerLink="/hub-market">Hub Market</a></li>
+                <li><a routerLink="/publicar">Publicar</a></li>
+            </ul>
+        </nav>
+
+        <nav class="footer__col" aria-label="Comunidad">
+            <h4 class="footer__title">Comunidad</h4>
+            <ul class="footer__list">
+                <li><a routerLink="/social-hub">Clubes, eventos y feed</a></li>
+            </ul>
+        </nav>
+
+        <nav class="footer__col" aria-label="Cuenta">
+            <h4 class="footer__title">Cuenta</h4>
+            <ul class="footer__list">
+                @if (isLoggedIn()) {
+                    <li><a routerLink="/perfil">Mi perfil</a></li>
+                } @else {
+                    <li><a routerLink="/login">Entrar</a></li>
+                    <li><a routerLink="/registro">Crear cuenta</a></li>
+                }
+            </ul>
+        </nav>
     </div>
-    <div class="footer__center">
-        <ul class="footer__center-links">
-            <li class="footer__center-link">
-                <a routerLink="/terminos-condiciones">Terminos y condiciones</a>
-            </li>
-            <li class="footer__center-link">
-                <a href="#">Privacidad</a>
-            </li>
-            <li class="footer__center-link">
-                <a href="#">Contacto</a>
-            </li>
-            <li class="footer__center-link">
-                <a href="#">Reportar problema</a>
-            </li>
+
+    <p class="footer__contact">
+        ¿Dudas con una pieza o un servicio? Escríbenos por WhatsApp al
+        <a [href]="whatsappLink" target="_blank" rel="noopener noreferrer">{{ phone }}</a>.
+    </p>
+
+    <div class="footer__bottom">
+        <div class="footer__left">
+            <app-logo-hub></app-logo-hub>
+            <span class="footer__left-text">© 2026 X AutoHub. Todos los derechos reservados.</span>
+        </div>
+        <ul class="footer__legal">
+            <li><a routerLink="/terminos-condiciones">Terminos y condiciones</a></li>
         </ul>
-    </div>
-    <div class="footer__right">
-        <ul class="footer__right-links">
-            <li class="footer__right-link ig">
-                <a href="https://www.instagram.com/xautohubrd/" target="_blank" rel="noopener noreferrer"><img src="assets/icons/instagram-w-icon.svg" alt="Instagram icon"></a>
+        <ul class="footer__social">
+            <li class="footer__social-link ig">
+                <a href="https://www.instagram.com/xautohubrd/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de X AutoHub"><img src="assets/icons/instagram-w-icon.svg" alt=""></a>
             </li>
-            <li class="footer__right-link email">
-                <a href="mailto:xautohub@gmail.com?subject=Contactar%20X%20AutoHub&body=Hola%20X%20AutoHub" target="_blank" rel="noopener noreferrer"><img src="assets/icons/email-w-icon.svg" alt="Gmail icon"></a>
+            <li class="footer__social-link email">
+                <a href="mailto:xautohub@gmail.com?subject=Contactar%20X%20AutoHub&body=Hola%20X%20AutoHub" target="_blank" rel="noopener noreferrer" aria-label="Escribir un correo a X AutoHub"><img src="assets/icons/email-w-icon.svg" alt=""></a>
             </li>
-            <li class="footer__right-link ws">
-                <a href="https://wa.me/18099539782?text=Hola%20X%20AutoHub" target="_blank" rel="noopener noreferrer"><img src="assets/icons/whatsapp-w-icon.svg" alt="Whatsapp icon"></a>
+            <li class="footer__social-link ws">
+                <a [href]="whatsappLink" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp de X AutoHub"><img src="assets/icons/whatsapp-w-icon.svg" alt=""></a>
             </li>
         </ul>
     </div>

@@ -162,6 +162,32 @@ export class HubMarketService {
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
 
+  /**
+   * Los últimos vehículos aprobados, más reciente primero. Es la fila de
+   * "Vehículos" del home: a diferencia de `getFeaturedVehicles`, no da
+   * prioridad a los destacados, porque ahí se enseña lo que acaba de salir.
+   */
+  getLatestVehicles(limit = 3): Observable<HubMarketItemModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(
+        this.approvedOnly(this.mockItems.filter((item) => item.category === 'vehiculos'))
+          .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || b.id - a.id)
+          .slice(0, limit),
+      );
+    }
+
+    return from(
+      this.supabase.db
+        .from('hub_market_items')
+        .select(SELECT_WITH_SELLER)
+        .eq('category', 'vehiculos')
+        .eq('is_active', true)
+        .eq('status', 'aprobado')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
+  }
+
   /** Publicaciones del usuario indicado, incluidas las despublicadas. */
   getBySeller(sellerId: string): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {

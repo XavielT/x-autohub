@@ -1,0 +1,23 @@
+<section class="hs" [class.hs--alt]="alt()" [attr.aria-label]="title()">
+  <div class="hs__head">
+    <div>
+      <span class="hs__eyebrow">{{ eyebrow() }}</span>
+      <h2 class="hs__title">{{ title() }}</h2>
+    </div>
+    <a class="hs__link" routerLink="/tienda">{{ linkLabel() }}</a>
+  </div>
+
+  <ul class="hrow" [class.hrow--carousel]="layout() === 'carousel'">
+    @for (p of products(); track p.id; let i = $index) {
+      <li class="hrow__item">
+        <app-catalogo-card [hubPart]="p" [priority]="i < 2" />
+        @if (showDeal() && discount(p) > 0) {
+          <p class="hrow__deal">
+            <span class="hrow__off">-{{ discount(p) }}%</span>
+            Antes <s>RD$ {{ p.compareAtPrice | number:'1.0-0' }}</s>
+          </p>
+        }
+      </li>
+    }
+  </ul>
+</section>

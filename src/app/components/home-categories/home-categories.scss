@@ -1,0 +1,57 @@
+.hcat {
+  padding: 20px 25px;
+  background-color: var(--secondary);
+
+  &__list {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 2px 0 6px;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+
+    li { flex: none; scroll-snap-align: start; }
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 18px 0 8px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #fff;
+    text-decoration: none;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+
+    &:hover { color: var(--Hub); border-color: var(--Hub); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    font-family: var(--font-brand);
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 50%;
+  }
+}
+
+// Con ratón la barra de scroll está oculta globalmente (styles.scss): en
+// escritorio las chips se envuelven en varias filas en vez de esconderse.
+@media (min-width: 901px) {
+  .hcat__list { flex-wrap: wrap; overflow: visible; }
+}

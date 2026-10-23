@@ -1,0 +1,17 @@
+// La barra de arriba se queda pegada: en una tienda el buscador y el carrito
+// tienen que estar a la mano en cualquier punto de una lista larga.
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+// En el teléfono hay una barra de pestañas fija abajo (MobileTabBar). Esto le
+// deja su espacio al final de todas las páginas, incluido el footer, y respeta el
+// área segura del iPhone. Los 60px son el alto de la barra: si cambia allá,
+// cambia aquí.
+@media (max-width: 900px) {
+  .app-content {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+}

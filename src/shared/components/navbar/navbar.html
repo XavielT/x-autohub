@@ -1,72 +1,113 @@
-<!-- Navbar -->
-<div class="navbar" [class.navbar-mobile-open]="isMobileMenuOpen()">
-    <div class="navbar-logo">
-        <a routerLink="/">
-            <app-logo-hub></app-logo-hub>
-        </a>
-    </div>
-    <button class="navbar-mobile-toggle" type="button" aria-label="Abrir menu de navegacion"
-        [attr.aria-expanded]="isMobileMenuOpen()" (click)="toggleMobileMenu()">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
-    <div class="navbar-menu">
-        <ul class="navbar-menu-list">
-            <li class="navbar-menu-list-item">
-                <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" #rlaHome="routerLinkActive"
-                    (click)="closeMobileMenu()"> <img class="navbar-menu-list-item-icon"
-                    [src]="rlaHome.isActive ? 'assets/icons/home-hub-icon.svg' : 'assets/icons/home-icon.svg'" alt="" aria-hidden="true"> Home</a>
-            </li>
-            <li class="navbar-menu-list-item">
-                <a routerLink="/auto-hub" routerLinkActive="active" #rlaAutoHub="routerLinkActive" (click)="closeMobileMenu()"> <img
-                        class="navbar-menu-list-item-icon" [src]="rlaAutoHub.isActive ? 'assets/icons/auto-hub-icon.svg' : 'assets/icons/auto-icon.svg'" alt="" aria-hidden="true">
-                    Auto Hub</a>
-            </li>
-            <li class="navbar-menu-list-item">
-                <a routerLink="/catalogo" routerLinkActive="active" #rlaCatalogo="routerLinkActive" (click)="closeMobileMenu()"> <img
-                        class="navbar-menu-list-item-icon" [src]="rlaCatalogo.isActive ? 'assets/icons/cart-hub-icon.svg' : 'assets/icons/cart-icon.svg'" alt="" aria-hidden="true">
-                    Catalogo</a>
-            </li>
-            <li class="navbar-menu-list-item">
-                <a routerLink="/hub-market" routerLinkActive="active" #rlaMarket="routerLinkActive" (click)="closeMobileMenu()"> <img
-                        class="navbar-menu-list-item-icon" [src]="rlaMarket.isActive ? 'assets/icons/market-hub-icon.svg' : 'assets/icons/market-icon.svg'" alt="" aria-hidden="true"> Hub
-                    Market</a>
-            </li>
-            <li class="navbar-menu-list-item">
-                <a routerLink="/servicios" routerLinkActive="active" #rlaServicios="routerLinkActive" (click)="closeMobileMenu()"> <img
-                        class="navbar-menu-list-item-icon" [src]="rlaServicios.isActive ? 'assets/icons/services-hub-icon.svg' : 'assets/icons/services-icon.svg'" alt="" aria-hidden="true">Servicios</a>
-            </li>
-            <li class="navbar-menu-list-item">
-                <a routerLink="/social-hub" routerLinkActive="active" #rlaSocial="routerLinkActive" (click)="closeMobileMenu()"> <img
-                        class="navbar-menu-list-item-icon" [src]="rlaSocial.isActive ? 'assets/icons/network2-hub-icon.svg' : 'assets/icons/network2-icon.svg'" alt="" aria-hidden="true">
-                    Social Hub</a>
-            </li>
-        </ul>
-    </div>
-    <div class="navbar-actions">
-        @if (isLoggedIn()) {
-            <a class="navbar-user" routerLink="/perfil" [title]="'Ver mi perfil'"
-               (click)="closeMobileMenu()">
-                <span class="navbar-user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
-                <span class="navbar-user-name">{{ user()?.displayName }}</span>
+<nav class="navbar" aria-label="Principal">
+    <a class="navbar__logo" routerLink="/" (click)="closeMenu()" aria-label="X AutoHub, ir al inicio">
+        <app-logo-hub class="navbar__logo-full"></app-logo-hub>
+        <app-logo-hub class="navbar__logo-compact" [compact]="true"></app-logo-hub>
+    </a>
+
+    <app-search-box class="navbar__search" idPrefix="nav" />
+
+    <ul class="navbar__menu">
+        <!-- Tienda: enlace + menú de categorías -->
+        <li class="navbar__item" (mouseenter)="openMenuFor('tienda')" (mouseleave)="closeMenu()">
+            <a class="navbar__link" [class.is-active]="isActive('tienda')" routerLink="/tienda"
+               (click)="closeMenu()">
+                <img class="navbar__link-icon" [src]="icon('tienda')" alt="" aria-hidden="true">Tienda
             </a>
-            @if (canModerate()) {
-                <a class="navbar-actions-button nav-button-secondary" routerLink="/admin"
-                   (click)="closeMobileMenu()">
-                    Panel
-                </a>
+            <button type="button" class="navbar__caret" aria-label="Ver las categorias de la tienda"
+                    aria-haspopup="true" [attr.aria-expanded]="openMenu() === 'tienda'"
+                    (click)="toggleMenu('tienda')">▾</button>
+
+            @if (openMenu() === 'tienda') {
+                <div class="navbar__panel navbar__panel--mega" role="menu">
+                    <a class="navbar__panel-all" routerLink="/tienda" (click)="closeMenu()">Ver toda la tienda →</a>
+                    <div class="navbar__mega-grid">
+                        @for (root of categoryTree(); track root.id) {
+                            <div class="navbar__mega-col">
+                                <a class="navbar__mega-root" role="menuitem" routerLink="/tienda"
+                                   [queryParams]="{ categoria: root.slug }" (click)="closeMenu()">{{ root.name }}</a>
+                                @for (child of root.children; track child.id) {
+                                    <a class="navbar__mega-child" role="menuitem" routerLink="/tienda"
+                                       [queryParams]="{ categoria: child.slug }" (click)="closeMenu()">{{ child.name }}</a>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
             }
-            <button class="navbar-actions-button nav-button-secondary" type="button" (click)="logout()">
-                Salir
-            </button>
-        } @else {
-            <a class="navbar-actions-button nav-button-secondary" routerLink="/login" (click)="closeMobileMenu()">
-                Login
+        </li>
+
+        <li class="navbar__item">
+            <a class="navbar__link" [class.is-active]="isActive('servicios')" routerLink="/servicios"
+               (click)="closeMenu()">
+                <img class="navbar__link-icon" [src]="icon('servicios')" alt="" aria-hidden="true">Servicios
             </a>
-        }
-        <a class="navbar-actions-button nav-button-primary" routerLink="/publicar" (click)="closeMobileMenu()">
-            Publicar
-        </a>
+        </li>
+
+        <!-- Vehículos: Auto Hub, Hub Market y Publicar -->
+        <li class="navbar__item" (mouseenter)="openMenuFor('vehiculos')" (mouseleave)="closeMenu()">
+            <button type="button" class="navbar__link navbar__link--button" [class.is-active]="isActive('vehiculos')"
+                    aria-haspopup="true" [attr.aria-expanded]="openMenu() === 'vehiculos'"
+                    (click)="toggleMenu('vehiculos')">
+                <img class="navbar__link-icon" [src]="icon('vehiculos')" alt="" aria-hidden="true">Vehiculos
+                <span aria-hidden="true">▾</span>
+            </button>
+
+            @if (openMenu() === 'vehiculos') {
+                <div class="navbar__panel" role="menu">
+                    <a class="navbar__panel-link" role="menuitem" routerLink="/auto-hub" (click)="closeMenu()">
+                        Auto Hub <small>Vehiculos verificados por X AutoHub</small>
+                    </a>
+                    <a class="navbar__panel-link" role="menuitem" routerLink="/hub-market" (click)="closeMenu()">
+                        Hub Market <small>Compra y vende entre la comunidad</small>
+                    </a>
+                    <a class="navbar__panel-link" role="menuitem" routerLink="/publicar" (click)="closeMenu()">
+                        Publicar <small>Pon tu vehiculo, pieza o accesorio</small>
+                    </a>
+                </div>
+            }
+        </li>
+
+        <li class="navbar__item">
+            <a class="navbar__link" [class.is-active]="isActive('comunidad')" routerLink="/social-hub"
+               (click)="closeMenu()">
+                <img class="navbar__link-icon" [src]="icon('comunidad')" alt="" aria-hidden="true">Comunidad
+            </a>
+        </li>
+    </ul>
+
+    <div class="navbar__actions">
+        <button type="button" class="navbar__vehicle" [class.has-vehicle]="vehicleLabel()"
+                (click)="openVehiclePicker()"
+                [attr.aria-label]="vehicleLabel() ? 'Mi vehiculo: ' + vehicleLabel() + '. Cambiar' : 'Elige tu vehiculo'">
+            <span class="navbar__vehicle-dot" aria-hidden="true"></span>
+            <span class="navbar__vehicle-text">{{ vehicleLabel() ?? 'Elige tu vehiculo' }}</span>
+        </button>
+
+        <button type="button" class="navbar__cart" (click)="openCart()"
+                [attr.aria-label]="cartCount() > 0 ? 'Abrir el carrito, ' + cartCount() + ' articulos' : 'Abrir el carrito'">
+            <img src="assets/icons/cart-b-icon.svg" alt="" aria-hidden="true">
+            @if (cartCount() > 0) { <span class="navbar__cart-count">{{ cartCount() }}</span> }
+        </button>
+
+        <div class="navbar__account" (mouseleave)="closeMenu()">
+            @if (isLoggedIn()) {
+                <button type="button" class="navbar__user" aria-haspopup="true"
+                        [attr.aria-expanded]="openMenu() === 'cuenta'" (click)="toggleMenu('cuenta')">
+                    <span class="navbar__user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
+                    <span class="navbar__user-name">{{ user()?.displayName }}</span>
+                </button>
+                @if (openMenu() === 'cuenta') {
+                    <div class="navbar__panel navbar__panel--right" role="menu">
+                        <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" (click)="closeMenu()">Mi perfil</a>
+                        @if (canModerate()) {
+                            <a class="navbar__panel-link" role="menuitem" routerLink="/admin" (click)="closeMenu()">Panel</a>
+                        }
+                        <button type="button" class="navbar__panel-link" role="menuitem" (click)="logout()">Salir</button>
+                    </div>
+                }
+            } @else {
+                <a class="navbar__login" routerLink="/login">Entrar</a>
+            }
+        </div>
     </div>
-</div>
+</nav>

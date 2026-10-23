@@ -1,0 +1,30 @@
+<section class="hs" aria-labelledby="hv-title">
+  <div class="hs__head">
+    <div>
+      <span class="hs__eyebrow">Vehículos</span>
+      <h2 id="hv-title" class="hs__title">¿Buscas un carro?</h2>
+    </div>
+  </div>
+
+  <div class="hv__doors">
+    <a class="hv__door" routerLink="/auto-hub">
+      <span class="hv__door-tag">Verificados por X AutoHub</span>
+      <strong class="hv__door-title">Auto Hub</strong>
+      <span class="hv__door-text">Vehículos revisados por el equipo. Si está aquí, la casa responde por él.</span>
+    </a>
+    <a class="hv__door hv__door--community" routerLink="/hub-market">
+      <span class="hv__door-tag">De la comunidad</span>
+      <strong class="hv__door-title">Hub Market</strong>
+      <span class="hv__door-text">Compra y vende vehículos entre la comunidad. Aquí X AutoHub es la plataforma.</span>
+    </a>
+  </div>
+
+  @if (latest().length > 0) {
+    <h3 class="hv__latest-title">Lo último publicado en Hub Market</h3>
+    <ul class="hv__latest">
+      @for (car of latest(); track car.id) {
+        <li><app-car-card [car]="car" /></li>
+      }
+    </ul>
+  }
+</section>

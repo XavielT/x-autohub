@@ -1,8 +1,11 @@
+<!-- El hero con video que antes abría el home -->
+<app-home-welcome (viewClubs)="showTab('clubes')" (viewEvents)="showTab('eventos')"></app-home-welcome>
+
 <div class="social">
   <!-- Encabezado -->
   <div class="social__header">
     <div class="social__title">
-      <h2>Social <span class="social__title-highlight">Hub</span></h2>
+      <h2>La <span class="social__title-highlight">Comunidad</span></h2>
       <span class="social__title-description">
         La escena de los autos en RD: builds, clubes y eventos en un solo lugar.
       </span>
@@ -14,7 +17,7 @@
   </div>
 
   <!-- Navegacion entre vistas -->
-  <div class="social__tabs" role="tablist" aria-label="Secciones del Social Hub">
+  <div #tabsAnchor class="social__tabs" role="tablist" aria-label="Secciones de la comunidad">
     @for (tab of tabs; track tab.value) {
       <button
         class="social__tab"
@@ -143,3 +146,7 @@
     </section>
   }
 </div>
+
+<!-- La suscripción al club de correo vivía al final del home; el home ya no la
+     trae y el club es de la comunidad, así que se mudó aquí. -->
+<app-club-channel></app-club-channel>

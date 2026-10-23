@@ -1,0 +1,33 @@
+@use '../../../styles/home-section' as *;
+@include home-section;
+
+.hc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  color: #fff;
+  text-decoration: none;
+  background-color: var(--main);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  transition: border-color 0.2s ease;
+
+  &:hover { border-color: var(--Hub); }
+  &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+
+  &__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  &__title { font-family: var(--font-brand); font-size: clamp(20px, 3vw, 26px); }
+  &__lead { font-size: 14px; color: var(--text-soft); }
+
+  &__cta {
+    flex: none;
+    font-family: var(--font-btns);
+    font-weight: 700;
+    color: var(--Hub);
+  }
+}

@@ -31,7 +31,8 @@
 .home-welcome-container {
     position: relative;
     z-index: 2; /* over of the video and the overlay */
-    min-height: 100vh;
+    // Ya no abre el home: en la comunidad no necesita llenar la pantalla.
+    min-height: min(100vh, 640px);
     display: flex;
     align-items: center;
 }
@@ -98,6 +99,7 @@
 }
 
 .home-welcome-cta-pri{
+    border: none;
     background-color: var(--Hub);
     color: #000000;
     transition: all 0.15s ease;
@@ -110,6 +112,8 @@
 }
 
 .home-welcome-cta-sec{
+    // Son <button>: sin esto traen el fondo gris del navegador.
+    background: transparent;
     border: 1px solid var(--main-ultra-light);
     width: 185px;
     cursor: pointer;

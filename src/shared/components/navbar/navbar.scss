@@ -1,226 +1,341 @@
-//navbar container
-.navbar{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background-color: var(--secondary);
-    color: var(--primary);
-    gap: 20px;
-    flex-wrap: wrap;
-}
+// La barra de arriba. Los colores y las fuentes son los de siempre
+// (src/styles.scss): el pivote cambia la estructura, no la identidad.
 
-.navbar-logo{
-    flex-shrink: 0;
-}
+:host { display: block; }
 
-.navbar-mobile-toggle{
-    display: none;
-    background: transparent;
-    border: 0;
-    padding: 8px;
-    cursor: pointer;
-}
-
-.navbar-mobile-toggle span{
-    display: block;
-    width: 24px;
-    height: 2px;
-    margin: 5px 0;
-    background-color: var(--main-ultra-light);
-}
-
-//navbar ul
-.navbar-menu-list{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    gap: 20px;
-}
-.navbar-menu-list-item{
-    display: flex;
-    justify-content: start;
-    align-items: center;
-}
-
-.navbar-menu-list-item a{
-    // Orbitron sustituye a ROLNER (sin licencia comercial, y que además el
-    // navegador rechazaba: esto caía a Trebuchet MS sin que se notara).
-    font-family: 'Orbitron', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    display: flex;
-    justify-content: start;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    color: var(--main-ultra-light);
-    font-size: 17px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-//nabvar active highlight
-.navbar-menu-list-item a.active{
-    color: var(--Hub);
+.navbar {
     position: relative;
-}
-
-.navbar-menu-list-item a.active::after{
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--Hub);
-}
-
-//navbar hover items
-.navbar-menu-list-item a:hover{
-    color: var(--Hub);
-}
-
-.navbar-menu-list-item-icon{
-    width: 20px;
-    height: 20px;
-    
-}
-
-//actions buttons
-.navbar-actions{
     display: flex;
     align-items: center;
     gap: 16px;
-}
-
-.navbar-actions-button{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100px;
-    height: 35px;
-    font-family: var(--font-btns);
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.nav-button-primary{
-    background-color: var(--Hub);
-    color: var(--main);
-}
-
-.nav-button-secondary{
-    background: none;
-    outline: 0;
+    padding: 10px 20px;
+    background-color: var(--secondary);
     color: var(--main-ultra-light);
-}
-
-//navbar actions hover
-.nav-button-secondary, .nav-button-primary{
-    transition: all 0.2s ease;
-}
-
-.nav-button-primary:hover{
-    box-shadow: 0px 0px 6px 1px var(--HubShadow);
-}
-
-.nav-button-secondary:hover{
-    color: var(--Hub);
-}
-
-//session chip, visible solo con sesion activa
-// Pasó de <span> a <a> hacia /perfil. Se conserva el aspecto: solo se quita el
-// subrayado que trae un enlace por defecto y se añade una señal de que ahora
-// lleva a algún lado.
-.navbar-user{
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 160px;
-    color: #fff;
     font-family: var(--font-body);
-    font-size: 14px;
-    text-decoration: none;
-    transition: color 0.2s ease;
 
-    &:hover .navbar-user-name{
-        color: var(--Hub);
-    }
-}
-
-.navbar-user-initial{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background-color: var(--Hub);
-    color: var(--main);
-    font-family: var(--font-brand);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.navbar-user-name{
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-//Responsive navbar
-@media (max-width: 900px){
-    .navbar{
+    &__logo {
+        flex: none;
+        display: flex;
         align-items: center;
     }
 
-    .navbar-mobile-toggle{
-        display: inline-block;
+    // El logo grande en escritorio, el chico en el teléfono (ver el @media de abajo).
+    &__logo-compact { display: none; }
+
+    &__search {
+        flex: 1 1 220px;
+        max-width: 480px;
+        // Con un vehiculo elegido el chip crece; el buscador no se deja aplastar.
+        min-width: 190px;
+    }
+
+    &__menu {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__item {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    &__link {
+        // Orbitron sustituye a ROLNER (sin licencia comercial, y que además el
+        // navegador rechazaba: esto caía a Trebuchet MS sin que se notara).
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 10px;
+        font-family: 'Orbitron', 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        font-size: 15px;
+        font-weight: 500;
+        color: #fff;
+        text-decoration: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: color 0.2s ease;
+
+        &:hover,
+        &.is-active { color: var(--Hub); }
+
+        &.is-active { box-shadow: inset 0 -2px 0 var(--Hub); }
+
+        &:focus-visible { outline: 2px solid var(--Hub); outline-offset: -2px; border-radius: 6px; }
+    }
+
+    &__link-icon { width: 20px; height: 20px; }
+
+    &__caret {
+        width: 28px;
+        min-height: 44px;
+        margin-left: -6px;
+        font-size: 12px;
+        color: var(--main-ultra-light);
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        &:hover { color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); border-radius: 6px; }
+    }
+
+    // --- Menús desplegables -----------------------------------------------------
+
+    &__panel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 70;
+        display: flex;
+        flex-direction: column;
+        min-width: 260px;
+        padding: 8px;
+        background-color: #1a1a1a;
+        border: 1px solid #2e2e2e;
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+        &--right { left: auto; right: 0; min-width: 200px; }
+
+        &--mega {
+            min-width: min(760px, calc(100vw - 40px));
+            padding: 16px;
+        }
+    }
+
+    &__panel-link {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-height: 44px;
+        justify-content: center;
+        padding: 8px 12px;
+        font-family: var(--font-body);
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        text-align: left;
+        text-decoration: none;
+        background: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+
+        small { font-size: 12px; font-weight: 400; color: var(--text-soft); }
+
+        &:hover { background-color: rgba(255, 255, 255, 0.08); color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); outline-offset: -2px; }
+    }
+
+    &__panel-all {
+        align-self: flex-start;
+        margin-bottom: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--Hub);
+        text-decoration: none;
+
+        &:hover { text-decoration: underline; }
+    }
+
+    &__mega-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: 14px 18px;
+    }
+
+    &__mega-col { display: flex; flex-direction: column; gap: 2px; }
+
+    &__mega-root,
+    &__mega-child {
+        padding: 5px 0;
+        color: #fff;
+        text-decoration: none;
+
+        &:hover { color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); border-radius: 4px; }
+    }
+
+    &__mega-root { font-size: 14px; font-weight: 700; }
+    &__mega-child { font-size: 13px; color: var(--text-soft); }
+
+    // --- Acciones: vehículo, carrito, cuenta --------------------------------------
+
+    &__actions {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         margin-left: auto;
     }
 
-    .navbar-menu,
-    .navbar-actions{
-        display: none;
-        width: 100%;
+    &__vehicle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        max-width: 160px;
+        padding: 0 12px;
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--text-soft);
+        background: transparent;
+        border: 1px dashed rgba(255, 255, 255, 0.3);
+        border-radius: 22px;
+        cursor: pointer;
+
+        &:hover { color: var(--Hub); border-color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+
+        &.has-vehicle {
+            color: #fff;
+            border-style: solid;
+            border-color: var(--Hub);
+            background-color: var(--Hub-translucid);
+        }
     }
 
-    .navbar.navbar-mobile-open .navbar-menu,
-    .navbar.navbar-mobile-open .navbar-actions{
-        display: flex;
+    &__vehicle-dot {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: currentColor;
     }
 
-    .navbar-menu-list{
-        flex-direction: column;
+    &__vehicle-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    // El botón ámbar que antes era "Publicar".
+    &__cart {
+        position: relative;
+        flex: none;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        gap: 10px;
+        width: 46px;
+        height: 44px;
+        background-color: var(--Hub);
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: box-shadow 0.2s ease;
+
+        img { width: 22px; height: 22px; }
+
+        &:hover { box-shadow: 0 0 6px 1px var(--HubShadow); }
+        &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
     }
 
-    .navbar-menu-list-item{
-        width: 100%;
+    &__cart-count {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        box-sizing: border-box;
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 20px;
+        text-align: center;
+        color: #fff;
+        background-color: var(--primary);
+        border: 2px solid var(--secondary);
+        border-radius: 12px;
     }
 
-    .navbar-menu-list-item a{
-        width: auto;
-        padding: 8px 0;
+    &__account { position: relative; }
+
+    &__login {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 10px;
+        font-family: var(--font-btns);
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        text-decoration: none;
+
+        &:hover { color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); border-radius: 6px; }
+    }
+
+    &__user {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 160px;
+        min-height: 44px;
+        padding: 0 6px;
+        color: #fff;
+        font-family: var(--font-body);
+        font-size: 14px;
+        background: none;
+        border: none;
+        cursor: pointer;
+
+        &:hover .navbar__user-name { color: var(--Hub); }
+        &:focus-visible { outline: 2px solid var(--Hub); border-radius: 22px; }
+    }
+
+    &__user-initial {
+        display: inline-flex;
+        align-items: center;
         justify-content: center;
+        flex: 0 0 28px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: var(--Hub);
+        color: var(--main);
+        font-family: var(--font-brand);
+        font-weight: 700;
+        text-transform: uppercase;
     }
 
-    .navbar-actions{
-        flex-direction: column;
+    &__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+// Pantallas medianas: se quitan los iconos del menú y se aprieta el chip para que
+// todo quepa en una sola fila.
+@media (max-width: 1180px) {
+    .navbar {
         gap: 10px;
-    }
+        padding-inline: 14px;
 
-    .navbar-actions a,
-    .navbar-actions-button{
-        width: 100%;
+        &__link-icon { display: none; }
+        &__link { font-size: 14px; padding: 0 8px; }
+        &__vehicle { max-width: 150px; }
+        &__user-name { display: none; }
+    }
+}
+
+// Teléfono: arriba solo logo, buscador y carrito. Todo lo demás está en la barra
+// de pestañas de abajo (MobileTabBar).
+@media (max-width: 900px) {
+    .navbar {
+        gap: 10px;
+        padding: 8px 12px;
+
+        &__logo-full,
+        &__menu,
+        &__vehicle,
+        &__account { display: none; }
+
+        &__logo-compact { display: block; }
+
+        &__search { flex: 1 1 auto; max-width: none; }
+
+        &__actions { margin-left: 0; }
     }
 }

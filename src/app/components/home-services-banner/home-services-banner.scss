@@ -1,0 +1,64 @@
+@use '../../../styles/home-section' as *;
+@include home-section;
+
+.hsb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 28px 40px;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+
+  &__lead { margin: 8px 0 18px; font-size: 15px; color: var(--text-soft); }
+
+  &__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  // Los dos botones comparten alto para que se lean como una pareja.
+  &__actions .whatsapp-btn,
+  &__book { min-height: 48px; box-sizing: border-box; }
+
+  &__book {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 22px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--main);
+    text-decoration: none;
+    background-color: var(--Hub);
+    border-radius: 8px;
+    transition: filter 0.2s ease;
+
+    &:hover { filter: brightness(1.1); }
+    &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  }
+
+  &__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    background-color: var(--main);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+
+  &__icon { width: 32px; height: 32px; margin-bottom: 4px; }
+  &__name { font-family: var(--font-brand); font-size: 16px; font-weight: 700; color: #fff; }
+  &__desc { font-size: 13px; color: var(--text-soft); }
+}
+
+@media (max-width: 860px) {
+  .hsb { grid-template-columns: 1fr; }
+}

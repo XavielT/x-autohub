@@ -1,0 +1,59 @@
+// =============================================================================
+// Bloques del home — estilo compartido
+// =============================================================================
+//
+// Cada sección del home es un componente con su propio SCSS (Angular encapsula),
+// y todas se leen como una misma familia: un margen, un encabezado con
+// sobretítulo ámbar y un enlace a la derecha. Eso vive aquí, una vez, y cada
+// componente lo incluye con `@include home-section;`.
+//
+// Se usa la clase `.hs` dentro de cada componente.
+
+@mixin home-section {
+  .hs {
+    box-sizing: border-box;
+    padding: clamp(32px, 6vw, 64px) 25px;
+    background-color: var(--main);
+    font-family: var(--font-body);
+
+    &--alt { background-color: var(--secondary); }
+
+    &__head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-bottom: 20px;
+    }
+
+    &__eyebrow {
+      display: block;
+      font-family: var(--font-brand);
+      font-size: 16px;
+      color: var(--Hub);
+    }
+
+    &__title {
+      margin: 0;
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: clamp(24px, 4vw, 34px);
+      color: #fff;
+    }
+
+    &__link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      font-family: var(--font-brand);
+      color: var(--main-ultra-light);
+      text-decoration: none;
+      transition: color 0.2s ease;
+
+      &::after { content: '\2192'; margin-left: 6px; }
+      &:hover { color: var(--Hub); }
+      &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; border-radius: 4px; }
+    }
+  }
+}

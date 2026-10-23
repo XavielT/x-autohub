@@ -1,0 +1,28 @@
+<section class="hs hs--alt" aria-labelledby="hsb-title">
+  <div class="hsb">
+    <div class="hsb__copy">
+      <span class="hs__eyebrow">Taller</span>
+      <h2 id="hsb-title" class="hs__title">Te lo instalamos y te lo dejamos al día</h2>
+      <p class="hsb__lead">Mantenimiento, mecánica ligera, eléctrico, aire acondicionado y diagnóstico.</p>
+      <div class="hsb__actions">
+        <a class="whatsapp-btn" [href]="quoteLink" target="_blank" rel="noopener noreferrer">
+          <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+          Cotizar por WhatsApp
+        </a>
+        <a class="hsb__book" routerLink="/servicios">Agendar cita</a>
+      </div>
+    </div>
+
+    @if (services().length > 0) {
+      <ul class="hsb__list">
+        @for (s of services(); track s.id) {
+          <li class="hsb__item">
+            <img class="hsb__icon" [src]="s.icon" alt="" aria-hidden="true" width="32" height="32" />
+            <span class="hsb__name">{{ s.title }}</span>
+            <span class="hsb__desc">{{ s.description }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

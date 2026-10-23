@@ -1,0 +1,24 @@
+@if (isOpen()) {
+  <div class="vpm__overlay" (click)="close()"></div>
+
+  <div #dialog class="vpm" role="dialog" aria-modal="true" aria-labelledby="vpm-title" tabindex="-1">
+    <header class="vpm__head">
+      <h3 id="vpm-title" class="vpm__title">¿Para qué <span>carro</span> buscas?</h3>
+      <button type="button" class="vpm__close" aria-label="Cerrar" (click)="close()">✕</button>
+    </header>
+
+    <p class="vpm__lead">
+      @if (label(); as current) {
+        Ahora mismo: <strong>{{ current }}</strong>. Cámbialo aquí.
+      } @else {
+        Elige tu vehículo y te mostramos lo que le sirve.
+      }
+    </p>
+
+    <app-vehicle-form idPrefix="vpm" submitLabel="Usar este vehículo" (chosen)="choose($event)" />
+
+    @if (hasVehicle()) {
+      <button type="button" class="vpm__clear" (click)="clear()">Quitar mi vehículo</button>
+    }
+  </div>
+}
