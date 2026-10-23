@@ -1,6 +1,6 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.5.2; el pivote está completo desde la 2.5.0). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.6.0; el pivote está completo desde la 2.5.0). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
 > **El pivote de octubre de 2026 está completo (fase 7).** Ya existen el esquema de la
@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0021 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0022 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -93,6 +93,7 @@ x-autohub/
     │   │   ├── service-card/  service-works/
     │   │   ├── cart-modal/  toast/  club-channel/
     │   │   ├── install-prompt/  update-toast/  offline-state/   (la PWA)
+    │   │   ├── coupon-box/              El campo "¿Tienes un cupón?" del checkout
     │   │   ├── reviews/                 Reseñas: promedio, distribución, lista y formulario
     │   ├── ui/                    Presentacionales puros, sin dependencias
     │   │   ├── highlight-badge/  info-badge/  image-gallery/
@@ -103,7 +104,7 @@ x-autohub/
     │   │                          category-tree, contact (el WhatsApp de la tienda), test-visibility,
     │   │                          phone, whatsapp…
     │   ├── testing/               product.fixture.ts (un ProductModel para los specs)
-    │   └── services/              28 servicios, todos providedIn: 'root'
+    │   └── services/              30 servicios, todos providedIn: 'root'
     │
     ├── styles/
     │   ├── _auth-shell.scss       Parcial compartido por login y registro
@@ -257,6 +258,23 @@ revisar cuando las fotos reales estén en Storage.
 - `vercel.json` fija `buildCommand: npm run build` para que el `prebuild` (el sitemap)
   corra también en Vercel.
 
+## Cupones y descuentos
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `CouponService` | `shared/services` | `validate()`: prueba un código con el carrito (`validate_coupon()`). El modo simulado guarda sus cupones en `localStorage` |
+| `AdminCouponsService` | `shared/services` | Crear, editar, apagar y borrar (`/admin/cupones`); la lista trae los usos (`admin_coupon_usage()`) |
+| `coupon-rules.ts` | `shared/utils` | **Espejo de `coupon_check()`**: mismas reglas, mismo orden, mismos mensajes. Lo usa el modo simulado y valida el formulario del panel |
+| `<app-coupon-box>` | `shared/components/coupon-box` | Prueba el código, enseña el ahorro y, con un cupón puesto, **lo vuelve a probar** si cambia el subtotal, el envío o el correo (un envío gratis deja de valer al pasar a retiro) |
+| `AdminCupones` | `pages/admin/cupones` | La pestaña del panel: estado de cada cupón (activo, apagado, vencido, por empezar, agotado) y su formulario |
+
+- **El checkout manda solo el código** (`CheckoutSubmitPayload.couponCode`); el descuento que se ve
+  antes de confirmar es una estimación y el definitivo lo calcula `create_order()`. `/pedido/:id` y
+  el panel de pedidos muestran el descuento y el código.
+- Si cambias una regla en `coupon_check()`, cámbiala también en `coupon-rules.ts` (y en las pruebas de
+  `verify-migrations.sh`): un modo simulado más permisivo que la base hace que el checkout "funcione"
+  en desarrollo y falle en producción.
+
 ## Rutas
 
 28 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
@@ -309,7 +327,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 
 ## Base de datos
 
-22 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
+23 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
@@ -319,6 +337,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
 | Comercio             | `shipping_options`, `payment_methods`, `orders`, `order_items` |
+| Cupones              | `coupons` (solo admin; los pedidos guardan `discount`, `coupon_id` y una copia de `coupon_code`) |
 | Reseñas              | `reviews` (de productos y servicios; la compra verificada la calcula un trigger) |
 | Marketing            | `club_subscriptions`                                           |
 
@@ -349,7 +368,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 117 archivos, 1131 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 122 archivos, 1224 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

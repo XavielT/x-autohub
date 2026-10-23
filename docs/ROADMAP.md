@@ -210,13 +210,32 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
   explícito del usuario.
 - **Variantes de producto (color, talla).** Un accesorio con tres colores hoy son tres
   productos. Tocan el carrito, el stock y el pedido a la vez.
-- **Cupones y descuentos por código.** Exigen reglas de validez y límites de uso dentro de
-  `create_order()`, que es donde se calcula el total.
 - **Inventario multi-almacén** y **facturación con NCF.** Solo tienen sentido con más de un
   punto de venta y con volumen que obligue a facturar.
 - **Renderizado en servidor** (o prerender) para el SEO: hoy el JSON-LD y el contenido los
   pone JavaScript. Es un proyecto aparte.
 - **Trabajo nuevo en Social Hub**, que sigue sin desarrollarse a propósito.
+
+---
+
+## Cupones y descuentos (2.6.0) ✅
+
+Hecho: tres tipos (porcentaje con tope, monto fijo y envío gratis), compra mínima, vigencia, usos
+en total y por cliente, el campo en el checkout, el descuento en `/pedido` y en el panel de pedidos, y
+`/admin/cupones`. Todo el cálculo es de Postgres (`validate_coupon()` y `create_order()`); ver
+"Cupones y descuentos" en `docs/BACKEND.md`.
+
+**Lo que queda fuera, a propósito (y por qué):**
+
+- **Un solo cupón por pedido.** Acumular cupones obliga a decidir el orden y qué tope manda;
+  nadie lo ha pedido.
+- **Cupones por producto o por categoría.** Hoy el descuento es sobre todo el subtotal. Serían
+  columnas nuevas en `coupons` y una cuenta por línea dentro de `create_order()`.
+- **Cupones automáticos** (sin código, por ejemplo "10 % la primera compra"). Es otra regla:
+  se aplica sola, no se escribe.
+- **El límite por cliente de un invitado se salta cambiando de correo.** No hay forma honesta de
+  evitarlo sin cuenta; para un tope firme usa los usos en total.
+- **Avisar al cliente de un cupón** (correo o WhatsApp): hoy los códigos se reparten a mano.
 
 ---
 

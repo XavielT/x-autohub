@@ -44,7 +44,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 19    | `supabase/migrations/0019_services_booking.sql` | Taller: servicios, horario, citas y trabajos realizados |
 | 20    | `supabase/migrations/0020_reviews.sql`         | Reseñas de productos y servicios, con compra verificada |
 | 21    | `supabase/migrations/0021_drop_legacy.sql`     | Se retiran `hub_parts.category` y el contador del home |
-| 22    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 22    | `supabase/migrations/0022_coupons.sql`         | Cupones y descuentos: tabla, `validate_coupon()` y `create_order()` con cupón |
+| 23    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -167,6 +168,7 @@ La clave anon es pública. La seguridad real está en RLS:
 | `service_appointments`          | El dueño de la cita y admin | Nadie: entran por `book_appointment()` y cambian por `set_appointment_status()` / `cancel_appointment()` |
 | `service_works`                 | Los publicados (el admin ve también los borradores) | Solo admin |
 | `order_status_history`          | El dueño del pedido y admin | Nadie: la llena un trigger           |
+| `coupons`                       | Solo admin (`anon` ni tiene el permiso de tabla: nadie descarga los códigos) | Solo admin. El público los prueba con `validate_coupon()` |
 | `reviews`                       | Todos (las reseñas son públicas) | Solo el autor puede escribir (`user_id = auth.uid()`); **nadie edita** (sin política ni permiso de UPDATE); borra el autor o el admin |
 | `product_categories`            | Todos (las activas; el admin ve también las ocultas) | Solo admin (`is_admin()`) |
 | `vehicle_makes`, `vehicle_models` | Todos           | Solo admin (`is_admin()`)            |
@@ -425,6 +427,50 @@ El seed regenerado **no actualiza** las filas que ya existen (`on conflict (id)
 do nothing`): la mezcla de ofertas, bajo pedido y compatibilidad de los mocks
 solo llega a una base nueva. Para la real, el catálogo se carga desde el panel
 (Inventario → Piezas, Categorías, Marcas y modelos).
+
+### Cupones y descuentos (migración 0022)
+
+Tres tipos: `percent` (un porcentaje del subtotal, con un tope opcional en RD$), `fixed` (un
+monto en RD$) y `free_shipping` (descuenta el envío, no el subtotal). Con compra mínima, vigencia
+(`starts_at` / `ends_at`), usos en total (`max_uses`) y usos por cliente
+(`max_uses_per_customer`).
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `coupons` | La tabla. El código va en mayúsculas (`[A-Z0-9_-]{4,32}`, único) y un `check` exige el valor que corresponde a cada tipo |
+| `orders.discount`, `coupon_id`, `coupon_code` | `total = subtotal + shipping_price - discount`. `coupon_code` es una **copia**: si el cupón se borra, el pedido sigue diciendo con cuál se compró |
+| `coupon_check(...)` | **La regla**, una sola para las dos puertas. Interna: ni `anon` ni `authenticated` la invocan |
+| `validate_coupon(código, subtotal, envío, correo)` | Cuánto descontaría. Solo calcula. La invoca un invitado (checkout de invitado) |
+| `create_order(..., p_coupon_code)` | Recibe **solo el código**, lo revalida dentro de la transacción con la fila del cupón bloqueada (`for update`) y calcula el descuento |
+| `admin_coupon_usage()` | Cuántas veces se usó cada cupón (`security invoker`: a un admin le devuelve el total, a un cliente lo suyo) |
+
+**Decisiones que conviene conocer**
+
+- **El descuento lo calcula Postgres, nunca el navegador.** El frontend solo manda el código;
+  `validate_coupon()` es una vista previa y `create_order()` vuelve a decidir al crear el pedido
+  (un cupón puede agotarse entre un paso y otro).
+- **La tabla `coupons` no se puede leer con la clave anon**: si se pudiera, cualquiera
+  descargaría todos los códigos. El público solo los conoce si se los dan.
+- **Los usos se cuentan, no se guardan en un contador:** son los pedidos con ese cupón que no
+  están cancelados. Cancelar un pedido devuelve el uso sin ningún trigger y el número nunca se
+  desincroniza. La fila bloqueada en `create_order()` es lo que impide que dos pedidos
+  simultáneos se lleven el último uso.
+- **El límite por cliente reconoce a la persona por su cuenta o, si compra de invitado, por su
+  correo** (sin importar mayúsculas). Un invitado puede cambiar de correo: es un tope de
+  cortesía; para uno firme se usa `max_uses`.
+- **Los mensajes no distinguen "no existe" de "vencido o apagado"**: quien prueba códigos al azar
+  no aprende cuáles existen. Los específicos (compra mínima, ya lo usaste, agotado) solo salen
+  con un código que existe.
+- **Un descuento nunca deja el total en negativo** (se limita al subtotal, o al envío en
+  `free_shipping`), y uno que no descuenta nada se rechaza: "no aplica a tu pedido" (el envío
+  gratis en un retiro).
+- **`create_order()` cambió de firma** (un parámetro nuevo al final, con valor por defecto, y dos
+  columnas más en lo que devuelve) y se retiró la anterior: dos firmas harían que PostgREST
+  respondiera `PGRST203`. **Primero la migración, después el frontend**: el frontend anterior
+  sigue funcionando contra la función nueva (no manda el parámetro), pero el nuevo no
+  funcionaría contra la vieja.
+- **La base arranca sin cupones.** Los crea el equipo desde `/admin/cupones`; los de demostración
+  de `coupon.mock.ts` solo existen en el modo simulado.
 
 ### Pedidos, pago y comprobantes (migración 0018)
 

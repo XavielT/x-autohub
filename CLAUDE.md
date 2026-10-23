@@ -146,7 +146,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 355 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 422 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -187,7 +187,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 117 archivos, 1131 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 122 archivos, 1224 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -212,6 +212,15 @@ Cosas que ya causaron un bug. No las repitas:
   meses en Trebuchet MS. Un 200 no prueba nada: revisa
   `[...document.fonts].map(f => f.family + ':' + f.status)` y exige `loaded`,
   no `error`.
+- **El descuento de un cupón lo calcula Postgres y el frontend lo espeja.** `coupon_check()` (SQL)
+  y `coupon-rules.ts` (modo simulado y formulario del panel) son la misma regla con los mismos
+  mensajes: si cambias una, cambia la otra y las pruebas de `verify-migrations.sh`. El navegador
+  manda solo el código, nunca un monto. La tabla `coupons` no la lee `anon` (si no, cualquiera
+  descargaría los códigos), y los usos se cuentan de los pedidos no cancelados, no en un contador.
+- **Cambiar la firma de `create_order()` obliga a retirar la anterior**, o PostgREST responde
+  `PGRST203`. Si el parámetro nuevo va al final con valor por defecto, el frontend viejo sigue
+  funcionando contra la función nueva: se migra primero y se despliega después (lo contrario que
+  al quitar una columna).
 - **Un trigger BEFORE por fila que devuelve `new` en un DELETE cancela el borrado, sin
   error.** En un DELETE `new` es nulo, y devolver nulo en un BEFORE salta la operación. El
   guard de `site_settings` (0014) lo hacía y ningún DELETE sobre esa tabla funcionaba, ni el
