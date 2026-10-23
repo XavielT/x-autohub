@@ -9,7 +9,7 @@ import { ProductFitmentType, ProductFulfillment } from './product.model';
 /**
  * Vistas reducidas del inventario propio para el panel.
  *
- * A propósito no son los modelos completos (`HubPartModel`, `AutoHubModel`): el
+ * A propósito no son los modelos completos (`ProductModel`, `AutoHubModel`): el
  * listado de administración solo necesita identificar cada fila y los campos que
  * se ajustan a diario. Traer las 17 columnas de un vehículo para pintar una
  * tabla sería gastar ancho de banda en datos que nadie mira.

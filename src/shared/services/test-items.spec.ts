@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AutoHubService } from './auto-hub.service';
 import { HubMarketService } from './hub-market.service';
-import { HubPartService } from './hub-part.service';
+import { ProductService } from './product.service';
 import { NewsService } from './news.service';
 import { UserModel } from '../models/user.model';
 
@@ -54,7 +54,7 @@ describe('Contenido de prueba (mock)', () => {
   const ids = (list: { id: number }[]) => list.map((i) => i.id);
 
   describe('catalogo de piezas', () => {
-    const parts = () => TestBed.inject(HubPartService);
+    const parts = () => TestBed.inject(ProductService);
 
     it('sin sesion la pieza de prueba no sale ni en la lista ni por id', async () => {
       expect(ids(await firstValueFrom(parts().getAll()))).not.toContain(PIEZA_PRUEBA);

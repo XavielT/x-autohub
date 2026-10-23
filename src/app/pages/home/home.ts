@@ -19,10 +19,7 @@ import { HomeCommunity } from '../../components/home-community/home-community';
  * mostrar (sin ofertas, por ejemplo), así que un catálogo recién creado no
  * enseña secciones vacías.
  *
- * Los componentes del home anterior (`page-counter-overview`,
- * `home-featured-vehicles`, `home-featured-catalog`, `home-news`) ya no se usan
- * aquí pero siguen en el repo hasta la fase 7. `home-welcome`, el hero con video,
- * se mudó a `/social-hub`.
+ * `home-welcome`, el hero con video del home anterior, se mudó a `/social-hub`.
  */
 @Component({
   selector: 'app-home',

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { HubPartModel } from '../../models/hub-part.model';
+import { ProductModel } from '../../models/product.model';
 import { CartService } from '../../services/cart.service';
 import { ToastService } from '../../services/toast.service';
 import { TestBadge } from '../../ui/test-badge/test-badge';
@@ -29,7 +29,7 @@ export class CatalogoCard {
   private readonly cartService = inject(CartService);
   private readonly toastService = inject(ToastService);
 
-  readonly hubPart = input.required<HubPartModel>();
+  readonly hubPart = input.required<ProductModel>();
   /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
   readonly priority = input(false);
   /** Hay vehículo elegido y este producto le sirve. Quien pinta la lista lo decide. */

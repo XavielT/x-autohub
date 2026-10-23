@@ -61,6 +61,14 @@ describe('SiteSettingsService: cuentas y retiro (migración 0018)', () => {
 
     expect((await firstValueFrom(otra.getPickupAddress()))?.address).toBe('Calle 5');
   });
+
+  it('con basura en el storage cae a los valores de ejemplo, sin romper', async () => {
+    localStorage.setItem('x-autohub.site-settings', 'no-es-json{');
+
+    const accounts = await firstValueFrom(service.getBankAccounts());
+
+    expect(accounts[0].isExample).toBe(true);
+  });
 });
 
 describe('toBankAccounts / toPickupAddress', () => {

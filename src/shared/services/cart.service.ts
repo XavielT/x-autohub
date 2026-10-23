@@ -1,16 +1,16 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { HubPartModel } from '../models/hub-part.model';
-import { HubPartService } from './hub-part.service';
+import { ProductModel } from '../models/product.model';
+import { ProductService } from './product.service';
 import { AuthService } from './auth.service';
 
 export interface CartItem {
-  part: HubPartModel;
+  part: ProductModel;
   quantity: number;
 }
 
 /** Una línea del carrito que pide más de lo que hay en inventario. */
 export interface StockIssue {
-  part: HubPartModel;
+  part: ProductModel;
   quantity: number;
   /** Lo que queda. Cero = agotado. */
   available: number;
@@ -56,7 +56,7 @@ interface StoredCart {
  */
 @Injectable({ providedIn: 'root' })
 export class CartService {
-  private readonly parts = inject(HubPartService);
+  private readonly products = inject(ProductService);
   private readonly auth = inject(AuthService);
 
   private readonly _items = signal<CartItem[]>(readStoredCart());
@@ -92,7 +92,7 @@ export class CartService {
     void this.refresh();
   }
 
-  addToCart(part: HubPartModel): void {
+  addToCart(part: ProductModel): void {
     const current = this._items();
     const existing = current.find((i) => i.part.id === part.id);
 
@@ -164,8 +164,8 @@ export class CartService {
     try {
       await this.auth.whenReady();
 
-      const catalog = await new Promise<HubPartModel[]>((resolve, reject) => {
-        this.parts.getAll().subscribe({ next: resolve, error: reject });
+      const catalog = await new Promise<ProductModel[]>((resolve, reject) => {
+        this.products.getAll().subscribe({ next: resolve, error: reject });
       });
 
       const byId = new Map(catalog.map((part) => [part.id, part]));
@@ -178,7 +178,7 @@ export class CartService {
           // reviente el checkout.
           .filter((item) => byId.has(item.part.id))
           // Y la que sigue ahí toma sus datos de la base, no del navegador.
-          .map((item) => ({ ...item, part: byId.get(item.part.id) as HubPartModel })),
+          .map((item) => ({ ...item, part: byId.get(item.part.id) as ProductModel })),
       );
     } catch (error) {
       console.warn('[carrito] no se pudo poner al dia contra el catalogo', error);

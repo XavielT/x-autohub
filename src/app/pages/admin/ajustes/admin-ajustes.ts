@@ -1,24 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { SiteSettingsService, StatsMode } from '../../../../shared/services/site-settings.service';
-import { StatsService } from '../../../../shared/services/stats.service';
+import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { SiteStats } from '../../../../shared/models/site-stats.model';
 import { BankAccount } from '../../../../shared/models/order.model';
-import { SHOWCASE_DISPLAY } from '../../../../shared/data/showcase-stats';
-import { compactNumber } from '../../../../shared/utils/compact-number';
-
-/** Una fila de la comparación: la misma métrica en los dos modos. */
-interface StatRow {
-  label: string;
-  showcase: string;
-  real: string;
-}
-
-const ROWS: { key: keyof SiteStats; label: string }[] = [
-  { key: 'vehicles', label: 'Vehiculos' },
-  { key: 'parts', label: 'Piezas' },
-  { key: 'members', label: 'Miembros' },
-];
 
 /** Una cuenta mientras se edita: los campos son texto libre hasta que se guarda. */
 interface AccountDraft {
@@ -32,8 +15,7 @@ interface AccountDraft {
 const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', type: 'Corriente', isExample: false });
 
 /**
- * Ajustes del sitio: qué números muestra el contador del home y, desde la fase 4,
- * **a dónde transfieren los clientes** y **dónde retiran**.
+ * Ajustes del sitio: **a dónde transfieren los clientes** y **dónde retiran**.
  *
  * Las cuentas y la dirección de retiro nacen con un valor de ejemplo (migración
  * 0018) marcado como tal. Mientras sigan siendo de ejemplo, el sitio público no
@@ -41,10 +23,8 @@ const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', ty
  * transfiere a una cuenta inventada es peor que uno que espera. Aquí se
  * reemplazan por las reales.
  *
- * La sección enseña **los dos modos con sus números al lado** a propósito. El
- * interruptor cambia lo que ve todo el que entra al sitio, incluido quien no
- * tiene sesión; decidir eso a ciegas ("real" ¿es 6 o es 300?) es cómo se acaba
- * dejando la portada peor de lo que estaba sin querer.
+ * (Hasta la fase 6 había aquí un interruptor para los números del contador del
+ * home. El pivote quitó ese contador y el interruptor se fue con él.)
  */
 @Component({
   selector: 'app-admin-ajustes',
@@ -55,11 +35,7 @@ const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', ty
 })
 export class AdminAjustes implements OnInit {
   private readonly settings = inject(SiteSettingsService);
-  private readonly stats = inject(StatsService);
   private readonly toast = inject(ToastService);
-
-  readonly mode = signal<StatsMode | null>(null);
-  readonly isSaving = signal(false);
 
   readonly accounts = signal<AccountDraft[]>([]);
   readonly isSavingAccounts = signal(false);
@@ -74,32 +50,7 @@ export class AdminAjustes implements OnInit {
     () => this.accounts().length > 0 && this.accounts().every((a) => a.isExample),
   );
 
-  private readonly siteStats = signal<SiteStats | null>(null);
-
-  readonly rows = computed<StatRow[]>(() => {
-    const stats = this.siteStats();
-
-    return ROWS.map(({ key, label }) => ({
-      label,
-      showcase: SHOWCASE_DISPLAY[key],
-      real: stats ? compactNumber(stats[key]) : '…',
-    }));
-  });
-
-  /** Los conteos exactos, para la línea de detalle. */
-  readonly exactCounts = computed(() => {
-    const stats = this.siteStats();
-    if (!stats) return null;
-
-    return `${stats.vehicles} vehiculo(s) · ${stats.parts} pieza(s) · ${stats.members} cuenta(s)`;
-  });
-
   ngOnInit(): void {
-    this.settings.getStatsMode().subscribe({
-      next: (mode) => this.mode.set(mode),
-      error: () => this.toast.show('No pudimos leer el ajuste actual.', 'error'),
-    });
-
     this.settings.getBankAccounts().subscribe({
       next: (accounts) => this.accounts.set(accounts.map(toDraft)),
       error: () => this.toast.show('No pudimos leer las cuentas bancarias.', 'error'),
@@ -112,13 +63,6 @@ export class AdminAjustes implements OnInit {
         this.pickupIsExample.set(pickup?.isExample ?? false);
       },
       error: () => this.toast.show('No pudimos leer la direccion de retiro.', 'error'),
-    });
-
-    // Los conteos se piden siempre, esté el sitio en el modo que esté: la
-    // gracia del panel es ver qué pasaría al cambiar.
-    this.stats.getSiteStats().subscribe({
-      next: (stats) => this.siteStats.set(stats),
-      error: () => this.toast.show('No pudimos leer los conteos reales.', 'error'),
     });
   }
 
@@ -187,35 +131,6 @@ export class AdminAjustes implements OnInit {
       error: (err: unknown) => {
         this.isSavingPickup.set(false);
         this.toast.show('No pudimos guardar la direccion.', 'error');
-        console.error(err);
-      },
-    });
-  }
-
-  choose(mode: StatsMode): void {
-    if (this.mode() === mode || this.isSaving()) return;
-
-    this.isSaving.set(true);
-    const previous = this.mode();
-
-    // Optimista, y con vuelta atrás si falla: el clic tiene que sentirse
-    // inmediato, pero dejar el botón marcado cuando la base lo rechazó (un
-    // moderador colándose por la URL, por ejemplo) sería mentir.
-    this.mode.set(mode);
-
-    this.settings.setStatsMode(mode).subscribe({
-      next: () => {
-        this.isSaving.set(false);
-        this.toast.show(
-          mode === 'real'
-            ? 'El home ya muestra los numeros reales.'
-            : 'El home ya muestra los numeros de impresion.',
-        );
-      },
-      error: (err: unknown) => {
-        this.mode.set(previous);
-        this.isSaving.set(false);
-        this.toast.show('No pudimos guardar el ajuste.', 'error');
         console.error(err);
       },
     });

@@ -291,13 +291,12 @@ describe('bloques del home', () => {
       ]);
     });
 
-    it('ya no trae el hero con video ni los contadores', () => {
+    it('ya no trae el hero con video', () => {
       const fixture = TestBed.createComponent(Home);
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
 
       expect(el.querySelector('app-home-welcome')).toBeNull();
-      expect(el.querySelector('app-page-counter-overview')).toBeNull();
       expect(el.querySelector('video')).toBeNull();
     });
   });

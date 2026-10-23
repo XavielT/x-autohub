@@ -2,14 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
 import { CartService, CartItem } from './cart.service';
-import { HubPartService } from './hub-part.service';
+import { ProductService } from './product.service';
 import { AuthService } from './auth.service';
-import { HubPartModel } from '../models/hub-part.model';
+import { ProductModel } from '../models/product.model';
 import { makeProduct } from '../testing/product.fixture';
 
 const STORAGE_KEY = 'x-autohub.cart';
 
-function pieza(id: number, price: number, name = `Pieza ${id}`): HubPartModel {
+function pieza(id: number, price: number, name = `Pieza ${id}`): ProductModel {
   return makeProduct({ id, price, name, brand: 'Brembo', imgUrl: 'assets/imgs/pieza.jpg', starsRating: 4.5, description: 'x' });
 }
 
@@ -28,11 +28,11 @@ function pieza(id: number, price: number, name = `Pieza ${id}`): HubPartModel {
  */
 describe('CartService', () => {
   class FakeParts {
-    catalog: HubPartModel[] = [pieza(1, 12950), pieza(2, 2850)];
+    catalog: ProductModel[] = [pieza(1, 12950), pieza(2, 2850)];
     fail = false;
     llamadas = 0;
 
-    getAll(): Observable<HubPartModel[]> {
+    getAll(): Observable<ProductModel[]> {
       this.llamadas++;
       return this.fail ? throwError(() => new Error('sin red')) : of(this.catalog);
     }
@@ -72,7 +72,7 @@ describe('CartService', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
-        { provide: HubPartService, useValue: parts as unknown as HubPartService },
+        { provide: ProductService, useValue: parts as unknown as ProductService },
         { provide: AuthService, useValue: auth as unknown as AuthService },
       ],
     });
