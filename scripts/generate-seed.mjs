@@ -136,12 +136,12 @@ try {
   parts.push(
     table(
       'hub_parts',
-      ['id', 'category', 'category_id', 'slug', 'sku', 'name', 'brand', 'short_description',
+      ['id', 'category_id', 'slug', 'sku', 'name', 'brand', 'short_description',
        'img_url', 'images', 'stars_rating', 'price', 'compare_at_price', 'description', 'stock',
        'is_featured', 'fulfillment', 'lead_time_days', 'fitment_type', 'installable',
        'installation_service_id', 'specs', 'sold_count', 'is_test'],
       m.HUB_PART_MOCK.map((p) => [
-        sql(p.id), sql(p.category),
+        sql(p.id),
         `(select id from public.product_categories where slug = ${sql(categorySlug(p.categoryId))})`,
         sql(p.slug), sql(p.sku), sql(p.name), sql(p.brand), sql(p.shortDescription),
         sql(p.imgUrl), sql(p.images ?? []), sql(Number(p.starsRating)), sql(p.price),

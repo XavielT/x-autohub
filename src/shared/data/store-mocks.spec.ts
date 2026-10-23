@@ -90,10 +90,11 @@ describe('mocks de la tienda', () => {
       for (const target of Object.values(LEGACY_CATEGORY_TO_SLUG)) expect(slugs.has(target)).toBe(true);
     });
 
-    it('cada producto cae en la categoria que le toca por su texto de antes', () => {
+    it('cada producto esta clasificado en una categoria que existe', () => {
+      const ids = new Set(PRODUCT_CATEGORIES_MOCK.map((c) => c.id));
       for (const p of HUB_PART_MOCK) {
-        const expected = PRODUCT_CATEGORIES_MOCK.find((c) => c.slug === LEGACY_CATEGORY_TO_SLUG[p.category]);
-        expect(p.categoryId).toBe(expected?.id);
+        expect(p.categoryId, p.name).not.toBeNull();
+        expect(ids.has(p.categoryId as number), p.name).toBe(true);
       }
     });
   });

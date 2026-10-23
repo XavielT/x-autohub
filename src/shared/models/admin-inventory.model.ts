@@ -18,8 +18,6 @@ export interface AdminPartModel {
   id: number;
   name: string;
   brand: string;
-  /** Categoría de texto de antes del pivote. Se retira en la fase 7; usa `categoryId`. */
-  category: string;
   /** Categoría del árbol nuevo. Nula si la pieza todavía no se clasificó. */
   categoryId: number | null;
   sku: string;

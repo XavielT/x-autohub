@@ -155,12 +155,8 @@ export type AutoHubVehicleRow = {
 
 export type HubPartRow = {
   id: number;
-  /**
-   * Categoría de texto de la tienda anterior al pivote. Nula en los productos
-   * nuevos que solo traen `category_id` (un trigger la rellena con la categoría
-   * raíz). Sigue en pie: la tienda y el panel todavía la leen (ver `docs/ROADMAP.md`).
-   */
-  category: string | null;
+  // (La columna `category` de texto, anterior al pivote, se borró en la migración 0021:
+  // la clasificación es `category_id`.)
   name: string;
   brand: string;
   img_url: string;
@@ -1032,10 +1028,6 @@ export type Database = {
           p_offset?: number;
         };
         Returns: SearchProductRow[];
-      };
-      get_site_stats: {
-        Args: Record<string, never>;
-        Returns: { vehicles: number; parts: number; members: number }[];
       };
       /**
        * Cambia un ajuste **existente**. Solo un admin, comprobado dentro de

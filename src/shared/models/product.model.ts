@@ -18,8 +18,6 @@ export type ProductFitmentType = 'universal' | 'specific';
 
 export interface ProductModel {
   id: number;
-  /** Categoría de texto de la tienda anterior al pivote. Sigue leyéndose (ver `docs/ROADMAP.md`). */
-  category: string;
   /** Categoría del árbol nuevo. Nula en filas que aún no se han clasificado. */
   categoryId: number | null;
   slug: string;

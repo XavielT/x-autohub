@@ -171,7 +171,6 @@ describe('mappers', () => {
   describe('toProduct', () => {
     const row: HubPartRow = {
       id: 1,
-      category: 'frenos',
       name: 'Disco GTR',
       brand: 'Brembo',
       img_url: 'disco.jpg',
@@ -227,10 +226,6 @@ describe('mappers', () => {
     it('un producto sin oferta tiene compareAtPrice nulo, y con oferta es un numero', () => {
       expect(toProduct(row).compareAtPrice).toBeNull();
       expect(toProduct({ ...row, compare_at_price: '14900.00' as unknown as number }).compareAtPrice).toBe(14900);
-    });
-
-    it('un producto nuevo con solo category_id no rompe el texto de la categoria', () => {
-      expect(toProduct({ ...row, category: null }).category).toBe('');
     });
 
     it('lee una fila de search_products() igual que una de hub_parts', () => {

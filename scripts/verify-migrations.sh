@@ -264,8 +264,8 @@ check "anon lee el catalogo"        "35" "$(as_anon 'select count(*) from hub_pa
 check "anon lee Auto Hub"           "6"  "$(as_anon 'select count(*) from auto_hub_vehicles;')"
 check "anon lee Hub Market"         "7"  "$(as_anon 'select count(*) from hub_market_items;')"
 check "anon lee las noticias"       "2"  "$(as_anon 'select count(*) from news;')"
-check "anon lee los ajustes"        "showcase" \
-  "$(as_anon "select value #>> '{}' from site_settings where key='stats_mode';")"
+check "anon lee los ajustes (cuentas y retiro)" "array|object" \
+  "$(as_anon "select (select jsonb_typeof(value) from site_settings where key='bank_accounts') || '|' || (select jsonb_typeof(value) from site_settings where key='pickup_address');")"
 
 echo "→ Contenido de prueba (migracion 0013)"
 check "anon no ve piezas de prueba"      "0" "$(as_anon 'select count(*) from hub_parts where is_test;')"
@@ -273,15 +273,13 @@ check "anon no ve vehiculos de prueba"   "0" "$(as_anon 'select count(*) from au
 check "un usuario de prueba si las ve"   "1" \
   "$(as_user '33333333-3333-3333-3333-333333333333' 'select count(*) from hub_parts where is_test;')"
 
-echo "→ Contadores del home (migracion 0014): la visibilidad de un anonimo,"
-echo "  sea quien sea el que llame"
-check "vehiculos = 6 propios + 4 aprobados" "10" "$(as_anon 'select vehicles from get_site_stats();')"
-check "piezas = 35 activas y no de prueba"  "35" "$(as_anon 'select parts from get_site_stats();')"
-check "miembros = 2 (de 3 cuentas, 1 de prueba)" "2" "$(as_anon 'select members from get_site_stats();')"
-check "un admin ve los mismos numeros que un anonimo" "10" \
-  "$(as_user '11111111-1111-1111-1111-111111111111' 'select vehicles from get_site_stats();')"
+echo "→ El contador del home ya no existe (migracion 0021)"
+check "get_site_stats() se borro" 'ERROR:  function get_site_stats() does not exist' \
+  "$(as_anon 'select * from get_site_stats();')"
+check "y la fila stats_mode tampoco esta" "0" "select count(*) from site_settings where key = 'stats_mode';"
 
-# Una publicacion de prueba y una pendiente, las dos de vehiculos: ninguna cuenta.
+# Una publicacion de prueba y una pendiente, las dos de vehiculos. Ya nadie las cuenta,
+# pero los conteos de Hub Market de mas abajo parten de que existen.
 $PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 insert into hub_market_items
   (title, description, images, price, location, seller_name, category, spec_year, status, is_active, is_test)
@@ -289,7 +287,6 @@ values
   ('PRUEBA vehiculo',    'x', '{}', 1, 'Santiago', 'x', 'vehiculos', 2020, 'aprobado',  true, true),
   ('Pendiente vehiculo', 'x', '{}', 1, 'Santiago', 'x', 'vehiculos', 2020, 'pendiente', true, false);
 SQL
-check "una publicacion de prueba no cuenta"  "10" "$(as_anon 'select vehicles from get_site_stats();')"
 
 echo "→ Ajustes del sitio: escritura solo por set_site_setting() (0014)"
 # Ojo con lo que se comprueba aqui: el update de `anon` **no da error**, se queda
@@ -299,19 +296,25 @@ echo "→ Ajustes del sitio: escritura solo por set_site_setting() (0014)"
 # politica de escritura. Lo que importa no es el error, es que el valor no
 # cambie: es exactamente lo que responde PostgREST en produccion — HTTP 200 con
 # `[]`.
-check "un update de anon deja el ajuste como estaba" "showcase" \
-  "$(as_anon "update site_settings set value='\"real\"' where key='stats_mode';
-              select value #>> '{}' from site_settings where key='stats_mode';")"
+check "un update de anon deja el ajuste como estaba" "1" \
+  "$(as_anon "update site_settings set value='[]' where key='bank_accounts';
+              select jsonb_array_length(value) from site_settings where key='bank_accounts';")"
 check "anon no puede invocar set_site_setting" "$(denied set_site_setting)" \
-  "$(as_anon "select * from set_site_setting('stats_mode','\"real\"');")"
+  "$(as_anon "select * from set_site_setting('pickup_address','{}');")"
 check "un usuario normal recibe 42501" \
   "ERROR:  Solo un administrador puede cambiar los ajustes del sitio." \
-  "$(as_user '22222222-2222-2222-2222-222222222222' "select * from set_site_setting('stats_mode','\"real\"');")"
-check "un admin si lo cambia" "real" \
-  "$(as_user '11111111-1111-1111-1111-111111111111' "select value #>> '{}' from set_site_setting('stats_mode','\"real\"');")"
-check "un valor invalido lo rechaza el check" \
+  "$(as_user '22222222-2222-2222-2222-222222222222' "select * from set_site_setting('pickup_address','{}');")"
+check "un admin si lo cambia" "Horario de prueba" \
+  "$(as_user '11111111-1111-1111-1111-111111111111' "select value ->> 'hours' from set_site_setting('pickup_address', jsonb_set((select value from site_settings where key = 'pickup_address'), '{hours}', '\"Horario de prueba\"'));")"
+# Se deja el valor de ejemplo como estaba: lo que sigue (pedidos, 0018) parte de el.
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update site_settings set value = jsonb_set(value, '{hours}', '"Horario de ejemplo"') where key = 'pickup_address';
+SQL
+check "un valor con la forma equivocada lo rechaza el check" \
   "ERROR:  new row for relation \"site_settings\" violates check constraint \"site_settings_value_valid\"" \
-  "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('stats_mode','\"showcas\"');")"
+  "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('bank_accounts','\"no-es-un-arreglo\"');")"
+check "stats_mode ya no es un ajuste que se pueda cambiar" "ERROR:  Ese ajuste no existe: stats_mode." \
+  "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('stats_mode','\"real\"');")"
 check "no se pueden inventar claves" "ERROR:  Ese ajuste no existe: inventada." \
   "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('inventada','\"x\"');")"
 
@@ -334,7 +337,7 @@ check "un usuario normal no lista usuarios" \
 echo "→ Lo que anon **si** tiene que poder hacer (revocar de mas rompe el sitio)"
 check "checkout de invitado" "1" \
   "$(as_anon "select count(*) from create_order('invitado@correo.com','Cliente Invitado','Calle 1','standard','transfer','[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
-check "contadores del home sin sesion" "35" "$(as_anon 'select parts from get_site_stats();')"
+check "la busqueda de la tienda sin sesion" "35" "$(as_anon 'select total_count from search_products(p_limit => 1);')"
 
 echo "→ Baja del club con token (migracion 0016)"
 $PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
@@ -495,8 +498,8 @@ check "las especificaciones tienen que ser un objeto" \
   "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, specs) values ('QQ Specs', 'M', 'x.jpg', 100, '[1]'::jsonb);")"
 check "slug y sku salen solos al insertar" "t" \
   "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price) values ('QQ Alta Rapida', 'M', 'x.jpg', 100) returning (slug = 'qq-alta-rapida-' || id) and (sku = 'XAH-' || lpad(id::text, 6, '0'));")"
-check "la categoria de texto la rellena el trigger con la raiz" "frenos" \
-  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, category_id) select 'QQ Hija', 'M', 'x.jpg', 100, id from product_categories where slug='discos' returning category;")"
+check "una pieza nueva solo con category_id queda clasificada (0021: ya no hay texto de categoria)" "discos" \
+  "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, category_id) select 'QQ Hija', 'M', 'x.jpg', 100, id from product_categories where slug='discos' returning (select slug from product_categories c where c.id = category_id);")"
 check "un producto nuevo nace como especifico, sin prometer compatibilidad" "specific" \
   "select fitment_type from hub_parts where name = 'QQ Alta Rapida';"
 check "un fitment no puede mezclar la marca de un modelo con otra" \
@@ -1141,7 +1144,7 @@ check "sin reseñas, la pieza vuelve a sus estrellas sembradas" "$STARS5|0" \
 
 echo "   (si se borra el producto o el servicio, se van sus reseñas)"
 $PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
-insert into hub_parts (id, category, name, brand, img_url, price, stock) values (99901, 'x', 'Pieza efimera', 'X', 'x.jpg', 100, 1);
+insert into hub_parts (id, name, brand, img_url, price, stock) values (99901, 'Pieza efimera', 'X', 'x.jpg', 100, 1);
 insert into services (id, icon, title, description) values (99901, 'x', 'Servicio efimero', 'x');
 insert into reviews (target_type, target_id, user_id, rating) values ('product', 99901, '$USER_A', 4), ('service', 99901, '$USER_A', 4);
 SQL
@@ -1292,7 +1295,7 @@ echo "→ Camino de actualizacion de la 0020: la base real ya tiene piezas con e
 $PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 update hub_parts set stars_rating = case when id % 2 = 0 then 4.5 else 0 end;
 SQL
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0020_reviews.sql upgrade
 CHECK_DB=upgrade check "las piezas con estrellas las copian a stars_seed, las demas quedan en 0" "4.5|0.0" \
   "select (select max(stars_seed) from hub_parts where id % 2 = 0) || '|' || (select max(stars_seed) from hub_parts where id % 2 = 1);"
 CHECK_DB=upgrade check "todas empiezan con 0 reseñas" "0" "select count(*) from hub_parts where review_count <> 0;"
@@ -1302,12 +1305,52 @@ insert into reviews (target_type, target_id, user_id, rating) values ('product',
 SQL
 CHECK_DB=upgrade check "una reseña real reemplaza a las estrellas sembradas por el promedio" "2.0|1|4.5" \
   "select stars_rating || '|' || review_count || '|' || stars_seed from hub_parts where id = $UP_PART;"
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0020_reviews.sql upgrade
 echo "   (aplicada otra vez, con una reseña real dentro)"
 CHECK_DB=upgrade check "el promedio real no se toma por sembrado" "2.0|1|4.5" \
   "select stars_rating || '|' || review_count || '|' || stars_seed from hub_parts where id = $UP_PART;"
 CHECK_DB=upgrade check "y al quedarse sin reseñas, vuelve a las sembradas" "4.5|0" \
   "delete from reviews; select stars_rating || '|' || review_count from hub_parts where id = $UP_PART;"
+
+echo "→ Camino de actualizacion de la 0021: la base real ya tiene piezas con categoria de texto"
+# La base real tiene 35 piezas con `category` y `category_id`. Antes de borrar la columna
+# la migracion comprueba que ninguna dependa de ella, y despues deja la busqueda, el
+# trigger y los ajustes funcionando sin ella.
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into hub_parts (category, name, brand, img_url, price, stock) values ('zzz', 'Sin clasificar', 'X', 'x.jpg', 1, 1);
+SQL
+CHECK_DB=upgrade check "una pieza con texto pero sin category_id detiene la migracion" \
+  "ERROR:  No se puede borrar hub_parts.category: 1 pieza(s) tienen texto pero no category_id. Clasifícalas primero." \
+  "$(cat supabase/migrations/0021_drop_legacy.sql)"
+CHECK_DB=upgrade check "y no se borro nada: la columna sigue ahi" "1" \
+  "select count(*) from information_schema.columns where table_name = 'hub_parts' and column_name = 'category';"
+CHECK_DB=upgrade check "ni la funcion de contadores ni su ajuste" "1|1" \
+  "select (select count(*) from pg_proc where proname = 'get_site_stats') || '|' || (select count(*) from site_settings where key = 'stats_mode');"
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set category_id = (select id from product_categories order by id limit 1) where name = 'Sin clasificar';
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con piezas dentro)"
+CHECK_DB=upgrade check "la columna category ya no existe" "0" \
+  "select count(*) from information_schema.columns where table_name = 'hub_parts' and column_name = 'category';"
+CHECK_DB=upgrade check "ni su indice" "0" "select count(*) from pg_indexes where indexname = 'hub_parts_category_idx';"
+CHECK_DB=upgrade check "las piezas siguen clasificadas por category_id" "18" "select count(category_id) from hub_parts;"
+CHECK_DB=upgrade check "search_products() ya no devuelve la columna category" "0" \
+  "select count(*) from information_schema.parameters where specific_name like 'search_products%' and parameter_name = 'category';"
+CHECK_DB=upgrade check "y sigue buscando sin acentos, con permiso para anon" "Batería AGM 70Ah" \
+  "$(as_anon "select name from search_products(p_query := 'bateria');")"
+CHECK_DB=upgrade check "anon sigue viendo el total de la busqueda" "18" \
+  "$(as_anon 'select total_count from search_products(p_limit => 1);')"
+CHECK_DB=upgrade check "una pieza nueva solo con category_id recibe su slug y su sku" "t" \
+  "insert into hub_parts (category_id, name, brand, img_url, price, stock) values ((select id from product_categories order by id limit 1), 'Pieza nueva', 'X', 'x.jpg', 1, 1) returning slug = 'pieza-nueva-' || id and sku = 'XAH-' || lpad(id::text, 6, '0');"
+CHECK_DB=upgrade check "get_site_stats() se borro" "0" "select count(*) from pg_proc where proname = 'get_site_stats';"
+CHECK_DB=upgrade check "y la fila stats_mode, pero las cuentas y el retiro siguen" "0|2" \
+  "select (select count(*) from site_settings where key = 'stats_mode') || '|' || (select count(*) from site_settings where key in ('bank_accounts', 'pickup_address'));"
+CHECK_DB=upgrade check "el check de site_settings ya no menciona stats_mode" "0" \
+  "select count(*) from pg_constraint where conname = 'site_settings_value_valid' and pg_get_constraintdef(oid) like '%stats_mode%';"
+CHECK_DB=upgrade check "set_site_setting ya no acepta stats_mode" "ERROR:  Ese ajuste no existe: stats_mode." \
+  "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('stats_mode','\"real\"');")"
 
 # --- Resumen ------------------------------------------------------------------
 

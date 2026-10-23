@@ -12,7 +12,6 @@ export function makeProduct(overrides: Partial<ProductModel> = {}): ProductModel
   const id = overrides.id ?? 1;
   return {
     id,
-    category: 'frenos',
     categoryId: 6,
     slug: `producto-${id}`,
     sku: `XAH-${String(id).padStart(6, '0')}`,

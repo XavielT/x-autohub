@@ -2,7 +2,13 @@ import { ProductFulfillment, ProductFitmentType, ProductModel } from "../models/
 import { slugify } from "../utils/slugify";
 import { LEGACY_CATEGORY_TO_SLUG, PRODUCT_CATEGORIES_MOCK } from "./product-category.mock";
 
-/** Los campos que tenía una pieza antes del pivote (migración 0017). */
+/**
+ * Los campos que tenía una pieza antes del pivote (migración 0017).
+ *
+ * `category` es el texto de entonces ("frenos", "interior"…): ya no existe en la base
+ * (migración 0021) ni en `ProductModel`, pero aquí sigue sirviendo para asignar la
+ * categoría del árbol nuevo con `LEGACY_CATEGORY_TO_SLUG`.
+ */
 interface LegacyPart {
     id: number;
     category: string;
@@ -467,7 +473,6 @@ export const HUB_PART_MOCK: ProductModel[] = LEGACY_PARTS.map((part) => {
     const fulfillment = extra.fulfillment ?? "stock";
     return {
         id: part.id,
-        category: part.category,
         categoryId: category.id,
         slug: `${slugify(part.name) || "producto"}-${part.id}`,
         sku: `XAH-${String(part.id).padStart(6, "0")}`,

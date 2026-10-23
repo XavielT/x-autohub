@@ -8,6 +8,7 @@ import { HubMarketService } from './hub-market.service';
 import { ProductService } from './product.service';
 import { NewsService } from './news.service';
 import { UserModel } from '../models/user.model';
+import { HUB_PART_MOCK } from '../data/hub-part.mock';
 
 /**
  * Visibilidad del contenido de prueba, por el camino simulado.
@@ -70,8 +71,11 @@ describe('Contenido de prueba (mock)', () => {
 
     it('tampoco entre los relacionados de su propia categoria', async () => {
       user.set(NORMAL);
-      const relacionados = await firstValueFrom(parts().getByCategory('herramientas'));
+      const prueba = HUB_PART_MOCK.find((p) => p.id === PIEZA_PRUEBA)!;
+      const hermana = HUB_PART_MOCK.find((p) => !p.isTest && p.categoryId === prueba.categoryId)!;
+      const relacionados = await firstValueFrom(parts().getRelated(hermana, 100));
 
+      expect(hermana).toBeDefined();
       expect(relacionados.length).toBeGreaterThan(0);
       expect(ids(relacionados)).not.toContain(PIEZA_PRUEBA);
     });

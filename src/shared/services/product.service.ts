@@ -26,7 +26,7 @@ import { searchProductsInMemory } from '../utils/product-search';
 // Una sola cadena literal: supabase-js deduce el tipo de la fila leyendo el texto
 // del select, y una concatenación ('a' + 'b') se ensancha a `string` y lo rompe.
 const PRODUCT_COLUMNS =
-  'id, category, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at';
+  'id, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at';
 
 /** Más reciente primero; a igual fecha, el de id mayor (el último que se cargó). */
 function newestFirst(a: ProductModel, b: ProductModel): number {
@@ -291,21 +291,6 @@ export class ProductService {
     return from(
       this.supabase.db.from('hub_parts').select(PRODUCT_COLUMNS).eq('slug', slug).maybeSingle(),
     ).pipe(map((res) => (res.data ? toProduct(res.data) : undefined)));
-  }
-
-  /** Por la categoría de texto de la tienda anterior. Se retira en la fase 7. */
-  getByCategory(category: string): Observable<ProductModel[]> {
-    if (this.supabase.shouldUseMockData()) {
-      return of(this.mockProducts().filter((p) => p.category === category));
-    }
-
-    return from(
-      this.supabase.db
-        .from('hub_parts')
-        .select(PRODUCT_COLUMNS)
-        .eq('category', category)
-        .eq('is_active', true),
-    ).pipe(map((res) => unwrap(res).map(toProduct)));
   }
 
   /**

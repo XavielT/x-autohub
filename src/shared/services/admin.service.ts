@@ -45,11 +45,11 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
 
 /** Las columnas del listado de piezas del panel. */
 const ADMIN_PART_COLUMNS =
-  'id, name, brand, category, category_id, sku, fulfillment, price, stock, is_active, is_test';
+  'id, name, brand, category_id, sku, fulfillment, price, stock, is_active, is_test';
 
 type AdminPartRow = Pick<
   HubPartRow,
-  | 'id' | 'name' | 'brand' | 'category' | 'category_id' | 'sku' | 'fulfillment'
+  | 'id' | 'name' | 'brand' | 'category_id' | 'sku' | 'fulfillment'
   | 'price' | 'stock' | 'is_active' | 'is_test'
 >;
 
@@ -58,7 +58,6 @@ function toAdminPart(r: AdminPartRow): AdminPartModel {
     id: r.id,
     name: r.name,
     brand: r.brand,
-    category: r.category ?? '',
     categoryId: r.category_id,
     sku: r.sku,
     fulfillment: r.fulfillment,
@@ -78,9 +77,6 @@ const EDITABLE_PART_COLUMNS =
  * Lo que se escribe en `hub_parts` al crear o editar desde el formulario.
  *
  * Dos reglas que viven aquí y no en el componente:
- *   · `category` (el texto de antes del pivote) se manda **nulo** y lo rellena el
- *     trigger de la migración 0017 con la categoría raíz. Si no, al cambiar la
- *     categoría el texto viejo se quedaría diciendo otra cosa.
  *   · Lo que no aplica se limpia: los días de entrega solo valen para un artículo
  *     bajo pedido, y el servicio de instalación solo para uno instalable. La base
  *     rechaza lo contrario con un check, y es mejor no llegar a ese error.
@@ -89,7 +85,6 @@ const EDITABLE_PART_COLUMNS =
  */
 function partWriteRow(draft: NewPartDraft) {
   return {
-    category: null,
     category_id: draft.categoryId,
     slug: draft.slug.trim(),
     sku: draft.sku.trim(),
@@ -434,7 +429,6 @@ export class AdminService {
         id,
         name: draft.name,
         brand: draft.brand,
-        category: '',
         categoryId: draft.categoryId,
         sku: draft.sku.trim() || `XAH-${String(id).padStart(6, '0')}`,
         fulfillment: draft.fulfillment,
@@ -640,7 +634,6 @@ export class AdminService {
         id,
         name: draft.name,
         brand: draft.brand,
-        category: previous?.category ?? '',
         categoryId: draft.categoryId,
         sku: draft.sku.trim() || previous?.sku || `XAH-${String(id).padStart(6, '0')}`,
         fulfillment: draft.fulfillment,

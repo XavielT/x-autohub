@@ -139,7 +139,6 @@ export function toAutoHubVehicle(row: AutoHubVehicleRow): AutoHubModel {
 export function toProduct(row: Omit<HubPartRow, 'search_vector' | 'stars_seed' | 'review_count'>): ProductModel {
   return {
     id: row.id,
-    category: row.category ?? '',
     categoryId: row.category_id,
     slug: row.slug,
     sku: row.sku,

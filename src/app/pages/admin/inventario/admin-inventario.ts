@@ -269,9 +269,9 @@ export class AdminInventario implements OnInit {
     });
   }
 
-  /** El nombre de la categoría de una pieza, con el texto viejo de respaldo. */
+  /** El nombre de la categoría de una pieza, o "Sin clasificar" si todavía no tiene. */
   categoryName(part: AdminPartModel): string {
-    return this.categories().find((c) => c.id === part.categoryId)?.name ?? part.category;
+    return this.categories().find((c) => c.id === part.categoryId)?.name ?? 'Sin clasificar';
   }
 
   /** Error de grupo del formulario de la pieza (las reglas que cruzan campos). */
