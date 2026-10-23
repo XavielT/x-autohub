@@ -26,6 +26,29 @@ for size, name in [(32,'icon-32.png'), (192,'icon-192.png'),
 PY
 ```
 
+## Regenerar los iconos de la PWA (maskable)
+
+`icon-192-maskable.png` e `icon-512-maskable.png` llevan el logo al 80 % central (la zona
+segura: el sistema recorta los bordes en círculo o squircle) sobre `#121212`. El fondo
+negro del logo se funde con el del icono (`lighter` = máximo por canal, el naranja no se toca):
+
+```bash
+python3 - <<'PY'
+from PIL import Image, ImageChops
+src = Image.open('brand/xh-logo.png').convert('RGB')
+bg = (18, 18, 18)  # #121212
+for size, name in [(192, 'icon-192-maskable.png'), (512, 'icon-512-maskable.png')]:
+    inner = round(size * 0.8)
+    logo = src.resize((inner, inner), Image.LANCZOS)
+    logo = ImageChops.lighter(logo, Image.new('RGB', logo.size, bg))
+    canvas = Image.new('RGB', (size, size), bg)
+    canvas.paste(logo, ((size - inner) // 2, (size - inner) // 2))
+    canvas.save(f'public/{name}', 'PNG', optimize=True)
+PY
+```
+
+Los `icon-192.png` / `icon-512.png` normales (propósito `any`) siguen siendo los de arriba.
+
 ## Regla para imágenes nuevas
 
 Antes de agregar cualquier imagen a `src/assets/imgs/`:

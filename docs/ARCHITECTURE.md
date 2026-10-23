@@ -1,9 +1,9 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.3.0, la fase 5 del pivote). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.4.0, la fase 6 del pivote). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 5.** Ya existen el esquema de la
+> **El pivote de octubre de 2026 va por la fase 6.** Ya existen el esquema de la
 > tienda (fase 1), la cara nueva (fase 2: navbar con buscador y menú de
 > categorías, barra de pestañas, footer por pilares, home de tienda) y la tienda
 > de verdad (fase 3: `/tienda` con filtros, "mi vehículo", ficha por slug,
@@ -11,7 +11,7 @@ estructura, actualiza este archivo en el mismo commit.
 > pasos, `/pedido/:id`, comprobante de transferencia o cierre por WhatsApp, "Mis
 > pedidos" y el panel) y el taller (fase 5: catálogo de servicios, cotizar por WhatsApp,
 > agenda de citas, "Mis citas", trabajos realizados y las cuatro pestañas del taller
-> en el panel). **Falta** la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
+> en el panel) y la PWA (fase 6: instalable, caché del shell y aviso de versión nueva). **Faltan** las reseñas y el SEO de producto. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
 > se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
@@ -27,7 +27,10 @@ x-autohub/
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, make-admin, setup-smtp,
 │                              verify-migrations.sh
-├── public/                    Se copia tal cual a la raíz de dist/ (favicons)
+├── public/                    Se copia tal cual a la raíz de dist/ (favicons, iconos de la
+│                              app incl. los maskable, manifest.webmanifest)
+├── ngsw-config.json           Qué cachea el service worker (ver "La PWA")
+├── vercel.json                CSP y cabeceras (ngsw-*.js sin caché, manifest con su tipo)
 ├── angular.json               Build, budgets, fileReplacements, providersFile
 └── src/
     ├── index.html             <title>, meta description, Open Graph, favicons
@@ -90,6 +93,7 @@ x-autohub/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
     │   │   ├── service-card/  service-works/
     │   │   ├── cart-modal/  toast/  club-channel/
+│   │   ├── install-prompt/  update-toast/  offline-state/   (la PWA)
     │   ├── ui/                    Presentacionales puros, sin dependencias
     │   │   ├── highlight-badge/  info-badge/  image-gallery/
     │   │   └── location-select/  test-badge/
@@ -99,7 +103,7 @@ x-autohub/
     │   │                          category-tree, contact (el WhatsApp de la tienda), test-visibility,
     │   │                          phone, whatsapp…
     │   ├── testing/               product.fixture.ts (un ProductModel para los specs)
-    │   └── services/              26 servicios, todos providedIn: 'root'
+    │   └── services/              28 servicios, todos providedIn: 'root'
     │
     ├── styles/
     │   ├── _auth-shell.scss       Parcial compartido por login y registro
@@ -204,11 +208,37 @@ persiste en todas las rutas:
 <app-cart-modal/>                         <!-- panel lateral, controlado por CartService.isOpen -->
 @defer (when pickerOpen()) { <app-vehicle-picker-modal/> }   <!-- se descarga al abrirlo -->
 <app-toast/>                              <!-- notificaciones -->
+<app-update-toast/>                       <!-- "Hay una versión nueva · Actualizar", arriba -->
+<app-install-prompt/>                     <!-- banner de instalar, fijo encima de la barra; solo ≤ 900 px -->
 <app-mobile-tab-bar/>                     <!-- solo ≤ 900 px: Inicio · Categorías · Buscar · Carrito · Cuenta -->
 ```
 
 Implicación: login y registro **también** se ven con navbar y footer. Es
 intencional — el usuario nunca pierde la navegación.
+
+## La PWA
+
+Instalable y con caché del shell; **los datos nunca se cachean**. Una PWA que muestra un
+precio viejo es peor que una página lenta.
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `manifest.webmanifest` | `public/` | Nombre, colores `#121212`, `standalone`, `es-DO`, iconos 192/512 y sus `maskable` |
+| `ngsw-config.json` | raíz | `app`: prefetch de index, JS, CSS, fuentes y manifest (~1.9 MB). `assets`: lazy, sin los videos. `dataGroups`: solo `/storage/v1/object/public/**` de Supabase; **nada** de `/rest/v1/` ni `/auth/v1/` |
+| `provideServiceWorker` | `app.config.ts` | Solo en producción (`!isDevMode()`), `registerWhenStable:30000` |
+| `InstallPrompt` | `shared/components/install-prompt` | Chrome/Edge/Android: `beforeinstallprompt` + botón. Safari iOS: pasos a mano. Nunca en `standalone`. "Ahora no" = 30 días (`localStorage`) |
+| `PwaUpdateService` + `UpdateToast` | `shared/services`, `shared/components` | `VERSION_READY` → aviso → `activateUpdate()` + recarga. Busca al volver a la pestaña |
+| `OnlineService` + `OfflineState` | `shared/services`, `shared/components` | `online$` e `isOnline`. Tienda, servicios, Auto Hub y Hub Market dicen "Sin conexión · Reintentar" cuando falla la red |
+
+`vercel.json` sirve `ngsw.json`, `ngsw-worker.js`, `safety-worker.js` y `worker-basic.min.js`
+con `Cache-Control: no-cache` (si el navegador cacheara el worker, los usuarios se quedarían
+en la versión vieja para siempre) y el manifest como `application/manifest+json`.
+
+**Límite conocido:** las imágenes de Storage se piden con `<img>` sin `crossorigin`, y el
+service worker no guarda respuestas opacas por omisión (guardarlas gasta mucha cuota: Chrome
+cuenta ~7 MB por cada una). Con la config actual el `dataGroup` queda armado pero es probable
+que no guarde esas fotos. Hoy el catálogo usa assets locales, así que no se pudo comprobar;
+revisar cuando las fotos reales estén en Storage.
 
 ## Rutas
 
@@ -301,7 +331,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 111 archivos, 1031 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 117 archivos, 1079 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

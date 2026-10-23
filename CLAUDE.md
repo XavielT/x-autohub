@@ -99,13 +99,14 @@ está en `docs/PIVOT-2026-10.md` y manda sobre `docs/VISION.md` y
 | **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
 
 > **El pivote se entrega por fases** (ver `docs/ROADMAP.md`). Mientras una fase
-> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 5) ya están el
+> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 6) ya están el
 > navbar, la barra de pestañas, el footer y el home nuevos, la tienda con filtros
 > y "mi vehículo" (`/tienda`, `/tienda/c/:slug`, `/tienda/p/:slug`), `/buscar` y el
 > garaje en el perfil, el checkout en tres pasos con `/pedido/:id` (transferencia con
 > comprobante o WhatsApp) y el panel de pedidos, y el taller (catálogo de servicios,
 > cotizar por WhatsApp, agendar citas, "Mis citas" y las pestañas del taller en el
-> panel); `/catalogo` y `/hub-part-details/:id` solo redirigen. La PWA no existe. No documentes ni
+> panel), y la PWA (instalable, caché del shell, aviso de versión nueva, "Sin conexión" en
+> las listas); `/catalogo` y `/hub-part-details/:id` solo redirigen. Las reseñas no existen. No documentes ni
 > asumas como existente lo que una fase posterior va a construir.
 
 > **Auto Hub y Hub Market están separados a propósito.** Auto Hub son los carros
@@ -185,7 +186,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 111 archivos, 1031 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 117 archivos, 1079 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -210,6 +211,19 @@ Cosas que ya causaron un bug. No las repitas:
   meses en Trebuchet MS. Un 200 no prueba nada: revisa
   `[...document.fonts].map(f => f.family + ':' + f.status)` y exige `loaded`,
   no `error`.
+- **El service worker no se prueba en `npm start`.** Solo existe en el build de producción
+  (`!isDevMode()`). Para verlo: `npm run build` y servir `dist/x-autohub/browser` con
+  fallback a `index.html`. Y el "offline" de DevTools/CDP corta la página pero **no al
+  worker**, que sigue pidiendo los datos por su cuenta: una lista "sin red" que igual carga
+  no es un bug de la app. Para ver el estado "Sin conexión" bloquea `*supabase.co*` con el
+  service worker desactivado.
+- **`ngsw.json` y `ngsw-worker.js` no pueden cachearse.** `vercel.json` les pone
+  `no-cache`; si alguien lo quita, el navegador sirve el worker viejo y los usuarios se
+  quedan en la versión anterior sin enterarse. Cada despliegue cambia los hashes de
+  `ngsw.json`: es lo que dispara el aviso "Hay una versión nueva".
+- **`npm install` en Windows le quita los campos `libc` a `package-lock.json`**, y eso
+  puede cambiar qué binarios nativos baja Linux (Vercel). Al agregar una dependencia, revisa
+  `git diff package-lock.json`: tiene que mostrar solo el paquete nuevo.
 - **Licencia de fuentes: está dentro del archivo.** La tabla `name` (IDs 7, 13,
   14) trae el copyright y la licencia aunque no haya ningún `.txt` al lado. Así
   se descubrió que Batman era `Shareware` y ROLNER `All Rights Reserved`. Ver

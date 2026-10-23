@@ -27,8 +27,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | 2.0.0     | No               | hecha        |
 | 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | hecha        |
 | 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | hecha        |
-| 5    | Servicios: catálogo, cotización, agenda, trabajos                 | **2.3.0** | 0019             | preparada    |
-| 6    | PWA                                                               | 2.4.0     | No               | pendiente    |
+| 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | hecha        |
+| 6    | PWA                                                               | **2.4.0** | No               | preparada    |
 | 7    | Reseñas, SEO de producto, limpieza de código muerto               | 2.5.0     | 0020 (y 0021)    | pendiente    |
 
 El orden está pensado para que el sitio nunca quede a medias en producción: la
@@ -118,7 +118,9 @@ instalación de verdad. 298 comprobaciones en `verify-migrations.sh`.
 
 **Pendiente que dejó la fase:**
 - **Poner los precios.** Los diez servicios nacen **a cotizar** (`price_from` nulo):
-  "Desde RD$ X" es una promesa y la pone el taller desde el panel. Hasta entonces
+  "Desde RD$ X" es una promesa y la pone el taller desde el panel (`/admin/taller` →
+  Servicios: cada tarjeta trae un campo "Desde RD$" y un botón "Guardar precio"; vacío
+  = a cotizar, y el encabezado cuenta cuántos siguen sin precio). Hasta entonces
   el checkout y la ficha dicen "a cotizar".
 - **Revisar el horario de ejemplo** (lunes–viernes 8:00–17:00, sábado 8:00–13:00,
   franjas de 60 min, 2 citas a la vez). Está marcado `is_example` y el panel lo
@@ -140,6 +142,15 @@ instalación de verdad. 298 comprobaciones en `verify-migrations.sh`.
 **Por qué:** el cliente de una tienda de accesorios entra desde el teléfono. Una
 app instalable con barra de pestañas y shell en caché se siente como Mercado
 Libre y no como una página, sin cachear precios ni stock.
+
+**Pendiente tras la entrega (a mano, en un teléfono de verdad):**
+
+- Lighthouse PWA en verde contra `xautohubrd.com`.
+- Instalar en un Android y en un iPhone, y abrir sin red: tiene que verse el shell.
+- Las fotos de Storage probablemente no se cachean (ver "La PWA" en
+  `docs/ARCHITECTURE.md`); revisarlo cuando haya fotos reales ahí.
+- El logo original (`brand/xh-logo.png`) trae un destello pequeño en la esquina inferior
+  derecha que se ve en los iconos; limpiar el original y regenerar.
 
 ### Fase 7 — Reseñas, SEO y limpieza (2.5.0)
 
