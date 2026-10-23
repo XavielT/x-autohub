@@ -21,7 +21,7 @@ import {
   HubMarketItemModel,
   PublicationStatus,
 } from '../../../shared/models/hub-market-item.model';
-import { ORDER_STATUS_LABELS, UserOrderModel } from '../../../shared/models/user-order.model';
+import { ORDER_STATUS_LABELS, UserOrderModel, needsProof } from '../../../shared/models/user-order.model';
 import { OrderStatus } from '../../../core/supabase/database.types';
 import {
   RequiredField,
@@ -95,7 +95,7 @@ export class Perfil implements OnInit {
       },
     });
 
-    this.orders.getByUserId(user.id).subscribe({
+    this.orders.getMyOrders().subscribe({
       next: (list) => {
         this.myOrders.set(list);
         this.isLoadingOrders.set(false);
@@ -197,14 +197,10 @@ export class Perfil implements OnInit {
   }
 
   /**
-   * Referencia corta del pedido.
-   *
-   * Los ids reales son uuid, y los 8 primeros bastan para nombrar uno. Los del
-   * modo simulado son cortos (`demo-1002`), y recortarlos a 8 los dejaba en
-   * `demo-100` — engañoso, y peor aún: dos pedidos distintos se veían con la
-   * misma referencia. Solo se recorta lo que de verdad es largo.
+   * ¿Este pedido está esperando que su dueño suba el comprobante? Es lo que se
+   * resalta en la lista: alguien tiene que hacer algo y es quien mira.
    */
-  shortId(id: string): string {
-    return id.length > 12 ? id.slice(0, 8) : id;
+  needsProof(order: UserOrderModel): boolean {
+    return needsProof(order);
   }
 }

@@ -1,0 +1,200 @@
+<div class="ped">
+  <div class="ped__inner">
+    @switch (state()) {
+      @case ('loading') {
+        <p class="ped__state" role="status">Cargando tu pedido…</p>
+      }
+
+      @case ('missing') {
+        <div class="ped__card ped__card--center">
+          <h1 class="ped__title">No encontramos este pedido</h1>
+          <p class="ped__muted">Revisa que el enlace esté completo. Si lo hiciste hace poco y no aparece, escríbenos.</p>
+          <a class="ped__btn" routerLink="/tienda">Ir a la tienda</a>
+        </div>
+      }
+
+      @case ('error') {
+        <div class="ped__card ped__card--center" role="alert">
+          <h1 class="ped__title">No pudimos cargar tu pedido</h1>
+          <p class="ped__muted">Revisa tu conexión e inténtalo otra vez. Tu pedido está guardado.</p>
+          <button type="button" class="ped__btn" (click)="refresh()">Reintentar</button>
+        </div>
+      }
+
+      @case ('ready') {
+        @if (order(); as o) {
+          <header class="ped__head">
+            <div>
+              <p class="ped__eyebrow">Gracias por tu compra</p>
+              <h1 class="ped__title">Pedido <span class="ped__num">#{{ o.orderNumber }}</span></h1>
+              <p class="ped__muted">{{ o.createdAt | date: "d 'de' MMMM y, h:mm a" }}</p>
+            </div>
+            <span class="ped__status" [attr.data-status]="o.status">{{ statusLabel() }}</span>
+          </header>
+
+          <!-- Línea de tiempo -->
+          <ol class="ped__timeline" aria-label="Estado del pedido">
+            @for (step of timeline(); track step.status) {
+              <li class="ped__step" [attr.data-state]="step.state" [attr.aria-current]="step.state === 'current' ? 'step' : null">
+                <span class="ped__dot" aria-hidden="true">
+                  @switch (step.state) {
+                    @case ('done') { ✓ }
+                    @case ('cancelled') { ✕ }
+                  }
+                </span>
+                <span class="ped__step-body">
+                  <span class="ped__step-label">{{ step.label }}</span>
+                  @if (step.at) { <span class="ped__step-date">{{ step.at | date: "d MMM, h:mm a" }}</span> }
+                  @if (step.note) { <span class="ped__step-note">{{ step.note }}</span> }
+                </span>
+              </li>
+            }
+          </ol>
+
+          <div class="ped__grid">
+            <div class="ped__col">
+              <!-- Pago -->
+              @if (o.status === 'cancelled') {
+                <section class="ped__card" aria-labelledby="ped-pay">
+                  <h2 id="ped-pay" class="ped__h2">Pedido cancelado</h2>
+                  <p class="ped__muted">Este pedido se canceló y no hay nada que pagar. Si fue un error, escríbenos y lo resolvemos.</p>
+                  <a class="ped__btn ped__btn--ghost" [href]="helpLink()" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
+                </section>
+              } @else if (awaitingPayment()) {
+                <section class="ped__card" aria-labelledby="ped-pay">
+                  @if (o.paymentMethodId === 'transfer') {
+                    <h2 id="ped-pay" class="ped__h2">Paga por transferencia</h2>
+                    <p class="ped__amount">Transfiere exactamente <strong>RD$ {{ o.total | number: '1.0-0' }}</strong></p>
+
+                    @if (bankAccounts().length > 0) {
+                      <ul class="ped__accounts">
+                        @for (acc of bankAccounts(); track acc.number) {
+                          <li class="ped__account">
+                            <div>
+                              <span class="ped__bank">{{ acc.bank }}</span>
+                              <span class="ped__muted">{{ acc.holder }}@if (acc.type) { · {{ acc.type }} }</span>
+                              <span class="ped__acc-number">{{ acc.number }}</span>
+                            </div>
+                            <button type="button" class="ped__copy" (click)="copy(acc.number, 'El número de cuenta')">Copiar</button>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <p class="ped__muted">
+                        Te enviamos los datos de la cuenta por WhatsApp. Escríbenos con tu número de pedido.
+                      </p>
+                      <a class="ped__btn ped__btn--ghost" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer"
+                         (click)="onWhatsAppClick()">Pedir los datos por WhatsApp</a>
+                    }
+
+                    <div class="ped__proof">
+                      <h3 class="ped__h3">Sube tu comprobante</h3>
+                      @if (o.hasProof) {
+                        <p class="ped__ok" role="status">✓ Recibimos tu comprobante. Lo revisamos y confirmamos tu pago.</p>
+                      } @else {
+                        <p class="ped__muted">Una foto o un PDF de la transferencia, de hasta 10 MB. Sin comprobante no podemos confirmar el pago.</p>
+                      }
+
+                      <label class="ped__btn" [class.is-busy]="isUploading()" [attr.aria-disabled]="isUploading()">
+                        {{ isUploading() ? 'Subiendo…' : (o.hasProof ? 'Subir otro comprobante' : 'Subir comprobante') }}
+                        <input class="ped__file" type="file" accept="image/*,application/pdf" [disabled]="isUploading()"
+                               (change)="onProofSelected($event)" />
+                      </label>
+                      @if (isUploading()) {
+                        <div class="ped__progress" role="progressbar" aria-label="Subiendo el comprobante"><span></span></div>
+                      }
+                      @if (uploadError()) { <p class="ped__error" role="alert">{{ uploadError() }}</p> }
+                    </div>
+                  } @else {
+                    <h2 id="ped-pay" class="ped__h2">Cierra tu pedido por WhatsApp</h2>
+                    <p class="ped__muted">
+                      Tu pedido #{{ o.orderNumber }} ya está registrado. Abre WhatsApp, mándanos el mensaje y coordinamos el pago
+                      de <strong>RD$ {{ o.total | number: '1.0-0' }}</strong> y la entrega.
+                    </p>
+                    <a class="ped__btn" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer" (click)="onWhatsAppClick()">
+                      Abrir WhatsApp
+                    </a>
+                    @if (o.whatsappOpenedAt) {
+                      <p class="ped__muted ped__small">Abriste WhatsApp el {{ o.whatsappOpenedAt | date: "d MMM, h:mm a" }}. Si no mandaste el mensaje, puedes volver a abrirlo.</p>
+                    }
+                  }
+                </section>
+              } @else {
+                <section class="ped__card" aria-labelledby="ped-pay">
+                  <h2 id="ped-pay" class="ped__h2">
+                    @if (o.status === 'delivered') { Pedido entregado } @else { Pago confirmado }
+                  </h2>
+                  <p class="ped__muted">
+                    @switch (o.status) {
+                      @case ('paid') { Recibimos tu pago. Ahora preparamos tu pedido. }
+                      @case ('preparing') { Estamos preparando tu pedido. Te avisamos cuando salga. }
+                      @case ('shipped') { Tu pedido va en camino. }
+                      @case ('ready_for_pickup') { Tu pedido está listo: pasa a retirarlo por el taller. }
+                      @default { Gracias por comprar en X AutoHub. }
+                    }
+                  </p>
+                </section>
+              }
+
+              <!-- Entrega -->
+              @if (o.fulfillment === 'pickup' && !isFinal()) {
+                <section class="ped__card" aria-labelledby="ped-pickup">
+                  <h2 id="ped-pickup" class="ped__h2">Retiro en el taller</h2>
+                  @if (pickupAddress(); as pickup) {
+                    <p>{{ pickup.address }}</p>
+                    @if (pickup.hours) { <p class="ped__muted">{{ pickup.hours }}</p> }
+                  } @else {
+                    <p class="ped__muted">Te confirmamos la dirección y el horario por WhatsApp.</p>
+                  }
+                </section>
+              }
+
+              <!-- Instalación -->
+              @if (o.wantsInstallation && o.status !== 'cancelled') {
+                <section class="ped__card" aria-labelledby="ped-install">
+                  <h2 id="ped-install" class="ped__h2">Agenda la instalación</h2>
+                  <p class="ped__muted">
+                    Pediste que te instalemos lo que compraste. Pronto podrás agendar aquí mismo; por ahora escríbenos por WhatsApp
+                    y coordinamos la cita.
+                  </p>
+                  <div class="ped__row">
+                    <a class="ped__btn" routerLink="/servicios"
+                       [queryParams]="{ service: o.installationServiceId, order: o.id }">Ver servicios</a>
+                    <a class="ped__btn ped__btn--ghost" [href]="installationLink()" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
+                  </div>
+                </section>
+              }
+            </div>
+
+            <!-- Resumen -->
+            <aside class="ped__card ped__card--summary" aria-labelledby="ped-sum">
+              <h2 id="ped-sum" class="ped__h2">Resumen</h2>
+              <ul class="ped__lines">
+                @for (item of o.items; track $index) {
+                  <li>
+                    <span>{{ item.quantity }} × {{ item.name }}</span>
+                    <span>RD$ {{ item.unitPrice * item.quantity | number: '1.0-0' }}</span>
+                  </li>
+                }
+              </ul>
+              <div class="ped__totals">
+                <div><span>Subtotal</span><span>RD$ {{ o.subtotal | number: '1.0-0' }}</span></div>
+                <div>
+                  <span>Envío</span>
+                  <span>@if (o.shippingPrice === 0) { Gratis } @else { RD$ {{ o.shippingPrice | number: '1.0-0' }} }</span>
+                </div>
+                <div class="ped__total"><span>Total</span><span>RD$ {{ o.total | number: '1.0-0' }}</span></div>
+              </div>
+              <button type="button" class="ped__link" (click)="refresh()">Actualizar el estado</button>
+              <a class="ped__link" [href]="helpLink()" target="_blank" rel="noopener noreferrer">¿Una duda? Escríbenos por WhatsApp</a>
+            </aside>
+          </div>
+
+          <p class="ped__foot">
+            Guarda este enlace: es tu pedido. Si tienes cuenta, también lo encuentras en <a routerLink="/perfil" fragment="pedidos">Mis pedidos</a>.
+          </p>
+        }
+      }
+    }
+  </div>
+</div>

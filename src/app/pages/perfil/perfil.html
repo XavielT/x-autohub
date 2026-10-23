@@ -126,8 +126,8 @@
       </section>
 
       <!-- Actividad -->
-      <section class="perfil__section">
-        <h2 class="perfil__section-title">Actividad</h2>
+      <section class="perfil__section" id="pedidos">
+        <h2 class="perfil__section-title">Mis pedidos</h2>
 
         @if (isLoadingOrders()) {
           <p class="perfil__empty">Cargando tu actividad...</p>
@@ -139,11 +139,12 @@
         } @else {
           <ul class="perfil__orders">
             @for (order of myOrders(); track order.id) {
-              <li class="perfil__order">
-                <div class="perfil__order-main">
-                  <span class="perfil__order-ref">#{{ shortId(order.id) }}</span>
+              <li class="perfil__order" [class.perfil__order--attention]="needsProof(order)">
+                <a class="perfil__order-main" [routerLink]="['/pedido', order.id]"
+                   [attr.aria-label]="'Ver el pedido ' + order.orderNumber">
+                  <span class="perfil__order-ref">#{{ order.orderNumber }}</span>
                   <span class="perfil__order-date">{{ order.createdAt | date: 'd MMM y' }}</span>
-                </div>
+                </a>
                 <span class="perfil__order-items">
                   {{ order.itemCount }} articulo{{ order.itemCount === 1 ? '' : 's' }}
                 </span>
@@ -151,6 +152,9 @@
                 <span class="perfil__order-status" [attr.data-status]="order.status">
                   {{ statusLabel(order.status) }}
                 </span>
+                @if (needsProof(order)) {
+                  <a class="perfil__order-action" [routerLink]="['/pedido', order.id]">Sube tu comprobante →</a>
+                }
               </li>
             }
           </ul>

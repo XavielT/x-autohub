@@ -387,3 +387,224 @@
         margin: 20px 0 0 0;
     }
 }
+
+// --- Pasos, avisos y resumen del checkout en tres pasos (pivote, fase 4) ---------
+
+.checkout {
+    // La barra de progreso. Los pasos ya recorridos son botones para volver; los
+    // que faltan no se pueden saltar: no hay atajo hacia adelante.
+    &__steps {
+        display: flex;
+        gap: 8px;
+        list-style: none;
+        margin: 0 0 24px;
+        padding: 0;
+    }
+
+    &__step {
+        flex: 1;
+        min-width: 0;
+        padding-top: 10px;
+        border-top: 3px solid #2e2e2e;
+        font-family: var(--font-brand);
+        font-size: 13px;
+        color: var(--main-ultra-light);
+
+        &.is-done { border-top-color: var(--Hub); }
+        &.is-current { border-top-color: var(--Hub); color: #ffffff; font-weight: 700; }
+    }
+
+    &__step-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 32px;
+        padding: 0;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+    }
+
+    button.checkout__step-btn { cursor: pointer; }
+
+    &__step-num {
+        display: inline-grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #2e2e2e;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    &__step.is-done &__step-num,
+    &__step.is-current &__step-num { background-color: var(--Hub); color: #000000; }
+
+    &__step-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    // Lo que se avisa antes de que `create_order()` lo rechace.
+    &__alert {
+        margin-bottom: 20px;
+        padding: 14px 16px;
+        border: 1px solid var(--Hub);
+        border-radius: 10px;
+        background-color: var(--Hub-translucid);
+        font-family: var(--font-body);
+        font-size: 14px;
+        color: #ffffff;
+
+        ul { margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    }
+
+    &__alert-btn {
+        min-height: 44px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 8px;
+        background-color: var(--Hub);
+        color: #000000;
+        font-family: var(--font-brand);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    // Envío o retiro: dos tarjetas grandes, que se tocan bien con el pulgar.
+    &__choices {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+
+        @media (min-width: 560px) { grid-template-columns: 1fr 1fr; }
+    }
+
+    &__choice {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 64px;
+        padding: 14px 14px 14px 44px;
+        border: 1px solid #2e2e2e;
+        border-radius: 10px;
+        background-color: var(--secondary);
+        cursor: pointer;
+
+        input { position: absolute; top: 16px; left: 14px; accent-color: var(--Hub); }
+        &.is-selected { border-color: var(--Hub); box-shadow: 0 0 0 1px rgba(255, 179, 0, 0.15); }
+    }
+
+    &__choice-title { font-family: var(--font-brand); font-size: 15px; font-weight: 700; color: #ffffff; }
+    &__choice-desc { font-family: var(--font-body); font-size: 13px; color: var(--main-ultra-light); }
+
+    &__select { appearance: auto; }
+
+    &__pickup-address { margin: 0 0 6px; font-family: var(--font-body); font-size: 15px; color: #ffffff; line-height: 1.5; }
+    &__pickup-hours { margin: 0 0 4px; font-family: var(--font-body); font-size: 13px; color: var(--main-ultra-light); }
+
+    &__hint {
+        margin: 16px 0 0;
+        font-family: var(--font-body);
+        font-size: 13px;
+        color: var(--main-ultra-light);
+        line-height: 1.5;
+    }
+
+    &__check {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 20px;
+        padding: 14px;
+        border: 1px solid #2e2e2e;
+        border-radius: 10px;
+        background-color: var(--secondary);
+        cursor: pointer;
+
+        input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--Hub); flex-shrink: 0; }
+        strong { display: block; font-family: var(--font-brand); font-size: 15px; color: #ffffff; }
+        small { display: block; margin-top: 4px; font-family: var(--font-body); font-size: 13px; color: var(--main-ultra-light); line-height: 1.45; }
+    }
+
+    // El resumen del último paso: cada dato con su "Cambiar".
+    &__review {
+        margin: 0 0 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+
+        > div {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            column-gap: 12px;
+            row-gap: 2px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #2e2e2e;
+        }
+
+        dt { grid-column: 1 / -1; font-family: var(--font-brand); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--Hub); }
+        dd { margin: 0; font-family: var(--font-body); font-size: 15px; color: #ffffff; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+        dd small { display: block; font-size: 13px; color: var(--main-ultra-light); }
+    }
+
+    &__link-btn {
+        align-self: start;
+        min-height: 44px;
+        padding: 0 4px;
+        border: none;
+        background: none;
+        color: var(--Hub);
+        font-family: var(--font-brand);
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    &__actions {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 10px;
+        margin-top: 28px;
+
+        @media (min-width: 560px) { flex-direction: row; justify-content: space-between; }
+
+        .checkout__submit { margin-top: 0; width: 100%; @media (min-width: 560px) { width: auto; flex: 1; max-width: 320px; margin-left: auto; } }
+        .checkout__submit:disabled { opacity: 0.6; cursor: default; box-shadow: none; }
+    }
+
+    &__btn-secondary {
+        min-height: 48px;
+        padding: 0 24px;
+        border: 1px solid #2e2e2e;
+        border-radius: 8px;
+        background-color: transparent;
+        color: #ffffff;
+        font-family: var(--font-brand);
+        font-size: 15px;
+        cursor: pointer;
+
+        &:hover:not(:disabled) { border-color: var(--Hub); }
+        &:disabled { opacity: 0.6; cursor: default; }
+    }
+
+    &__line-avail {
+        font-family: var(--font-body);
+        font-size: 12px;
+        color: var(--main-ultra-light);
+
+        &[data-kind="in_stock"] { color: #5bd68a; }
+        &[data-kind="on_order"] { color: var(--Hub); }
+        &[data-kind="out_of_stock"] { color: #ff6b6b; }
+    }
+
+    &__input.is-invalid { box-shadow: 0 0 0 2px #ff6b6b; }
+}
+
+.checkout [data-step-heading]:focus { outline: none; }

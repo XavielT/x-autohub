@@ -21,26 +21,26 @@ export const CHECKOUT_SHIPPING_OPTIONS_MOCK: CheckoutShippingOption[] = [
   {
     id: 'pickup',
     label: 'Retiro en hub',
-    description: 'Coordinación por WhatsApp / correo al confirmar el pedido.',
+    description: 'Retira tu pedido en el taller. Te avisamos cuando esté listo.',
     price: 0,
     etaLabel: 'A coordinar',
   },
 ];
 
+/**
+ * Solo los métodos **activos**, que es lo que `CheckoutOptionsService` pide. La
+ * tarjeta y Mercado Pago siguen en la base pero desactivados (migración 0018):
+ * no hay pasarela en esta ronda.
+ */
 export const CHECKOUT_PAYMENT_METHODS_MOCK: CheckoutPaymentMethodOption[] = [
-  {
-    id: 'card',
-    label: 'Tarjeta débito / crédito',
-    description: 'Visa, Mastercard, American Express (integración pendiente).',
-  },
   {
     id: 'transfer',
     label: 'Transferencia bancaria',
-    description: 'Recibirás los datos al confirmar el pedido.',
+    description: 'Transfieres y subes el comprobante; confirmamos tu pago y preparamos el pedido.',
   },
   {
-    id: 'mercadopago',
-    label: 'Mercado Pago',
-    description: 'Wallet y cuotas según disponibilidad (integración pendiente).',
+    id: 'whatsapp',
+    label: 'Pedir por WhatsApp',
+    description: 'Cerramos el pedido y el pago por WhatsApp con nuestro equipo.',
   },
 ];

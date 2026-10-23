@@ -65,4 +65,59 @@
       publicaciones pendientes y sin cuentas de prueba.
     </p>
   </article>
+
+  <article class="adm-set__card">
+    <h3 class="adm-set__card-title">Cuentas para transferir</h3>
+    <p class="adm-set__card-text">
+      Las ve el cliente al confirmar un pedido por transferencia, junto al monto exacto.
+    </p>
+
+    @if (onlyExampleAccounts()) {
+      <p class="adm-set__warn" role="status">
+        Estas cuentas son de <strong>ejemplo</strong>. Mientras no las reemplaces, el sitio no se las muestra a nadie:
+        los clientes ven "te enviamos los datos por WhatsApp".
+      </p>
+    }
+
+    <ul class="adm-set__accounts">
+      @for (acc of accounts(); track $index; let i = $index) {
+        <li class="adm-set__account">
+          <label>Banco<input type="text" [value]="acc.bank" (input)="setAccountField(i, 'bank', $event)" placeholder="Banco Popular" /></label>
+          <label>Titular<input type="text" [value]="acc.holder" (input)="setAccountField(i, 'holder', $event)" placeholder="X AutoHub SRL" /></label>
+          <label>Número de cuenta<input type="text" inputmode="numeric" [value]="acc.number" (input)="setAccountField(i, 'number', $event)" /></label>
+          <label>Tipo<input type="text" [value]="acc.type" (input)="setAccountField(i, 'type', $event)" placeholder="Corriente" /></label>
+          <button type="button" class="adm-set__remove" (click)="removeAccount(i)" [attr.aria-label]="'Quitar la cuenta ' + (i + 1)">Quitar</button>
+        </li>
+      }
+    </ul>
+
+    <div class="adm-set__row">
+      <button type="button" class="adm-set__secondary" (click)="addAccount()">+ Agregar una cuenta</button>
+      <button type="button" class="adm-set__primary" [disabled]="isSavingAccounts()" (click)="saveAccounts()">
+        {{ isSavingAccounts() ? 'Guardando…' : 'Guardar las cuentas' }}
+      </button>
+    </div>
+  </article>
+
+  <article class="adm-set__card">
+    <h3 class="adm-set__card-title">Dirección de retiro</h3>
+    <p class="adm-set__card-text">Dónde pasa a buscar su pedido quien elige "Retiro en el taller".</p>
+
+    @if (pickupIsExample()) {
+      <p class="adm-set__warn" role="status">
+        La dirección es de <strong>ejemplo</strong>: mientras no la reemplaces, el sitio dice que la confirmas por WhatsApp.
+      </p>
+    }
+
+    <div class="adm-set__account">
+      <label>Dirección<input type="text" [value]="pickupAddress()" (input)="setPickupField('address', $event)" placeholder="Calle, número, sector, ciudad" /></label>
+      <label>Horario<input type="text" [value]="pickupHours()" (input)="setPickupField('hours', $event)" placeholder="Lunes a viernes, 8:00 a. m. a 5:00 p. m." /></label>
+    </div>
+
+    <div class="adm-set__row">
+      <button type="button" class="adm-set__primary" [disabled]="isSavingPickup()" (click)="savePickup()">
+        {{ isSavingPickup() ? 'Guardando…' : 'Guardar la dirección' }}
+      </button>
+    </div>
+  </article>
 </section>

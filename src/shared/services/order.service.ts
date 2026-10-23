@@ -1,124 +1,71 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, from, map, of, switchMap, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { toOrderView, toUserOrder } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { CheckoutSubmitPayload } from '../models/checkout.model';
-import { CartItem } from './cart.service';
+import {
+  CreatedOrder,
+  OrderHistoryEntry,
+  OrderView,
+} from '../models/order.model';
 import { UserOrderModel } from '../models/user-order.model';
+import { CHECKOUT_SHIPPING_OPTIONS_MOCK } from '../data/checkout-options.mock';
+import { CartItem } from './cart.service';
+import { AuthService } from './auth.service';
+import { StorageService } from './storage.service';
 
-export interface OrderResult {
-  id: string;
-  total: number;
+/** Dónde guarda el modo simulado sus pedidos entre recargas. */
+const MOCK_STORAGE_KEY = 'x-autohub.mock-orders';
+
+/** Un pedido del modo simulado: el mismo que ve /pedido/:id, y de quién es. */
+interface MockOrder {
+  /** `null` = invitado. `'demo'` = de ejemplo, lo ve cualquiera con sesión. */
+  userId: string | null;
+  view: OrderView;
 }
 
 /**
- * Pedidos del catálogo.
+ * Pedidos de la tienda.
  *
  * Se permite comprar sin cuenta: pedir registro antes de pagar es una barrera
  * innecesaria. Ver docs/ROADMAP.md.
  *
- * Todo pasa por la función `create_order` de Postgres (migración 0005), no por
- * inserts directos. Dos razones, las dos verificadas contra la base real:
+ * Todo pasa por funciones de Postgres (migraciones 0005 y 0018), no por inserts
+ * directos. Las razones, verificadas contra la base real:
  *
- * 1. **El precio lo pone el servidor.** Antes el navegador enviaba `subtotal`,
- *    `total` y el `unit_price` de cada línea, y nada los contrastaba con el
- *    catálogo: un cliente manipulado podía comprar a RD$ 1. Ahora solo manda qué
- *    pieza y cuántas.
+ * 1. **El precio y el envío los pone el servidor.** El navegador solo manda qué
+ *    pieza y cuántas; un cliente manipulado no puede comprar a RD$ 1.
  *
  * 2. **El checkout de invitado funciona.** Un pedido con `user_id` nulo no lo
- *    puede leer nadie (RLS pide `user_id = auth.uid()`, y `NULL = NULL` no es
- *    verdadero). Eso hacía fallar tanto el `.select()` posterior al insert como
- *    el insert de `order_items`, cuyo `with check` consulta `orders`. El pedido
- *    se creaba igual, así que un reintento generaba duplicados.
+ *    puede leer nadie por RLS, así que ni el insert ni su `select` posterior
+ *    habrían funcionado desde el navegador. `get_order()` es la forma de leerlo:
+ *    quien tiene el id (un uuid imposible de adivinar) ve su pedido.
  *
- * Además el pedido y sus líneas entran en una sola transacción: ya no existe el
- * estado a medias de "pedido sin líneas".
+ * 3. **El stock se descuenta en la misma transacción** que crea el pedido, y se
+ *    devuelve al cancelarlo. Ver `create_order()` y `set_order_status()`.
+ *
+ * Lo que `create` devuelve **es lo que calculó Postgres**, y es lo que se
+ * muestra: el navegador no recalcula el total.
  */
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthService);
+  private readonly storage = inject(StorageService);
 
   /**
-   * Pedidos simulados, para que la actividad del perfil tenga algo que mostrar
-   * sin backend.
-   *
-   * En modo real esto no se usa: los pedidos salen de la base. Aquí hacen falta
-   * porque `submit()` en modo simulado solo devolvía `{ id, total }` sin guardar
-   * nada, así que no existía historial que listar. Los dos sembrados dan
-   * contenido al abrir el perfil por primera vez, y `submit()` añade los nuevos.
+   * Los pedidos del modo simulado. Viven en `localStorage` y no solo en memoria:
+   * `/pedido/:id` se abre tras una navegación y se puede recargar, y un pedido
+   * que desaparece con el F5 haría parecer que la página no funciona. Es la misma
+   * razón por la que `SiteSettingsService` guarda sus ajustes ahí.
    */
-  private mockOrders: UserOrderModel[] = [
-    {
-      id: 'demo-1001',
-      createdAt: new Date('2026-08-09T15:20:00Z'),
-      itemCount: 2,
-      total: 15800,
-      status: 'delivered',
-    },
-    {
-      id: 'demo-1002',
-      createdAt: new Date('2026-08-12T11:05:00Z'),
-      itemCount: 1,
-      total: 3300,
-      status: 'paid',
-    },
-  ];
+  private mockOrders: MockOrder[] = readMockOrders();
 
-  /**
-   * Los pedidos de un usuario, del mas nuevo al mas viejo.
-   *
-   * Solo los que tienen cuenta detras. Los de invitado (`user_id` nulo) no
-   * aparecen aquí ni pueden: RLS los limita a `user_id = auth.uid()`, y para un
-   * pedido sin dueño esa comparacion nunca es verdadera. Es coherente con que la
-   * compra sin cuenta no deja rastro en ningún perfil.
-   */
-  getByUserId(userId: string): Observable<UserOrderModel[]> {
+  /** Crea el pedido. Devuelve lo que calculó Postgres. */
+  create(payload: CheckoutSubmitPayload, items: readonly CartItem[]): Observable<CreatedOrder> {
     if (this.supabase.shouldUseMockData()) {
-      return of(
-        [...this.mockOrders].sort((a, b) => +b.createdAt - +a.createdAt),
-      );
-    }
-
-    return from(
-      this.supabase.db
-        .from('orders')
-        .select('id, total, status, created_at, order_items(quantity)')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false }),
-    ).pipe(
-      map((res) =>
-        unwrap(res).map((row) => ({
-          id: row.id,
-          createdAt: new Date(row.created_at),
-          // La suma de cantidades, no el numero de lineas: dos unidades de la
-          // misma pieza son dos articulos para quien mira su pedido.
-          itemCount: (row.order_items ?? []).reduce((acc, i) => acc + i.quantity, 0),
-          total: Number(row.total),
-          status: row.status,
-        })),
-      ),
-    );
-  }
-
-  submit(
-    payload: CheckoutSubmitPayload,
-    items: CartItem[],
-    shippingPrice: number,
-  ): Observable<OrderResult> {
-    if (this.supabase.shouldUseMockData()) {
-      const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
-      const total = subtotal + shippingPrice;
-      const created: UserOrderModel = {
-        id: `demo-${Date.now()}`,
-        createdAt: new Date(),
-        itemCount: items.reduce((acc, i) => acc + i.quantity, 0),
-        total,
-        status: 'pending',
-      };
-      // Se guarda para que aparezca en la actividad del perfil, igual que en modo
-      // real. Sin esto un pedido hecho con mocks no dejaba rastro en ningún lado.
-      this.mockOrders = [created, ...this.mockOrders];
-      return of({ id: created.id, total });
+      return this.createMock(payload, items);
     }
 
     return from(
@@ -133,6 +80,9 @@ export class OrderService {
         p_city: payload.city || null,
         p_postal_code: payload.postalCode || null,
         p_order_notes: payload.orderNotes ?? null,
+        p_fulfillment_type: payload.fulfillment,
+        p_province: payload.province || null,
+        p_wants_installation: payload.wantsInstallation,
       }),
     ).pipe(
       map((res) => unwrap(res)),
@@ -142,8 +92,264 @@ export class OrderService {
         if (!order) {
           throw new Error('No pudimos registrar tu pedido. Intenta de nuevo.');
         }
-        return { id: order.id, total: Number(order.total) };
+        return {
+          id: order.id,
+          orderNumber: order.order_number,
+          subtotal: Number(order.subtotal),
+          shippingPrice: Number(order.shipping_price),
+          total: Number(order.total),
+        };
       }),
     );
+  }
+
+  /** El pedido de /pedido/:id, o `null` si ese id no existe. */
+  getOrder(id: string): Observable<OrderView | null> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(this.mockOrders.find((o) => o.view.id === id)?.view ?? null);
+    }
+
+    return from(this.supabase.db.rpc('get_order', { p_order_id: id })).pipe(
+      map((res) => {
+        if (res.error) {
+          // Un id que no es un uuid ni siquiera llega a la función: para quien
+          // abrió el enlace es lo mismo que un pedido que no existe.
+          if (res.error.code === '22P02') return null;
+          unwrap({ data: null, error: res.error });
+        }
+        return res.data ? toOrderView(res.data) : null;
+      }),
+    );
+  }
+
+  /**
+   * Los pedidos de quien tiene la sesión abierta, del más nuevo al más viejo. Los
+   * de invitado no aparecen aquí ni pueden: no tienen dueño.
+   */
+  getMyOrders(): Observable<UserOrderModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      const userId = this.auth.user()?.id ?? null;
+      return of(
+        this.mockOrders
+          .filter((o) => o.userId === 'demo' || (userId !== null && o.userId === userId))
+          .map(({ view }) => ({
+            id: view.id,
+            orderNumber: view.orderNumber,
+            createdAt: view.createdAt,
+            itemCount: view.items.reduce((acc, i) => acc + i.quantity, 0),
+            total: view.total,
+            status: view.status,
+            fulfillment: view.fulfillment,
+            paymentMethodId: view.paymentMethodId,
+            hasProof: view.hasProof,
+            wantsInstallation: view.wantsInstallation,
+          }))
+          .sort((a, b) => +b.createdAt - +a.createdAt),
+      );
+    }
+
+    return from(this.supabase.db.rpc('my_orders')).pipe(
+      map((res) => unwrap(res).map(toUserOrder)),
+    );
+  }
+
+  /**
+   * Sube el comprobante y lo deja registrado en el pedido. Son dos pasos y los dos
+   * pueden fallar: primero el archivo al bucket privado (en la carpeta del
+   * pedido), y luego `attach_payment_proof()`, que comprueba que el archivo esté
+   * ahí y que el pedido todavía lo acepte.
+   *
+   * El navegador no puede escribir `payment_proof_url` por su cuenta: es la
+   * función la que apunta el pedido al archivo.
+   */
+  uploadProof(orderId: string, file: File): Observable<void> {
+    const invalid = this.storage.validateProof(file);
+    if (invalid) return throwError(() => new Error(invalid));
+
+    return this.storage.uploadPaymentProof(file, orderId).pipe(
+      switchMap((path) => {
+        if (this.supabase.shouldUseMockData()) {
+          this.updateMock(orderId, (view) => ({ ...view, hasProof: true }));
+          return of(undefined);
+        }
+
+        return from(
+          this.supabase.db.rpc('attach_payment_proof', { p_order_id: orderId, p_path: path }),
+        ).pipe(
+          map((res) => {
+            if (res.error) unwrap({ data: null, error: res.error });
+          }),
+        );
+      }),
+    );
+  }
+
+  /** Deja constancia de que el cliente abrió WhatsApp. No bloquea nada si falla. */
+  markWhatsAppOpened(orderId: string): Observable<void> {
+    if (this.supabase.shouldUseMockData()) {
+      this.updateMock(orderId, (view) => ({ ...view, whatsappOpenedAt: view.whatsappOpenedAt ?? new Date() }));
+      return of(undefined);
+    }
+
+    return from(this.supabase.db.rpc('mark_whatsapp_opened', { p_order_id: orderId })).pipe(
+      map((res) => {
+        if (res.error) console.error('[supabase]', res.error);
+      }),
+    );
+  }
+
+  // --- Modo simulado ---------------------------------------------------------
+
+  /**
+   * Hace lo mismo que `create_order()`, con los mismos mensajes: valida el stock
+   * de lo que es de inventario propio, calcula el envío con la opción elegida y
+   * deja el pedido en `awaiting_payment`. Si el modo simulado fuera más permisivo
+   * que la base, el checkout "funcionaría" en desarrollo y fallaría en producción.
+   */
+  private createMock(payload: CheckoutSubmitPayload, items: readonly CartItem[]): Observable<CreatedOrder> {
+    if (items.length === 0) {
+      return throwError(() => new Error('Un pedido necesita al menos una pieza.'));
+    }
+
+    for (const { part, quantity } of items) {
+      if (part.fulfillment !== 'stock') continue;
+      if (part.stock <= 0) {
+        return throwError(() => new Error(`Se agoto "${part.name}". Quitala del carrito para continuar.`));
+      }
+      if (quantity > part.stock) {
+        return throwError(
+          () => new Error(`De "${part.name}" solo quedan ${part.stock} y pediste ${quantity}. Ajusta la cantidad.`),
+        );
+      }
+    }
+
+    const shipping = CHECKOUT_SHIPPING_OPTIONS_MOCK.find((o) => o.id === payload.shippingOptionId);
+    if (!shipping) return throwError(() => new Error('Metodo de envio no valido.'));
+
+    const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
+    const orderNumber = Math.max(1000, ...this.mockOrders.map((o) => o.view.orderNumber)) + 1;
+    const createdAt = new Date();
+    const status = 'awaiting_payment' as const;
+
+    const view: OrderView = {
+      id: `demo-${Date.now()}`,
+      orderNumber,
+      status,
+      fulfillment: payload.fulfillment,
+      paymentMethodId: payload.paymentMethodId,
+      wantsInstallation: payload.wantsInstallation && items.some((i) => i.part.installable),
+      subtotal,
+      shippingPrice: shipping.price,
+      total: subtotal + shipping.price,
+      createdAt,
+      hasProof: false,
+      whatsappOpenedAt: null,
+      paymentConfirmedAt: null,
+      installationServiceId: items.find((i) => i.part.installable)?.part.installationServiceId ?? null,
+      items: items.map((i) => ({ name: i.part.name, unitPrice: i.part.price, quantity: i.quantity })),
+      history: [{ fromStatus: null, toStatus: status, note: null, createdAt }],
+    };
+
+    this.mockOrders = [{ userId: this.auth.user()?.id ?? null, view }, ...this.mockOrders];
+    writeMockOrders(this.mockOrders);
+
+    return of({
+      id: view.id,
+      orderNumber,
+      subtotal: view.subtotal,
+      shippingPrice: view.shippingPrice,
+      total: view.total,
+    });
+  }
+
+  private updateMock(orderId: string, change: (view: OrderView) => OrderView): void {
+    this.mockOrders = this.mockOrders.map((o) =>
+      o.view.id === orderId ? { ...o, view: change(o.view) } : o,
+    );
+    writeMockOrders(this.mockOrders);
+  }
+}
+
+// --- Persistencia del modo simulado ----------------------------------------------
+
+const DEMO_ORDERS = (): MockOrder[] => {
+  const history = (status: OrderView['status'], at: string): OrderHistoryEntry[] => [
+    { fromStatus: null, toStatus: 'awaiting_payment', note: null, createdAt: new Date(at) },
+    ...(status === 'awaiting_payment' ? [] : [{ fromStatus: 'awaiting_payment' as const, toStatus: status, note: null, createdAt: new Date(at) }]),
+  ];
+
+  return [
+    {
+      userId: 'demo',
+      view: {
+        id: 'demo-1001',
+        orderNumber: 1001,
+        status: 'delivered',
+        fulfillment: 'shipping',
+        paymentMethodId: 'transfer',
+        wantsInstallation: false,
+        subtotal: 15800,
+        shippingPrice: 0,
+        total: 15800,
+        createdAt: new Date('2026-08-09T15:20:00Z'),
+        hasProof: true,
+        whatsappOpenedAt: null,
+        paymentConfirmedAt: new Date('2026-08-09T16:00:00Z'),
+        installationServiceId: null,
+        items: [
+          { name: 'Disco ventilado GTR 355mm', unitPrice: 12950, quantity: 1 },
+          { name: 'Filtro de aire de alto flujo', unitPrice: 2850, quantity: 1 },
+        ],
+        history: history('delivered', '2026-08-09T15:20:00Z'),
+      },
+    },
+    {
+      userId: 'demo',
+      view: {
+        id: 'demo-1002',
+        orderNumber: 1002,
+        status: 'paid',
+        fulfillment: 'pickup',
+        paymentMethodId: 'whatsapp',
+        wantsInstallation: false,
+        subtotal: 3300,
+        shippingPrice: 0,
+        total: 3300,
+        createdAt: new Date('2026-08-12T11:05:00Z'),
+        hasProof: false,
+        whatsappOpenedAt: new Date('2026-08-12T11:06:00Z'),
+        paymentConfirmedAt: new Date('2026-08-12T12:00:00Z'),
+        installationServiceId: null,
+        items: [{ name: 'Alfombras all-weather', unitPrice: 3300, quantity: 1 }],
+        history: history('paid', '2026-08-12T11:05:00Z'),
+      },
+    },
+  ];
+};
+
+/** Las fechas viajan como texto en JSON; esto las vuelve `Date`. */
+const DATE_FIELDS = new Set(['createdAt', 'whatsappOpenedAt', 'paymentConfirmedAt']);
+
+function readMockOrders(): MockOrder[] {
+  try {
+    const raw = localStorage.getItem(MOCK_STORAGE_KEY);
+    if (!raw) return DEMO_ORDERS();
+
+    const parsed = JSON.parse(raw, (key, value) =>
+      DATE_FIELDS.has(key) && typeof value === 'string' ? new Date(value) : value,
+    ) as MockOrder[];
+
+    return Array.isArray(parsed) ? parsed : DEMO_ORDERS();
+  } catch {
+    // Modo privado, storage lleno o JSON corrupto: los pedidos de ejemplo.
+    return DEMO_ORDERS();
+  }
+}
+
+function writeMockOrders(orders: MockOrder[]): void {
+  try {
+    localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(orders));
+  } catch {
+    // Sin storage el pedido vive lo que dure la pestaña.
   }
 }

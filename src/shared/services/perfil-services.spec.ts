@@ -3,9 +3,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { HubMarketService } from './hub-market.service';
-import { OrderService } from './order.service';
 import { HubMarketItemModel } from '../models/hub-market-item.model';
-import { makeProduct } from '../testing/product.fixture';
 
 /**
  * Los caminos simulados de lo que consume el perfil.
@@ -71,56 +69,6 @@ describe('HubMarketService.getBySellerId (mock)', () => {
     const mias = await firstValueFrom(service.getBySellerId('u-3'));
 
     expect(mias[0].title).toBe('Segunda');
-  });
-});
-
-describe('OrderService.getByUserId (mock)', () => {
-  let service: OrderService;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(OrderService);
-  });
-
-  it('trae los pedidos sembrados, del mas nuevo al mas viejo', async () => {
-    const pedidos = await firstValueFrom(service.getByUserId('u-1'));
-
-    expect(pedidos.length).toBe(2);
-    expect(+pedidos[0].createdAt).toBeGreaterThan(+pedidos[1].createdAt);
-  });
-
-  it('un pedido nuevo aparece en la actividad', async () => {
-    const antes = (await firstValueFrom(service.getByUserId('u-1'))).length;
-
-    await firstValueFrom(
-      service.submit(
-        {
-          contactEmail: 'a@b.c',
-          contactPhone: '',
-          fullName: 'A',
-          addressLine1: 'B',
-          city: '',
-          postalCode: '',
-          shippingOptionId: 'standard',
-          paymentMethodId: 'card',
-        },
-        [
-          {
-            part: makeProduct({ id: 1, name: 'Pieza', price: 1000, brand: 'X', imgUrl: 'x', description: '', starsRating: 4 }),
-            quantity: 2,
-          },
-        ],
-        0,
-      ),
-    );
-
-    const despues = await firstValueFrom(service.getByUserId('u-1'));
-
-    expect(despues.length).toBe(antes + 1);
-    // Cuenta unidades, no lineas: dos del mismo articulo son dos articulos.
-    expect(despues[0].itemCount).toBe(2);
-    expect(despues[0].total).toBe(2000);
-    expect(despues[0].status).toBe('pending');
   });
 });
 

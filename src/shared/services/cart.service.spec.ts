@@ -248,4 +248,68 @@ describe('CartService', () => {
       expect(montar().items()).toEqual([]);
     });
   });
+
+  describe('cantidades y existencias (fase 4)', () => {
+    it('cambia la cantidad de una pieza', () => {
+      const cart = montar();
+      cart.addToCart(makeProduct({ id: 5, stock: 10 }));
+
+      cart.setQuantity(5, 4);
+
+      expect(cart.items()[0].quantity).toBe(4);
+      expect(cart.totalItems()).toBe(4);
+    });
+
+    it('cero o menos la quita', () => {
+      const cart = montar();
+      cart.addToCart(makeProduct({ id: 5 }));
+
+      cart.setQuantity(5, 0);
+
+      expect(cart.items()).toEqual([]);
+    });
+
+    it('lo de inventario propio no pasa de lo que queda', () => {
+      const cart = montar();
+      cart.addToCart(makeProduct({ id: 5, stock: 3 }));
+
+      cart.setQuantity(5, 9);
+
+      expect(cart.items()[0].quantity).toBe(3);
+    });
+
+    it('lo bajo pedido no tiene tope: no depende de existencias', () => {
+      const cart = montar();
+      cart.addToCart(makeProduct({ id: 5, fulfillment: 'on_order', leadTimeDays: 10, stock: 0 }));
+
+      cart.setQuantity(5, 9);
+
+      expect(cart.items()[0].quantity).toBe(9);
+    });
+
+    it('stockIssues lista las líneas que piden más de lo que hay, y no cuenta lo bajo pedido', () => {
+      const cart = montar();
+      cart.addToCart(makeProduct({ id: 1, name: 'Disco', stock: 1 }));
+      cart.addToCart(makeProduct({ id: 1, name: 'Disco', stock: 1 }));
+      cart.addToCart(makeProduct({ id: 2, name: 'Agotada', stock: 0 }));
+      cart.addToCart(makeProduct({ id: 3, fulfillment: 'on_order', leadTimeDays: 5, stock: 0 }));
+
+      expect(cart.stockIssues().map((i) => [i.part.name, i.quantity, i.available])).toEqual([
+        ['Disco', 2, 1],
+        ['Agotada', 1, 0],
+      ]);
+    });
+
+    it('refresh() vuelve a leer el stock del catálogo: lo que bajó desde la última visita se avisa', async () => {
+      sembrar([{ part: makeProduct({ id: 1, stock: 10 }), quantity: 3 }]);
+      const cart = montar();
+      await asentar();
+      expect(cart.stockIssues()).toEqual([]);
+
+      parts.catalog = [makeProduct({ id: 1, stock: 1 })];
+      await cart.refresh();
+
+      expect(cart.stockIssues().map((i) => [i.quantity, i.available])).toEqual([[3, 1]]);
+    });
+  });
 });

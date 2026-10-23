@@ -255,7 +255,7 @@ describe('Navbar', () => {
       expect(el.querySelector('.navbar__user-initial')?.textContent?.trim()).toBe('M');
       expect(el.querySelector('.navbar__user-name')?.textContent?.trim()).toBe('Maria Perez');
       const items = texts(el, '.navbar__panel--right .navbar__panel-link');
-      expect(items).toEqual(['Mi perfil', 'Salir']);
+      expect(items).toEqual(['Mi perfil', 'Mis pedidos', 'Salir']);
     });
 
     it('un moderador ve ademas el Panel; un usuario normal no', () => {

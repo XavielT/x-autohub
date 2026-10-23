@@ -39,10 +39,15 @@ const PUBLICACION: HubMarketItemModel = {
 
 const PEDIDO: UserOrderModel = {
   id: '7f038d63-ac9d-41d2-af3d-1c8cae1f62b6',
+  orderNumber: 1042,
   createdAt: new Date('2026-08-12T11:05:00Z'),
   itemCount: 3,
   total: 28750,
   status: 'paid',
+  fulfillment: 'shipping',
+  paymentMethodId: 'transfer',
+  hasProof: true,
+  wantsInstallation: false,
 };
 
 describe('Perfil', () => {
@@ -67,7 +72,7 @@ describe('Perfil', () => {
         },
         {
           provide: OrderService,
-          useValue: { getByUserId: vi.fn(() => of(options.pedidos ?? [PEDIDO])) },
+          useValue: { getMyOrders: vi.fn(() => of(options.pedidos ?? [PEDIDO])) },
         },
       ],
     });
@@ -183,8 +188,41 @@ describe('Perfil', () => {
     expect(texto).toContain('3 articulos');
     expect(texto).toContain('28,750');
     expect(texto).toContain('Pagado');
-    // Los 8 primeros del uuid, no el uuid entero.
-    expect(texto).toContain('#7f038d63');
+    // El número que se le dice al cliente, no el uuid.
+    expect(texto).toContain('#1042');
+    expect(texto).not.toContain('7f038d63');
+  });
+
+  describe('Mis pedidos', () => {
+    it('cada pedido lleva a su página', async () => {
+      const { fixture } = montar();
+      await fixture.whenStable();
+
+      const link = (fixture.nativeElement as HTMLElement).querySelector('.perfil__order-main');
+      expect(link?.getAttribute('href')).toBe('/pedido/7f038d63-ac9d-41d2-af3d-1c8cae1f62b6');
+    });
+
+    it('resalta el que espera el comprobante, y solo ese', async () => {
+      const { fixture } = montar({
+        pedidos: [
+          { ...PEDIDO, id: 'a', status: 'awaiting_payment', hasProof: false },
+          { ...PEDIDO, id: 'b', orderNumber: 1043, status: 'awaiting_payment', hasProof: true },
+          { ...PEDIDO, id: 'c', orderNumber: 1044, status: 'awaiting_payment', hasProof: false, paymentMethodId: 'whatsapp' },
+        ],
+      });
+      await fixture.whenStable();
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelectorAll('.perfil__order--attention').length).toBe(1);
+      expect(el.querySelector('.perfil__order-action')?.textContent).toContain('Sube tu comprobante');
+    });
+
+    it('la sección se puede enlazar con #pedidos', async () => {
+      const { fixture } = montar();
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('#pedidos')).not.toBeNull();
+    });
   });
 
   it('avisa de que las compras sin cuenta no aparecen', async () => {

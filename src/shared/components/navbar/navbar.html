@@ -99,6 +99,7 @@
                 @if (openMenu() === 'cuenta') {
                     <div class="navbar__panel navbar__panel--right" role="menu">
                         <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" (click)="closeMenu()">Mi perfil</a>
+                        <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" fragment="pedidos" (click)="closeMenu()">Mis pedidos</a>
                         @if (canModerate()) {
                             <a class="navbar__panel-link" role="menuitem" routerLink="/admin" (click)="closeMenu()">Panel</a>
                         }

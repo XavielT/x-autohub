@@ -107,37 +107,36 @@
     font-weight: 700;
   }
 
-  &__status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
+  // El estado actual, como etiqueta. Cambiarlo se hace con los botones de abajo.
+  &__state {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
 
-    select {
-      font-family: var(--font-body);
-      font-size: 13px;
-      background-color: rgba(0, 0, 0, 0.3);
-      color: inherit;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 6px 8px;
-      cursor: pointer;
-
-      &:disabled { opacity: 0.5; }
-      &:focus { outline: none; border-color: var(--Hub); }
-    }
+    &[data-status='pending'],
+    &[data-status='awaiting_payment'] { background-color: rgba(var(--Hub-rgb), 0.18); color: var(--tertiary-soft); }
+    &[data-status='paid'],
+    &[data-status='preparing'],
+    &[data-status='shipped'],
+    &[data-status='ready_for_pickup'] { background-color: rgba(80, 150, 255, 0.18); color: #8fb8ff; }
+    &[data-status='delivered'] { background-color: rgba(70, 190, 120, 0.18); color: #7fdca4; }
+    &[data-status='cancelled'] { background-color: rgba(229, 72, 77, 0.18); color: #ff8d8f; }
   }
 
-  &__status-label { color: var(--text-soft); }
-
   &__toggle {
+    margin-top: 12px;
+    min-height: 44px;
     font-family: var(--font-body);
     font-size: 13px;
     background: transparent;
     color: var(--text-strong);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 6px 14px;
     cursor: pointer;
 
     &:hover { color: var(--Hub); border-color: var(--Hub); }
@@ -202,4 +201,88 @@
     text-align: center;
     color: var(--text-soft);
   }
+
+  // Transferencia con comprobante esperando que alguien lo mire.
+  &__item--attention { box-shadow: 0 0 0 1px var(--Hub); }
+
+  &__badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+
+  &__badge {
+    &--pay { background-color: var(--Hub-translucid); color: var(--Hub); }
+    &--ok { background-color: rgba(70, 190, 120, 0.18); color: #7fdca4; }
+    &--warn { background-color: rgba(229, 72, 77, 0.18); color: #ff8d8f; }
+  }
+
+  // Botones grandes: se tocan con el pulgar, de pie, con el comprobante en la otra mano.
+  &__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+  &__action {
+    flex: 1 1 200px;
+    min-height: 48px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #1a1a1a;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+    &:disabled { opacity: 0.55; cursor: default; }
+
+    &--danger { background-color: transparent; color: #ff8d8f; border: 1px solid rgba(229, 72, 77, 0.6); }
+    &--confirm { background-color: #e5484d; color: #fff; border-color: #e5484d; }
+  }
+
+  &__note {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-soft);
+
+    small { color: var(--text-soft); }
+
+    input {
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background-color: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-family: var(--font-body);
+      // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+      font-size: 16px;
+
+      &:focus { outline: none; border-color: var(--Hub); }
+    }
+  }
+
+  &__proof {
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  &__link { display: inline-block; margin-top: 4px; color: var(--Hub); font-size: 14px; }
+
+  &__history {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+
+    li { display: flex; flex-direction: column; gap: 1px; }
+  }
+
+  &__history-note { color: var(--Hub); font-size: 13px; overflow-wrap: anywhere; }
 }

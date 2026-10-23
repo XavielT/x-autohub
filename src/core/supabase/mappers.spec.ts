@@ -6,8 +6,10 @@ import {
   toProduct,
   toProductCategory,
   toProductFitment,
+  toOrderView,
   toProfileVehicle,
   toSocialPost,
+  toUserOrder,
   toSpecs,
   toVehicleMake,
   toVehicleModel,
@@ -377,6 +379,65 @@ describe('mappers', () => {
       });
       expect(verified.isVerified).toBe(true);
       expect(verified.authorName).toBe('Juan Manuel');
+    });
+  });
+
+  describe('pedidos (0018)', () => {
+    const json = {
+      id: 'o-1',
+      order_number: 1042,
+      status: 'awaiting_payment' as const,
+      fulfillment_type: 'pickup' as const,
+      payment_method_id: 'transfer',
+      wants_installation: true,
+      subtotal: '12050.00' as unknown as number,
+      shipping_price: 0,
+      total: '12050.00' as unknown as number,
+      created_at: '2026-10-23T14:00:00Z',
+      has_proof: true,
+      whatsapp_opened_at: null,
+      payment_confirmed_at: '2026-10-23T15:00:00Z',
+      installation_service_id: 7,
+      items: [{ name: 'Disco', unit_price: '6025.00' as unknown as number, quantity: 2 }],
+      history: [
+        { from_status: null, to_status: 'awaiting_payment' as const, note: null, created_at: '2026-10-23T14:00:00Z' },
+      ],
+    };
+
+    it('get_order() → OrderView: números como números, fechas como fechas', () => {
+      const v = toOrderView(json);
+
+      expect(v.orderNumber).toBe(1042);
+      expect(v.fulfillment).toBe('pickup');
+      expect(v.subtotal).toBe(12050);
+      expect(v.total).toBe(12050);
+      expect(v.items[0]).toEqual({ name: 'Disco', unitPrice: 6025, quantity: 2 });
+      expect(v.createdAt).toBeInstanceOf(Date);
+      expect(v.paymentConfirmedAt).toBeInstanceOf(Date);
+      expect(v.whatsappOpenedAt).toBeNull();
+      expect(v.installationServiceId).toBe(7);
+      expect(v.history[0].createdAt).toBeInstanceOf(Date);
+      expect(v.history[0].fromStatus).toBeNull();
+    });
+
+    it('my_orders() → UserOrderModel: la suma de unidades llega como bigint (texto)', () => {
+      const o = toUserOrder({
+        id: 'o-1',
+        order_number: 1042,
+        status: 'paid',
+        fulfillment_type: 'shipping',
+        payment_method_id: 'whatsapp',
+        total: '3300.00' as unknown as number,
+        created_at: '2026-10-23T14:00:00Z',
+        item_count: '3' as unknown as number,
+        has_proof: false,
+        wants_installation: false,
+      });
+
+      expect(o.itemCount).toBe(3);
+      expect(o.total).toBe(3300);
+      expect(o.orderNumber).toBe(1042);
+      expect(o.paymentMethodId).toBe('whatsapp');
     });
   });
 });

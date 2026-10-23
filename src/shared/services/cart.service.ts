@@ -8,6 +8,14 @@ export interface CartItem {
   quantity: number;
 }
 
+/** Una línea del carrito que pide más de lo que hay en inventario. */
+export interface StockIssue {
+  part: HubPartModel;
+  quantity: number;
+  /** Lo que queda. Cero = agotado. */
+  available: number;
+}
+
 /** Donde vive el carrito entre visitas. Mismo prefijo que las otras claves. */
 const STORAGE_KEY = 'x-autohub.cart';
 
@@ -65,12 +73,23 @@ export class CartService {
     this._items().reduce((acc, item) => acc + item.part.price * item.quantity, 0),
   );
 
+  /**
+   * Las líneas que piden más de lo que hay. Solo cuenta lo de inventario propio:
+   * lo bajo pedido no depende de existencias. `create_order()` las rechazaría, así
+   * que el checkout las avisa **antes** y no deja confirmar con ellas.
+   */
+  readonly stockIssues = computed<StockIssue[]>(() =>
+    this._items()
+      .filter((i) => i.part.fulfillment === 'stock' && i.quantity > i.part.stock)
+      .map((i) => ({ part: i.part, quantity: i.quantity, available: i.part.stock })),
+  );
+
   constructor() {
     // Un `effect` y no un `persist()` en cada método: así el próximo método que
     // toque el carrito no puede olvidarse de guardar.
     effect(() => writeStoredCart(this._items()));
 
-    void this.reconcileWithCatalog();
+    void this.refresh();
   }
 
   addToCart(part: HubPartModel): void {
@@ -84,6 +103,27 @@ export class CartService {
     } else {
       this._items.set([...current, { part, quantity: 1 }]);
     }
+  }
+
+  /**
+   * Cambia la cantidad de una pieza. Cero o menos la quita. En lo de inventario
+   * propio no pasa de lo que queda (si queda alguna): pedir más solo llevaría a un
+   * rechazo en el checkout.
+   */
+  setQuantity(partId: number, quantity: number): void {
+    const wanted = Math.floor(quantity);
+    if (!Number.isFinite(wanted) || wanted <= 0) {
+      this.removeFromCart(partId);
+      return;
+    }
+
+    this._items.set(
+      this._items().map((item) => {
+        if (item.part.id !== partId) return item;
+        const cap = item.part.fulfillment === 'stock' && item.part.stock > 0 ? item.part.stock : wanted;
+        return { ...item, quantity: Math.min(wanted, cap) };
+      }),
+    );
   }
 
   removeFromCart(partId: number): void {
@@ -103,7 +143,10 @@ export class CartService {
   }
 
   /**
-   * Pone al día lo que se leyó del navegador.
+   * Pone al día lo que hay en el carrito contra el catálogo: nombre, precio,
+   * disponibilidad y existencias. Se corre al arrancar y cada vez que se abre el
+   * checkout, que es cuando importa que el stock sea el de ahora y no el de la
+   * última visita.
    *
    * Espera a `auth.whenReady()` porque la visibilidad del contenido de prueba
    * depende de la sesión, y con Supabase la sesión se restaura de forma
@@ -115,7 +158,7 @@ export class CartService {
    * mejor un carrito con precios de ayer que un carrito vacío por un fallo de
    * red, y de todos modos el precio que se cobra lo pone Postgres.
    */
-  private async reconcileWithCatalog(): Promise<void> {
+  async refresh(): Promise<void> {
     if (this._items().length === 0) return;
 
     try {

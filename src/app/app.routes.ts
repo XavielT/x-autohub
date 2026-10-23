@@ -75,6 +75,12 @@ export const routes: Routes = [
     title: `Checkout | ${BRAND}`,
     loadComponent: () => import('./pages/checkout/checkout').then((m) => m.Checkout),
   },
+  // El pedido ya hecho: público por id (el uuid es la llave). Ver `get_order()`.
+  {
+    path: 'pedido/:id',
+    title: `Tu pedido | ${BRAND}`,
+    loadComponent: () => import('./pages/pedido/pedido').then((m) => m.Pedido),
+  },
 
   // --- Hub Market: publicaciones de la comunidad ---
   {

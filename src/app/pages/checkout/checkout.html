@@ -1,122 +1,296 @@
 <div class="checkout">
   <div class="checkout__inner">
     <nav class="checkout__breadcrumb" aria-label="Navegación">
-      <a routerLink="/catalogo" class="checkout__back">← Volver al catálogo</a>
+      <a routerLink="/tienda" class="checkout__back">← Seguir comprando</a>
     </nav>
 
     @if (cartService.items().length === 0) {
       <div class="checkout__sheet checkout__sheet--empty">
         <h1 class="checkout__title">Tu <span class="checkout__title-highlight">carrito</span> está vacío</h1>
-        <p class="checkout__lead">Agrega piezas desde el catálogo para continuar con el pago.</p>
-        <a routerLink="/catalogo" class="checkout__cta">Ir al catálogo</a>
+        <p class="checkout__lead">Agrega piezas desde la tienda para continuar con el pago.</p>
+        <a routerLink="/tienda" class="checkout__cta">Ir a la tienda</a>
       </div>
     } @else {
       <header class="checkout__page-header">
         <h1 class="checkout__title">Finalizar <span class="checkout__title-highlight">compra</span></h1>
-        <p class="checkout__subtitle">Revisa tu pedido y completa los datos de envío. Los totales usan tu carrito actual.</p>
+        <p class="checkout__subtitle">Tres pasos y tu pedido queda registrado. Pagas por transferencia o por WhatsApp.</p>
       </header>
 
+      <ol class="checkout__steps" aria-label="Pasos de la compra">
+        @for (label of stepLabels; track label; let i = $index) {
+          <li class="checkout__step" [class.is-current]="step() === i + 1" [class.is-done]="step() > i + 1"
+              [attr.aria-current]="step() === i + 1 ? 'step' : null">
+            @if (step() > i + 1) {
+              <button type="button" class="checkout__step-btn" (click)="jumpTo($any(i + 1))">
+                <span class="checkout__step-num" aria-hidden="true">✓</span>
+                <span class="checkout__step-label">{{ label }}</span>
+              </button>
+            } @else {
+              <span class="checkout__step-btn">
+                <span class="checkout__step-num" aria-hidden="true">{{ i + 1 }}</span>
+                <span class="checkout__step-label">{{ label }}</span>
+              </span>
+            }
+          </li>
+        }
+      </ol>
+
+      @if (stockIssues().length > 0) {
+        <div class="checkout__alert" role="alert">
+          <strong>Hay piezas con menos existencias de las que pides.</strong>
+          <ul>
+            @for (issue of stockIssues(); track issue.part.id) {
+              <li>
+                <span>
+                  {{ issue.part.name }}:
+                  @if (issue.available > 0) {
+                    pides {{ issue.quantity }} y solo quedan {{ issue.available }}.
+                  } @else {
+                    se agotó.
+                  }
+                </span>
+                <button type="button" class="checkout__alert-btn" (click)="fixIssue(issue)">
+                  {{ issue.available > 0 ? 'Ajustar a ' + issue.available : 'Quitar' }}
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
       <div class="checkout__grid">
-        <section class="checkout__sheet checkout__sheet--form" aria-labelledby="checkout-form-heading">
-          <h2 id="checkout-form-heading" class="checkout__section-title">Datos de contacto y envío</h2>
-          <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
+        <section class="checkout__sheet checkout__sheet--form" aria-labelledby="checkout-step-heading">
+          @switch (step()) {
+            @case (1) {
+              <h2 id="checkout-step-heading" class="checkout__section-title" data-step-heading tabindex="-1">1. Entrega</h2>
+              <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
 
-          <div class="checkout__fields">
-            <label class="checkout__label">
-              <span>Correo electrónico<span class="req" aria-hidden="true">*</span></span>
-              <input class="checkout__input" type="email" name="email" [ngModel]="email()" (ngModelChange)="email.set($event)" autocomplete="email" placeholder="correo@ejemplo.com" required
-                     [class.is-invalid]="showError('email')" />
-              @if (showError('email')) {
-                <span class="field-error">Escribe tu correo electronico.</span>
+              <div class="checkout__choices" role="radiogroup" aria-label="Cómo quieres recibir tu pedido">
+                <label class="checkout__choice" [class.is-selected]="fulfillment() === 'shipping'">
+                  <input type="radio" name="fulfillment" value="shipping" [ngModel]="fulfillment()"
+                         (ngModelChange)="chooseFulfillment($event)" />
+                  <span class="checkout__choice-title">Envío a domicilio</span>
+                  <span class="checkout__choice-desc">Lo llevamos a tu dirección.</span>
+                </label>
+                <label class="checkout__choice" [class.is-selected]="fulfillment() === 'pickup'">
+                  <input type="radio" name="fulfillment" value="pickup" [ngModel]="fulfillment()"
+                         (ngModelChange)="chooseFulfillment($event)" />
+                  <span class="checkout__choice-title">Retiro en el taller</span>
+                  <span class="checkout__choice-desc">Sin costo de envío.</span>
+                </label>
+              </div>
+
+              <div class="checkout__fields">
+                <label class="checkout__label">
+                  <span>Correo electrónico<span class="req" aria-hidden="true">*</span></span>
+                  <input class="checkout__input" type="email" name="email" [ngModel]="email()" (ngModelChange)="email.set($event)"
+                         autocomplete="email" placeholder="correo@ejemplo.com" required
+                         [class.is-invalid]="showError('email')" />
+                  @if (showError('email')) { <span class="field-error">Escribe tu correo electronico.</span> }
+                </label>
+                <label class="checkout__label">
+                  <span>Teléfono<span class="req" aria-hidden="true">*</span></span>
+                  <input class="checkout__input" type="tel" name="phone" [ngModel]="phone()" (ngModelChange)="phone.set($event)"
+                         autocomplete="tel" inputmode="tel" placeholder="Ej: 809-000-1234" required
+                         [class.is-invalid]="showError('phone')" />
+                  @if (showError('phone')) { <span class="field-error">Escribe un telefono valido (809, 829 o 849…).</span> }
+                </label>
+                <label class="checkout__label checkout__label--full">
+                  <span>Nombre completo<span class="req" aria-hidden="true">*</span></span>
+                  <input class="checkout__input" type="text" name="fullName" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)"
+                         autocomplete="name" placeholder="Nombre y apellidos" required
+                         [class.is-invalid]="showError('fullName')" />
+                  @if (showError('fullName')) { <span class="field-error">Escribe tu nombre completo.</span> }
+                </label>
+
+                @if (fulfillment() === 'shipping') {
+                  <label class="checkout__label">
+                    <span>Provincia<span class="req" aria-hidden="true">*</span></span>
+                    <select class="checkout__input checkout__select" name="province" [ngModel]="province()"
+                            (ngModelChange)="province.set($event)" autocomplete="address-level1" required
+                            [class.is-invalid]="showError('province')">
+                      <option value="">Elige tu provincia</option>
+                      @for (p of provinces; track p) { <option [value]="p">{{ p }}</option> }
+                    </select>
+                    @if (showError('province')) { <span class="field-error">Elige la provincia de entrega.</span> }
+                  </label>
+                  <label class="checkout__label">
+                    <span>Ciudad o sector</span>
+                    <input class="checkout__input" type="text" name="city" [ngModel]="city()" (ngModelChange)="city.set($event)"
+                           autocomplete="address-level2" />
+                  </label>
+                  <label class="checkout__label checkout__label--full">
+                    <span>Dirección<span class="req" aria-hidden="true">*</span></span>
+                    <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()"
+                           (ngModelChange)="addressLine1.set($event)" autocomplete="street-address"
+                           placeholder="Calle, número, referencia" required [class.is-invalid]="showError('addressLine1')" />
+                    @if (showError('addressLine1')) { <span class="field-error">Escribe la direccion de entrega.</span> }
+                  </label>
+                  <label class="checkout__label">
+                    <span>Código postal <span class="checkout__optional">(opcional)</span></span>
+                    <input class="checkout__input" type="text" name="postalCode" [ngModel]="postalCode()"
+                           (ngModelChange)="postalCode.set($event)" autocomplete="postal-code" />
+                  </label>
+                }
+              </div>
+
+              @if (fulfillment() === 'shipping') {
+                <h3 class="checkout__subsection-title">Tipo de envío</h3>
+                <ul class="checkout__options">
+                  @for (opt of visibleShippingOptions(); track opt.id) {
+                    <li class="checkout__option">
+                      <label class="checkout__option-label">
+                        <input type="radio" name="shipping" [value]="opt.id" [ngModel]="selectedShippingId()"
+                               (ngModelChange)="selectedShippingId.set($event)" />
+                        <span class="checkout__option-body">
+                          <span class="checkout__option-title">{{ opt.label }}</span>
+                          <span class="checkout__option-desc">{{ opt.description }}</span>
+                          <span class="checkout__option-meta">{{ opt.etaLabel }}</span>
+                        </span>
+                        <span class="checkout__option-price">
+                          @if (opt.price === 0) { Gratis } @else { RD$ {{ opt.price | number:'1.0-0' }} }
+                        </span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <div class="checkout__pickup">
+                  <h3 class="checkout__subsection-title">Dónde retiras</h3>
+                  @if (pickupAddress(); as pickup) {
+                    @if (!pickup.isExample) {
+                      <p class="checkout__pickup-address">{{ pickup.address }}</p>
+                      @if (pickup.hours) { <p class="checkout__pickup-hours">{{ pickup.hours }}</p> }
+                    } @else {
+                      <p class="checkout__pickup-address">Te confirmamos la dirección y el horario por WhatsApp al hacer el pedido.</p>
+                    }
+                  } @else {
+                    <p class="checkout__pickup-address">Te confirmamos la dirección y el horario por WhatsApp al hacer el pedido.</p>
+                  }
+                  <p class="checkout__pickup-hours">Te avisamos cuando esté listo para retirar.</p>
+                </div>
               }
-            </label>
-            <label class="checkout__label">
-              <span>Teléfono</span>
-              <input class="checkout__input" type="tel" name="phone" [ngModel]="phone()" (ngModelChange)="phone.set($event)" autocomplete="tel" placeholder="Ej: 809-000-1234" />
-            </label>
-            <label class="checkout__label checkout__label--full">
-              <span>Nombre completo<span class="req" aria-hidden="true">*</span></span>
-              <input class="checkout__input" type="text" name="fullName" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" autocomplete="name" placeholder="Nombre y apellidos" required
-                     [class.is-invalid]="showError('fullName')" />
-              @if (showError('fullName')) {
-                <span class="field-error">Escribe tu nombre completo.</span>
+            }
+
+            @case (2) {
+              <h2 id="checkout-step-heading" class="checkout__section-title" data-step-heading tabindex="-1">2. Pago</h2>
+
+              <h3 class="checkout__subsection-title">Cómo vas a pagar</h3>
+              <ul class="checkout__options">
+                @for (pm of paymentOptions(); track pm.id) {
+                  <li class="checkout__option">
+                    <label class="checkout__option-label">
+                      <input type="radio" name="payment" [value]="pm.id" [ngModel]="selectedPaymentId()"
+                             (ngModelChange)="selectedPaymentId.set($event)" />
+                      <span class="checkout__option-body">
+                        <span class="checkout__option-title">{{ pm.label }}</span>
+                        <span class="checkout__option-desc">{{ pm.description }}</span>
+                      </span>
+                    </label>
+                  </li>
+                }
+              </ul>
+
+              <p class="checkout__hint">
+                @if (selectedPaymentId() === 'transfer') {
+                  Al confirmar te mostramos las cuentas y el monto exacto, y subes tu comprobante ahí mismo.
+                } @else {
+                  Al confirmar se abre WhatsApp con tu pedido ya escrito. El pedido queda registrado antes, así que no se pierde.
+                }
+              </p>
+
+              @if (hasInstallable()) {
+                <label class="checkout__check">
+                  <input type="checkbox" name="wantsInstallation" [ngModel]="wantsInstallation()"
+                         (ngModelChange)="wantsInstallation.set($event)" />
+                  <span>
+                    <strong>Quiero que me lo instalen</strong>
+                    <small>Alguna pieza de tu carrito se instala en el taller. Te confirmamos el precio de la instalación al coordinar; la cita la agendas después de hacer el pedido.</small>
+                  </span>
+                </label>
               }
-            </label>
-            <label class="checkout__label checkout__label--full">
-              <span>Dirección<span class="req" aria-hidden="true">*</span></span>
-              <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()" (ngModelChange)="addressLine1.set($event)" autocomplete="street-address" placeholder="Calle, número" required
-                     [class.is-invalid]="showError('addressLine1')" />
-              @if (showError('addressLine1')) {
-                <span class="field-error">Escribe la direccion de entrega.</span>
+            }
+
+            @case (3) {
+              <h2 id="checkout-step-heading" class="checkout__section-title" data-step-heading tabindex="-1">3. Confirmar</h2>
+
+              <dl class="checkout__review">
+                <div>
+                  <dt>Entrega</dt>
+                  <dd>
+                    @if (fulfillment() === 'shipping') {
+                      Envío a {{ addressLine1() }}@if (city()) {, {{ city() }}}, {{ province() }}
+                      <small>{{ selectedShipping()?.label }} · {{ selectedShipping()?.etaLabel }}</small>
+                    } @else {
+                      Retiro en el taller
+                    }
+                  </dd>
+                  <button type="button" class="checkout__link-btn" (click)="jumpTo(1)">Cambiar</button>
+                </div>
+                <div>
+                  <dt>Contacto</dt>
+                  <dd>{{ fullName() }} · {{ phone() }}<small>{{ email() }}</small></dd>
+                  <button type="button" class="checkout__link-btn" (click)="jumpTo(1)">Cambiar</button>
+                </div>
+                <div>
+                  <dt>Pago</dt>
+                  <dd>{{ selectedPayment()?.label }}</dd>
+                  <button type="button" class="checkout__link-btn" (click)="jumpTo(2)">Cambiar</button>
+                </div>
+                @if (hasInstallable() && wantsInstallation()) {
+                  <div>
+                    <dt>Instalación</dt>
+                    <dd>Sí, quiero que me la instalen<small>Te confirmamos el precio al coordinar.</small></dd>
+                    <button type="button" class="checkout__link-btn" (click)="jumpTo(2)">Cambiar</button>
+                  </div>
+                }
+              </dl>
+
+              @if (hasOnOrder()) {
+                <p class="checkout__hint">
+                  Lo que está <strong>bajo pedido</strong> se pide al proveedor al confirmar tu pago: el tiempo de entrega de cada cosa
+                  está en el resumen.
+                </p>
               }
-            </label>
-            <label class="checkout__label">
-              <span>Ciudad</span>
-              <input class="checkout__input" type="text" name="city" [ngModel]="city()" (ngModelChange)="city.set($event)" autocomplete="address-level2" />
-            </label>
-            <label class="checkout__label">
-              <span>Código postal</span>
-              <input class="checkout__input" type="text" name="postalCode" [ngModel]="postalCode()" (ngModelChange)="postalCode.set($event)" autocomplete="postal-code" />
-            </label>
+
+              <label class="checkout__label checkout__label--full">
+                <span>Notas del pedido <span class="checkout__optional">(opcional)</span></span>
+                <textarea class="checkout__textarea" name="orderNotes" [ngModel]="orderNotes()"
+                          (ngModelChange)="orderNotes.set($event)" rows="3"
+                          placeholder="Indicaciones de entrega, referencias…"></textarea>
+              </label>
+            }
+          }
+
+          <div class="checkout__actions">
+            @if (step() > 1) {
+              <button type="button" class="checkout__btn-secondary" (click)="back()" [disabled]="isSubmitting()">← Atrás</button>
+            }
+            @if (step() < 3) {
+              <button type="button" class="checkout__submit" (click)="next()">Continuar →</button>
+            } @else {
+              <button type="button" class="checkout__submit" (click)="submitOrder()"
+                      [disabled]="isSubmitting() || stockIssues().length > 0">
+                {{ isSubmitting() ? 'Registrando tu pedido…' : 'Confirmar pedido' }}
+              </button>
+            }
           </div>
-
-          <h3 class="checkout__subsection-title">Método de envío</h3>
-          <ul class="checkout__options">
-            @for (opt of shippingOptions(); track opt.id) {
-              <li class="checkout__option">
-                <label class="checkout__option-label">
-                  <input type="radio" name="shipping" [value]="opt.id" [ngModel]="selectedShippingId()" (ngModelChange)="selectedShippingId.set($event)" />
-                  <span class="checkout__option-body">
-                    <span class="checkout__option-title">{{ opt.label }}</span>
-                    <span class="checkout__option-desc">{{ opt.description }}</span>
-                    <span class="checkout__option-meta">{{ opt.etaLabel }}</span>
-                  </span>
-                  <span class="checkout__option-price">
-                    @if (opt.price === 0) { Gratis } @else { RD$ {{ opt.price | number:'1.0-0' }} }
-                  </span>
-                </label>
-              </li>
-            }
-          </ul>
-
-          <h3 class="checkout__subsection-title">Método de pago</h3>
-          <ul class="checkout__options">
-            @for (pm of paymentOptions(); track pm.id) {
-              <li class="checkout__option">
-                <label class="checkout__option-label">
-                  <input type="radio" name="payment" [value]="pm.id" [ngModel]="selectedPaymentId()" (ngModelChange)="selectedPaymentId.set($event)" />
-                  <span class="checkout__option-body">
-                    <span class="checkout__option-title">{{ pm.label }}</span>
-                    <span class="checkout__option-desc">{{ pm.description }}</span>
-                  </span>
-                </label>
-              </li>
-            }
-          </ul>
-
-          <label class="checkout__label checkout__label--full">
-            <span>Notas del pedido <span class="checkout__optional">(opcional)</span></span>
-            <textarea class="checkout__textarea" name="orderNotes" [ngModel]="orderNotes()" (ngModelChange)="orderNotes.set($event)" rows="3" placeholder="Indicaciones de entrega, referencias…"></textarea>
-          </label>
-
-          <button type="button" class="checkout__submit" (click)="submitOrder()">
-            {{ isDemoMode ? 'Confirmar pedido (demo)' : 'Confirmar pedido' }}
-          </button>
         </section>
 
         <aside class="checkout__sheet checkout__sheet--summary" aria-labelledby="checkout-summary-heading">
           <h2 id="checkout-summary-heading" class="checkout__section-title">Resumen del pedido</h2>
 
           <ul class="checkout__lines">
-            @for (item of cartService.items(); track item.part.id) {
+            @for (line of lines(); track line.item.part.id) {
               <li class="checkout__line">
-                <img class="checkout__line-img" [src]="item.part.imgUrl" [alt]="item.part.name" />
+                <img class="checkout__line-img" [src]="line.item.part.imgUrl" [alt]="line.item.part.name" />
                 <div class="checkout__line-info">
-                  <span class="checkout__line-name">{{ item.part.name }}</span>
-                  <span class="checkout__line-brand">{{ item.part.brand }}</span>
-                  <span class="checkout__line-qty">Cantidad: {{ item.quantity }}</span>
+                  <span class="checkout__line-name">{{ line.item.part.name }}</span>
+                  <span class="checkout__line-brand">{{ line.item.part.brand }}</span>
+                  <span class="checkout__line-qty">Cantidad: {{ line.item.quantity }}</span>
+                  <span class="checkout__line-avail" [attr.data-kind]="line.availability.kind">{{ line.availability.short }}</span>
                 </div>
-                <span class="checkout__line-price">RD$ {{ item.part.price * item.quantity | number:'1.0-0' }}</span>
+                <span class="checkout__line-price">RD$ {{ line.item.part.price * line.item.quantity | number:'1.0-0' }}</span>
               </li>
             }
           </ul>
@@ -135,18 +309,13 @@
             <div class="checkout__divider"></div>
             <div class="checkout__total-row checkout__total-row--grand">
               <span>Total</span>
-              <span>RD$ {{ grandTotal() | number:'1.0-0' }}</span>
+              <span>RD$ {{ estimatedTotal() | number:'1.0-0' }}</span>
             </div>
           </div>
 
           <p class="checkout__disclaimer">
-            @if (isDemoMode) {
-              Los métodos de pago mostrados son de demostración. Aquí se integrará la pasarela real
-              y la confirmación con el backend.
-            } @else {
-              Tu pedido queda registrado, pero todavía no cobramos en línea: te contactamos para
-              coordinar el pago y la entrega.
-            }
+            Los precios y el envío definitivos los calcula el sistema al confirmar. No cobramos en línea:
+            pagas por transferencia o por WhatsApp.
           </p>
         </aside>
       </div>

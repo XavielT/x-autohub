@@ -7,6 +7,7 @@ import { toSpecs } from '../../core/supabase/mappers';
 import { AdminUserModel } from '../models/release.model';
 import { UserRole } from '../models/user.model';
 import { AdminOrderModel } from '../models/admin-order.model';
+import { canMoveTo } from '../utils/order-status';
 import {
   AdminNewsModel,
   AdminPartModel,
@@ -230,12 +231,27 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('orders')
-        .select('*, order_items(id, name, unit_price, quantity)')
+        .select('*, order_items(id, name, unit_price, quantity), order_status_history(id, from_status, to_status, note, created_at)')
         .order('created_at', { ascending: false }),
     ).pipe(
       map((res) =>
         unwrap(res).map((row) => ({
           id: row.id,
+          orderNumber: row.order_number,
+          fulfillmentType: row.fulfillment_type,
+          province: row.province ?? undefined,
+          proofPath: row.payment_proof_url,
+          paymentConfirmedAt: row.payment_confirmed_at ? new Date(row.payment_confirmed_at) : null,
+          whatsappOpenedAt: row.whatsapp_opened_at ? new Date(row.whatsapp_opened_at) : null,
+          wantsInstallation: row.wants_installation,
+          history: (row.order_status_history ?? [])
+            .map((h) => ({
+              fromStatus: h.from_status,
+              toStatus: h.to_status,
+              note: h.note,
+              createdAt: new Date(h.created_at),
+            }))
+            .sort((a, b) => +a.createdAt - +b.createdAt),
           contactEmail: row.contact_email,
           contactPhone: row.contact_phone ?? undefined,
           fullName: row.full_name,
@@ -839,20 +855,49 @@ export class AdminService {
     );
   }
 
-  /** Solo un admin puede cambiar el estado: lo exige la política de `orders`. */
-  setOrderStatus(orderId: string, status: OrderStatus): Observable<void> {
+  /**
+   * Mueve un pedido al siguiente estado. Va por `set_order_status()`, no por un
+   * `update`: la función comprueba que el paso sea válido (no se salta de
+   * `awaiting_payment` a `shipped` sin pasar por `paid`), anota la nota en el
+   * historial y, al cancelar, devuelve el stock. Un `update` directo ni siquiera
+   * lo deja pasar el trigger de `orders`.
+   *
+   * La nota **la ve el cliente** en la línea de tiempo de su pedido.
+   */
+  setOrderStatus(orderId: string, status: OrderStatus, note?: string): Observable<void> {
     if (this.supabase.shouldUseMockData()) {
+      const order = this.mockOrders.find((o) => o.id === orderId);
+      if (!order) return throwError(() => new Error('Ese pedido no existe.'));
+      if (!canMoveTo(order.status, status, order.fulfillmentType)) {
+        return throwError(() => new Error(`Un pedido ${order.status} no puede pasar a ${status}.`));
+      }
+
+      const now = new Date();
       this.mockOrders = this.mockOrders.map((o) =>
-        o.id === orderId ? { ...o, status } : o,
+        o.id === orderId
+          ? {
+              ...o,
+              status,
+              paymentConfirmedAt: status === 'paid' ? now : o.paymentConfirmedAt,
+              history: [
+                ...o.history,
+                { fromStatus: o.status, toStatus: status, note: note?.trim() || null, createdAt: now },
+              ],
+            }
+          : o,
       );
       return of(undefined);
     }
 
     return from(
-      this.supabase.db.from('orders').update({ status }).eq('id', orderId),
+      this.supabase.db.rpc('set_order_status', {
+        p_order_id: orderId,
+        p_to: status,
+        p_note: note?.trim() || null,
+      }),
     ).pipe(
       map((res) => {
-        unwrap(res);
+        if (res.error) unwrap({ data: null, error: res.error });
       }),
     );
   }

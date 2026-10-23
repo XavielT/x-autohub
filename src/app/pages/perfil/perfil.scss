@@ -360,6 +360,28 @@
   &__order-main {
     display: flex;
     flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover .perfil__order-ref { text-decoration: underline; }
+  }
+
+  // Un pedido por transferencia sin comprobante: alguien tiene que hacer algo y
+  // es quien está mirando.
+  &__order--attention {
+    border: 1px solid var(--Hub);
+    background-color: var(--Hub-translucid);
+  }
+
+  &__order-action {
+    grid-column: 1 / -1;
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--Hub);
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
   }
 
   &__order-ref {
@@ -399,9 +421,18 @@
       color: #ff8d8f;
     }
 
-    &[data-status='pending'] {
+    &[data-status='pending'],
+    &[data-status='awaiting_payment'] {
       background-color: rgba(var(--Hub-rgb), 0.18);
       color: var(--tertiary-soft);
+    }
+
+    &[data-status='paid'],
+    &[data-status='preparing'],
+    &[data-status='shipped'],
+    &[data-status='ready_for_pickup'] {
+      background-color: rgba(80, 150, 255, 0.18);
+      color: #8fb8ff;
     }
   }
 

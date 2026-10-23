@@ -21,6 +21,12 @@ export function translateDbError(error: PostgrestError | null): string {
       return 'Los datos no cumplen con lo requerido. Revisa el formulario.';
     case '23502': // not_null_violation
       return 'Faltan campos obligatorios.';
+    case '22023': // invalid_parameter_value
+      // Los mensajes que las funciones de la base (create_order, set_order_status,
+      // attach_payment_proof…) escriben **para quien los lee**: "De X solo quedan
+      // 2 y pediste 5". Traducirlos a "Algo salio mal" borraba justo lo que el
+      // cliente necesitaba para arreglar su carrito.
+      return error.message || 'Los datos no cumplen con lo requerido.';
     case '42501': // insufficient_privilege — típicamente RLS
     case 'PGRST301':
       return 'No tienes permiso para hacer esto. Inicia sesion e intenta de nuevo.';

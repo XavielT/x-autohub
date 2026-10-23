@@ -32,11 +32,15 @@ import {
   CheckoutShippingOption,
 } from '../../shared/models/checkout.model';
 import { UserModel } from '../../shared/models/user.model';
+import { OrderView } from '../../shared/models/order.model';
+import { UserOrderModel } from '../../shared/models/user-order.model';
 import {
   AutoHubVehicleRow,
   HubMarketItemRow,
   HubPartRow,
+  MyOrderRow,
   NewsRow,
+  OrderViewJson,
   PaymentMethodRow,
   ProductCategoryRow,
   ProductFitmentRow,
@@ -379,5 +383,55 @@ export function toPaymentMethod(row: PaymentMethodRow): CheckoutPaymentMethodOpt
     id: row.id,
     label: row.label,
     description: row.description,
+  };
+}
+
+// --- Pedidos (migración 0018) ------------------------------------------------
+
+/** Lo que devuelve `get_order()` → el pedido de /pedido/:id. */
+export function toOrderView(json: OrderViewJson): OrderView {
+  return {
+    id: json.id,
+    orderNumber: json.order_number,
+    status: json.status,
+    fulfillment: json.fulfillment_type,
+    paymentMethodId: json.payment_method_id,
+    wantsInstallation: json.wants_installation,
+    subtotal: Number(json.subtotal),
+    shippingPrice: Number(json.shipping_price),
+    total: Number(json.total),
+    createdAt: new Date(json.created_at),
+    hasProof: json.has_proof,
+    whatsappOpenedAt: json.whatsapp_opened_at ? new Date(json.whatsapp_opened_at) : null,
+    paymentConfirmedAt: json.payment_confirmed_at ? new Date(json.payment_confirmed_at) : null,
+    installationServiceId: json.installation_service_id,
+    items: json.items.map((i) => ({
+      name: i.name,
+      unitPrice: Number(i.unit_price),
+      quantity: i.quantity,
+    })),
+    history: json.history.map((h) => ({
+      fromStatus: h.from_status,
+      toStatus: h.to_status,
+      note: h.note,
+      createdAt: new Date(h.created_at),
+    })),
+  };
+}
+
+/** Una fila de `my_orders()` → "Mis pedidos". */
+export function toUserOrder(row: MyOrderRow): UserOrderModel {
+  return {
+    id: row.id,
+    orderNumber: row.order_number,
+    createdAt: new Date(row.created_at),
+    // `sum()` llega como bigint, que PostgREST entrega como número o como texto.
+    itemCount: Number(row.item_count),
+    total: Number(row.total),
+    status: row.status,
+    fulfillment: row.fulfillment_type,
+    paymentMethodId: row.payment_method_id,
+    hasProof: row.has_proof,
+    wantsInstallation: row.wants_installation,
   };
 }

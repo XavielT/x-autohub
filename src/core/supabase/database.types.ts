@@ -16,7 +16,24 @@ export type FuelType = 'gasoline' | 'diesel' | 'glp' | 'electric';
 export type HubMarketCategoryDb = 'vehiculos' | 'piezas' | 'accesorios';
 export type ItemCondition = 'new' | 'used';
 export type NewsScope = 'internacional' | 'local';
-export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+/**
+ * El ciclo de un pedido (migración 0018):
+ * `awaiting_payment → paid → preparing → shipped | ready_for_pickup → delivered`,
+ * y `cancelled` hasta que sale de la tienda. `pending` es el estado técnico de los
+ * pedidos anteriores a 0018.
+ */
+export type OrderStatus =
+  | 'pending'
+  | 'awaiting_payment'
+  | 'paid'
+  | 'preparing'
+  | 'shipped'
+  | 'ready_for_pickup'
+  | 'delivered'
+  | 'cancelled';
+
+/** Cómo recibe el cliente el pedido. Migración 0018. */
+export type OrderFulfillmentDb = 'shipping' | 'pickup';
 
 /** Cómo se cumple un producto: de inventario propio o bajo pedido. Migración 0017. */
 export type ProductFulfillmentDb = 'stock' | 'on_order';
@@ -343,8 +360,77 @@ export type OrderRow = {
   total: number;
   status: OrderStatus;
   created_at: string;
+  /** El número que se le dice al cliente (#1042). Migración 0018. */
+  order_number: number;
+  fulfillment_type: OrderFulfillmentDb;
+  /** Nulo en un retiro en el taller. */
+  province: string | null;
+  /**
+   * RUTA del comprobante en el bucket privado `payment-proofs`, no una URL: el
+   * bucket es privado, así que para verlo hace falta una URL firmada.
+   */
+  payment_proof_url: string | null;
+  payment_confirmed_at: string | null;
+  whatsapp_opened_at: string | null;
+  wants_installation: boolean;
+  updated_at: string;
   /** Presente solo cuando el select incluye `order_items(...)`. */
   order_items?: OrderItemRow[] | null;
+  /** Presente solo cuando el select incluye `order_status_history(...)`. */
+  order_status_history?: OrderStatusHistoryRow[] | null;
+}
+
+/** Un cambio de estado de un pedido. La llena un trigger; el navegador solo la lee. */
+export type OrderStatusHistoryRow = {
+  id: number;
+  order_id: string;
+  from_status: OrderStatus | null;
+  to_status: OrderStatus;
+  changed_by: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+/**
+ * Lo que devuelve `get_order()` (migración 0018): el pedido para /pedido/:id, sin
+ * nada personal (ni correo, ni teléfono, ni dirección). Es JSON, no una fila.
+ */
+export type OrderViewJson = {
+  id: string;
+  order_number: number;
+  status: OrderStatus;
+  fulfillment_type: OrderFulfillmentDb;
+  payment_method_id: string;
+  wants_installation: boolean;
+  subtotal: number;
+  shipping_price: number;
+  total: number;
+  created_at: string;
+  has_proof: boolean;
+  whatsapp_opened_at: string | null;
+  payment_confirmed_at: string | null;
+  installation_service_id: number | null;
+  items: { name: string; unit_price: number; quantity: number }[];
+  history: {
+    from_status: OrderStatus | null;
+    to_status: OrderStatus;
+    note: string | null;
+    created_at: string;
+  }[];
+}
+
+/** Una fila de `my_orders()` (migración 0018). */
+export type MyOrderRow = {
+  id: string;
+  order_number: number;
+  status: OrderStatus;
+  fulfillment_type: OrderFulfillmentDb;
+  payment_method_id: string;
+  total: number;
+  created_at: string;
+  item_count: number;
+  has_proof: boolean;
+  wants_installation: boolean;
 }
 
 export type ReleaseRow = {
@@ -400,6 +486,8 @@ export type OrderItemRow = {
   name: string;
   unit_price: number;
   quantity: number;
+  /** Cuánto stock descontó esta línea (0 si era bajo pedido). Migración 0018. */
+  stock_deducted: number;
 }
 
 /**
@@ -407,7 +495,7 @@ export type OrderItemRow = {
  * opcionales, y `profiles` (que solo aparece en los joins) se excluye siempre.
  */
 export type Insert<T, Required extends keyof T> = Pick<T, Required> &
-  Partial<Omit<T, Required | 'profiles' | 'order_items'>>;
+  Partial<Omit<T, Required | 'profiles' | 'order_items' | 'order_status_history'>>;
 
 /**
  * Claves foráneas. supabase-js las usa para validar los joins embebidos
@@ -436,6 +524,15 @@ type HubMarketRelationships = [
 type OrderItemRelationships = [
   {
     foreignKeyName: 'order_items_order_id_fkey';
+    columns: ['order_id'];
+    isOneToOne: false;
+    referencedRelation: 'orders';
+    referencedColumns: ['id'];
+  },
+];
+type OrderStatusHistoryRelationships = [
+  {
+    foreignKeyName: 'order_status_history_order_id_fkey';
     columns: ['order_id'];
     isOneToOne: false;
     referencedRelation: 'orders';
@@ -600,6 +697,16 @@ export type Database = {
         Update: Partial<OrderRow>;
         Relationships: [];
       };
+      /**
+       * Historial de estados de cada pedido (migración 0018). Solo lectura: sin
+       * política de escritura, lo llena un trigger.
+       */
+      order_status_history: {
+        Row: OrderStatusHistoryRow;
+        Insert: never;
+        Update: never;
+        Relationships: OrderStatusHistoryRelationships;
+      };
       order_items: {
         Row: OrderItemRow;
         Insert: Insert<OrderItemRow, 'order_id' | 'name' | 'unit_price' | 'quantity'>;
@@ -748,6 +855,12 @@ export type Database = {
         Args: { p_key: string; p_value: SettingValue };
         Returns: { key: string; value: SettingValue; updated_at: string }[];
       };
+      /**
+       * Crea un pedido (migración 0018): precios y envío de la base, stock
+       * validado y descontado si es de inventario propio, estado
+       * `awaiting_payment`. Devuelve los totales **que calculó Postgres**: es lo que
+       * el cliente muestra.
+       */
       create_order: {
         Args: {
           p_contact_email: string;
@@ -760,8 +873,53 @@ export type Database = {
           p_city?: string | null;
           p_postal_code?: string | null;
           p_order_notes?: string | null;
+          p_fulfillment_type?: OrderFulfillmentDb;
+          p_province?: string | null;
+          p_wants_installation?: boolean;
         };
-        Returns: { id: string; total: number }[];
+        Returns: {
+          id: string;
+          order_number: number;
+          subtotal: number;
+          shipping_price: number;
+          total: number;
+        }[];
+      };
+      /**
+       * Mueve un pedido al siguiente estado válido. Solo admin; el orden lógico
+       * se comprueba dentro de Postgres (migración 0018).
+       */
+      set_order_status: {
+        Args: { p_order_id: string; p_to: OrderStatus; p_note?: string | null };
+        Returns: {
+          id: string;
+          order_number: number;
+          status: OrderStatus;
+          payment_confirmed_at: string | null;
+        }[];
+      };
+      /** Apunta el pedido a un comprobante ya subido a su carpeta (migración 0018). */
+      attach_payment_proof: {
+        Args: { p_order_id: string; p_path: string };
+        Returns: undefined;
+      };
+      /** Anota que el cliente abrió WhatsApp. Idempotente (migración 0018). */
+      mark_whatsapp_opened: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+      /**
+       * El pedido para /pedido/:id, por id. `null` si no existe. Sin datos
+       * personales (migración 0018).
+       */
+      get_order: {
+        Args: { p_order_id: string };
+        Returns: OrderViewJson | null;
+      };
+      /** Los pedidos de quien llama, del más nuevo al más viejo (migración 0018). */
+      my_orders: {
+        Args: Record<string, never>;
+        Returns: MyOrderRow[];
       };
     };
     Enums: {
@@ -772,6 +930,7 @@ export type Database = {
       item_condition: ItemCondition;
       news_scope: NewsScope;
       order_status: OrderStatus;
+      order_fulfillment: OrderFulfillmentDb;
       product_fulfillment: ProductFulfillmentDb;
       product_fitment_type: ProductFitmentTypeDb;
     };

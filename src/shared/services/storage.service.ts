@@ -1,10 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { PROOF_MAX_BYTES } from '../models/order.model';
 
 /** Límites que espejean los del bucket (ver 0003_storage.sql). */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Lo que acepta el bucket `payment-proofs` (migración 0018): foto o PDF, hasta 10 MB. */
+const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
 
 /**
  * Subida de imágenes a Supabase Storage.
@@ -32,6 +36,70 @@ export class StorageService {
       return 'Cada imagen debe pesar menos de 5 MB.';
     }
     return null;
+  }
+
+  /** Valida un comprobante de pago antes de subirlo. Devuelve el error o null. */
+  validateProof(file: File): string | null {
+    if (!PROOF_TYPES.includes(file.type)) {
+      return 'El comprobante tiene que ser una foto (JPG, PNG, WebP) o un PDF.';
+    }
+    if (file.size > PROOF_MAX_BYTES) {
+      return 'El comprobante debe pesar menos de 10 MB.';
+    }
+    return null;
+  }
+
+  /**
+   * Sube el comprobante de un pedido y devuelve la **ruta** dentro del bucket
+   * (`<order_id>/<archivo>`), no una URL: `payment-proofs` es privado y no tiene
+   * URL pública. La primera carpeta es el id del pedido, y de eso depende la
+   * política del bucket (`order_accepts_proof`).
+   *
+   * No guarda nada en el pedido: eso lo hace `OrderService` con
+   * `attach_payment_proof()`, que comprueba que el archivo esté de verdad.
+   */
+  uploadPaymentProof(file: File, orderId: string): Observable<string> {
+    const path = `${orderId}/${this.uniqueName(file.name)}`;
+
+    if (this.supabase.shouldUseMockData()) {
+      return of(path);
+    }
+
+    return from(
+      this.supabase.db.storage.from('payment-proofs').upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      }),
+    ).pipe(
+      map((res) => {
+        if (res.error) {
+          console.error('[storage] comprobante', res.error);
+          throw new Error('No pudimos subir el comprobante. Intenta de nuevo.');
+        }
+        return res.data.path;
+      }),
+    );
+  }
+
+  /**
+   * Un enlace de diez minutos para ver un comprobante. Solo lo consigue un admin
+   * (o el dueño del pedido): la política de lectura del bucket lo decide, no esta
+   * función.
+   */
+  getPaymentProofUrl(path: string): Observable<string> {
+    if (this.supabase.shouldUseMockData()) {
+      return of('assets/imgs/hub-parts/disco-brembo-gtr.jpg');
+    }
+
+    return from(this.supabase.db.storage.from('payment-proofs').createSignedUrl(path, 600)).pipe(
+      map((res) => {
+        if (res.error || !res.data) {
+          console.error('[storage] enlace del comprobante', res.error);
+          throw new Error('No pudimos abrir el comprobante.');
+        }
+        return res.data.signedUrl;
+      }),
+    );
   }
 
   /**

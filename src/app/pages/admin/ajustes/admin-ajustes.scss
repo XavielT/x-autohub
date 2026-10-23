@@ -158,3 +158,61 @@
     color: var(--text-soft);
   }
 }
+
+// --- Cuentas bancarias y direccion de retiro (fase 4) ---------------------------
+
+.adm-set__warn {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--Hub);
+  border-radius: 10px;
+  background-color: var(--Hub-translucid);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.adm-set__accounts { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.adm-set__account {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-soft); }
+
+  input {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: var(--text-strong);
+    font-family: var(--font-body);
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-size: 16px;
+
+    &:focus { outline: none; border-color: var(--Hub); }
+  }
+}
+
+.adm-set__row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.adm-set__primary,
+.adm-set__secondary,
+.adm-set__remove {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-family: var(--font-brand);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.adm-set__primary { border: none; background-color: var(--Hub); color: #1a1a1a; &:disabled { opacity: 0.6; cursor: default; } }
+.adm-set__secondary { border: 1px solid var(--Hub); background: transparent; color: var(--Hub); }
+.adm-set__remove { border: 1px solid rgba(229, 72, 77, 0.6); background: transparent; color: #ff8d8f; }

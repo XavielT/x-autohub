@@ -139,6 +139,10 @@ create function storage.foldername(name text) returns text[] language sql immuta
   select string_to_array(name, '/');
 $$;
 grant usage on schema storage to anon, authenticated, service_role;
+-- Supabase da acceso a la tabla a los tres roles y es RLS quien decide. Sin este
+-- grant, las politicas de payment-proofs (0018) no se ejercitarian: un insert de
+-- anon fallaria antes, por permisos de tabla, y la comprobacion no probaria nada.
+grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
 SQL
 echo "→ Andamio de Supabase puesto"
 
@@ -329,7 +333,7 @@ check "un usuario normal no lista usuarios" \
 
 echo "→ Lo que anon **si** tiene que poder hacer (revocar de mas rompe el sitio)"
 check "checkout de invitado" "1" \
-  "$(as_anon "select count(*) from create_order('invitado@correo.com','Cliente Invitado','Calle 1','standard','card','[{\"part_id\": 1, \"quantity\": 1}]'::jsonb);")"
+  "$(as_anon "select count(*) from create_order('invitado@correo.com','Cliente Invitado','Calle 1','standard','transfer','[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
 check "contadores del home sin sesion" "35" "$(as_anon 'select parts from get_site_stats();')"
 
 echo "→ Baja del club con token (migracion 0016)"
@@ -601,6 +605,254 @@ check "...y desmarca al primero: queda uno solo por defecto" "1" \
 check "los dos siguen en el garaje" "2" \
   "select count(*) from profile_vehicles where user_id = '$USER_A';"
 
+
+echo "→ Pedidos: estado, stock y reglas de entrega (migracion 0018)"
+# Cuatro piezas con comportamiento conocido. Se prepara por encima de RLS: es el
+# escenario, no lo que se comprueba.
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+update hub_parts set fulfillment = 'stock',    stock = 3,  installable = false where id = 2;
+update hub_parts set fulfillment = 'on_order', stock = 0,  lead_time_days = 10, installable = false, installation_service_id = null where id = 3;
+update hub_parts set fulfillment = 'stock',    stock = 0                       where id = 4;
+update hub_parts set fulfillment = 'stock',    stock = 10, installable = true  where id = 5;
+SQL
+
+# Un valor suelto de una consulta (lo que `check` hace por dentro, pero devuelto).
+scalar() {
+  $PSQL -d "${SCALAR_DB:-postgres}" -t -A -c "$1" 2>&1 | tr -d '\r' \
+    | awk '/^(SET|RESET|INSERT|UPDATE|DELETE)/ { next } NF { ultima = $0 } END { print ultima }'
+}
+
+NAME2="$(scalar 'select name from hub_parts where id = 2;')"
+NAME4="$(scalar 'select name from hub_parts where id = 4;')"
+I2x2='[{"part_id": 2, "quantity": 2}]'
+I2x1x2='[{"part_id": 2, "quantity": 1}, {"part_id": 2, "quantity": 1}]'
+I3x2='[{"part_id": 3, "quantity": 2}]'
+I4x1='[{"part_id": 4, "quantity": 1}]'
+I5x1='[{"part_id": 5, "quantity": 1}]'
+I5x4='[{"part_id": 5, "quantity": 4}]'
+
+# create_order(items, pago, entrega, opcion de envio [, extras con nombre])
+mk_order() {
+  echo "select * from create_order('c@x.com', 'Cliente', 'Calle 1', '$4', '$2', '$1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => '$3', p_province => 'Santiago'${5:-});"
+}
+
+ORD1="$(scalar "$(as_anon "$(mk_order "$I2x2" transfer shipping standard | sed 's/select \*/select id/')")")"
+check "un pedido nuevo nace en awaiting_payment" "awaiting_payment" \
+  "select status from orders where id = '$ORD1';"
+check "con su numero legible" "t" "select order_number >= 1001 from orders where id = '$ORD1';"
+check "descuenta el stock de lo de inventario propio (3 - 2)" "1" "select stock from hub_parts where id = 2;"
+check "y lo anota en la linea, para poder devolverlo" "2" \
+  "select stock_deducted from order_items where order_id = '$ORD1';"
+check "el historial nace con su primera fila" "1|awaiting_payment" \
+  "select count(*) || '|' || min(to_status::text) from order_status_history where order_id = '$ORD1';"
+
+check "rechaza el stock insuficiente, y dice cuanto queda" \
+  "ERROR:  De \"$NAME2\" solo quedan 1 y pediste 2. Ajusta la cantidad." \
+  "$(as_anon "$(mk_order "$I2x2" transfer shipping standard)")"
+check "la misma pieza en dos lineas se suma" \
+  "ERROR:  De \"$NAME2\" solo quedan 1 y pediste 2. Ajusta la cantidad." \
+  "$(as_anon "$(mk_order "$I2x1x2" transfer shipping standard)")"
+check "no vende lo agotado" "ERROR:  Se agoto \"$NAME4\". Quitala del carrito para continuar." \
+  "$(as_anon "$(mk_order "$I4x1" transfer shipping standard)")"
+check "el rechazo no descuenta nada" "1" "select stock from hub_parts where id = 2;"
+
+ORD_OO="$(scalar "$(as_anon "$(mk_order "$I3x2" transfer shipping standard | sed 's/select \*/select id/')")")"
+check "lo bajo pedido se vende aunque no haya stock" "awaiting_payment" \
+  "select status from orders where id = '$ORD_OO';"
+check "y no descuenta nada (ni pone el stock en negativo)" "0|0" \
+  "select (select stock from hub_parts where id = 3) || '|' || (select stock_deducted from order_items where order_id = '$ORD_OO');"
+
+echo "   (entrega: envio o retiro)"
+ORD_R="$(scalar "$(as_anon "select id from create_order('c@x.com', 'Cliente', '', 'pickup', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => 'pickup');")")"
+check "un retiro no pide direccion ni provincia" "Retiro en el taller|-|pickup" \
+  "select address_line1 || '|' || coalesce(province, '-') || '|' || fulfillment_type from orders where id = '$ORD_R';"
+check "un envio sin provincia se rechaza" "ERROR:  Elige la provincia de entrega." \
+  "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000');")"
+check "un envio sin direccion tambien" "ERROR:  Escribe la direccion de entrega." \
+  "$(as_anon "select * from create_order('c@x.com', 'Cliente', ' ', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+check "el telefono es obligatorio" "ERROR:  Escribe tu telefono: lo usamos para coordinar la entrega." \
+  "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_province => 'Santiago');")"
+check "un retiro con la opcion de envio estandar no cuadra" \
+  "ERROR:  La opcion de envio no corresponde al tipo de entrega." \
+  "$(as_anon "$(mk_order "$I5x1" transfer pickup standard)")"
+check "ni un envio con la opcion de retiro" \
+  "ERROR:  La opcion de envio no corresponde al tipo de entrega." \
+  "$(as_anon "$(mk_order "$I5x1" transfer shipping pickup)")"
+check "un tipo de entrega inventado se rechaza" "ERROR:  Tipo de entrega no valido." \
+  "$(as_anon "$(mk_order "$I5x1" transfer volando standard)")"
+check "y uno nulo no cae en la rama de retiro" "ERROR:  Tipo de entrega no valido." \
+  "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => null);")"
+check "el envio express suma 450 y el total lo calcula Postgres" "450.00|0.00" \
+  "$(as_anon "select shipping_price || '|' || (total - subtotal - shipping_price) from create_order('c@x.com', 'Cliente', 'Calle 1', 'express', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+
+echo "   (instalacion y metodos de pago)"
+ORD_I1="$(scalar "$(as_anon "select id from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_wants_installation => true);")")"
+ORD_I0="$(scalar "$(as_anon "select id from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I3x2'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_wants_installation => true);")")"
+check "pide instalacion de algo instalable: queda marcada" "t" \
+  "select wants_installation from orders where id = '$ORD_I1';"
+check "pide instalacion de algo que no se instala: se ignora" "f" \
+  "select wants_installation from orders where id = '$ORD_I0';"
+check "los metodos de pago que ve un visitante: transferencia y WhatsApp" "transfer,whatsapp" \
+  "$(as_anon "select string_agg(id, ',' order by sort_order) from payment_methods;")"
+check "la tarjeta ya no se acepta" "ERROR:  Metodo de pago no valido." \
+  "$(as_anon "$(mk_order "$I5x1" card shipping standard)")"
+check "pero la fila de la tarjeta sigue existiendo (desactivada, no borrada)" "card|false" \
+  "select id || '|' || is_active::text from payment_methods where id = 'card';"
+
+echo "   (leer pedidos: cada quien los suyos)"
+ORD_A="$(scalar "$(as_user "$USER_A" "$(mk_order "$I5x1" transfer shipping standard | sed 's/select \*/select id/')")")"
+check "el pedido de un usuario con cuenta queda a su nombre" "$USER_A" "select user_id from orders where id = '$ORD_A';"
+check "my_orders trae los suyos" "1" "$(as_user "$USER_A" 'select count(*) from my_orders();')"
+check "otro usuario no ve los ajenos" "0" "$(as_user "$USER_B" 'select count(*) from my_orders();')"
+check "anon no invoca my_orders" "$(denied my_orders)" "$(as_anon 'select count(*) from my_orders();')"
+check "anon no lee la tabla de pedidos" "0" "$(as_anon 'select count(*) from orders;')"
+NUM1="$(scalar "select order_number from orders where id = '$ORD1';")"
+check "get_order devuelve el pedido a quien tiene el enlace" "$NUM1" \
+  "$(as_anon "select get_order('$ORD1')->>'order_number';")"
+check "con sus lineas" "1" "$(as_anon "select jsonb_array_length(get_order('$ORD1')->'items');")"
+check "y sin un solo dato personal" "f" \
+  "$(as_anon "select get_order('$ORD1') ?| array['contact_email','contact_phone','address_line1','full_name','province','user_id'];")"
+check "un id que no existe devuelve nulo, no un error" "" \
+  "$(as_anon "select get_order('00000000-0000-0000-0000-000000000000');")"
+
+echo "   (estados: solo set_order_status(), solo un admin, en orden)"
+check "ni un admin cambia el estado a mano" \
+  "ERROR:  El estado y el pago de un pedido solo cambian con las funciones del sistema." \
+  "$(as_user "$ADMIN" "update orders set status = 'paid' where id = '$ORD1';")"
+check "un usuario normal ni lo intenta: no toca ninguna fila" "awaiting_payment" \
+  "$(as_user "$USER_A" "update orders set status = 'paid' where id = '$ORD_A'; select status from orders where id = '$ORD_A';")"
+check "ni se marca el comprobante a mano" \
+  "ERROR:  El estado y el pago de un pedido solo cambian con las funciones del sistema." \
+  "$(as_user "$ADMIN" "update orders set payment_proof_url = '$ORD1/x.jpg' where id = '$ORD1';")"
+check "un usuario normal recibe 42501 en set_order_status" \
+  "ERROR:  Solo un administrador puede cambiar el estado de los pedidos." \
+  "$(as_user "$USER_A" "select * from set_order_status('$ORD_A', 'paid');")"
+check "anon no invoca set_order_status" "$(denied set_order_status)" \
+  "$(as_anon "select * from set_order_status('$ORD_A', 'paid');")"
+check "de awaiting_payment no se salta a shipped" \
+  "ERROR:  Un pedido awaiting_payment no puede pasar a shipped." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'shipped');")"
+check "un estado inventado se rechaza" "ERROR:  Estado no valido: volando." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'volando');")"
+check "un pedido que no existe tambien" "ERROR:  Ese pedido no existe." \
+  "$(as_user "$ADMIN" "select * from set_order_status('00000000-0000-0000-0000-000000000000', 'paid');")"
+check "un admin lo marca pagado" "paid" \
+  "$(as_user "$ADMIN" "select status from set_order_status('$ORD1', 'paid', 'Transferencia verificada');")"
+check "y queda anotado cuando se confirmo el pago" "t" \
+  "select payment_confirmed_at is not null from orders where id = '$ORD1';"
+check "con su nota en el historial" "Transferencia verificada" \
+  "select note from order_status_history where order_id = '$ORD1' and to_status = 'paid';"
+check "de paid tampoco se salta preparing (el orden es estricto)" \
+  "ERROR:  Un pedido paid no puede pasar a shipped." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'shipped');")"
+check "un envio sigue paid → preparing → shipped → delivered" "delivered" \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'preparing'); select * from set_order_status('$ORD1', 'shipped'); select status from set_order_status('$ORD1', 'delivered');")"
+check "un pedido entregado ya no se mueve" "ERROR:  Un pedido delivered no puede pasar a cancelled." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'cancelled');")"
+check "el historial cuenta toda la vida del pedido" "5" \
+  "select count(*) from order_status_history where order_id = '$ORD1';"
+
+ORD_P="$(scalar "$(as_anon "select id from create_order('c@x.com', 'Cliente', '', 'pickup', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => 'pickup');")")"
+check "un retiro llega a preparing" "preparing" \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD_P', 'paid'); select status from set_order_status('$ORD_P', 'preparing');")"
+check "pero no puede pasar a shipped" "ERROR:  Un pedido preparing no puede pasar a shipped." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD_P', 'shipped');")"
+check "sino a ready_for_pickup" "ready_for_pickup" \
+  "$(as_user "$ADMIN" "select status from set_order_status('$ORD_P', 'ready_for_pickup');")"
+
+echo "   (cancelar devuelve el stock, una sola vez)"
+STOCK5_BEFORE="$(scalar 'select stock from hub_parts where id = 5;')"
+ORD_C="$(scalar "$(as_anon "$(mk_order "$I5x4" transfer shipping standard | sed 's/select \*/select id/')")")"
+check "el pedido descuenta 4" "$((STOCK5_BEFORE - 4))" "select stock from hub_parts where id = 5;"
+# Dos statements: un select dentro del mismo statement que el update no ve su
+# efecto (una sola instantanea).
+check "cancelarlo lo devuelve" "$STOCK5_BEFORE" \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD_C', 'cancelled'); select stock from hub_parts where id = 5;")"
+check "y queda cancelado" "cancelled" "select status from orders where id = '$ORD_C';"
+check "y la linea queda en cero" "0" "select stock_deducted from order_items where order_id = '$ORD_C';"
+check "cancelar dos veces se rechaza" "ERROR:  Un pedido cancelled no puede pasar a cancelled." \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD_C', 'cancelled');")"
+check "y el stock no se devolvio de nuevo" "$STOCK5_BEFORE" "select stock from hub_parts where id = 5;"
+check "cancelar un pedido bajo pedido no toca el stock" "0" \
+  "$(as_user "$ADMIN" "select * from set_order_status('$ORD_OO', 'cancelled'); select stock from hub_parts where id = 3;")"
+
+echo "   (comprobantes: bucket privado, cada pedido en su carpeta)"
+check "el bucket es privado, de 10 MB" "false|10485760" \
+  "select public::text || '|' || file_size_limit from storage.buckets where id = 'payment-proofs';"
+ORD_T="$(scalar "$(as_anon "$(mk_order "$I5x1" transfer shipping standard | sed 's/select \*/select id/')")")"
+ORD_W="$(scalar "$(as_anon "$(mk_order "$I5x1" whatsapp shipping standard | sed 's/select \*/select id/')")")"
+ORD_U="$(scalar "$(as_user "$USER_A" "$(mk_order "$I5x1" transfer shipping standard | sed 's/select \*/select id/')")")"
+check "un pedido por transferencia acepta comprobante" "t" "$(as_anon "select order_accepts_proof('$ORD_T');")"
+check "uno por WhatsApp no" "f" "$(as_anon "select order_accepts_proof('$ORD_W');")"
+check "una carpeta que no es un uuid dice que no, sin romper la politica" "f" \
+  "$(as_anon "select order_accepts_proof('no-es-un-uuid');")"
+check "un invitado sube a la carpeta de su pedido" "" \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_T/comprobante.jpg');")"
+check "pero no a la de un pedido que no existe" \
+  'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('payment-proofs', '00000000-0000-0000-0000-000000000000/x.jpg');")"
+check "ni a la de un pedido por WhatsApp" \
+  'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_W/x.jpg');")"
+check "ni a la de un pedido que tiene dueño, sin ser el dueño" \
+  'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_U/x.jpg');")"
+check "ni otro usuario con cuenta" \
+  'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_user "$USER_B" "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_U/x.jpg');")"
+check "el dueño si sube a su pedido" "" \
+  "$(as_user "$USER_A" "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_U/comprobante.pdf');")"
+check "anon no lee ningun comprobante" "0" \
+  "$(as_anon "select count(*) from storage.objects where bucket_id = 'payment-proofs';")"
+check "otro usuario tampoco" "0" \
+  "$(as_user "$USER_B" "select count(*) from storage.objects where bucket_id = 'payment-proofs';")"
+check "el dueño lee el suyo" "1" \
+  "$(as_user "$USER_A" "select count(*) from storage.objects where bucket_id = 'payment-proofs';")"
+check "un admin lee los de todos" "2" \
+  "$(as_user "$ADMIN" "select count(*) from storage.objects where bucket_id = 'payment-proofs';")"
+
+echo "   (registrar el comprobante en el pedido)"
+check "el invitado apunta su pedido a su archivo" "true" \
+  "$(as_anon "select attach_payment_proof('$ORD_T', '$ORD_T/comprobante.jpg'); select get_order('$ORD_T')->>'has_proof';")"
+check "no puede apuntarlo al archivo de otro pedido" "ERROR:  Ese archivo no pertenece a este pedido." \
+  "$(as_anon "select attach_payment_proof('$ORD_T', '$ORD_U/comprobante.pdf');")"
+check "ni a un archivo que no subio" "ERROR:  No encontramos el archivo subido. Intenta de nuevo." \
+  "$(as_anon "select attach_payment_proof('$ORD_T', '$ORD_T/fantasma.jpg');")"
+check "un pedido por WhatsApp no recibe comprobantes" "ERROR:  Este pedido ya no recibe comprobantes." \
+  "$(as_anon "select attach_payment_proof('$ORD_W', '$ORD_W/x.jpg');")"
+check "la columna no acepta la ruta de otro pedido" \
+  'ERROR:  new row for relation "orders" violates check constraint "orders_proof_path_matches_order"' \
+  "update orders set payment_proof_url = '$ORD_U/comprobante.pdf' where id = '$ORD_T';"
+check "un admin confirma el pago del pedido con comprobante" "paid" \
+  "$(as_user "$ADMIN" "select status from set_order_status('$ORD_T', 'paid');")"
+check "ya pagado, no se aceptan mas comprobantes" "ERROR:  Este pedido ya no recibe comprobantes." \
+  "$(as_anon "select attach_payment_proof('$ORD_T', '$ORD_T/comprobante.jpg');")"
+check "ni subir archivos" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('payment-proofs', '$ORD_T/otro.jpg');")"
+
+echo "   (WhatsApp y ajustes)"
+WA1="$(scalar "$(as_anon "select mark_whatsapp_opened('$ORD_W'); select whatsapp_opened_at::text from orders where id = '$ORD_W';")")"
+check "abrir WhatsApp deja constancia" "t" "select whatsapp_opened_at is not null from orders where id = '$ORD_W';"
+check "y solo la primera vez" "$WA1" \
+  "$(as_anon "select mark_whatsapp_opened('$ORD_W'); select whatsapp_opened_at::text from orders where id = '$ORD_W';")"
+check "las cuentas bancarias nacen como ejemplo" "true" \
+  "select value->0->>'is_example' from site_settings where key = 'bank_accounts';"
+check "y la direccion de retiro tambien" "true" \
+  "select value->>'is_example' from site_settings where key = 'pickup_address';"
+check "anon las lee (el sitio las muestra)" "2" \
+  "$(as_anon "select count(*) from site_settings where key in ('bank_accounts', 'pickup_address');")"
+check "las cuentas tienen que ser una lista" \
+  'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_value_valid"' \
+  "$(as_user "$ADMIN" "select * from set_site_setting('bank_accounts', '\"no soy una lista\"');")"
+check "la direccion tiene que ser un objeto" \
+  'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_value_valid"' \
+  "$(as_user "$ADMIN" "select * from set_site_setting('pickup_address', '[]');")"
+check "un admin si guarda sus cuentas" "bank_accounts" \
+  "$(as_user "$ADMIN" "select key from set_site_setting('bank_accounts', '[{\"bank\":\"Banco Real\",\"holder\":\"X AutoHub\",\"number\":\"123\",\"type\":\"Corriente\"}]');")"
+check "los numeros de pedido no se repiten" "t" "select count(*) = count(distinct order_number) from orders;"
+check "todo pedido tiene su primera fila de historial" "t" \
+  "select count(*) = (select count(distinct order_id) from order_status_history) from orders;"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -628,7 +880,7 @@ insert into hub_parts (category, name, brand, img_url, price, stock) values
   ('detailing',     'Shampoo pH neutro',      'Meguiars',    'x.jpg', 780, 10),
   ('herramientas',  'Llave torque',           'Tekton',      'x.jpg', 3650, 10);
 SQL
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0017_store_catalog.sql upgrade
 echo "   (las 17 categorias de texto de la tienda anterior, una pieza por cada una)"
 CHECK_DB=upgrade check "las 17 piezas quedan clasificadas" "17" \
   "select count(*) from hub_parts where category_id is not null;"
@@ -652,6 +904,53 @@ CHECK_DB=upgrade check "la busqueda de texto queda lista para todas" "17" \
   "select count(*) from hub_parts where search_vector is not null;"
 CHECK_DB=upgrade check "y busca sin acentos sobre lo que ya habia" "Batería AGM 70Ah" \
   "select name from search_products(p_query := 'bateria');"
+
+
+echo "→ Camino de actualizacion de la 0018: la base real ya tiene pedidos al migrar"
+# Pedidos anteriores a la 0018, con el esquema de entonces: sin numero, sin
+# entrega, sin stock descontado. Es lo que la migracion tiene que numerar,
+# clasificar y dejar en paz.
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into shipping_options (id, label, description, price, eta_label) values
+  ('standard', 'Estandar', 'x', 0, '5 dias'),
+  ('pickup',   'Retiro',   'Coordinación por WhatsApp / correo al confirmar el pedido.', 0, 'A coordinar');
+insert into payment_methods (id, label, description) values
+  ('card',     'Tarjeta',       'x'),
+  ('transfer', 'Transferencia', 'Recibirás los datos al confirmar el pedido.');
+insert into orders (contact_email, full_name, address_line1, shipping_option_id, payment_method_id,
+                    subtotal, total, status, created_at) values
+  ('a@x.com', 'Antiguo Uno',  'Calle 1', 'standard', 'card',     100, 100, 'pending',   '2026-08-01'),
+  ('b@x.com', 'Antiguo Dos',  'Calle 2', 'pickup',   'transfer', 200, 200, 'paid',      '2026-08-02'),
+  ('c@x.com', 'Antiguo Tres', 'Calle 3', 'standard', 'card',     300, 300, 'delivered', '2026-07-30');
+insert into order_items (order_id, part_id, name, unit_price, quantity)
+  select id, (select min(id) from hub_parts), 'Pieza vieja', 100, 2 from orders where full_name = 'Antiguo Uno';
+insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'admin@x.com');
+set request.jwt.claim.role = 'service_role';
+update profiles set role = 'admin' where id = '11111111-1111-1111-1111-111111111111';
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con pedidos dentro)"
+CHECK_DB=upgrade check "los pedidos viejos reciben su numero en el orden en que se hicieron" \
+  "Antiguo Tres=1001,Antiguo Uno=1002,Antiguo Dos=1003" \
+  "select string_agg(full_name || '=' || order_number, ',' order by order_number) from orders;"
+CHECK_DB=upgrade check "volver a aplicar no los renumera" "3" \
+  "select count(*) from orders where order_number between 1001 and 1003;"
+CHECK_DB=upgrade check "lo que era retiro lo sigue siendo, lo demas es envio" "pickup|2" \
+  "select (select fulfillment_type::text from orders where full_name = 'Antiguo Dos') || '|' || (select count(*) from orders where fulfillment_type = 'shipping');"
+CHECK_DB=upgrade check "conservan su estado" "paid,pending,delivered" \
+  "select string_agg(status::text, ',' order by order_number desc) from orders;"
+CHECK_DB=upgrade check "y no descontaron stock: no hay nada que devolver" "0" \
+  "select coalesce(sum(stock_deducted), 0) from order_items;"
+CHECK_DB=upgrade check "el historial empieza con la 0018: los pedidos viejos no lo tienen" "0" \
+  "select count(*) from order_status_history;"
+STOCK_MIN_BEFORE="$(SCALAR_DB=upgrade scalar 'select stock from hub_parts where id = (select min(id) from hub_parts);')"
+CHECK_DB=upgrade check "cancelar un pedido viejo no inventa existencias" "cancelled|$STOCK_MIN_BEFORE" \
+  "$(as_user '11111111-1111-1111-1111-111111111111' "select status || '|' || (select stock from hub_parts where id = (select min(id) from hub_parts)) from set_order_status((select id from orders where full_name = 'Antiguo Uno'), 'cancelled');")"
+CHECK_DB=upgrade check "y queda en el historial desde ahi" "1" \
+  "select count(*) from order_status_history;"
+CHECK_DB=upgrade check "el siguiente pedido es el 1004" "1004" \
+  "$(as_anon "select order_number from create_order('n@x.com', 'Nuevo', 'Calle', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
 
 # --- Resumen ------------------------------------------------------------------
 

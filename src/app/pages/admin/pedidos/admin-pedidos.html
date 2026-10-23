@@ -3,7 +3,8 @@
     <div>
       <h2 class="adm-ord__title">Pedidos</h2>
       <p class="adm-ord__lead">
-        {{ orders().length }} pedido(s) · {{ pendingCount() }} pendiente(s) ·
+        {{ orders().length }} pedido(s) · {{ awaitingCount() }} esperando pago
+        @if (withProofCount() > 0) { (<strong>{{ withProofCount() }} con comprobante por revisar</strong>) } ·
         RD$ {{ revenue() | number:'1.0-0' }} sin contar cancelados
       </p>
     </div>
@@ -11,15 +12,17 @@
 
   <div class="adm-ord__filters" role="group" aria-label="Filtrar por estado">
     <button type="button" [class.adm-ord__chip--active]="statusFilter() === 'all'"
-            class="adm-ord__chip" (click)="setFilter('all')">Todos</button>
+            class="adm-ord__chip" (click)="setFilter('all')">Todos {{ orders().length }}</button>
     @for (s of statuses; track s.value) {
-      <button type="button" class="adm-ord__chip"
-              [class.adm-ord__chip--active]="statusFilter() === s.value"
-              (click)="setFilter(s.value)">{{ s.label }}</button>
+      @if ((counts()[s.value] ?? 0) > 0 || statusFilter() === s.value) {
+        <button type="button" class="adm-ord__chip"
+                [class.adm-ord__chip--active]="statusFilter() === s.value"
+                (click)="setFilter(s.value)">{{ s.label }} {{ counts()[s.value] ?? 0 }}</button>
+      }
     }
   </div>
 
-  @if (isLoading()) {
+  @if (isLoading() && orders().length === 0) {
     <p class="adm-ord__empty">Cargando pedidos...</p>
   } @else if (filtered().length === 0) {
     <p class="adm-ord__empty">
@@ -32,10 +35,10 @@
   } @else {
     <ul class="adm-ord__list">
       @for (order of filtered(); track order.id) {
-        <li class="adm-ord__item">
+        <li class="adm-ord__item" [class.adm-ord__item--attention]="order.status === 'awaiting_payment' && order.proofPath">
           <div class="adm-ord__item-head">
             <div class="adm-ord__who">
-              <span class="adm-ord__ref">#{{ shortId(order.id) }}</span>
+              <span class="adm-ord__ref">#{{ order.orderNumber }}</span>
               <span class="adm-ord__name">{{ order.fullName }}</span>
               @if (order.isGuest) {
                 <span class="adm-ord__badge" title="Compra sin cuenta">Invitado</span>
@@ -43,37 +46,88 @@
             </div>
             <div class="adm-ord__meta">
               <span class="adm-ord__total">RD$ {{ order.total | number:'1.0-0' }}</span>
-              <label class="adm-ord__status">
-                <span class="adm-ord__status-label">Estado</span>
-                <select [value]="order.status" (change)="changeStatus(order, $event)"
-                        [disabled]="savingId() === order.id"
-                        [attr.aria-label]="'Estado del pedido ' + shortId(order.id)">
-                  @for (s of statuses; track s.value) {
-                    <option [value]="s.value">{{ s.label }}</option>
-                  }
-                </select>
-              </label>
-              <button type="button" class="adm-ord__toggle" (click)="toggleDetail(order.id)">
-                {{ expandedId() === order.id ? 'Ocultar' : 'Detalle' }}
-              </button>
+              <span class="adm-ord__state" [attr.data-status]="order.status">{{ statusLabel(order.status) }}</span>
             </div>
           </div>
+
+          <p class="adm-ord__badges">
+            <span class="adm-ord__badge adm-ord__badge--pay">{{ paymentLabel(order.paymentMethodId) }}</span>
+            <span class="adm-ord__badge">{{ order.fulfillmentType === 'pickup' ? 'Retiro' : 'Envío' }}</span>
+            @if (order.paymentMethodId === 'transfer' && order.status === 'awaiting_payment') {
+              @if (order.proofPath) {
+                <span class="adm-ord__badge adm-ord__badge--ok">Con comprobante</span>
+              } @else {
+                <span class="adm-ord__badge adm-ord__badge--warn">Sin comprobante</span>
+              }
+            }
+            @if (order.wantsInstallation) { <span class="adm-ord__badge adm-ord__badge--pay">Instalación</span> }
+            @if (order.whatsappOpenedAt) { <span class="adm-ord__badge">Abrió WhatsApp</span> }
+          </p>
 
           <p class="adm-ord__sub">
             {{ order.createdAt | date:'d MMM y, h:mm a' }} · {{ order.contactEmail }}
             @if (order.contactPhone) { · {{ order.contactPhone }} }
           </p>
 
+          <!-- Los pasos que este pedido puede dar ahora -->
+          @if (actionsFor(order).length > 0) {
+            <div class="adm-ord__actions">
+              @for (action of actionsFor(order); track action.to) {
+                <button type="button" class="adm-ord__action"
+                        [class.adm-ord__action--danger]="action.destructive"
+                        [class.adm-ord__action--confirm]="action.destructive && confirmCancelId() === order.id"
+                        [disabled]="savingId() !== null"
+                        (click)="act(order, action)">
+                  @if (savingId() === order.id) { Guardando… }
+                  @else if (action.destructive && confirmCancelId() === order.id) { Toca otra vez para cancelar }
+                  @else { {{ action.label }} }
+                </button>
+              }
+            </div>
+            <label class="adm-ord__note">
+              <span>Nota <small>(la ve el cliente, opcional)</small></span>
+              <input type="text" maxlength="200" [value]="noteOf(order.id)" (input)="setNote(order.id, $event)"
+                     placeholder="Ej: Enviado con Vimenpaq, guía 123" />
+            </label>
+          }
+
+          <button type="button" class="adm-ord__toggle" [attr.aria-expanded]="expandedId() === order.id"
+                  (click)="toggleDetail(order.id)">
+            {{ expandedId() === order.id ? 'Ocultar el detalle' : 'Ver el detalle' }}
+          </button>
+
           @if (expandedId() === order.id) {
             <div class="adm-ord__detail">
+              @if (order.paymentMethodId === 'transfer') {
+                <div class="adm-ord__block">
+                  <h4>Comprobante</h4>
+                  @if (!order.proofPath) {
+                    <p class="adm-ord__muted">El cliente todavía no subió el comprobante.</p>
+                  } @else if (proofUrls()[order.id]; as url) {
+                    @if (isImageProof(order.proofPath)) {
+                      <a [href]="url" target="_blank" rel="noopener noreferrer">
+                        <img class="adm-ord__proof" [src]="url" alt="Comprobante de pago del pedido {{ order.orderNumber }}" />
+                      </a>
+                    }
+                    <a class="adm-ord__link" [href]="url" target="_blank" rel="noopener noreferrer">Abrir el comprobante</a>
+                    <p class="adm-ord__muted">El enlace dura diez minutos.</p>
+                  } @else {
+                    <button type="button" class="adm-ord__action" [disabled]="loadingProofId() !== null" (click)="viewProof(order)">
+                      {{ loadingProofId() === order.id ? 'Abriendo…' : 'Ver el comprobante' }}
+                    </button>
+                  }
+                </div>
+              }
+
               <div class="adm-ord__block">
                 <h4>Entrega</h4>
-                <p>{{ order.addressLine1 }}@if (order.city) {, {{ order.city }}}</p>
-                <p class="adm-ord__muted">
-                  Envio: {{ order.shippingOptionId }} · Pago: {{ order.paymentMethodId }}
-                </p>
+                <p>{{ order.addressLine1 }}@if (order.city) {, {{ order.city }}}@if (order.province) {, {{ order.province }}}</p>
+                <p class="adm-ord__muted">Envio: {{ order.shippingOptionId }}</p>
                 @if (order.orderNotes) {
-                  <p class="adm-ord__muted">Notas: {{ order.orderNotes }}</p>
+                  <p class="adm-ord__muted">Notas del cliente: {{ order.orderNotes }}</p>
+                }
+                @if (customerWhatsApp(order); as wa) {
+                  <a class="adm-ord__link" [href]="wa" target="_blank" rel="noopener noreferrer">Escribirle por WhatsApp</a>
                 }
               </div>
 
@@ -96,6 +150,19 @@
                   </span>
                   <strong>Total</strong><strong>RD$ {{ order.total | number:'1.0-0' }}</strong>
                 </div>
+              </div>
+
+              <div class="adm-ord__block">
+                <h4>Historial</h4>
+                <ol class="adm-ord__history">
+                  @for (h of order.history; track $index) {
+                    <li>
+                      <strong>{{ statusLabel(h.toStatus) }}</strong>
+                      <span class="adm-ord__muted">{{ h.createdAt | date:'d MMM, h:mm a' }}</span>
+                      @if (h.note) { <span class="adm-ord__history-note">“{{ h.note }}”</span> }
+                    </li>
+                  }
+                </ol>
               </div>
             </div>
           }

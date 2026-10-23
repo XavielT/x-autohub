@@ -20,11 +20,24 @@
                 <span class="cart-modal__item-name">{{ item.part.name }}</span>
                 <span class="cart-modal__item-brand">{{ item.part.brand }}</span>
                 <span class="cart-modal__item-price">RD$ {{ item.part.price * item.quantity | number:'1.0-0' }}</span>
+                <span class="cart-modal__item-avail" [attr.data-kind]="availability(item).kind">
+                  {{ availability(item).label }}
+                </span>
+                @if (exceedsStock(item)) {
+                  <span class="cart-modal__item-warn" role="alert">
+                    {{ item.part.stock > 0 ? 'Pides más de lo que hay. Ajusta la cantidad.' : 'Se agotó. Quítala para continuar.' }}
+                  </span>
+                }
               </div>
-              <div class="cart-modal__item-qty">
-                <span>x{{ item.quantity }}</span>
+              <div class="cart-modal__item-qty" role="group" [attr.aria-label]="'Cantidad de ' + item.part.name">
+                <button type="button" class="cart-modal__qty-btn" aria-label="Una menos"
+                        (click)="changeQuantity(item, -1)">−</button>
+                <span class="cart-modal__qty-num" aria-live="polite">{{ item.quantity }}</span>
+                <button type="button" class="cart-modal__qty-btn" aria-label="Una más"
+                        [disabled]="!canAddMore(item)" (click)="changeQuantity(item, 1)">+</button>
               </div>
-              <button class="cart-modal__item-remove" (click)="removeItem(item.part.id)">✕</button>
+              <button class="cart-modal__item-remove" [attr.aria-label]="'Quitar ' + item.part.name"
+                      (click)="removeItem(item.part.id)">✕</button>
             </div>
           }
         </div>
@@ -36,6 +49,11 @@
           </div>
           <button class="cart-modal__clear" (click)="clearCart()">Vaciar carrito</button>
           <button type="button" class="cart-modal__checkout" (click)="proceedToCheckout()">Proceder al pago →</button>
+          @if (cartService.stockIssues().length > 0) {
+            <p class="cart-modal__issues" role="status">
+              Hay piezas con menos existencias de las que pides: te lo avisamos de nuevo al pagar.
+            </p>
+          }
         </div>
       }
     </div>

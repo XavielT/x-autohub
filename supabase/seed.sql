@@ -202,14 +202,13 @@ select setval(pg_get_serial_sequence('public.social_events', 'id'), (select max(
 insert into public.shipping_options (id, label, description, price, eta_label, sort_order) values
   ('standard', 'Estándar', 'Entrega en 5–7 días hábiles.', 0, '5–7 días', 0),
   ('express', 'Express', 'Prioridad en almacén y envío acelerado.', 450, '2–3 días', 1),
-  ('pickup', 'Retiro en hub', 'Coordinación por WhatsApp / correo al confirmar el pedido.', 0, 'A coordinar', 2)
+  ('pickup', 'Retiro en hub', 'Retira tu pedido en el taller. Te avisamos cuando esté listo.', 0, 'A coordinar', 2)
 on conflict (id) do nothing;
 
 
--- 3 registro(s)
+-- 2 registro(s)
 insert into public.payment_methods (id, label, description, sort_order) values
-  ('card', 'Tarjeta débito / crédito', 'Visa, Mastercard, American Express (integración pendiente).', 0),
-  ('transfer', 'Transferencia bancaria', 'Recibirás los datos al confirmar el pedido.', 1),
-  ('mercadopago', 'Mercado Pago', 'Wallet y cuotas según disponibilidad (integración pendiente).', 2)
+  ('transfer', 'Transferencia bancaria', 'Transfieres y subes el comprobante; confirmamos tu pago y preparamos el pedido.', 0),
+  ('whatsapp', 'Pedir por WhatsApp', 'Cerramos el pedido y el pago por WhatsApp con nuestro equipo.', 1)
 on conflict (id) do nothing;
 
