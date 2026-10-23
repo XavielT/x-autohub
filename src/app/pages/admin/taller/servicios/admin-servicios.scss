@@ -3,3 +3,6 @@
 @include taller-base;
 
 .svc-thumbs { flex-direction: row; flex-wrap: wrap; li { display: flex; flex-direction: column; gap: 6px; } }
+
+.tl__quick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 12px; }
+.tl__quick-label { display: flex; flex: 1 1 160px; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-soft); }

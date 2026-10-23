@@ -121,4 +121,37 @@ describe('AdminServicios', () => {
   it('solo ofrece los iconos que existen en assets/icons', () => {
     expect(SERVICE_ICONS.every((i) => i.value.startsWith('assets/icons/') && i.value.endsWith('.svg'))).toBe(true);
   });
+
+  it('precio rápido: pone el precio de un servicio a cotizar sin abrir el formulario', async () => {
+    const { c, fixture } = await montar();
+    const svc = c.services().find((x) => x.priceFrom === null)!;
+    const antes = c.unpriced();
+
+    expect(c.quickPriceChanged(svc)).toBe(false);
+    c.setQuickPrice(svc, input('1800'));
+    expect(c.quickPriceChanged(svc)).toBe(true);
+
+    c.saveQuickPrice(svc);
+    await fixture.whenStable();
+
+    expect(c.services().find((x) => x.id === svc.id)!.priceFrom).toBe(1800);
+    expect(c.unpriced()).toBe(antes - 1);
+    expect(c.priceInputs()[svc.id]).toBeUndefined();
+    expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('desde RD$ 1800'));
+  });
+
+  it('precio rápido: vaciarlo lo devuelve a cotizar, y un precio negativo se rechaza', async () => {
+    const { c, fixture } = await montar();
+    const svc = c.services().find((x) => x.priceFrom !== null)!;
+
+    c.setQuickPrice(svc, input('-5'));
+    c.saveQuickPrice(svc);
+    expect(c.services().find((x) => x.id === svc.id)!.priceFrom).toBe(svc.priceFrom);
+    expect(toast.show).toHaveBeenCalledWith(expect.any(String), 'error');
+
+    c.setQuickPrice(svc, input(''));
+    c.saveQuickPrice(svc);
+    await fixture.whenStable();
+    expect(c.services().find((x) => x.id === svc.id)!.priceFrom).toBeNull();
+  });
 });

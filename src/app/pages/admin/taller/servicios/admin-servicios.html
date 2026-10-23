@@ -2,7 +2,10 @@
   <header class="tl__head tl__row">
     <div>
       <h2 class="tl__title">Servicios</h2>
-      <p class="tl__lead">{{ services().length }} servicio(s). Lo que sale en /servicios y se puede agendar.</p>
+      <p class="tl__lead">
+        {{ services().length }} servicio(s). Lo que sale en /servicios y se puede agendar.
+        @if (unpriced() > 0) { <strong>{{ unpriced() }} sin precio (a cotizar).</strong> }
+      </p>
     </div>
     @if (!draft()) { <button type="button" class="tl__btn tl__btn--small" (click)="newService()">+ Nuevo servicio</button> }
   </header>
@@ -100,6 +103,16 @@
             @if (s.priceFrom !== null) { desde RD$ {{ s.priceFrom | number:'1.0-0' }} } @else { a cotizar } ·
             {{ duration(s.durationMinutes) }} · {{ s.isBookable ? 'se agenda' : 'solo cotiza' }}
           </p>
+          <form class="tl__quick" (submit)="$event.preventDefault(); saveQuickPrice(s)" novalidate>
+            <label class="tl__quick-label">
+              <span>Desde RD$</span>
+              <input class="tl__input" type="number" name="quick-price-{{ s.id }}" min="0" step="50" inputmode="numeric"
+                     placeholder="A cotizar" [value]="quickPrice(s)" (input)="setQuickPrice(s, $event)" />
+            </label>
+            <button type="submit" class="tl__btn tl__btn--small" [disabled]="!quickPriceChanged(s) || savingPriceId() !== null">
+              {{ savingPriceId() === s.id ? 'Guardando…' : 'Guardar precio' }}
+            </button>
+          </form>
           <div class="tl__actions">
             <button type="button" class="tl__btn tl__btn--ghost" (click)="edit(s)">Editar</button>
             <button type="button" class="tl__btn tl__btn--ghost" (click)="toggleActive(s)">{{ s.isActive ? 'Apagar' : 'Encender' }}</button>

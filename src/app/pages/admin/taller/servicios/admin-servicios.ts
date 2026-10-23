@@ -86,6 +86,10 @@ export class AdminServicios implements OnInit {
   readonly isSaving = signal(false);
   readonly isUploading = signal(false);
 
+  /** Lo que se va tecleando en el precio rápido de cada tarjeta, por id de servicio. */
+  readonly priceInputs = signal<Record<number, string>>({});
+  readonly savingPriceId = signal<number | null>(null);
+
   ngOnInit(): void {
     this.load();
   }
@@ -194,6 +198,61 @@ export class AdminServicios implements OnInit {
       },
       error: (error: Error) => {
         this.isSaving.set(false);
+        this.toast.show(error.message, 'error');
+      },
+    });
+  }
+
+  /** El valor del precio rápido: lo tecleado, o el precio que ya tiene el servicio. */
+  quickPrice(service: ServiceModel): string {
+    const typed = this.priceInputs()[service.id];
+    return typed ?? (service.priceFrom === null ? '' : String(service.priceFrom));
+  }
+
+  setQuickPrice(service: ServiceModel, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.priceInputs.update((m) => ({ ...m, [service.id]: value }));
+  }
+
+  /** Hay algo distinto al precio guardado en el campo rápido. */
+  quickPriceChanged(service: ServiceModel): boolean {
+    const raw = this.quickPrice(service).trim();
+    const next = raw === '' ? null : Number(raw);
+    return next !== service.priceFrom;
+  }
+
+  /** Cuántos servicios siguen sin precio: es lo que el taller tiene pendiente de poner. */
+  unpriced(): number {
+    return this.services().filter((s) => s.priceFrom === null).length;
+  }
+
+  /** Guarda solo el precio, sin abrir el formulario. Vacío = a cotizar. */
+  saveQuickPrice(service: ServiceModel): void {
+    if (this.savingPriceId() !== null) return;
+
+    const raw = this.quickPrice(service).trim();
+    const draft: ServiceDraft = { ...toDraft(service), priceFrom: raw === '' ? null : Number(raw) };
+
+    const invalid = validateService(draft);
+    if (invalid) {
+      this.toast.show(invalid, 'error');
+      return;
+    }
+
+    this.savingPriceId.set(service.id);
+    this.admin.saveService(draft).subscribe({
+      next: (saved) => {
+        this.savingPriceId.set(null);
+        this.priceInputs.update(({ [service.id]: _drop, ...rest }) => rest);
+        this.toast.show(
+          saved.priceFrom === null
+            ? `"${saved.title}" quedó a cotizar.`
+            : `"${saved.title}": desde RD$ ${saved.priceFrom}.`,
+        );
+        this.load();
+      },
+      error: (error: Error) => {
+        this.savingPriceId.set(null);
         this.toast.show(error.message, 'error');
       },
     });
