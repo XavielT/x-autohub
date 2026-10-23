@@ -24,8 +24,8 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | ---- | ----------------------------------------------------------------- | --------- | ---------------- | ------------ |
 | 0    | Documentación del pivote                                          | 1.4.0     | No               | hecha        |
 | 1    | Esquema de tienda: categorías, producto, fitment, búsqueda, admin | 1.5.0     | 0017             | hecha        |
-| 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | **2.0.0** | No               | preparada    |
-| 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | pendiente    |
+| 2    | Shell nuevo (navbar, barra inferior, footer) y home nuevo         | 2.0.0     | No               | hecha        |
+| 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | **2.1.0** | No               | preparada    |
 | 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | pendiente    |
 | 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | pendiente    |
 | 6    | PWA                                                               | 2.4.0     | No               | pendiente    |
@@ -54,6 +54,23 @@ no le dice qué hacer; el buscador, las categorías y "elige tu vehículo" sí. 
 **Por qué:** sin filtros por vehículo y una ficha que diga "¿sirve para mi
 carro?", una tienda de piezas es un catálogo mudo. La compatibilidad es la
 diferencia con preguntar por WhatsApp.
+
+**Hecho:** `/tienda` y `/tienda/c/:slug` con filtros en la URL; ficha
+`/tienda/p/:slug` con galería, compatibilidad y disponibilidad; `/buscar`; el
+garaje (`profile_vehicles`) en el perfil, con migración del vehículo del invitado;
+los enlaces viejos (`/catalogo`, `?category=`, `/hub-part-details/:id`) siguen
+funcionando. Se borraron las páginas `catalogo` y `hub-part-details`.
+
+**Pendiente que dejó la fase:**
+- **Filtro de marca en el RPC.** `search_products` no tiene `p_brand`, y la fase no
+  tocaba Supabase, así que la marca se filtra en el cliente (trae páginas de 100 y
+  corta). Es correcto pero no escala; cuando el inventario pase de unos cientos,
+  agregar `p_brand` en una migración y quitar `searchByBrand`.
+- **Precio de instalación** ("desde RD$ X") en la ficha: los servicios no tienen
+  precio hasta la fase 5. Hoy dice "Instalación disponible" y el servicio.
+- **Reseñas** en la ficha: hay un hueco con `TODO` para la fase 7.
+- **Advisor de Supabase:** `search_path` mutable en `xah_unaccent`/`xah_slugify`; se arregla
+  con una migración chica.
 
 ### Fase 4 — Checkout, pedidos y pago (2.2.0)
 
@@ -232,9 +249,9 @@ y un `<app-expandable-text [text]="..." [maxLength]="200">`. Cada página de
 detalle se queda solo con lo que la hace distinta.
 
 **Por qué importa:** cuatro copias significa que un arreglo de galería hay que
-hacerlo cuatro veces. **Ojo con la fase 3:** la ficha nueva (`/tienda/p/:slug`)
-necesita galería con zoom; conviene extraer el componente ahí y no escribir una
-quinta copia.
+hacerlo cuatro veces. **Ojo:** la fase 3 ya extrajo `shared/ui/image-gallery` para la
+ficha nueva (`/tienda/p/:slug`). Falta migrar a él las cuatro páginas de detalle
+de arriba, que siguen con su copia (`hub-part-details` ya no existe).
 
 > Esto **no** unifica Auto Hub con Hub Market como producto. Comparten la galería,
 > no el inventario.

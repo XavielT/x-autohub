@@ -54,11 +54,11 @@ universales **y** piezas por modelo con compatibilidad. Se cobra por
 transferencia con comprobante o cerrando el pedido por WhatsApp (sin pasarela de
 tarjeta en esta ronda). Se entrega por envío nacional o retiro en el taller.
 
-> **Hoy** (fase 2) `/tienda` es todavía la página del catálogo de antes, con carrito
-> y checkout de precios calculados en Postgres; `/catalogo` ya redirige a ella.
-> El buscador, el menú de categorías y el home de tienda ya existen. Lo demás
-> (filtros por vehículo, ficha, checkout por transferencia) llega por fases: ver
-> `docs/ROADMAP.md`.
+> **Hoy** (fase 3) `/tienda` ya filtra por categoría, marca, precio, stock y
+> vehículo, cada pieza tiene su ficha con compatibilidad y disponibilidad, y el
+> carrito y el checkout (precios calculados en Postgres) siguen como estaban;
+> `/catalogo` redirige a la tienda. El checkout por transferencia llega por
+> fases: ver `docs/ROADMAP.md`.
 
 ### Servicios
 
@@ -128,8 +128,7 @@ de prueba. Diecisiete migraciones aplicadas.
   (buscador, categorías, ofertas, más vendidos, nuevos, taller, vehículos y
   comunidad). El hero con video pasó a la página de la Comunidad.
 
-**Lo que todavía no** (fases 3 a 7): la tienda con filtros por vehículo y la ficha
-de producto (`/tienda` sigue siendo la página del catálogo de antes), el checkout
+**Lo que todavía no** (fases 4 a 7): el checkout
 por transferencia con comprobante, la agenda de citas del taller, la PWA y las
 reseñas. Ver `docs/ROADMAP.md` para el orden.
 

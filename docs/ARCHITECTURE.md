@@ -1,14 +1,14 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-22** (v2.0.0, la fase 2 del pivote). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.1.0, la fase 3 del pivote). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 2.** Ya existen el esquema de la
-> tienda (fase 1) y la cara nueva: navbar con buscador y menú de categorías,
-> barra de pestañas en el teléfono, footer por pilares, home de tienda y selector
-> de vehículo. **Falta** la tienda de verdad (`/tienda` sigue siendo la página del
-> catálogo de antes: fase 3), el checkout por transferencia, la agenda de
-> servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
+> **El pivote de octubre de 2026 va por la fase 3.** Ya existen el esquema de la
+> tienda (fase 1), la cara nueva (fase 2: navbar con buscador y menú de
+> categorías, barra de pestañas, footer por pilares, home de tienda) y la tienda
+> de verdad (fase 3: `/tienda` con filtros, "mi vehículo", ficha por slug,
+> `/buscar` y el garaje en el perfil). **Falta** el checkout por transferencia,
+> la agenda de servicios y la PWA. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
 > se documenta aquí al cerrar la fase 7, no antes.
 
 ## Estructura de carpetas
@@ -65,13 +65,13 @@ x-autohub/
     │   │   └── (sin uso desde la fase 2, se retiran en la fase 7:
     │   │        page-counter-overview, home-featured-vehicles,
     │   │        home-featured-catalog, home-news)
-    │   └── pages/                    Una carpeta por página (21)
+    │   └── pages/                    Una carpeta por página (22)
     │       ├── home/  auto-hub/  auto-hub-details/
-    │       ├── catalogo/  hub-part-details/  checkout/
+    │       ├── tienda/  producto/  buscar/  checkout/
     │       ├── hub-market/  car-details/  hub-market-part-details/
     │       ├── accessory-details/  publicar/
     │       ├── servicios/  social-hub/  new-details/
-    │       ├── login/  registro/  perfil/  baja/
+    │       ├── login/  registro/  perfil/ (con mi-garaje/)  baja/
     │       ├── admin/  (moderacion, versiones, pedidos, inventario,
     │       │            usuarios, ajustes). inventario/ trae además las pestañas
     │       │            Categorías y Marcas y modelos y los editores de
@@ -81,12 +81,12 @@ x-autohub/
     ├── shared/                Reutilizable entre páginas
     │   ├── components/            Componentes con lógica o datos
     │   │   ├── navbar/  mobile-tab-bar/  footer/  logo-hub/
-    │   │   ├── search-box/  vehicle-form/  vehicle-picker-modal/
+    │   │   ├── search-box/  vehicle-form/  vehicle-picker-modal/  store-filters/
     │   │   ├── car-card/  autohub-card/  hub-market-card/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
     │   │   ├── cart-modal/  toast/  club-channel/
     │   ├── ui/                    Presentacionales puros, sin dependencias
-    │   │   ├── highlight-badge/  info-badge/
+    │   │   ├── highlight-badge/  info-badge/  image-gallery/
     │   │   └── location-select/  test-badge/
     │   ├── models/                Interfaces de los modelos (product.model.ts: la tienda)
     │   ├── data/                  Mocks (*.mock.ts), locations, showcase-stats
@@ -126,7 +126,7 @@ Hoy hay **tres modelos de artículo** porque representan tres inventarios distin
 | -------------------- | ----------------------------- | ------------------------------------------- | ------------------------------------ |
 | `AutoHubModel`       | `auto-hub.model.ts`           | Vehículo **propio**, verificado             | `/auto-hub`, `/auto-hub-details/:id` |
 | `HubMarketItemModel` | `hub-market-item.model.ts`    | Publicación de **usuario** (3 categorías)   | `/hub-market` y sus 3 detalles       |
-| `ProductModel`       | `product.model.ts`            | Producto de la **tienda propia** (tabla `hub_parts`) | `/catalogo`, carrito, checkout, panel |
+| `ProductModel`       | `product.model.ts`            | Producto de la **tienda propia** (tabla `hub_parts`) | `/tienda`, carrito, checkout, panel |
 
 `HubPartModel` (`hub-part.model.ts`) es un alias deprecado de `ProductModel`, para no
 romper imports; se retira en la fase 7. El archivo `product.model.ts` trae además
@@ -207,8 +207,10 @@ intencional — el usuario nunca pierde la navegación.
 
 ## Rutas
 
-22 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
-`title` (salvo el redirect `/catalogo` → `/tienda`, que conserva los query params); `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
+24 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
+`title`, salvo dos que solo redirigen: `/catalogo` → `/tienda` (conserva los query
+params) y `/hub-part-details/:id` → `/tienda/p/:slug` (la resuelve
+`productIdRedirectGuard`, porque ese enlace se llegó a compartir); `/admin` tiene además seis rutas hijas. Ver `src/app/app.routes.ts`,
 que está agrupado por pilar y comentado.
 
 Protegidas por `authGuard`: `/publicar`, `/perfil`.
@@ -217,7 +219,19 @@ Protegidas por `guestGuard` (redirigen si ya hay sesión): `/login`, `/registro`
 cuenta** (`adminGuard` salvo `moderacion`); ver el comentario en el archivo.
 `**` → `NotFound`. Debe quedar siempre de último.
 
-Con el pivote `/catalogo` pasará a redirigir a `/tienda`; hoy no existe `/tienda`.
+**La tienda** vive en `/tienda` (todo), `/tienda/c/:slug` (una categoría) y
+`/tienda/p/:slug` (la ficha). Los filtros viajan en la URL (`marca`, `min`, `max`,
+`stock`, `compat`, `orden`; `shared/utils/store-filters.ts`) para que una búsqueda se
+pueda compartir y recargar; el vehículo **no** viaja, es de quien mira. Siguen
+funcionando los enlaces viejos `?category=<texto>` y `?categoria=<slug>`
+(`legacy-categories.ts`). `/buscar?q=` separa lo de la tienda de lo que publica la
+comunidad en Hub Market.
+
+**Compatibilidad** (`product-compat.ts`): un universal sirve siempre; uno
+específico solo con un fitment que cubra el vehículo; uno específico **sin**
+fitments cargados dice "Consultar compatibilidad", nunca "compatible".
+**Disponibilidad** (`product-availability.ts`) es la única definición de "En stock:
+N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen de ahí.
 
 ## Base de datos
 
@@ -247,7 +261,7 @@ Decisiones que conviene conocer:
 
 ## Build
 
-- Bundle inicial: **630 kB** (~167 kB transferidos, medido el 2026-10-22; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
+- Bundle inicial: **636 kB** (~169 kB transferidos, medido el 2026-10-23; el límite de aviso es 700 kB, subido desde 600 en la fase 2 porque el shell ahora trae el navbar, el buscador, la barra de pestañas y el footer). Cada
   página es un chunk aparte; el cliente de Supabase (~200 kB) va en el inicial
   porque el navbar necesita la sesión desde el primer render.
 - `dist/` total: **6.2 MB**. `src/assets/fonts` pesa 308 KB y el video del hero
@@ -258,7 +272,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 81 archivos, 632 pruebas, todas pasando (2026-10-22). Corren siempre en modo mock (los
+- 85 archivos, 658 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.
