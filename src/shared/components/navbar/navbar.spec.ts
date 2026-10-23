@@ -99,7 +99,7 @@ describe('Navbar', () => {
       fixture.detectChanges();
 
       const frenos = Array.from(el.querySelectorAll('.navbar__mega-root')).find((a) => a.textContent?.trim() === 'Frenos');
-      expect(frenos?.getAttribute('href')).toBe('/tienda?categoria=frenos');
+      expect(frenos?.getAttribute('href')).toBe('/tienda/c/frenos');
     });
 
     it('pasar el raton abre el menu y sacarlo lo cierra', () => {

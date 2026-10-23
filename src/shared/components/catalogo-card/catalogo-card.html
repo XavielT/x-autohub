@@ -1,28 +1,45 @@
-<div class="hub-part-card">
+<div class="hub-part-card" [class.is-out]="!availability().canBuy">
     <div class="hub-part-card__top">
-        <a class="hub-part-card__image-link" [routerLink]="['/hub-part-details', hubPart().id]"><img class="hub-part-card__img"
-                [ngSrc]="hubPart().imgUrl" [priority]="priority()" fill /></a>
+        @if (discount() > 0) {
+            <span class="hub-part-card__off">-{{ discount() }}%</span>
+        }
+        <a class="hub-part-card__image-link" [routerLink]="['/tienda', 'p', hubPart().slug]"><img class="hub-part-card__img"
+                [ngSrc]="hubPart().imgUrl" [priority]="priority()" [alt]="hubPart().name" fill /></a>
     </div>
     <div class="hub-part-card__middle">
         <div class="hub-part-card__middle-header">
             <span>{{hubPart().brand}}</span>
             @if (hubPart().isTest) { <app-test-badge /> }
             <div class="hub-part-card__stars">
-                <img src="assets/icons/star-icon.svg" /><span>{{hubPart().starsRating}}</span>
+                <img src="assets/icons/star-icon.svg" alt="" /><span>{{hubPart().starsRating}}</span>
             </div>
         </div>
         <div class="hub-part-card__middle-content">
-            <a [routerLink]="['/hub-part-details', hubPart().id]">
+            <a [routerLink]="['/tienda', 'p', hubPart().slug]">
                 <h3 class="hub-part-card__name">{{hubPart().name}}</h3>
             </a>
         </div>
+        <div class="hub-part-card__status">
+            <span [class]="'hub-part-card__avail hub-part-card__avail--' + availability().kind">
+                {{ availability().short }}
+            </span>
+            @if (compatible()) {
+                <span class="hub-part-card__compat">✓ Compatible</span>
+            }
+        </div>
     </div>
     <div class="hub-part-card__bottom">
-        <h4 class="hub-part-card__price">RD$ {{hubPart().price | number:'1.0-0'}}</h4>
+        <div class="hub-part-card__prices">
+            <h4 class="hub-part-card__price">RD$ {{hubPart().price | number:'1.0-0'}}</h4>
+            @if (discount() > 0) {
+                <s class="hub-part-card__before">RD$ {{hubPart().compareAtPrice | number:'1.0-0'}}</s>
+            }
+        </div>
         <button
             type="button"
             class="hub-part-card__cart-button"
-            [attr.aria-label]="'Agregar ' + hubPart().name + ' al carrito'"
+            [disabled]="!availability().canBuy"
+            [attr.aria-label]="availability().canBuy ? 'Agregar ' + hubPart().name + ' al carrito' : hubPart().name + ' esta agotado'"
             (click)="addToCart()">
             <img src="assets/icons/cart-icon.svg" alt="" />
         </button>

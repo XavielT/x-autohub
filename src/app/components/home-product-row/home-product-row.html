@@ -11,12 +11,6 @@
     @for (p of products(); track p.id; let i = $index) {
       <li class="hrow__item">
         <app-catalogo-card [hubPart]="p" [priority]="i < 2" />
-        @if (showDeal() && discount(p) > 0) {
-          <p class="hrow__deal">
-            <span class="hrow__off">-{{ discount(p) }}%</span>
-            Antes <s>RD$ {{ p.compareAtPrice | number:'1.0-0' }}</s>
-          </p>
-        }
       </li>
     }
   </ul>

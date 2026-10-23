@@ -1,0 +1,101 @@
+.garage {
+  font-family: var(--font-body);
+  color: var(--text-strong);
+
+  &__head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    margin-bottom: 14px;
+  }
+
+  &__title { margin: 0; font-family: var(--font-brand); font-size: 22px; }
+  &__lead { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); }
+
+  &__add-btn {
+    min-height: 44px;
+    padding: 0 18px;
+    font-family: var(--font-btns);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  }
+
+  &__form {
+    margin-bottom: 16px;
+    padding: 18px;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 22px;
+    font-size: 14px;
+    color: var(--text-soft);
+    background-color: var(--main-light);
+    border-radius: 14px;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 14px 16px;
+    background-color: var(--main-light);
+    border: 1px solid transparent;
+    border-radius: 14px;
+
+    &.is-default { border-color: var(--Hub); }
+  }
+
+  &__info { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; min-width: 0; }
+  &__name { font-size: 16px; }
+
+  &__tag {
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 12px;
+  }
+
+  &__actions { display: flex; gap: 8px; }
+
+  &__btn {
+    min-height: 44px;
+    padding: 0 16px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text-strong);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { color: var(--Hub); border-color: var(--Hub); }
+    &:disabled { opacity: 0.5; cursor: default; }
+    &--danger:hover:not(:disabled) { color: var(--danger-text); border-color: var(--danger-text); }
+  }
+}

@@ -1,0 +1,261 @@
+.tienda {
+  box-sizing: border-box;
+  padding: 24px 30px 48px;
+  font-family: var(--font-body);
+  color: var(--text-strong);
+
+  &__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin-bottom: 18px;
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--font-brand);
+    font-size: clamp(26px, 4vw, 38px);
+  }
+
+  &__count { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); }
+
+  &__tools { display: flex; align-items: flex-end; gap: 12px; }
+
+  &__sort {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-soft);
+
+    select {
+      min-height: 44px;
+      padding: 0 12px;
+      font-family: inherit;
+      // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+      font-size: 16px;
+      color: var(--text-strong);
+      background-color: #1a1a1a;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+
+      &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 1px; }
+    }
+  }
+
+  // El botón de filtros solo existe en el teléfono: en escritorio la columna ya está.
+  &__filters-btn {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-strong);
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  &__badge {
+    min-width: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 22px;
+    text-align: center;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 11px;
+  }
+
+  &__vehicle-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    font-size: 14px;
+    background-color: var(--Hub-translucid);
+    border: 1px solid var(--Hub);
+    border-radius: 10px;
+
+    strong { color: var(--Hub); }
+
+    button {
+      min-height: 36px;
+      padding: 0 8px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: none;
+      border: none;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  }
+
+  &__layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+
+  &__side {
+    position: sticky;
+    // Debajo de la barra de arriba, que es fija.
+    top: 88px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    max-height: calc(100dvh - 104px);
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  &__help {
+    padding: 16px;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+
+    h4 { margin: 0 0 6px; font-family: var(--font-brand); font-size: 15px; }
+    p { margin: 0 0 8px; font-size: 13px; color: var(--text-soft); }
+    a { font-size: 14px; font-weight: 700; color: var(--Hub); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    justify-items: center;
+    gap: 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    font-size: 14px;
+    color: var(--text-soft);
+
+    p { margin: 0; }
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 56px 16px;
+    text-align: center;
+    background-color: #1a1a1a;
+    border-radius: 14px;
+
+    h2 { margin: 0; font-family: var(--font-brand); font-size: 20px; }
+    p { margin: 0 0 8px; color: var(--text-soft); }
+  }
+
+  &__link { margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--Hub); text-decoration: none; }
+  &__link:hover { text-decoration: underline; }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 26px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--main);
+    text-decoration: none;
+    background-color: var(--Hub);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+    &:disabled { opacity: 0.6; cursor: default; }
+    &:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  }
+
+  // --- La hoja de filtros del teléfono ---------------------------------------------
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background-color: rgba(0, 0, 0, 0.65);
+  }
+
+  &__sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 96;
+    display: flex;
+    flex-direction: column;
+    max-height: 90dvh;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  &__sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+
+    h3 { margin: 0; font-family: var(--font-brand); font-size: 20px; }
+  }
+
+  &__close {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    color: var(--text-strong);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  &__sheet-body { flex: 1; min-height: 0; margin-bottom: 12px; overflow-y: auto; }
+
+  &__sheet-done { width: 100%; }
+}
+
+@media (max-width: 900px) {
+  .tienda {
+    padding: 16px 16px 32px;
+
+    &__filters-btn { display: inline-flex; }
+    &__layout { grid-template-columns: minmax(0, 1fr); }
+    &__side { display: none; }
+    &__grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  }
+}
+
+// La hoja no tiene sentido en pantalla ancha: si alguien la dejó abierta y giró
+// el teléfono o agrandó la ventana, se cierra con el fondo y la columna aparece.
+@media (min-width: 901px) {
+  .tienda__overlay,
+  .tienda__sheet { display: none; }
+}

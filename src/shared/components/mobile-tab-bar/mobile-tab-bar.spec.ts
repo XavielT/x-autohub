@@ -123,7 +123,7 @@ describe('MobileTabBar', () => {
 
       expect(el.querySelectorAll('.tabs__root').length).toBe(12);
       expect(el.querySelector('.tabs__all')?.getAttribute('href')).toBe('/tienda');
-      expect(el.querySelector('.tabs__root')?.getAttribute('href')).toBe('/tienda?categoria=accesorios-interior');
+      expect(el.querySelector('.tabs__root')?.getAttribute('href')).toBe('/tienda/c/accesorios-interior');
     });
 
     it('tocar la pestana otra vez la cierra, y Escape tambien', () => {

@@ -1,0 +1,51 @@
+<div class="bus">
+  <header class="bus__head">
+    @if (query()) {
+      <h1 class="bus__title">Resultados para <span>“{{ query() }}”</span></h1>
+    } @else {
+      <h1 class="bus__title">¿Qué estás buscando?</h1>
+    }
+    <app-search-box class="bus__box" variant="hero" idPrefix="buscar" />
+  </header>
+
+  @if (!query()) {
+    <p class="bus__hint">Escribe el nombre de una pieza, una marca o un SKU.</p>
+  } @else if (isLoading()) {
+    <p class="bus__hint">Buscando…</p>
+  } @else {
+    <section class="bus__section" aria-labelledby="bus-store">
+      <h2 id="bus-store" class="bus__h2">En la tienda <span>{{ results().storeTotal }}</span></h2>
+
+      @if (hasError()) {
+        <p class="bus__empty" role="alert">No pudimos buscar en la tienda ahora mismo. Inténtalo otra vez en un momento.</p>
+      } @else if (results().store.length === 0) {
+        <p class="bus__empty">No encontramos nada en la tienda para “{{ query() }}”.
+          <a routerLink="/tienda">Ver toda la tienda</a></p>
+      } @else {
+        <ul class="bus__grid">
+          @for (p of results().store; track p.id; let i = $index) {
+            <li><app-catalogo-card [hubPart]="p" [priority]="i < 4" /></li>
+          }
+        </ul>
+        @if (results().storeTotal > results().store.length) {
+          <p class="bus__more">Mostrando {{ results().store.length }} de {{ results().storeTotal }}. Afina la búsqueda para ver el resto.</p>
+        }
+      }
+    </section>
+
+    <section class="bus__section bus__section--community" aria-labelledby="bus-community">
+      <h2 id="bus-community" class="bus__h2">De la comunidad <span>{{ results().community.length }}</span></h2>
+      <p class="bus__note">Lo publican usuarios de Hub Market, no X AutoHub.</p>
+
+      @if (results().community.length === 0) {
+        <p class="bus__empty">Nada de la comunidad para “{{ query() }}”.</p>
+      } @else {
+        <ul class="bus__grid">
+          @for (item of results().community; track item.id) {
+            <li><app-hub-market-card [item]="item" /></li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>

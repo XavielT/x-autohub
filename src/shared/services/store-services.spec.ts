@@ -262,6 +262,55 @@ describe('servicios de la tienda (mock)', () => {
 
       expect(vehicles().selected()).toEqual(corolla);
     });
+
+    it('al iniciar sesion con el garaje vacio, el vehiculo del invitado se migra al garaje y se borra del navegador', async () => {
+      vehicles().select(corolla); // como invitado
+      user.set(BASE);
+      TestBed.tick();
+      await vi.waitFor(() => expect(vehicles().garage().length).toBe(1));
+
+      expect(vehicles().garage()[0]).toMatchObject({ ...corolla, isDefault: true });
+      expect(localStorage.getItem(GUEST_VEHICLE_KEY)).toBeNull();
+    });
+
+    it('agregar al garaje: el primero es el de por defecto aunque no se pida, y no se duplica', async () => {
+      user.set(BASE);
+      TestBed.tick();
+
+      await firstValueFrom(vehicles().addToGarage(corolla));
+      await firstValueFrom(vehicles().addToGarage(civic, false, 'El del trabajo'));
+      await firstValueFrom(vehicles().addToGarage(civic));
+
+      const garaje = vehicles().garage();
+      expect(garaje.length).toBe(2);
+      expect(garaje.find((v) => v.isDefault)).toMatchObject(corolla);
+      expect(garaje.find((v) => v.makeId === civic.makeId)?.nickname).toBe('El del trabajo');
+      expect(vehicles().selected()).toEqual(corolla);
+    });
+
+    it('cambiar el predeterminado mueve el vehiculo elegido; quitar el predeterminado lo deja sin elegido', async () => {
+      user.set(BASE);
+      TestBed.tick();
+      await firstValueFrom(vehicles().addToGarage(corolla));
+      await firstValueFrom(vehicles().addToGarage(civic));
+      const civicRow = vehicles().garage().find((v) => v.makeId === civic.makeId)!;
+
+      await firstValueFrom(vehicles().setDefaultVehicle(civicRow.id));
+      expect(vehicles().selected()).toEqual(civic);
+      expect(vehicles().garage().filter((v) => v.isDefault).length).toBe(1);
+
+      await firstValueFrom(vehicles().removeFromGarage(civicRow.id));
+      expect(vehicles().garage().length).toBe(1);
+      expect(vehicles().selected()).toBeNull();
+    });
+
+    it('sin sesion, las acciones del garaje no hacen nada', async () => {
+      await firstValueFrom(vehicles().addToGarage(corolla));
+      await firstValueFrom(vehicles().setDefaultVehicle(1));
+      await firstValueFrom(vehicles().removeFromGarage(1));
+
+      expect(vehicles().garage()).toEqual([]);
+    });
   });
 
   describe('AdminCatalogService', () => {

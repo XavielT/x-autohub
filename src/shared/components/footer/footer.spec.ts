@@ -39,7 +39,7 @@ describe('Footer', () => {
     const tienda = links(el, 'Tienda');
 
     expect(tienda.length).toBe(13);
-    expect(tienda[0]).toBe('/tienda?categoria=accesorios-interior');
+    expect(tienda[0]).toBe('/tienda/c/accesorios-interior');
     expect(tienda[12]).toBe('/tienda');
   });
 

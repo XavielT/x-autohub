@@ -1,0 +1,87 @@
+<div class="sf">
+  <section class="sf__group" aria-labelledby="{{ idPrefix() }}-cat">
+    <h4 class="sf__title" [id]="idPrefix() + '-cat'">Categorías</h4>
+    <ul class="sf__tree">
+      <li>
+        <button type="button" class="sf__cat" [class.is-active]="filters().categorySlug === ''" (click)="clearCategory()">
+          Todas
+        </button>
+      </li>
+      @for (root of categories(); track root.id) {
+        <li>
+          <button type="button" class="sf__cat" [class.is-active]="filters().categorySlug === root.slug"
+                  [attr.aria-current]="filters().categorySlug === root.slug" (click)="selectCategory(root.slug)">
+            {{ root.name }}
+          </button>
+          @if (openRootSlug() === root.slug && root.children.length > 0) {
+            <ul class="sf__children">
+              @for (child of root.children; track child.id) {
+                <li>
+                  <button type="button" class="sf__cat sf__cat--child" [class.is-active]="filters().categorySlug === child.slug"
+                          [attr.aria-current]="filters().categorySlug === child.slug" (click)="selectCategory(child.slug)">
+                    {{ child.name }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="sf__group">
+    <h4 class="sf__title">Mi vehículo</h4>
+    @if (vehicleLabel(); as label) {
+      <label class="sf__check">
+        <input type="checkbox" [checked]="compatibleOn()" (change)="onCompatible($event)" />
+        <span>Compatible con mi <strong>{{ label }}</strong></span>
+      </label>
+      @if (compatibleOn()) {
+        <p class="sf__note">Solo lo que le sirve a tu vehículo y lo universal. Quita el filtro para ver todo.</p>
+      } @else {
+        <p class="sf__note">Estás viendo todo, también lo que no le sirve a tu vehículo.</p>
+      }
+      <button type="button" class="sf__link" (click)="pickVehicle.emit()">Cambiar de vehículo</button>
+    } @else {
+      <p class="sf__note">Elige tu vehículo y te mostramos solo lo que le sirve.</p>
+      <button type="button" class="sf__vehicle" (click)="pickVehicle.emit()">Elegir mi vehículo</button>
+    }
+  </section>
+
+  @if (brands().length > 0) {
+    <section class="sf__group">
+      <label class="sf__title" [for]="idPrefix() + '-brand'">Marca</label>
+      <select class="sf__select" [id]="idPrefix() + '-brand'" (change)="onBrand($event)">
+        <option value="" [selected]="filters().brand === ''">Todas las marcas</option>
+        @for (b of brands(); track b) {
+          <option [value]="b" [selected]="filters().brand === b">{{ b }}</option>
+        }
+      </select>
+    </section>
+  }
+
+  <section class="sf__group">
+    <h4 class="sf__title">Precio (RD$)</h4>
+    <div class="sf__price">
+      <input class="sf__input" type="number" inputmode="numeric" min="0" step="100" placeholder="Mínimo"
+             aria-label="Precio mínimo" [value]="filters().minPrice ?? ''" (change)="onPrice('minPrice', $event)" />
+      <span aria-hidden="true">–</span>
+      <input class="sf__input" type="number" inputmode="numeric" min="0" step="100" placeholder="Máximo"
+             aria-label="Precio máximo" [value]="filters().maxPrice ?? ''" (change)="onPrice('maxPrice', $event)" />
+    </div>
+    <input class="sf__slider" type="range" min="0" [max]="sliderMax()" [step]="step"
+           aria-label="Precio máximo, deslizador" [value]="sliderValue()" (change)="onSlider($event)" />
+  </section>
+
+  <section class="sf__group">
+    <label class="sf__check">
+      <input type="checkbox" [checked]="filters().inStockOnly" (change)="onStock($event)" />
+      <span>Solo en stock</span>
+    </label>
+  </section>
+
+  @if (isFiltered()) {
+    <button type="button" class="sf__reset" (click)="reset()">Quitar filtros</button>
+  }
+</div>

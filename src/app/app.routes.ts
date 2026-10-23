@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from '../core/guards/auth.guard';
 import { adminGuard } from '../core/guards/admin.guard';
 import { moderatorGuard } from '../core/guards/moderator.guard';
+import { productIdRedirectGuard } from '../core/guards/product-redirect.guard';
 
 const BRAND = 'X AutoHub';
 
@@ -34,25 +35,40 @@ export const routes: Routes = [
 
   // --- Tienda: accesorios y piezas de X AutoHub (carrito + checkout) ---
   //
-  // Hoy `/tienda` y `/buscar` son la misma pagina (la del catalogo de antes); la
-  // fase 3 las convierte en la tienda de verdad. `/catalogo` redirige para no
-  // romper enlaces ya publicados, y el redirect conserva los query params.
+  // `/tienda` es el listado con filtros; `/tienda/c/:slug` es la misma pagina con
+  // una categoria fija y su titulo; `/tienda/p/:slug` es la ficha del producto.
+  // Los titulos de las dos primeras los afina la propia pagina.
+  //
+  // Las rutas viejas siguen contestando para no romper enlaces ya publicados:
+  //   · `/catalogo` redirige a `/tienda` (y conserva los query params);
+  //   · `/hub-part-details/:id` resuelve el id y redirige a la ficha por slug.
   {
     path: 'tienda',
     title: `Tienda — Accesorios y piezas | ${BRAND}`,
-    loadComponent: () => import('./pages/catalogo/catalogo').then((m) => m.Catalogo),
+    loadComponent: () => import('./pages/tienda/tienda').then((m) => m.Tienda),
+  },
+  {
+    path: 'tienda/c/:slug',
+    title: `Tienda — Accesorios y piezas | ${BRAND}`,
+    loadComponent: () => import('./pages/tienda/tienda').then((m) => m.Tienda),
+  },
+  {
+    path: 'tienda/p/:slug',
+    title: `Producto | ${BRAND}`,
+    loadComponent: () => import('./pages/producto/producto').then((m) => m.Producto),
   },
   { path: 'catalogo', pathMatch: 'full', redirectTo: 'tienda' },
   {
-    path: 'buscar',
-    title: `Buscar | ${BRAND}`,
-    loadComponent: () => import('./pages/catalogo/catalogo').then((m) => m.Catalogo),
+    path: 'hub-part-details/:id',
+    canActivate: [productIdRedirectGuard],
+    // Nunca se pinta: el guard siempre devuelve una redireccion. El router pide un
+    // destino y esta es la forma de no inventarle una pagina.
+    children: [],
   },
   {
-    path: 'hub-part-details/:id',
-    title: `Detalle de la pieza | ${BRAND}`,
-    loadComponent: () =>
-      import('./pages/hub-part-details/hub-part-details').then((m) => m.HubPartDetails),
+    path: 'buscar',
+    title: `Buscar | ${BRAND}`,
+    loadComponent: () => import('./pages/buscar/buscar').then((m) => m.Buscar),
   },
   {
     path: 'checkout',

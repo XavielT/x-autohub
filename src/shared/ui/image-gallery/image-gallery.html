@@ -1,0 +1,45 @@
+<div class="gal">
+  <div class="gal__stage">
+    @if (hasMany()) {
+      <button type="button" class="gal__nav gal__nav--prev" aria-label="Foto anterior" (click)="step(-1)">&#8249;</button>
+    }
+
+    <button type="button" class="gal__main" aria-label="Ampliar la foto" (click)="openZoom()">
+      <img class="gal__img" [src]="current()" [alt]="alt()" />
+      <span class="gal__zoom-hint" aria-hidden="true">Toca para ampliar</span>
+    </button>
+
+    @if (hasMany()) {
+      <button type="button" class="gal__nav gal__nav--next" aria-label="Foto siguiente" (click)="step(1)">&#8250;</button>
+    }
+  </div>
+
+  @if (hasMany()) {
+    <ul class="gal__thumbs">
+      @for (src of images(); track $index) {
+        <li>
+          <button type="button" class="gal__thumb" [class.is-active]="$index === index()"
+                  [attr.aria-label]="'Ver la foto ' + ($index + 1)" [attr.aria-current]="$index === index()"
+                  (click)="select($index)">
+            <img [src]="src" alt="" width="64" height="64" loading="lazy" />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (isZoomed()) {
+    <div class="gal__zoom" role="dialog" aria-modal="true" aria-label="Foto ampliada" (click)="closeZoom()">
+      <button type="button" class="gal__close" aria-label="Cerrar" (click)="closeZoom()">✕</button>
+      @if (hasMany()) {
+        <button type="button" class="gal__nav gal__nav--prev" aria-label="Foto anterior"
+                (click)="$event.stopPropagation(); step(-1)">&#8249;</button>
+      }
+      <img class="gal__zoom-img" [src]="current()" [alt]="alt()" (click)="$event.stopPropagation()" />
+      @if (hasMany()) {
+        <button type="button" class="gal__nav gal__nav--next" aria-label="Foto siguiente"
+                (click)="$event.stopPropagation(); step(1)">&#8250;</button>
+      }
+    </div>
+  }
+</div>

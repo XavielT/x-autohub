@@ -23,11 +23,11 @@
                     <div class="navbar__mega-grid">
                         @for (root of categoryTree(); track root.id) {
                             <div class="navbar__mega-col">
-                                <a class="navbar__mega-root" role="menuitem" routerLink="/tienda"
-                                   [queryParams]="{ categoria: root.slug }" (click)="closeMenu()">{{ root.name }}</a>
+                                <a class="navbar__mega-root" role="menuitem" [routerLink]="['/tienda', 'c', root.slug]"
+                                   (click)="closeMenu()">{{ root.name }}</a>
                                 @for (child of root.children; track child.id) {
-                                    <a class="navbar__mega-child" role="menuitem" routerLink="/tienda"
-                                       [queryParams]="{ categoria: child.slug }" (click)="closeMenu()">{{ child.name }}</a>
+                                    <a class="navbar__mega-child" role="menuitem" [routerLink]="['/tienda', 'c', child.slug]"
+                                       (click)="closeMenu()">{{ child.name }}</a>
                                 }
                             </div>
                         }

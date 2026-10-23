@@ -86,15 +86,30 @@ describe('rutas de la tienda', () => {
     expect(route('buscar')?.loadComponent).toBeDefined();
   });
 
-  it('/tienda y /buscar cargan la misma pagina (hasta la fase 3)', async () => {
+  it('/tienda y /buscar son paginas distintas', async () => {
     const tienda = await route('tienda')!.loadComponent!();
     const buscar = await route('buscar')!.loadComponent!();
 
-    expect(tienda).toBe(buscar);
+    expect(tienda).not.toBe(buscar);
   });
 
-  it('las rutas de detalle y el checkout siguen donde estaban', () => {
-    for (const path of ['hub-part-details/:id', 'checkout', 'car-details/:id', 'hub-market-part-details/:id']) {
+  it('la tienda tiene categoria y ficha por slug, y /tienda/c y /tienda/p cargan sus paginas', async () => {
+    const tienda = await route('tienda')!.loadComponent!();
+
+    expect(await route('tienda/c/:slug')!.loadComponent!()).toBe(tienda);
+    expect(route('tienda/p/:slug')?.loadComponent).toBeDefined();
+    expect(await route('tienda/p/:slug')!.loadComponent!()).not.toBe(tienda);
+  });
+
+  it('/hub-part-details/:id ya no es una pagina: solo redirige a la ficha por slug', () => {
+    const legacy = route('hub-part-details/:id');
+
+    expect(legacy?.loadComponent).toBeUndefined();
+    expect(legacy?.canActivate?.length).toBe(1);
+  });
+
+  it('el checkout y los detalles de Auto Hub y Hub Market siguen donde estaban', () => {
+    for (const path of ['checkout', 'car-details/:id', 'hub-market-part-details/:id']) {
       expect(route(path), `Falta la ruta '${path}'`).toBeDefined();
     }
   });

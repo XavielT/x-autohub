@@ -5,9 +5,11 @@
     align-items: center;
     justify-content: center;
     width: 330px;
-    height: 430px;
+    // Alto minimo, no fijo: la disponibilidad y el precio anterior agregan lineas.
+    min-height: 430px;
 
     &__top{
+        position: relative;
         //width: 300px;
         //height: 220px;
         width: 100%;
@@ -126,6 +128,64 @@
         text-decoration: none;
     }
 
+    // --- Oferta, disponibilidad y compatibilidad -------------------------------------
+
+    &__off{
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 2;
+        padding: 3px 9px;
+        font-family: var(--font-body);
+        font-size: 13px;
+        font-weight: 800;
+        color: #fff;
+        background-color: var(--primary);
+        border-radius: 6px;
+    }
+
+    &__status{
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        margin-top: 6px;
+        font-family: var(--font-body);
+        font-size: 13px;
+    }
+
+    &__avail{
+        font-weight: 700;
+
+        &--in_stock{ color: #4cd964; }
+        &--on_order{ color: var(--Hub); }
+        &--out_of_stock{ color: var(--text-soft); }
+    }
+
+    &__compat{
+        padding: 2px 8px;
+        font-weight: 700;
+        color: #0b3d16;
+        background-color: #4cd964;
+        border-radius: 10px;
+    }
+
+    &__prices{
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    &__before{
+        font-family: var(--font-price);
+        font-size: 14px;
+        color: var(--text-soft);
+    }
+
+    // Agotado: la tarjeta se apaga, y el boton tambien.
+    &.is-out &__img{ opacity: 0.45; }
+    &.is-out &__name{ color: var(--text-soft); }
+
     // Es un <button> y no un <a>: dispara una acción, no navega. Como <a> sin
     // href no recibía foco con el teclado ni se anunciaba como control.
     &__cart-button{
@@ -141,8 +201,18 @@
         cursor: pointer;
     }
 
-    &__cart-button:hover{
+    &__cart-button:hover:not(:disabled){
         box-shadow: 0 0 5px 1px var(--Hub);
+    }
+
+    &__cart-button:disabled{
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
+
+    &__cart-button:focus-visible{
+        outline: 2px solid var(--Hub);
+        outline-offset: 2px;
     }
 
     &__cart-button img{

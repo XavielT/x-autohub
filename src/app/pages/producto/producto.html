@@ -1,0 +1,143 @@
+<div class="prod">
+  @if (product(); as p) {
+    <nav class="prod__crumbs" aria-label="Ruta">
+      <a routerLink="/tienda">Tienda</a>
+      @if (category(); as c) {
+        <span aria-hidden="true">›</span>
+        <a [routerLink]="['/tienda', 'c', c.slug]">{{ c.name }}</a>
+      }
+    </nav>
+
+    <div class="prod__top">
+      <app-image-gallery class="prod__gallery" [images]="images()" [alt]="p.name" />
+
+      <div class="prod__info">
+        <div class="prod__id">
+          <span class="prod__brand">{{ p.brand }}</span>
+          <span class="prod__sku">SKU {{ p.sku }}</span>
+          @if (p.isTest) { <app-test-badge /> }
+        </div>
+        <h1 class="prod__name">{{ p.name }}</h1>
+        @if (p.shortDescription) { <p class="prod__short">{{ p.shortDescription }}</p> }
+
+        <div class="prod__price-row">
+          <span class="prod__price">RD$ {{ p.price | number:'1.0-0' }}</span>
+          @if (discount() > 0) {
+            <s class="prod__before">RD$ {{ p.compareAtPrice | number:'1.0-0' }}</s>
+            <span class="prod__off">-{{ discount() }}%</span>
+          }
+        </div>
+
+        @if (availability(); as a) {
+          <p class="prod__avail" [class]="'prod__avail prod__avail--' + a.kind" role="status">{{ a.label }}</p>
+        }
+
+        <!-- ¿Sirve para mi carro? -->
+        @if (compat(); as c) {
+          <section class="prod__compat" [class]="'prod__compat prod__compat--' + c.kind" aria-labelledby="compat-title">
+            <h2 id="compat-title" class="prod__compat-title">¿Sirve para mi carro?</h2>
+            @switch (c.kind) {
+              @case ('universal') {
+                <p><strong>Universal.</strong> Sirve para cualquier vehículo.</p>
+              }
+              @case ('compatible') {
+                <p class="prod__yes">✓ <strong>Sí, es compatible</strong> con tu <strong>{{ vehicleLabel() }}</strong>.</p>
+                <button type="button" class="prod__link" (click)="pickVehicle()">Cambiar de vehículo</button>
+              }
+              @case ('incompatible') {
+                <p>
+                  <strong>No está declarado para tu {{ vehicleLabel() }}.</strong>
+                  Puede que sí le sirva y nadie lo haya cargado: escríbenos y lo confirmamos.
+                </p>
+                <ul class="prod__lines">
+                  @for (line of fitmentLines(); track line.id) { <li>{{ line.text }}</li> }
+                </ul>
+                <button type="button" class="prod__link" (click)="pickVehicle()">Cambiar de vehículo</button>
+              }
+              @case ('list') {
+                <p>Sirve para estos vehículos. Elige el tuyo y te decimos si le sirve.</p>
+                <ul class="prod__lines">
+                  @for (line of fitmentLines(); track line.id) { <li>{{ line.text }}</li> }
+                </ul>
+                <button type="button" class="prod__link" (click)="pickVehicle()">Elegir mi vehículo</button>
+              }
+              @default {
+                <p><strong>Consultar compatibilidad.</strong> Todavía no tenemos declarado con qué vehículos funciona.</p>
+                <a class="whatsapp-btn" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer">
+                  <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+                  Preguntar si le sirve
+                </a>
+              }
+            }
+          </section>
+        }
+
+        <div class="prod__actions">
+          <button type="button" class="prod__add" [disabled]="!availability()?.canBuy" (click)="addToCart()">
+            {{ availability()?.canBuy ? 'Agregar al carrito' : 'Agotado' }}
+          </button>
+          <button type="button" class="prod__buy" [disabled]="!availability()?.canBuy" (click)="buyNow()">
+            Comprar ahora
+          </button>
+        </div>
+
+        @if (p.installable) {
+          <p class="prod__install">
+            <strong>Instalación disponible</strong>
+            @if (installationService(); as s) { · {{ s.title }} }
+            <a routerLink="/servicios">Ver el taller</a>
+          </p>
+        }
+
+        <a class="whatsapp-btn prod__ask" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer">
+          <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+          Preguntar por WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <section class="prod__section">
+      <h2>Descripción</h2>
+      <p>{{ p.description }}</p>
+    </section>
+
+    @if (specs().length > 0) {
+      <section class="prod__section">
+        <h2>Especificaciones</h2>
+        <table class="prod__specs">
+          <caption class="sr-only">Especificaciones de {{ p.name }}</caption>
+          <tbody>
+            @for (spec of specs(); track spec[0]) {
+              <tr><th scope="row">{{ spec[0] }}</th><td>{{ spec[1] }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+
+    <section class="prod__section">
+      <h2>Reseñas</h2>
+      <!-- TODO (fase 7): reseñas verificadas. Hasta entonces el bloque existe vacío. -->
+      <p class="prod__muted">Aún no hay reseñas.</p>
+    </section>
+
+    @if (related().length > 0) {
+      <section class="prod__section">
+        <h2>Relacionados</h2>
+        <ul class="prod__related">
+          @for (item of related(); track item.id) {
+            <li><app-catalogo-card [hubPart]="item" /></li>
+          }
+        </ul>
+      </section>
+    }
+  } @else if (isLoading()) {
+    <p class="prod__state">Cargando el producto…</p>
+  } @else {
+    <div class="prod__state prod__state--missing">
+      <h1>Upss, producto no encontrado</h1>
+      <p>Puede que ya no esté a la venta, o que el enlace esté mal escrito.</p>
+      <a class="prod__add" routerLink="/tienda">Ver la tienda</a>
+    </div>
+  }
+</div>

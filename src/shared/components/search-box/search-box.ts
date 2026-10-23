@@ -133,7 +133,7 @@ export class SearchBox {
   open(product: ProductModel): void {
     this.close();
     this.query.set('');
-    void this.router.navigate(['/hub-part-details', product.id]);
+    void this.router.navigate(['/tienda', 'p', product.slug]);
   }
 
   private close(): void {

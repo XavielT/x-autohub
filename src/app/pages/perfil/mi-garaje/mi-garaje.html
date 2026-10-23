@@ -1,0 +1,47 @@
+<section class="garage" aria-labelledby="garage-title">
+  <header class="garage__head">
+    <div>
+      <h2 id="garage-title" class="garage__title">Mi garaje</h2>
+      <p class="garage__lead">Los vehículos que guardas aquí te muestran en la tienda solo lo que les sirve.</p>
+    </div>
+    <button type="button" class="garage__add-btn" [attr.aria-expanded]="isAdding()" (click)="toggleForm()">
+      {{ isAdding() ? 'Cancelar' : '+ Agregar vehículo' }}
+    </button>
+  </header>
+
+  @if (isAdding()) {
+    <div class="garage__form">
+      <app-vehicle-form idPrefix="garage" submitLabel="Guardar en mi garaje" (chosen)="add($event)" />
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="garage__empty">Cargando tu garaje...</p>
+  } @else if (rows().length === 0) {
+    <p class="garage__empty">Todavía no tienes vehículos guardados. Agrega el primero y te lo recordamos en cada visita.</p>
+  } @else {
+    <ul class="garage__list">
+      @for (row of rows(); track row.vehicle.id) {
+        <li class="garage__item" [class.is-default]="row.vehicle.isDefault">
+          <div class="garage__info">
+            <strong class="garage__name">{{ row.label }}</strong>
+            @if (row.vehicle.isDefault) {
+              <span class="garage__tag">Mi vehículo</span>
+            }
+          </div>
+          <div class="garage__actions">
+            @if (!row.vehicle.isDefault) {
+              <button type="button" class="garage__btn" [disabled]="busyId() === row.vehicle.id" (click)="makeDefault(row)">
+                Usar este
+              </button>
+            }
+            <button type="button" class="garage__btn garage__btn--danger" [disabled]="busyId() === row.vehicle.id"
+                    [attr.aria-label]="'Quitar ' + row.label + ' del garaje'" (click)="remove(row)">
+              Quitar
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

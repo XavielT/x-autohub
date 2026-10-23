@@ -24,23 +24,6 @@
     .hrow__item { flex: none; scroll-snap-align: start; }
   }
 
-  &__deal {
-    margin: 0;
-    font-size: 13px;
-    color: var(--text-soft);
-
-    s { color: var(--text-soft); }
-  }
-
-  &__off {
-    display: inline-block;
-    margin-right: 6px;
-    padding: 2px 8px;
-    font-weight: 800;
-    color: #fff;
-    background-color: var(--primary);
-    border-radius: 6px;
-  }
 }
 
 // En el teléfono las tarjetas de 330px no caben dos por fila: una columna.

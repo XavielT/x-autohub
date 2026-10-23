@@ -122,6 +122,8 @@ export type ProductSort = 'relevance' | 'price_asc' | 'price_desc' | 'best_selle
 /** Los filtros de `searchProducts()`. Todos opcionales. */
 export interface ProductSearchParams {
   query?: string;
+  /** Marca del producto, tal como está escrita. */
+  brand?: string;
   categorySlug?: string;
   makeId?: number;
   modelId?: number;
@@ -132,6 +134,12 @@ export interface ProductSearchParams {
   sort?: ProductSort;
   limit?: number;
   offset?: number;
+}
+
+/** Lo que la tienda necesita para pintar sus filtros: las marcas y el precio más alto. */
+export interface ProductFacets {
+  brands: string[];
+  maxPrice: number;
 }
 
 export interface ProductSearchResult {

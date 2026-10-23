@@ -1,0 +1,111 @@
+<section class="tienda">
+  <header class="tienda__header">
+    <div class="tienda__heading">
+      <h1 class="tienda__title">{{ heading() }}</h1>
+      <p class="tienda__count" aria-live="polite">
+        @if (isLoading()) { Buscando… } @else {
+          {{ total() }} {{ total() === 1 ? 'producto' : 'productos' }}
+        }
+      </p>
+    </div>
+
+    <div class="tienda__tools">
+      <button type="button" class="tienda__filters-btn" (click)="openFilters()">
+        Filtros @if (activeCount() > 0) { <span class="tienda__badge">{{ activeCount() }}</span> }
+      </button>
+      <label class="tienda__sort">
+        <span>Ordenar</span>
+        <select (change)="onSort($event)">
+          @for (o of sortOptions; track o.value) {
+            <option [value]="o.value" [selected]="filters().sort === o.value">{{ o.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  </header>
+
+  @if (useVehicle()) {
+    <p class="tienda__vehicle-strip" role="status">
+      Mostrando lo que le sirve a tu <strong>{{ vehicleLabel() }}</strong> y lo universal.
+      <button type="button" (click)="showEverything()">Ver todo</button>
+    </p>
+  }
+
+  <div class="tienda__layout">
+    <aside class="tienda__side" aria-label="Filtros">
+      <app-store-filters idPrefix="side" [filters]="filters()" [categories]="tree()" [brands]="facets().brands"
+                         [maxPrice]="facets().maxPrice" [vehicleLabel]="vehicleLabel()"
+                         (changed)="applyFilters($event)" (pickVehicle)="pickVehicle()" />
+
+      <div class="tienda__help">
+        <h4>¿Le sirve a tu carro?</h4>
+        <p>Si no estás seguro de que una pieza sea compatible, pregúntanos antes de comprarla.</p>
+        <a [href]="helpLink" target="_blank" rel="noopener noreferrer">Preguntar por WhatsApp →</a>
+      </div>
+    </aside>
+
+    <div class="tienda__main">
+      @if (hasError()) {
+        <div class="tienda__state" role="alert">
+          <h2>No pudimos cargar los productos</h2>
+          <p>Revisa tu conexión e inténtalo otra vez.</p>
+          <button type="button" class="tienda__btn" (click)="retry()">Reintentar</button>
+        </div>
+      } @else if (isLoading() && items().length === 0) {
+        <div class="tienda__state"><h2>Cargando productos…</h2></div>
+      } @else if (items().length === 0) {
+        <div class="tienda__state">
+          @if (useVehicle()) {
+            <!-- Con vehículo elegido, vacío casi siempre significa "falta cargar la
+                 compatibilidad", no "no existe": se dice así y se ofrece ver todo o preguntar. -->
+            <h2>Todavía no tenemos productos para tu {{ vehicleLabel() }}</h2>
+            <p>No es que no existan: aún no tenemos cargado con qué vehículos funciona cada uno. Mira todo lo que hay o pregúntanos.</p>
+            <button type="button" class="tienda__btn" (click)="showEverything()">Ver todo</button>
+            <a class="tienda__link" [href]="helpLink" target="_blank" rel="noopener noreferrer">Preguntar por WhatsApp →</a>
+          } @else if (isFiltered()) {
+            <h2>No encontramos productos con esos filtros</h2>
+            <p>Prueba quitando alguno: a veces uno solo deja todo sin resultados.</p>
+            <button type="button" class="tienda__btn" (click)="clearFilters()">Quitar filtros</button>
+          } @else {
+            <h2>Todavía no hay productos aquí</h2>
+            <p>La tienda no tiene productos en esta sección.</p>
+            <a class="tienda__btn" routerLink="/">Volver al inicio</a>
+          }
+        </div>
+      } @else {
+        <ul class="tienda__grid">
+          @for (p of items(); track p.id; let i = $index) {
+            <li><app-catalogo-card [hubPart]="p" [priority]="i < 4" [compatible]="compatibleIds().has(p.id)" /></li>
+          }
+        </ul>
+
+        <div class="tienda__more">
+          <p>Mostrando {{ items().length }} de {{ total() }}</p>
+          @if (canLoadMore()) {
+            <button type="button" class="tienda__btn" [disabled]="isLoadingMore()" (click)="loadMore()">
+              {{ isLoadingMore() ? 'Cargando…' : 'Cargar más' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (filtersOpen()) {
+    <div class="tienda__overlay" (click)="closeFilters()"></div>
+    <div class="tienda__sheet" role="dialog" aria-modal="true" aria-label="Filtros de la tienda">
+      <header class="tienda__sheet-head">
+        <h3>Filtros</h3>
+        <button type="button" class="tienda__close" aria-label="Cerrar los filtros" (click)="closeFilters()">✕</button>
+      </header>
+      <div class="tienda__sheet-body">
+        <app-store-filters idPrefix="sheet" [filters]="filters()" [categories]="tree()" [brands]="facets().brands"
+                           [maxPrice]="facets().maxPrice" [vehicleLabel]="vehicleLabel()"
+                           (changed)="applyFilters($event)" (pickVehicle)="pickVehicle()" />
+      </div>
+      <button type="button" class="tienda__btn tienda__sheet-done" (click)="closeFilters()">
+        Ver {{ total() }} {{ total() === 1 ? 'resultado' : 'resultados' }}
+      </button>
+    </div>
+  }
+</section>

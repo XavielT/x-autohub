@@ -77,6 +77,11 @@
       </section>
 
       <!-- Mis publicaciones -->
+      <!-- Mi garaje: los vehículos que filtran la tienda -->
+      <div class="perfil__section">
+        <app-mi-garaje></app-mi-garaje>
+      </div>
+
       <section class="perfil__section">
         <header class="perfil__section-head">
           <h2 class="perfil__section-title">Mis publicaciones</h2>
@@ -129,7 +134,7 @@
         } @else if (myOrders().length === 0) {
           <div class="perfil__empty perfil__empty--cta">
             <p>Todavia no tienes pedidos.</p>
-            <a routerLink="/catalogo" class="perfil__cta">Ver el catalogo</a>
+            <a routerLink="/tienda" class="perfil__cta">Ver la tienda</a>
           </div>
         } @else {
           <ul class="perfil__orders">

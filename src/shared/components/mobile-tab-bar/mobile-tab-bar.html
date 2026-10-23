@@ -8,9 +8,9 @@
       <a class="tabs__all" routerLink="/tienda" (click)="go()">Ver toda la tienda →</a>
       @for (root of categoryTree(); track root.id) {
         <div class="tabs__group">
-          <a class="tabs__root" routerLink="/tienda" [queryParams]="{ categoria: root.slug }" (click)="go()">{{ root.name }}</a>
+          <a class="tabs__root" [routerLink]="['/tienda', 'c', root.slug]" (click)="go()">{{ root.name }}</a>
           @for (child of root.children; track child.id) {
-            <a class="tabs__child" routerLink="/tienda" [queryParams]="{ categoria: child.slug }" (click)="go()">{{ child.name }}</a>
+            <a class="tabs__child" [routerLink]="['/tienda', 'c', child.slug]" (click)="go()">{{ child.name }}</a>
           }
         </div>
       }

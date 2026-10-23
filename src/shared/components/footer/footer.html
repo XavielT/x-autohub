@@ -4,7 +4,7 @@
             <h4 class="footer__title">Tienda</h4>
             <ul class="footer__list">
                 @for (root of categoryTree(); track root.id) {
-                    <li><a routerLink="/tienda" [queryParams]="{ categoria: root.slug }">{{ root.name }}</a></li>
+                    <li><a [routerLink]="['/tienda', 'c', root.slug]">{{ root.name }}</a></li>
                 }
                 <li><a class="footer__more" routerLink="/tienda">Ver toda la tienda</a></li>
             </ul>

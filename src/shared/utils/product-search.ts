@@ -114,6 +114,7 @@ export function searchProductsInMemory(
 
   const matched = products.filter((p) => {
     if (p.isActive === false) return false;
+    if (params.brand && p.brand !== params.brand) return false;
     if (query && !matchesWords(p, words) && !matchesPartial(p, query)) return false;
     if (ids && (p.categoryId === null || !ids.has(p.categoryId))) return false;
     if (!fitsVehicle(p, fitments, { makeId: params.makeId, modelId: params.modelId, year: params.year })) return false;

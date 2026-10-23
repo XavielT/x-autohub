@@ -188,6 +188,42 @@ export class HubMarketService {
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
 
+  /**
+   * Búsqueda por título en lo que publica la comunidad. Es la mitad de abajo de
+   * `/buscar` ("De la comunidad"): la tienda oficial va arriba y esto va aparte,
+   * porque no es lo mismo comprarle a X AutoHub que a un particular.
+   *
+   * Sin acentos ni mayúsculas, y solo lo aprobado y activo, como los listados.
+   */
+  search(query: string, limit = 12): Observable<HubMarketItemModel[]> {
+    const text = query.trim();
+    if (!text) return of([]);
+
+    if (this.supabase.shouldUseMockData()) {
+      const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const needle = fold(text);
+      return of(
+        this.approvedOnly(this.mockItems)
+          .filter((item) => fold(item.title).includes(needle))
+          .slice(0, limit),
+      );
+    }
+
+    // `%`, `_` y la barra invertida son comodines de ilike: se escapan para que
+    // "100%" busque "100%" y no "100 y lo que sea".
+    const escaped = text.replace(/[\\%_]/g, (c) => `\\${c}`);
+    return from(
+      this.supabase.db
+        .from('hub_market_items')
+        .select(SELECT_WITH_SELLER)
+        .ilike('title', `%${escaped}%`)
+        .eq('is_active', true)
+        .eq('status', 'aprobado')
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
+  }
+
   /** Publicaciones del usuario indicado, incluidas las despublicadas. */
   getBySeller(sellerId: string): Observable<HubMarketItemModel[]> {
     if (this.supabase.shouldUseMockData()) {

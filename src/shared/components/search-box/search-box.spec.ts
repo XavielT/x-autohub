@@ -27,7 +27,7 @@ describe('SearchBox', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     search.mockReset();
-    search.mockReturnValue(of(result([makeProduct({ id: 1, name: 'Disco' }), makeProduct({ id: 2, name: 'Discoteca' })])));
+    search.mockReturnValue(of(result([makeProduct({ id: 1, name: 'Disco', slug: 'disco' }), makeProduct({ id: 2, name: 'Discoteca', slug: 'discoteca' })])));
   });
 
   afterEach(() => vi.useRealTimers());
@@ -148,7 +148,7 @@ describe('SearchBox', () => {
     expect(c.activeIndex()).toBe(1);
 
     c.submit();
-    expect(navigate).toHaveBeenCalledWith(['/hub-part-details', 2]);
+    expect(navigate).toHaveBeenCalledWith(['/tienda', 'p', 'discoteca']);
   });
 
   it('"Ver todos los resultados" va a la lista aunque haya algo resaltado', () => {
@@ -192,7 +192,7 @@ describe('SearchBox', () => {
 
     c.open(c.suggestions()[0]);
 
-    expect(navigate).toHaveBeenCalledWith(['/hub-part-details', 1]);
+    expect(navigate).toHaveBeenCalledWith(['/tienda', 'p', 'disco']);
     expect(c.query()).toBe('');
     expect(c.suggestions()).toEqual([]);
   });

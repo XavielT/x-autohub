@@ -56,7 +56,7 @@ describe('bloques del home', () => {
       const chips = Array.from(el.querySelectorAll('.hcat__chip'));
       expect(chips.length).toBe(12);
       expect(chips[0].textContent).toContain('Accesorios interior');
-      expect(chips[0].getAttribute('href')).toBe('/tienda?categoria=accesorios-interior');
+      expect(chips[0].getAttribute('href')).toBe('/tienda/c/accesorios-interior');
       // El icono es la inicial: no hay assets de iconos de categoria.
       expect(chips[0].querySelector('.hcat__icon')?.textContent?.trim()).toBe('A');
     });
@@ -105,29 +105,15 @@ describe('bloques del home', () => {
   describe('home-product-row', () => {
     const offer = makeProduct({ id: 1, name: 'Filtro', price: 2850, compareAtPrice: 3400 });
 
-    it('calcula el descuento redondeado, y cero si no hay oferta', () => {
-      const fixture = TestBed.createComponent(HomeProductRow);
-      const c = fixture.componentInstance;
-
-      expect(c.discount(offer)).toBe(16); // (3400-2850)/3400 = 16.2 %
-      expect(c.discount(makeProduct({ price: 100, compareAtPrice: null }))).toBe(0);
-      expect(c.discount(makeProduct({ price: 100, compareAtPrice: 100 }))).toBe(0);
-    });
-
-    it('con showDeal pinta el precio anterior y el porcentaje; sin el, no', () => {
+    it('cada producto se pinta con la tarjeta de la tienda, que es la dueña del precio y la oferta', () => {
       const fixture = TestBed.createComponent(HomeProductRow);
       fixture.componentRef.setInput('eyebrow', 'Tienda');
       fixture.componentRef.setInput('title', 'Ofertas');
       fixture.componentRef.setInput('products', [offer]);
-      fixture.componentRef.setInput('showDeal', true);
       fixture.detectChanges();
       const el = html(fixture);
 
-      expect(el.querySelector('.hrow__off')?.textContent).toContain('-16%');
-      expect(el.querySelector('.hrow__deal s')?.textContent).toContain('RD$ 3,400');
-
-      fixture.componentRef.setInput('showDeal', false);
-      fixture.detectChanges();
+      expect(el.querySelectorAll('app-catalogo-card').length).toBe(1);
       expect(el.querySelector('.hrow__deal')).toBeNull();
     });
 
@@ -172,7 +158,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-offers: solo lo que tiene oferta', () => {
-    it('las tarjetas son productos con precio anterior, con su descuento', async () => {
+    it('las tarjetas son productos con precio anterior, y la tarjeta pinta su descuento', async () => {
       const fixture = TestBed.createComponent(HomeOffers);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -181,7 +167,7 @@ describe('bloques del home', () => {
 
       const cards = el.querySelectorAll('app-catalogo-card').length;
       expect(cards).toBe(6); // los 6 del mock con compare_at_price
-      expect(el.querySelectorAll('.hrow__off').length).toBe(cards);
+      expect(el.querySelectorAll('.hub-part-card__off').length).toBe(cards);
       expect(el.querySelector('.hrow--carousel')).not.toBeNull();
     });
   });

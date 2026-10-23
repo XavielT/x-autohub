@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
-import { Observable, from, map, of, switchMap } from 'rxjs';
+import { Observable, from, map, of, switchMap, tap } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { toProfileVehicle, toVehicleMake, toVehicleModel } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
@@ -36,17 +36,30 @@ function readGuestVehicle(): SelectedVehicle | null {
   return null;
 }
 
+function removeGuestVehicle(): void {
+  try {
+    localStorage.removeItem(GUEST_VEHICLE_KEY);
+  } catch {
+    // Sin almacenamiento: no hay nada que borrar.
+  }
+}
+
+const sameVehicle = (a: SelectedVehicle, b: SelectedVehicle) =>
+  a.makeId === b.makeId && a.modelId === b.modelId && a.year === b.year;
+
 /**
  * Marcas y modelos, y el vehículo que la persona eligió para filtrar la tienda.
  *
  * **Dónde vive el vehículo elegido:**
  *   · Sin sesión, en `localStorage` (`x-autohub.vehicle`).
  *   · Con sesión, en su garaje (`profile_vehicles`), como el vehículo por
- *     defecto: así le sigue de un teléfono a otro.
+ *     defecto: así le sigue de un teléfono a otro. El garaje puede tener varios
+ *     vehículos y uno solo es el predeterminado (un trigger de Postgres, de la
+ *     migración 0017, lo garantiza).
  *
  * Al iniciar sesión la señal pasa a ser el vehículo por defecto del garaje. Si el
- * garaje está vacío no se toca lo que el visitante ya había elegido; llevarlo al
- * garaje es trabajo de la fase 3.
+ * garaje está vacío y el visitante ya había elegido uno en este navegador, **se
+ * migra**: pasa al garaje como el predeterminado y se borra de `localStorage`.
  *
  * Las marcas y modelos son de lectura pública. Agregarlas es del panel
  * (`AdminCatalogService`).
@@ -67,6 +80,10 @@ export class VehicleService {
    * dice el chip "Mi vehículo" del navbar; `selected` solo trae ids.
    */
   readonly selectedLabel = this._selectedLabel.asReadonly();
+
+  private readonly _garage = signal<ProfileVehicleModel[]>([]);
+  /** El garaje de la sesión, tal como se leyó por última vez. Vacío sin sesión. */
+  readonly garage = this._garage.asReadonly();
 
   /** El garaje en modo mock: no hay tabla, y no tiene que sobrevivir a la sesión. */
   private mockGarage: ProfileVehicleModel[] = [];
@@ -132,6 +149,67 @@ export class VehicleService {
     ).pipe(map((res) => unwrap(res).map(toProfileVehicle)));
   }
 
+  /** Vuelve a leer el garaje, lo deja en `garage` y alinea el vehículo elegido con el predeterminado. */
+  refreshGarage(): Observable<ProfileVehicleModel[]> {
+    return this.getGarage().pipe(
+      tap((garage) => {
+        this._garage.set(garage);
+        this.applyDefault(garage);
+      }),
+    );
+  }
+
+  /**
+   * Agrega un vehículo al garaje. El primero que se agrega es el predeterminado
+   * aunque no se pida; uno que ya estaba no se duplica.
+   */
+  addToGarage(vehicle: SelectedVehicle, makeDefault = false, nickname: string | null = null): Observable<void> {
+    return this.saveToGarage(vehicle, makeDefault, nickname).pipe(
+      switchMap(() => this.refreshGarage()),
+      map(() => undefined),
+    );
+  }
+
+  /** Quita un vehículo del garaje. Si era el predeterminado, el garaje queda sin predeterminado. */
+  removeFromGarage(id: number): Observable<void> {
+    const user = this.auth.user();
+    if (!user) return of(undefined);
+
+    if (this.supabase.shouldUseMockData()) {
+      this.mockGarage = this.mockGarage.filter((v) => !(v.id === id && v.userId === user.id));
+      return this.refreshGarage().pipe(map(() => undefined));
+    }
+
+    return from(this.supabase.db.from('profile_vehicles').delete().eq('id', id)).pipe(
+      map((res) => {
+        if (res.error) unwrap({ data: null, error: res.error });
+      }),
+      switchMap(() => this.refreshGarage()),
+      map(() => undefined),
+    );
+  }
+
+  /** Marca otro vehículo del garaje como el predeterminado (el anterior se desmarca solo). */
+  setDefaultVehicle(id: number): Observable<void> {
+    const user = this.auth.user();
+    if (!user) return of(undefined);
+
+    if (this.supabase.shouldUseMockData()) {
+      this.mockGarage = this.mockGarage.map((v) =>
+        v.userId === user.id ? { ...v, isDefault: v.id === id } : v,
+      );
+      return this.refreshGarage().pipe(map(() => undefined));
+    }
+
+    return from(this.supabase.db.from('profile_vehicles').update({ is_default: true }).eq('id', id)).pipe(
+      map((res) => {
+        if (res.error) unwrap({ data: null, error: res.error });
+      }),
+      switchMap(() => this.refreshGarage()),
+      map(() => undefined),
+    );
+  }
+
   // --- El vehículo elegido -----------------------------------------------------
 
   /** Elige un vehículo. Se ve al instante; guardarlo en segundo plano no bloquea nada. */
@@ -143,9 +221,13 @@ export class VehicleService {
       return;
     }
 
-    this.saveAsDefault(vehicle).subscribe({
-      error: () => this.toast.show('No pudimos guardar tu vehiculo en el garaje.', 'error'),
-    });
+    this.saveToGarage(vehicle, true, null)
+      .pipe(switchMap(() => this.getGarage()))
+      .subscribe({
+        // Solo se actualiza la lista: la señal ya tiene el vehículo que se eligió.
+        next: (garage) => this._garage.set(garage),
+        error: () => this.toast.show('No pudimos guardar tu vehiculo en el garaje.', 'error'),
+      });
   }
 
   /** Deja de filtrar por vehículo. */
@@ -153,17 +235,16 @@ export class VehicleService {
     this._selected.set(null);
 
     if (!this.auth.user()) {
-      try {
-        localStorage.removeItem(GUEST_VEHICLE_KEY);
-      } catch {
-        // Sin almacenamiento: no hay nada que borrar.
-      }
+      removeGuestVehicle();
       return;
     }
 
-    this.unsetDefault().subscribe({
-      error: () => this.toast.show('No pudimos actualizar tu garaje.', 'error'),
-    });
+    this.unsetDefault()
+      .pipe(switchMap(() => this.getGarage()))
+      .subscribe({
+        next: (garage) => this._garage.set(garage),
+        error: () => this.toast.show('No pudimos actualizar tu garaje.', 'error'),
+      });
   }
 
   // --- Internos --------------------------------------------------------------------
@@ -209,15 +290,26 @@ export class VehicleService {
     }
   }
 
+  /** El vehículo elegido sigue al predeterminado del garaje: sin predeterminado, ninguno. */
+  private applyDefault(garage: ProfileVehicleModel[]): void {
+    const preferred = garage.find((v) => v.isDefault);
+    this._selected.set(
+      preferred ? { makeId: preferred.makeId, modelId: preferred.modelId, year: preferred.year } : null,
+    );
+  }
+
   private syncWithSession(userId: string | null): void {
     if (userId === null) {
       // Cerró sesión (o nunca la tuvo): vale lo que había en este navegador.
+      this._garage.set([]);
       this._selected.set(readGuestVehicle());
       return;
     }
 
     this.getGarage().subscribe({
       next: (garage) => {
+        this._garage.set(garage);
+
         const preferred = garage.find((v) => v.isDefault);
         if (preferred) {
           this._selected.set({
@@ -225,28 +317,62 @@ export class VehicleService {
             modelId: preferred.modelId,
             year: preferred.year,
           });
+          return;
         }
+
+        // Garaje vacío y un vehículo elegido como invitado: pasa al garaje.
+        const guest = readGuestVehicle();
+        if (garage.length === 0 && guest) this.migrateGuestVehicle(guest);
+        // Con garaje pero sin predeterminado se conserva lo que ya estaba elegido.
       },
       // Sin garaje legible se conserva lo que ya estaba elegido.
       error: () => undefined,
     });
   }
 
-  /** Lo guarda como el vehículo por defecto; si ya estaba en el garaje, solo lo marca. */
-  private saveAsDefault(vehicle: SelectedVehicle): Observable<void> {
+  /** Lleva al garaje el vehículo que se eligió sin sesión, y lo borra de este navegador. */
+  private migrateGuestVehicle(guest: SelectedVehicle): void {
+    this.saveToGarage(guest, true, null)
+      .pipe(switchMap(() => this.getGarage()))
+      .subscribe({
+        next: (garage) => {
+          this._garage.set(garage);
+          // Ya vive en el garaje: la copia del navegador sobra, y si la dejáramos
+          // reaparecería al cerrar sesión como un vehículo que el usuario quitó.
+          removeGuestVehicle();
+        },
+        // Si falla, la copia local se queda: la próxima sesión lo intenta otra vez.
+        error: () => undefined,
+      });
+  }
+
+  /**
+   * Lo guarda en el garaje. Si ya estaba, no lo duplica: solo lo marca como
+   * predeterminado si se pidió. El primero del garaje lo es siempre.
+   */
+  private saveToGarage(
+    vehicle: SelectedVehicle,
+    makeDefault: boolean,
+    nickname: string | null,
+  ): Observable<void> {
     const user = this.auth.user();
     if (!user) return of(undefined);
 
     if (this.supabase.shouldUseMockData()) {
-      const same = (v: ProfileVehicleModel) =>
-        v.userId === user.id &&
-        v.makeId === vehicle.makeId &&
-        v.modelId === vehicle.modelId &&
-        v.year === vehicle.year;
-      this.mockGarage = this.mockGarage.map((v) =>
-        v.userId === user.id ? { ...v, isDefault: same(v) } : v,
-      );
-      if (!this.mockGarage.some(same)) {
+      const mine = this.mockGarage.filter((v) => v.userId === user.id);
+      const existing = mine.find((v) => sameVehicle(v, vehicle));
+      const asDefault = makeDefault || mine.length === 0;
+
+      if (asDefault) {
+        this.mockGarage = this.mockGarage.map((v) =>
+          v.userId === user.id ? { ...v, isDefault: existing ? v.id === existing.id : false } : v,
+        );
+      }
+      if (existing) {
+        if (nickname !== null) {
+          this.mockGarage = this.mockGarage.map((v) => (v.id === existing.id ? { ...v, nickname } : v));
+        }
+      } else {
         this.mockGarage = [
           ...this.mockGarage,
           {
@@ -255,8 +381,8 @@ export class VehicleService {
             makeId: vehicle.makeId,
             modelId: vehicle.modelId,
             year: vehicle.year,
-            nickname: null,
-            isDefault: true,
+            nickname,
+            isDefault: asDefault,
           },
         ];
       }
@@ -269,30 +395,45 @@ export class VehicleService {
       this.supabase.db
         .from('profile_vehicles')
         .select('id')
-        .eq('user_id', user.id)
-        .eq('make_id', vehicle.makeId)
-        .eq('model_id', vehicle.modelId)
-        .eq('year', vehicle.year)
-        .maybeSingle(),
+        .eq('user_id', user.id),
     ).pipe(
-      switchMap((existing) =>
-        existing.data
-          ? from(
-              this.supabase.db
-                .from('profile_vehicles')
-                .update({ is_default: true })
-                .eq('id', existing.data.id),
-            )
-          : from(
-              this.supabase.db.from('profile_vehicles').insert({
-                user_id: user.id,
-                make_id: vehicle.makeId,
-                model_id: vehicle.modelId,
-                year: vehicle.year,
-                is_default: true,
-              }),
-            ),
-      ),
+      switchMap((all) => {
+        const rows = unwrap(all);
+        const asDefault = makeDefault || rows.length === 0;
+        return from(
+          this.supabase.db
+            .from('profile_vehicles')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('make_id', vehicle.makeId)
+            .eq('model_id', vehicle.modelId)
+            .eq('year', vehicle.year)
+            .maybeSingle(),
+        ).pipe(
+          switchMap((existing) =>
+            existing.data
+              ? from(
+                  this.supabase.db
+                    .from('profile_vehicles')
+                    .update({
+                      ...(asDefault && { is_default: true }),
+                      ...(nickname !== null && { nickname }),
+                    })
+                    .eq('id', existing.data.id),
+                )
+              : from(
+                  this.supabase.db.from('profile_vehicles').insert({
+                    user_id: user.id,
+                    make_id: vehicle.makeId,
+                    model_id: vehicle.modelId,
+                    year: vehicle.year,
+                    nickname,
+                    is_default: asDefault,
+                  }),
+                ),
+          ),
+        );
+      }),
       map((res) => {
         if (res.error) unwrap({ data: null, error: res.error });
       }),
