@@ -1,0 +1,28 @@
+@if (visible()) {
+  <section class="avisos" aria-labelledby="avisos-title">
+    <div class="avisos__text">
+      <h2 id="avisos-title" class="avisos__title">Avisos en este dispositivo</h2>
+      @switch (state()) {
+        @case ('on') {
+          <p class="avisos__desc">Activados. Te avisamos cuando tu pedido salga o tu cita se confirme.</p>
+        }
+        @case ('off') {
+          <p class="avisos__desc">Recibe un aviso cuando tu pedido salga o tu cita se confirme, sin tener que abrir la página.</p>
+        }
+        @case ('blocked') {
+          <p class="avisos__desc">Los bloqueaste en este navegador. Para recibirlos, permite las notificaciones de este sitio en su configuración.</p>
+        }
+        @case ('needs-install') {
+          <p class="avisos__desc">En iPhone los avisos llegan a la app instalada: toca Compartir, "Agregar a pantalla de inicio" y abre X AutoHub desde ahí.</p>
+        }
+      }
+    </div>
+
+    @if (state() === 'on' || state() === 'off') {
+      <button type="button" class="avisos__btn" [class.avisos__btn--off]="state() === 'on'"
+              [disabled]="isWorking()" [attr.aria-pressed]="state() === 'on'" (click)="toggle()">
+        {{ isWorking() ? 'Un momento…' : state() === 'on' ? 'Desactivar' : 'Activar avisos' }}
+      </button>
+    }
+  </section>
+}

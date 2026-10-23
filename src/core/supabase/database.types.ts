@@ -254,6 +254,20 @@ export type ProductVariantRow = {
   created_at: string;
 }
 
+/**
+ * Un dispositivo donde un usuario quiere recibir avisos (migración 0024). Cada quien ve y
+ * borra solo los suyos; se guarda con `register_push_subscription()`.
+ */
+export type PushSubscriptionRow = {
+  id: number;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string;
+  created_at: string;
+}
+
 /** Dos niveles como máximo: `parent_id` nulo es primer nivel. Migración 0017. */
 export type ProductCategoryRow = {
   id: number;
@@ -797,6 +811,16 @@ export type Database = {
         Update: Partial<ProductVariantRow>;
         Relationships: ProductVariantRelationships;
       };
+      /**
+       * Dispositivos con avisos activados (migración 0024). Sin política de insert ni de
+       * update: se escribe solo por `register_push_subscription()`. Desactivar es borrar.
+       */
+      push_subscriptions: {
+        Row: PushSubscriptionRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       product_categories: {
         Row: ProductCategoryRow;
         Insert: Insert<ProductCategoryRow, 'slug' | 'name'>;
@@ -1157,6 +1181,14 @@ export type Database = {
           coupon_code: string | null;
           total: number;
         }[];
+      };
+      /**
+       * Guarda el dispositivo actual para recibir avisos (migración 0024). Si estaba a nombre
+       * de otra cuenta, cambia de dueño. Pide sesión.
+       */
+      register_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
+        Returns: undefined;
       };
       /**
        * Cuánto descontaría un cupón con ese subtotal y envío. Solo calcula; la puede

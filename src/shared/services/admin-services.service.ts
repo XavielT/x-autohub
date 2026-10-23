@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, from, map, of, switchMap, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { PushService } from './push.service';
 import {
   toAdminAppointment,
   toAvailabilityRule,
@@ -91,6 +92,7 @@ const APPOINTMENT_COLUMNS =
 export class AdminServicesService {
   private readonly supabase = inject(SupabaseService);
   private readonly storage = inject(StorageService);
+  private readonly push = inject(PushService);
 
   private mockServices: ServiceModel[] = SERVICES_MOCK.map((s) => ({ ...s }));
   private mockRules: AvailabilityRule[] = AVAILABILITY_MOCK.map((r) => ({ ...r }));
@@ -338,6 +340,8 @@ export class AdminServicesService {
     ).pipe(
       map((res) => {
         if (res.error) unwrap({ data: null, error: res.error });
+        // El estado ya cambió. Avisarle al cliente es aparte y nunca hace fallar esto.
+        void this.push.notify('appointment', id);
       }),
     );
   }

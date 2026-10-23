@@ -1422,6 +1422,51 @@ check "anon sigue pudiendo crear pedidos y buscar" "true|true" \
   "select has_function_privilege('anon', 'public.create_order(text,text,text,text,text,jsonb,text,text,text,text,text,text,boolean,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.search_products(text,text,bigint,bigint,integer,numeric,numeric,boolean,text,integer,integer)', 'execute')::text;"
 check "anon no invoca set_order_status" "$(denied set_order_status)" "$(as_anon "select * from set_order_status('$ORD_VAR', 'paid');")"
 
+echo "→ Notificaciones push (migracion 0024)"
+
+# Una suscripcion de mentira con el largo de las de verdad (p256dh de 87 caracteres, auth de 22).
+PUSH_P256DH="$(printf 'B%.0s' $(seq 1 87))"
+PUSH_AUTH="$(printf 'a%.0s' $(seq 1 22))"
+reg() { echo "select register_push_subscription('$1', '$PUSH_P256DH', '$PUSH_AUTH', '${2:-test}');"; }
+
+echo "   (quien guarda y quien ve)"
+check "anon no puede guardar un dispositivo" "$(denied register_push_subscription)" "$(as_anon "$(reg https://push.example/a)")"
+check "anon ni siquiera lee la tabla" "ERROR:  permission denied for table push_subscriptions" \
+  "$(as_anon 'select count(*) from push_subscriptions;')"
+check "un usuario guarda su dispositivo" "1" \
+  "$(as_user "$USER_A" "$(reg https://push.example/a)") select count(*) from push_subscriptions;"
+check "no inserta directo en la tabla (no hay permiso)" "ERROR:  permission denied for table push_subscriptions" \
+  "$(as_user "$USER_A" "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/x', '$PUSH_P256DH', '$PUSH_AUTH');")"
+check "ni actualiza (no hay permiso)" "ERROR:  permission denied for table push_subscriptions" \
+  "$(as_user "$USER_A" "update push_subscriptions set user_agent = 'x';")"
+check "otro usuario no ve los dispositivos ajenos" "0" "$(as_user "$USER_B" 'select count(*) from push_subscriptions;')"
+check "ni un admin los lee con la clave del navegador (los lee la funcion con service_role)" "0" \
+  "$(as_user "$ADMIN" 'select count(*) from push_subscriptions;')"
+
+echo "   (un dispositivo, una cuenta)"
+check "si otra cuenta registra el mismo dispositivo, se lo queda" "0|1" \
+  "$(as_user "$USER_B" "$(reg https://push.example/a)") select (select count(*) from push_subscriptions where user_id = '$USER_A') || '|' || (select count(*) from push_subscriptions where user_id = '$USER_B');"
+check "registrar dos veces el mismo no duplica" "1" \
+  "$(as_user "$USER_B" "$(reg https://push.example/a)") select count(*) from push_subscriptions where endpoint = 'https://push.example/a';"
+check "el tope es de 10 dispositivos por cuenta, y se quedan los mas recientes" "10|true" \
+  "$(as_user "$USER_A" "$(for n in $(seq 1 12); do reg https://push.example/m$n; done)") select count(*) || '|' || bool_and(endpoint <> 'https://push.example/m1' and endpoint <> 'https://push.example/m2') from push_subscriptions where user_id = '$USER_A';"
+
+echo "   (desactivar los avisos)"
+check "cada quien borra los suyos" "9" \
+  "$(as_user "$USER_A" "delete from push_subscriptions where endpoint = 'https://push.example/m3'; select count(*) from push_subscriptions;")"
+check "y no los ajenos (0 filas)" "0" \
+  "$(as_user "$USER_A" "with d as (delete from push_subscriptions where endpoint = 'https://push.example/a' returning 1) select count(*) from d;")"
+
+echo "   (la forma de una suscripcion la exige la base)"
+check "el endpoint tiene que ser https" 'ERROR:  new row for relation "push_subscriptions" violates check constraint "push_subscriptions_endpoint_check"' \
+  "$(as_user "$USER_A" "$(reg http://push.example/inseguro)")"
+check "las claves no pueden venir vacias o cortas" 'ERROR:  new row for relation "push_subscriptions" violates check constraint "push_subscriptions_p256dh_check"' \
+  "$(as_user "$USER_A" "select register_push_subscription('https://push.example/corta', 'abc', '$PUSH_AUTH');")"
+check "borrar la cuenta borra sus dispositivos" "0" \
+  "insert into auth.users (id, email) values ('99999999-9999-9999-9999-999999999999', 'tmp@x.com'); $(as_user 99999999-9999-9999-9999-999999999999 "$(reg https://push.example/tmp)") reset role; delete from profiles where id = '99999999-9999-9999-9999-999999999999'; select count(*) from push_subscriptions where endpoint = 'https://push.example/tmp';"
+check "la funcion no la invoca anon, y si un usuario con sesion" "false|true" \
+  "select has_function_privilege('anon', 'public.register_push_subscription(text,text,text,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.register_push_subscription(text,text,text,text)', 'execute')::text;"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1643,8 +1688,8 @@ CHECK_DB=upgrade check "antes de migrar no existe product_variants" "0" \
   "select count(*) from information_schema.tables where table_name = 'product_variants';"
 UP_STOCK="$(SCALAR_DB=upgrade scalar "select string_agg(id || '=' || stock, ',' order by id) from hub_parts;")"
 UP_TOTALS23="$(SCALAR_DB=upgrade scalar "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;")"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0023_product_variants.sql upgrade
+apply supabase/migrations/0023_product_variants.sql upgrade
 echo "   (aplicada dos veces, con piezas y pedidos dentro)"
 CHECK_DB=upgrade check "ninguna pieza tiene opciones y el stock no se movio" "0|$UP_STOCK" \
   "select (select count(*) from hub_parts where has_variants) || '|' || (select string_agg(id || '=' || stock, ',' order by id) from hub_parts);"
@@ -1658,6 +1703,15 @@ CHECK_DB=upgrade check "search_products ya devuelve has_variants" "false" \
   "$(as_anon "select has_variants::text from search_products(p_limit => 1);")"
 CHECK_DB=upgrade check "una opcion creada despues de migrar suma al producto" "true|3" \
   "insert into product_variants (product_id, name, stock) values (1, 'Unica', 3); select has_variants::text || '|' || stock from hub_parts where id = 1;"
+
+echo "→ Camino de actualizacion de la 0024: la base real ya tiene usuarios al migrar"
+CHECK_DB=upgrade check "antes de migrar no existe push_subscriptions" "0" \
+  "select count(*) from information_schema.tables where table_name = 'push_subscriptions';"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con usuarios dentro)"
+CHECK_DB=upgrade check "la tabla queda vacia y la funcion existe una sola vez" "0|1" \
+  "select (select count(*) from push_subscriptions) || '|' || (select count(*) from pg_proc where proname = 'register_push_subscription');"
 
 # --- Resumen ------------------------------------------------------------------
 

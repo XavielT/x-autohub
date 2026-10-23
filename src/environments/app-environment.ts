@@ -31,4 +31,12 @@ export interface AppEnvironment {
    * se salta todas las políticas RLS.
    */
   supabaseAnonKey: string;
+
+  /**
+   * La clave **pública** VAPID del sitio, para los avisos push (base64url, 65 bytes).
+   * Es pública por diseño. La privada vive solo como secreto de la Edge Function
+   * `send-push` y no va nunca en este repositorio. Vacía o ausente = los avisos no se
+   * ofrecen. Ver `docs/BACKEND.md`.
+   */
+  vapidPublicKey?: string;
 }

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { PushService } from './push.service';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { AdminUserRow, HubPartRow, OrderStatus } from '../../core/supabase/database.types';
 import { toSpecs } from '../../core/supabase/mappers';
@@ -128,6 +129,7 @@ function partWriteRow(draft: NewPartDraft) {
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly supabase = inject(SupabaseService);
+  private readonly push = inject(PushService);
 
   private mockUsers: AdminUserModel[] = [...ADMIN_USERS_MOCK];
   private mockOrders: AdminOrderModel[] = [...ADMIN_ORDERS_MOCK];
@@ -899,6 +901,8 @@ export class AdminService {
     ).pipe(
       map((res) => {
         if (res.error) unwrap({ data: null, error: res.error });
+        // El estado ya cambió. Avisarle al cliente es aparte y nunca hace fallar esto.
+        void this.push.notify('order', orderId);
       }),
     );
   }
