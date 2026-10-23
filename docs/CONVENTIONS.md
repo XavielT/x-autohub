@@ -36,7 +36,7 @@ export class SocialHubComponent {
 }
 
 // ⚠️ Patrón viejo. Ya no queda en componentes ni servicios; no lo reintroduzcas.
-constructor(private route: ActivatedRoute, private service: HubPartService) {}
+constructor(private route: ActivatedRoute, private service: ProductService) {}
 ```
 
 ### Estado — usa signals

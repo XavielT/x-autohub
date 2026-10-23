@@ -133,7 +133,8 @@ de prueba. Diecisiete migraciones aplicadas.
   (buscador, categorías, ofertas, más vendidos, nuevos, taller, vehículos y
   comunidad). El hero con video pasó a la página de la Comunidad.
 
-**Lo que todavía no** (fase 7): las reseñas verificadas y el SEO de producto. La PWA (fase 6) ya está. Ver `docs/ROADMAP.md` para el orden.
+**Con la fase 7 el pivote está completo**: las reseñas con compra verificada, el SEO de producto
+(datos estructurados, sitemap, robots) y la limpieza del código del home anterior. La PWA (fase 6) ya estaba. Ver `docs/ROADMAP.md` para el orden.
 
 Sigue funcionando todo lo anterior: Auto Hub, Hub Market con moderación, carrito
 persistente y checkout de invitado o con cuenta (precios calculados en Postgres),

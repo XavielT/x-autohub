@@ -99,14 +99,15 @@ está en `docs/PIVOT-2026-10.md` y manda sobre `docs/VISION.md` y
 | **Comunidad**  | `/social-hub`              | Secundario | Feed, clubes, eventos. Hereda el hero. No se desarrolla más por ahora |
 
 > **El pivote se entrega por fases** (ver `docs/ROADMAP.md`). Mientras una fase
-> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 6) ya están el
+> no esté desplegada, el código sigue siendo el anterior. Hoy (fase 7, el pivote completo) ya están el
 > navbar, la barra de pestañas, el footer y el home nuevos, la tienda con filtros
 > y "mi vehículo" (`/tienda`, `/tienda/c/:slug`, `/tienda/p/:slug`), `/buscar` y el
 > garaje en el perfil, el checkout en tres pasos con `/pedido/:id` (transferencia con
 > comprobante o WhatsApp) y el panel de pedidos, y el taller (catálogo de servicios,
 > cotizar por WhatsApp, agendar citas, "Mis citas" y las pestañas del taller en el
 > panel), y la PWA (instalable, caché del shell, aviso de versión nueva, "Sin conexión" en
-> las listas); `/catalogo` y `/hub-part-details/:id` solo redirigen. Las reseñas no existen. No documentes ni
+> las listas), las reseñas verificadas de productos y servicios, y el SEO de producto (JSON-LD, sitemap, robots);
+> `/catalogo` y `/hub-part-details/:id` solo redirigen. No documentes ni
 > asumas como existente lo que una fase posterior va a construir.
 
 > **Auto Hub y Hub Market están separados a propósito.** Auto Hub son los carros
@@ -145,7 +146,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 298 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 343 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -186,7 +187,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 117 archivos, 1079 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 117 archivos, 1132 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -211,6 +212,24 @@ Cosas que ya causaron un bug. No las repitas:
   meses en Trebuchet MS. Un 200 no prueba nada: revisa
   `[...document.fonts].map(f => f.family + ':' + f.status)` y exige `loaded`,
   no `error`.
+- **Las estrellas de un producto no prueban que haya reseñas.** `hub_parts.stars_rating`
+  es el dato sembrado hasta que entra la primera reseña real (entonces es el promedio), y
+  `ProductModel.starsRating` no distingue una cosa de la otra. Para "¿hay opiniones de
+  verdad?" —el JSON-LD `aggregateRating`, por ejemplo— usa `ReviewService.getStats()`
+  (`review_stats()`). Declarar una calificación que no existe va contra las reglas de Google.
+- **`is_verified_purchase` nunca viene del navegador.** Lo calcula el trigger
+  `reviews_prepare()` (migración 0020) y pisa lo que se mande; las reseñas no tienen UPDATE
+  (se borran y se reescriben) justo para no tener que congelar esa columna. No agregues un
+  `update` sobre `reviews`.
+- **`search_products()` devuelve columnas explícitas.** Una columna nueva en `hub_parts` no
+  llega a `ProductModel` por ahí: hay que recrear la función (no sirve `create or replace`
+  con otras columnas de salida). Por eso `review_count` existe en la tabla pero no en el
+  modelo.
+- **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
+  `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
+  `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y
+  Vercel vuelve a `ng build`, el sitemap desaparece sin avisar. Un producto `is_test` nunca
+  entra.
 - **El service worker no se prueba en `npm start`.** Solo existe en el build de producción
   (`!isDevMode()`). Para verlo: `npm run build` y servir `dist/x-autohub/browser` con
   fallback a `index.html`. Y el "offline" de DevTools/CDP corta la página pero **no al

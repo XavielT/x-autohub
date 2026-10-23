@@ -28,8 +28,11 @@ con el ritual de `CLAUDE.md` (build sin warnings, tests en verde,
 | 3    | Tienda: listado con filtros, búsqueda, "mi vehículo", ficha       | 2.1.0     | No               | hecha        |
 | 4    | Checkout nuevo, pedidos, comprobante, WhatsApp, Mis pedidos       | 2.2.0     | 0018             | hecha        |
 | 5    | Servicios: catálogo, cotización, agenda, trabajos                 | 2.3.0     | 0019             | hecha        |
-| 6    | PWA                                                               | **2.4.0** | No               | preparada    |
-| 7    | Reseñas, SEO de producto, limpieza de código muerto               | 2.5.0     | 0020 (y 0021)    | pendiente    |
+| 6    | PWA                                                               | 2.4.0     | No               | hecha        |
+| 7    | Reseñas, SEO de producto, limpieza de código muerto               | **2.5.0** | 0020             | preparada    |
+
+**Con la fase 7 el pivote queda completo.** Lo que sigue está abajo, en "Después del
+pivote".
 
 El orden está pensado para que el sitio nunca quede a medias en producción: la
 fase 1 es invisible para el usuario; la 2 estrena la cara nueva sobre el
@@ -154,13 +157,69 @@ Libre y no como una página, sin cachear precios ni stock.
 
 **Por qué:** las reseñas con compra verificada dan confianza, el SEO de producto
 trae tráfico sin pagar, y la limpieza retira el código que el pivote dejó sin
-dueño (`page-counter-overview`, `home-featured-*`, `home-news`, `HubPartModel`,
-la columna `category text`) en cuanto nada lo importa.
+dueño.
 
-**Fuera de esta ronda, a propósito:** pasarela de tarjeta (Azul/CardNet vía
-función serverless), notificaciones push, variantes de producto, cupones,
-inventario multi-almacén, facturación con NCF y trabajo nuevo en Social Hub.
-Ver `docs/PIVOT-2026-10.md` §9.
+**Qué trae:** la migración 0020 (`reviews`, la compra verificada calculada por un trigger,
+las estrellas de cada pieza recalculadas, `review_stats()`), el bloque de reseñas en la
+ficha de producto y en el detalle de servicio, el JSON-LD `Product` y `Service`, el
+`sitemap.xml` generado en cada build y `robots.txt`. Y la limpieza: se borraron
+`page-counter-overview`, `home-featured-vehicles`, `home-featured-catalog`, `home-news`,
+`StatsService`, el interruptor del contador en `/admin/ajustes`, `HubPartModel` y
+`HubPartService` (nada los importaba, comprobado con grep).
+
+**Pendiente tras la entrega:**
+
+- **Search Console:** enviar `https://xautohubrd.com/sitemap.xml` y probar una ficha con el
+  Rich Results Test de Google (el JSON-LD lo pone JavaScript; Googlebot lo ejecuta).
+- **No hay moderación previa de reseñas**: se publican al instante y el admin puede
+  borrarlas después (botón "Borrar (moderación)"). Si llega spam, el siguiente paso es
+  un estado `pending`, no un cambio de esta migración.
+- **Una reseña no se edita**, se borra y se escribe otra (decisión de la 0020).
+- **`hub_parts.category` (texto) NO se eliminó, y no hay migración 0021.** El plan lo
+  condicionaba a que ningún `select` la leyera, y la leen `product.service` y
+  `admin.service`; además `hub_parts_fill_defaults()` (0017) la rellena y el mock
+  la usa para asignar la categoría nueva. Para quitarla: dejar de seleccionarla, quitarla
+  de `ProductModel` y del mapper, reescribir esa función, y recién entonces
+  `alter table hub_parts drop column category`. Es irreversible: se hace a propósito.
+- **Restos del contador del home en la base:** la fila `stats_mode` de `site_settings` y la
+  función `get_site_stats()` (0014) siguen ahí sin que nada las lea. Candidatas a la misma
+  migración que quite `category`.
+- **Las tarjetas muestran `stars_rating`**, que sin reseñas es el valor sembrado de antes.
+  `search_products()` no devuelve `review_count` (columnas explícitas: añadirlo obliga a
+  recrear la función), así que la tarjeta no puede distinguir una estrella real de una
+  sembrada. Si molesta, ese es el cambio.
+- **Una reseña de un pedido de invitado no se verifica** (no hay a quién atribuirlo).
+- **Assets sin ninguna referencia** (no se borraron; decide Xaviel): 27 archivos, ~137 KB.
+  Iconos: `auto-hub-icon`, `auto-icon`, `bag-icon`, `cart-hub-icon`, `chat-round-icon`,
+  `crowd-hub-icon`, `crowd-icon`, `home-hub2-icon`, `home-icon`, `market-hub-icon`,
+  `market-icon`, `network-hub-icon`, `network-icon`, `network2-hub-icon`, `network2-icon`,
+  `next-fat-icon`, `next-hub-fat-icon`, `next-hub-icon`, `next-icon`, `not-found-icon`,
+  `not-found-w-icon`, `services-icon`, `speedometer-icon`, `star-rounded-icon` (todos
+  `.svg` en `src/assets/icons/`), y las fotos `cars/corvette.jpg`, `cars/lambo-bg.jpg` y
+  `cars/porsche.jpg` en `src/assets/imgs/`. (Las dos `OFL.txt` de las fuentes son licencias:
+  se quedan.)
+
+---
+
+## Después del pivote
+
+Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con su porqué:
+
+- **Pasarela de tarjeta (Azul/CardNet vía función serverless).** Hoy se paga por
+  transferencia o se cierra por WhatsApp; la tarjeta convierte más, pero exige una
+  función que no filtre la clave del comercio, conciliación y el manejo de contracargos.
+- **Notificaciones push.** La PWA ya es instalable; falta avisar "tu pedido salió" o "tu
+  cita se confirmó" (hoy el equipo escribe a mano). Pide una Edge Function y un permiso
+  explícito del usuario.
+- **Variantes de producto (color, talla).** Un accesorio con tres colores hoy son tres
+  productos. Tocan el carrito, el stock y el pedido a la vez.
+- **Cupones y descuentos por código.** Exigen reglas de validez y límites de uso dentro de
+  `create_order()`, que es donde se calcula el total.
+- **Inventario multi-almacén** y **facturación con NCF.** Solo tienen sentido con más de un
+  punto de venta y con volumen que obligue a facturar.
+- **Renderizado en servidor** (o prerender) para el SEO: hoy el JSON-LD y el contenido los
+  pone JavaScript. Es un proyecto aparte.
+- **Trabajo nuevo en Social Hub**, que sigue sin desarrollarse a propósito.
 
 ---
 
@@ -330,13 +389,12 @@ Hub Market; la página a la que llevan debería estar a la altura.
 
 ### El carrito solo acepta piezas del catálogo
 
-`CartService` está tipado a `HubPartModel` (`CartItem.part`), así que no se puede
+`CartService` está tipado a `ProductModel` (`CartItem.part`), así que no se puede
 comprar un accesorio de Hub Market, y `cart-modal` y `checkout` acceden a
 `item.part.price`: el nombre `part` está incrustado en las plantillas.
 
-**Cómo queda con el pivote:** la fase 1 convierte `HubPartModel` en alias
-deprecado de `ProductModel`, y la fase 4 reescribe el checkout, así que el
-carrito va a tocarse igual. Hub Market sigue sin vender dentro del sitio (el
+**Cómo quedó con el pivote:** la fase 1 convirtió `HubPartModel` en alias
+deprecado de `ProductModel` (la fase 7 lo borró), y la fase 4 reescribió el checkout. Hub Market sigue sin vender dentro del sitio (el
 contacto es por WhatsApp), de modo que el `CartLineItem` con `source:
 'catalogo' | 'hub-market'` que proponía este punto **ya no hace falta**; basta
 con que el carrito hable de `ProductModel`.

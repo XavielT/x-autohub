@@ -1,9 +1,9 @@
 # Arquitectura
 
-Estado real del proyecto al **2026-10-23** (v2.4.0, la fase 6 del pivote). Si cambias la
+Estado real del proyecto al **2026-10-23** (v2.5.0, la fase 7 del pivote: **el pivote está completo**). Si cambias la
 estructura, actualiza este archivo en el mismo commit.
 
-> **El pivote de octubre de 2026 va por la fase 6.** Ya existen el esquema de la
+> **El pivote de octubre de 2026 está completo (fase 7).** Ya existen el esquema de la
 > tienda (fase 1), la cara nueva (fase 2: navbar con buscador y menú de
 > categorías, barra de pestañas, footer por pilares, home de tienda) y la tienda
 > de verdad (fase 3: `/tienda` con filtros, "mi vehículo", ficha por slug,
@@ -11,8 +11,9 @@ estructura, actualiza este archivo en el mismo commit.
 > pasos, `/pedido/:id`, comprobante de transferencia o cierre por WhatsApp, "Mis
 > pedidos" y el panel) y el taller (fase 5: catálogo de servicios, cotizar por WhatsApp,
 > agenda de citas, "Mis citas", trabajos realizados y las cuatro pestañas del taller
-> en el panel) y la PWA (fase 6: instalable, caché del shell y aviso de versión nueva). **Faltan** las reseñas y el SEO de producto. Eso está en `docs/PIVOT-2026-10.md`, y la estructura final
-> se documenta aquí al cerrar la fase 7, no antes.
+> en el panel) y la PWA (fase 6: instalable, caché del shell y aviso de versión nueva). y, en la fase 7, las reseñas verificadas, el SEO de producto (JSON-LD, sitemap, robots) y la
+> limpieza del código muerto. Lo que sigue (pasarela de tarjeta, push, variantes, cupones) está en
+> `docs/ROADMAP.md`; el plan original, en `docs/PIVOT-2026-10.md`.
 
 ## Estructura de carpetas
 
@@ -22,13 +23,14 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0017 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0020 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
-├── scripts/                   generate-seed, make-admin, setup-smtp,
-│                              verify-migrations.sh
+├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
+│                              setup-smtp, verify-migrations.sh
 ├── public/                    Se copia tal cual a la raíz de dist/ (favicons, iconos de la
-│                              app incl. los maskable, manifest.webmanifest)
+│                              app incl. los maskable, manifest.webmanifest, robots.txt;
+│                              sitemap.xml se GENERA antes de cada build y no se versiona)
 ├── ngsw-config.json           Qué cachea el service worker (ver "La PWA")
 ├── vercel.json                CSP y cabeceras (ngsw-*.js sin caché, manifest con su tipo)
 ├── angular.json               Build, budgets, fileReplacements, providersFile
@@ -67,10 +69,7 @@ x-autohub/
     │   │   ├── home-offers/ home-bestsellers/ home-new-arrivals/  (usan home-product-row)
     │   │   ├── home-services-banner/ home-trust-strip/
     │   │   ├── home-vehicles/ home-community/
-    │   │   ├── home-welcome/             Hero con video: ahora abre /social-hub
-    │   │   └── (sin uso desde la fase 2, se retiran en la fase 7:
-    │   │        page-counter-overview, home-featured-vehicles,
-    │   │        home-featured-catalog, home-news)
+    │   │   └── home-welcome/             Hero con video: ahora abre /social-hub
     │   └── pages/                    Una carpeta por página (26)
     │       ├── home/  auto-hub/  auto-hub-details/
     │       ├── tienda/  producto/  buscar/  checkout/  pedido/
@@ -93,7 +92,8 @@ x-autohub/
     │   │   ├── catalogo-card/  grid-catalog-card/  servicios-card/  new-card/
     │   │   ├── service-card/  service-works/
     │   │   ├── cart-modal/  toast/  club-channel/
-│   │   ├── install-prompt/  update-toast/  offline-state/   (la PWA)
+    │   │   ├── install-prompt/  update-toast/  offline-state/   (la PWA)
+    │   │   ├── reviews/                 Reseñas: promedio, distribución, lista y formulario
     │   ├── ui/                    Presentacionales puros, sin dependencias
     │   │   ├── highlight-badge/  info-badge/  image-gallery/
     │   │   └── location-select/  test-badge/
@@ -137,8 +137,7 @@ Hoy hay **tres modelos de artículo** porque representan tres inventarios distin
 | `HubMarketItemModel` | `hub-market-item.model.ts`    | Publicación de **usuario** (3 categorías)   | `/hub-market` y sus 3 detalles       |
 | `ProductModel`       | `product.model.ts`            | Producto de la **tienda propia** (tabla `hub_parts`) | `/tienda`, carrito, checkout, panel |
 
-`HubPartModel` (`hub-part.model.ts`) es un alias deprecado de `ProductModel`, para no
-romper imports; se retira en la fase 7. El archivo `product.model.ts` trae además
+El archivo `product.model.ts` trae además
 `ProductCategoryModel`, `VehicleMakeModel`, `VehicleModelModel`,
 `ProductFitmentModel`, `ProfileVehicleModel` y los tipos de la búsqueda.
 
@@ -186,7 +185,7 @@ Sin librería de estado. Todo con **signals de Angular** dentro de servicios ra�
 
 | Servicio      | Estado                                  | Notas                             |
 | ------------- | --------------------------------------- | --------------------------------- |
-| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `HubPartModel` (alias de `ProductModel`); persiste en `localStorage` |
+| `CartService` | `items`, `isOpen` + computed de totales | Solo acepta `ProductModel`; persiste en `localStorage` |
 | `VehicleService` | `selected`: el vehículo elegido para filtrar la tienda | `localStorage` sin sesión, el garaje (`profile_vehicles`) con sesión |
 | `ToastService`| cola de toasts, auto-cierre a 3s        | Renderizado por `<app-toast>`     |
 | `AuthService` | sesión de Supabase Auth + perfil       | `user`, `isLoggedIn`, `isRestoring` |
@@ -240,6 +239,24 @@ cuenta ~7 MB por cada una). Con la config actual el `dataGroup` queda armado per
 que no guarde esas fotos. Hoy el catálogo usa assets locales, así que no se pudo comprobar;
 revisar cuando las fotos reales estén en Storage.
 
+## Reseñas y SEO de producto (fase 7)
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `ReviewService` | `shared/services` | `getStats` (`review_stats()`), `getReviews` (verificadas primero, 10 por página), `getMine`, `create`, `remove`. El modo simulado espeja las reglas pero **no puede verificar compras** |
+| `<app-reviews target targetId>` | `shared/components/reviews` | El bloque de la ficha de producto y del detalle de servicio. Avisa las estadísticas con `(statsChange)` |
+| `JsonLdService` + `structured-data.ts` | `shared/services`, `shared/utils` | `Product` en la ficha y `Service` en el detalle, como `<script type="application/ld+json" data-ld="…">` en el `<head>` |
+| `scripts/generate-sitemap.mjs` | `prebuild` | `public/sitemap.xml`: páginas fijas, categorías y cada ficha de producto y servicio. Con credenciales lee Supabase (solo lo que ve un anónimo, sin `is_test`); sin ellas, los mocks; sin red, solo las fijas |
+| `public/robots.txt` | — | Bloquea panel, cuenta, pedidos y búsqueda; apunta al sitemap |
+
+- **`aggregateRating` solo con reseñas reales**, y sale de `review_stats()`, no de
+  `ProductModel.starsRating` (que puede ser el dato sembrado). Un producto de prueba no
+  lleva JSON-LD. Las URLs del JSON-LD son las canónicas (`SITE_URL`), no las de donde corra.
+- **El JSON-LD lo pone JavaScript**: el sitio se renderiza en el navegador, así que lo ve
+  quien ejecuta JS (Googlebot sí). Un renderizado en servidor sería otro proyecto.
+- `vercel.json` fija `buildCommand: npm run build` para que el `prebuild` (el sitemap)
+  corra también en Vercel.
+
 ## Rutas
 
 28 rutas de primer nivel más el comodín, todas con `loadComponent` (lazy) y
@@ -292,7 +309,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 
 ## Base de datos
 
-21 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
+22 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
@@ -302,6 +319,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
 | Comercio             | `shipping_options`, `payment_methods`, `orders`, `order_items` |
+| Reseñas              | `reviews` (de productos y servicios; la compra verificada la calcula un trigger) |
 | Marketing            | `club_subscriptions`                                           |
 
 Decisiones que conviene conocer:
@@ -331,7 +349,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 117 archivos, 1079 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 117 archivos, 1132 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

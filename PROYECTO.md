@@ -113,9 +113,9 @@ Todos los métodos devuelven `Observable<T>` y todos tienen rama de mock.
 | --- | --- | --- | --- |
 | `AutoHubService` | `getAll()` | `AutoHubModel[]` | `auto_hub_vehicles` · `is_available=true` · `created_at` desc |
 | | `getById(id: number)` | `AutoHubModel \| undefined` | `auto_hub_vehicles` · `maybeSingle()` |
-| `HubPartService` | `getAll()` | `HubPartModel[]` | `hub_parts` · `is_active=true` · `id` asc |
-| | `getById(id: number)` | `HubPartModel \| undefined` | `hub_parts` |
-| | `getByCategory(category: string)` | `HubPartModel[]` | `hub_parts` · `is_active=true` |
+| `ProductService` | `getAll()` | `ProductModel[]` | `hub_parts` · `is_active=true` · `id` asc |
+| | `getById(id: number)` | `ProductModel \| undefined` | `hub_parts` |
+| | `getByCategory(category: string)` | `ProductModel[]` | `hub_parts` · `is_active=true` |
 | `HubMarketService` | `getAll()` | `HubMarketItemModel[]` | `hub_market_items` · `is_active=true` · `created_at` desc |
 | | `getById(id: number)` | `HubMarketItemModel \| undefined` | `hub_market_items` |
 | | `getByCategory(c: HubMarketCategory)` | `HubMarketItemModel[]` | `hub_market_items` · `is_active=true` |

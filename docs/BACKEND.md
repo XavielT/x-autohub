@@ -42,11 +42,14 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 17    | `supabase/migrations/0017_store_catalog.sql`   | Tienda: categorías, compatibilidad por vehículo, garaje y búsqueda |
 | 18    | `supabase/migrations/0018_orders_payment_flow.sql` | Pedidos: estados, stock, historial, comprobantes y cuentas |
 | 19    | `supabase/migrations/0019_services_booking.sql` | Taller: servicios, horario, citas y trabajos realizados |
-| 20    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 20    | `supabase/migrations/0020_reviews.sql`         | Reseñas de productos y servicios, con compra verificada |
+| 21    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
-> de pago de la 0018 y los servicios de la 0019 (por eso el seed ya no los trae) (que ya trae `card` y `mercadopago` desactivados). Y las dependencias entre migraciones son
+> de pago de la 0018 (que ya trae `card` y `mercadopago` desactivados) y los servicios de
+> la 0019 (por eso el seed ya no los trae). La 0020 no lo toca: un trigger copia las
+> `stars_rating` del seed a `stars_seed` al insertar. Y las dependencias entre migraciones son
 > reales: la **0012 usa `is_moderator_or_admin()`**, que crea la 0011, y la
 > **0013 rehace las políticas de select de 0002 y 0012** — aplicarla antes
 > dejaría a esas políticas sin el filtro de prueba, o directamente sin existir.
@@ -163,6 +166,7 @@ La clave anon es pública. La seguridad real está en RLS:
 | `service_appointments`          | El dueño de la cita y admin | Nadie: entran por `book_appointment()` y cambian por `set_appointment_status()` / `cancel_appointment()` |
 | `service_works`                 | Los publicados (el admin ve también los borradores) | Solo admin |
 | `order_status_history`          | El dueño del pedido y admin | Nadie: la llena un trigger           |
+| `reviews`                       | Todos (las reseñas son públicas) | Solo el autor puede escribir (`user_id = auth.uid()`); **nadie edita** (sin política ni permiso de UPDATE); borra el autor o el admin |
 | `product_categories`            | Todos (las activas; el admin ve también las ocultas) | Solo admin (`is_admin()`) |
 | `vehicle_makes`, `vehicle_models` | Todos           | Solo admin (`is_admin()`)            |
 | `product_fitments`              | Todos, pero **solo los de un producto que quien consulta pueda ver** (el `exists` sobre `hub_parts` aplica RLS) | Solo admin |
@@ -331,6 +335,12 @@ La 0015 lo cierra en seis funciones: `admin_list_users`, `get_my_profile`,
 > ```
 
 ### Ajustes del sitio y contadores (migración 0014)
+
+> **Estado desde la fase 7:** el contador del home y su interruptor en `/admin/ajustes`
+> ya no existen (el pivote reemplazó ese home). La función `get_site_stats()` y la fila
+> `stats_mode` de más abajo siguen en la base, sin que nada las lea; `site_settings` hoy
+> vive de `bank_accounts` y `pickup_address` (0018). Lo que sigue describe cómo se
+> diseñó, y las comprobaciones de `verify-migrations.sh` lo siguen cubriendo.
 
 Dos cosas que la sección de contadores del home necesita: un ajuste que diga qué
 números mostrar, y una función que los cuente.
@@ -548,6 +558,48 @@ para el modo simulado y para mostrar las horas.
   vehículo era. `order_id` liga la cita con la instalación de un pedido.
 - **Una cita ajena y una que no existe se responden igual** ("Esa cita no existe"): no se
   confirma cuáles hay.
+
+### Reseñas verificadas (migración 0020)
+
+Séptima fase del pivote. Una reseña es de un producto o de un servicio (`target_type` +
+`target_id`), de 1 a 5 estrellas, con un comentario opcional de hasta 1000 caracteres.
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `reviews` | Una por persona y objetivo (`unique (target_type, target_id, user_id)`) |
+| `reviews_prepare()` (trigger BEFORE INSERT) | Rechaza un producto o servicio que no existe o está apagado, recorta el comentario y **calcula `is_verified_purchase`** |
+| `reviews_sync_product()` (trigger AFTER INSERT/DELETE) | Recalcula `hub_parts.stars_rating` (promedio, un decimal) y `hub_parts.review_count` |
+| `reviews_cascade_product()` / `_service()` | Si se borra el producto o el servicio, se van sus reseñas (`target_id` no es clave foránea) |
+| `review_stats(tipo, id)` | Total, promedio y cuántas hay de cada estrella (`c1`…`c5`). `security invoker`, la invoca `anon` |
+| `hub_parts.stars_seed` / `review_count` | Las estrellas sembradas de antes, y cuántas reseñas reales hay |
+
+**La compra verificada la decide Postgres.** Al insertar, el trigger mira si esa persona
+tiene un pedido `delivered` con ese producto (`orders.user_id` + `order_items.part_id`) o
+una cita `done` con ese servicio (`service_appointments.user_id`). Lo que mande el
+navegador en la columna se pisa. Un pedido de invitado (`user_id` nulo) no verifica a
+nadie: no hay a quién atribuirlo.
+
+**Decisiones que conviene conocer**
+
+- **Sin compra verificada también se puede reseñar**, pero sin la etiqueta; el listado
+  pone primero las verificadas. Exigir compra habría dejado el bloque vacío meses.
+- **No hay UPDATE**, ni política ni permiso: una reseña no se edita, se borra y se escribe
+  otra. Editarla obligaría a congelar `is_verified_purchase`, `target_*` y `user_id`
+  con un trigger (RLS no filtra por columna); que no exista el camino es más simple.
+- **Las estrellas sembradas se conservan** en `stars_seed`. Mientras `review_count = 0`,
+  `stars_rating` es ese valor; con la primera reseña pasa a ser el promedio real, y si se
+  borra la última vuelve al sembrado. **Solo `review_count > 0` significa que hay
+  opiniones reales**: por eso el JSON-LD de la ficha declara `aggregateRating` con
+  `review_stats()` y nunca con `starsRating`.
+- **`search_products()` no devuelve `review_count`.** Devuelve columnas explícitas y
+  cambiarlas obliga a recrear la función; las tarjetas no necesitan el conteo, así que
+  `ProductModel` no lo lleva. Si algún día hace falta, hay que recrear la función en una
+  migración nueva (no se puede con `create or replace`).
+- La migración **se puede aplicar dos veces**: el backfill de `stars_seed` solo toca filas
+  sin sembrar y sin reseñas, así que repetirla no toma un promedio real por sembrado.
+- **Restos del contador del home:** la fila `stats_mode` de `site_settings` y la función
+  `get_site_stats()` (0014) siguen en la base pero **ya nada las lee**: el contador se fue
+  con el pivote. Quitarlas es una migración futura (ver `docs/ROADMAP.md`).
 
 ### Datos privados del perfil (migración 0006)
 
