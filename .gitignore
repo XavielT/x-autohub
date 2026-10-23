@@ -2,6 +2,8 @@
 
 # Compiled output
 /dist
+# Lo genera scripts/generate-sitemap.mjs antes de cada build
+/public/sitemap.xml
 /tmp
 /out-tsc
 /bazel-out

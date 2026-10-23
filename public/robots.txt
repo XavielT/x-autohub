@@ -1,0 +1,15 @@
+# X AutoHub
+User-agent: *
+Allow: /
+# Lo que es de una persona o de un proceso, no de un buscador
+Disallow: /admin
+Disallow: /checkout
+Disallow: /pedido
+Disallow: /perfil
+Disallow: /login
+Disallow: /registro
+Disallow: /publicar
+Disallow: /baja
+Disallow: /buscar
+
+Sitemap: https://xautohubrd.com/sitemap.xml
