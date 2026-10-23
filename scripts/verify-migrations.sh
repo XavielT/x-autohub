@@ -1162,6 +1162,139 @@ check "anon si llama a review_stats" "0" "$(as_anon "select total from review_st
 check "ningun producto sin reseñas se aparta de sus estrellas sembradas" "0" \
   "select count(*) from hub_parts where review_count = 0 and stars_rating <> stars_seed;"
 
+echo "→ Cupones y descuentos (migracion 0022)"
+
+echo "   (quien ve y quien escribe los cupones)"
+check "anon no lee la tabla de cupones: nadie descarga los codigos" "ERROR:  permission denied for table coupons" \
+  "$(as_anon 'select count(*) from coupons;')"
+check "un usuario normal tampoco ve ninguno" "0" "$(as_user "$USER_A" 'select count(*) from coupons;')"
+check "ni crea uno" 'ERROR:  new row violates row-level security policy for table "coupons"' \
+  "$(as_user "$USER_A" "insert into coupons (code, discount_type, discount_value) values ('HACKEADO', 'percent', 99);")"
+check "un admin crea los de la prueba" "10" "$(as_user "$ADMIN" "
+  insert into coupons (code, description, discount_type, discount_value, min_subtotal, max_discount, starts_at, ends_at, max_uses, max_uses_per_customer, is_active) values
+   ('PCT10',     '10 por ciento',          'percent',       10,   0,    null, null, null, null, null, true),
+   ('PCT50CAP',  '50 con tope de 100',     'percent',       50,   0,    100,  null, null, null, null, true),
+   ('FIJO500',   '500 desde 3000',         'fixed',         500,  3000, null, null, null, null, null, true),
+   ('FIJO9999',  'fijo enorme',            'fixed',         9999, 0,    null, null, null, null, null, true),
+   ('ENVIOFREE', 'envio gratis',           'free_shipping', null, 0,    null, null, null, null, null, true),
+   ('UNICO',     'un solo uso',            'percent',       10,   0,    null, null, null, 1,    null, true),
+   ('UNAVEZ',    'una vez por cliente',    'percent',       10,   0,    null, null, null, null, 1,    true),
+   ('VENCIDO',   'ya vencio',              'percent',       10,   0,    null, null, now() - interval '1 day', null, null, true),
+   ('FUTURO',    'todavia no empieza',     'percent',       10,   0,    null, now() + interval '1 day', null, null, null, true),
+   ('MINALTO',   'minimo inalcanzable',    'fixed',         100,  1000000, null, null, null, null, null, true);
+  insert into coupons (code, discount_type, discount_value, is_active) values ('APAGADO', 'percent', 10, false);
+  select count(*) from coupons where code <> 'APAGADO';")"
+check "un admin los lee todos" "11" "$(as_user "$ADMIN" 'select count(*) from coupons;')"
+
+echo "   (la forma de un cupon la exige la base)"
+check "el codigo va en mayusculas" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_code_check"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value) values ('minuscula', 'percent', 10);")"
+check "y con al menos 4 caracteres" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_code_check"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value) values ('AB', 'percent', 10);")"
+check "el codigo no se repite" 'ERROR:  duplicate key value violates unique constraint "coupons_code_key"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value) values ('PCT10', 'percent', 5);")"
+check "un porcentaje de mas de 100 se rechaza" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_value_matches_type"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value) values ('MASDE100', 'percent', 101);")"
+check "el envio gratis no lleva monto" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_value_matches_type"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value) values ('ENVIO2', 'free_shipping', 100);")"
+check "un monto fijo necesita monto" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_value_matches_type"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type) values ('SINMONTO', 'fixed');")"
+check "no puede vencer antes de empezar" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_dates_in_order"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value, starts_at, ends_at) values ('FECHAS', 'percent', 10, now() + interval '2 days', now() + interval '1 day');")"
+check "el minimo de compra no es negativo" 'ERROR:  new row for relation "coupons" violates check constraint "coupons_min_subtotal_check"' \
+  "$(as_user "$ADMIN" "insert into coupons (code, discount_type, discount_value, min_subtotal) values ('NEGATIVO', 'percent', 10, -1);")"
+
+echo "   (validate_coupon: lo puede llamar un invitado, y solo calcula)"
+vc() { echo "select discount_amount from validate_coupon('$1', $2, ${3:-0}${4:-});"; }
+check "10 por ciento de 1000 son 100" "100.00" "$(as_anon "$(vc PCT10 1000 450)")"
+check "el codigo se acepta en minusculas y con espacios" "100.00" "$(as_anon "$(vc ' pct10 ' 1000 450)")"
+check "un porcentaje respeta su tope: 50% de 1000 es 100, no 500" "100.00" "$(as_anon "$(vc PCT50CAP 1000)")"
+check "y sin llegar al tope descuenta lo que toca" "50.00" "$(as_anon "$(vc PCT50CAP 100)")"
+check "un monto fijo descuenta el monto" "500.00" "$(as_anon "$(vc FIJO500 5000)")"
+check "y respeta la compra minima, diciendo cuanto falta pedir" "ERROR:  Este cupon pide una compra de al menos RD$ 3,000." \
+  "$(as_anon "$(vc FIJO500 2000)")"
+check "un monto fijo nunca pasa del subtotal: el total no queda en negativo" "1000.00" "$(as_anon "$(vc FIJO9999 1000)")"
+check "el envio gratis descuenta el envio" "450.00" "$(as_anon "$(vc ENVIOFREE 1000 450)")"
+check "pero si el envio ya es gratis (un retiro) no aplica" "ERROR:  Este cupon no aplica a tu pedido." \
+  "$(as_anon "$(vc ENVIOFREE 1000 0)")"
+check "uno vencido" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc VENCIDO 1000)")"
+check "uno que todavia no empieza dice lo mismo" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc FUTURO 1000)")"
+check "uno apagado tambien" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc APAGADO 1000)")"
+check "y uno que no existe: nadie aprende cuales existen" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc NOEXISTE 1000)")"
+check "sin codigo se pide el codigo" "ERROR:  Escribe el codigo del cupon." "$(as_anon "$(vc '   ' 1000)")"
+check "un subtotal negativo se rechaza" "ERROR:  El subtotal no es valido." "$(as_anon "$(vc PCT10 -5)")"
+check "validar no gasta un uso: UNICO sigue disponible tras validarlo dos veces" "100.00" \
+  "$(as_anon "$(vc UNICO 1000)")"
+
+echo "   (create_order: el descuento lo calcula Postgres y queda en el pedido)"
+# Todos con la pieza 5 (hay stock de sobra). Devuelve: descuento correcto | codigo guardado | el total cuadra.
+corder() {
+  echo "select (discount = round(subtotal * $4 / 100, 2))::text || '|' || coalesce(coupon_code, '-') || '|' || (total = subtotal + shipping_price - discount)::text from create_order('$1', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => '$2');"
+}
+check "un pedido con PCT10: descuenta el 10% del subtotal, guarda el codigo y el total cuadra" "true|PCT10|true" \
+  "$(as_anon "$(corder invitado@x.com PCT10 x 10)")"
+check "el codigo en minusculas se guarda en mayusculas" "true|PCT10|true" \
+  "$(as_anon "$(corder invitado@x.com ' pct10' x 10)")"
+check "un codigo en blanco es 'sin cupon': descuento 0" "true|-|true" \
+  "$(as_anon "$(corder invitado@x.com '' x 0)")"
+STOCK5_BEFORE="$(scalar 'select stock from hub_parts where id = 5;')"
+check "un codigo que no existe rechaza el pedido entero" "ERROR:  Ese cupon no existe o ya no esta disponible." \
+  "$(as_anon "$(corder invitado@x.com NOEXISTE x 0)")"
+check "y no descuenta stock" "$STOCK5_BEFORE" "select stock from hub_parts where id = 5;"
+check "la compra minima tambien se exige al crear el pedido" "ERROR:  Este cupon pide una compra de al menos RD$ 1,000,000." \
+  "$(as_anon "$(corder invitado@x.com MINALTO x 0)")"
+check "un monto enorme deja el total en el envio, nunca en negativo" "t" \
+  "$(as_anon "select (discount = subtotal and total = shipping_price and total >= 0) from create_order('invitado@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'FIJO9999');")"
+check "el envio gratis deja el total en el subtotal" "t" \
+  "$(as_anon "select (discount = shipping_price and total = subtotal) from create_order('invitado@x.com', 'Cliente', 'Calle 1', 'express', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'ENVIOFREE');")"
+check "un retiro con envio gratis no aplica" "ERROR:  Este cupon no aplica a tu pedido." \
+  "$(as_anon "select * from create_order('invitado@x.com', 'Cliente', '', 'pickup', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => 'pickup', p_coupon_code => 'ENVIOFREE');")"
+check "un cupon vencido no pasa al crear el pedido" "ERROR:  Ese cupon no existe o ya no esta disponible." \
+  "$(as_anon "$(corder invitado@x.com VENCIDO x 0)")"
+
+echo "   (cuantas veces se puede usar)"
+ORD_UNICO="$(scalar "$(as_anon "select id from create_order('u1@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'UNICO');")")"
+check "UNICO se usa una vez" "UNICO" "select coupon_code from orders where id = '$ORD_UNICO';"
+check "la segunda vez ya se agoto" "ERROR:  Este cupon ya se agoto." "$(as_anon "$(corder u2@x.com UNICO x 10)")"
+check "y validarlo tambien lo dice" "ERROR:  Este cupon ya se agoto." "$(as_anon "$(vc UNICO 1000)")"
+check "cancelar el pedido devuelve el uso" "cancelled" \
+  "$(as_user "$ADMIN" "select status from set_order_status('$ORD_UNICO', 'cancelled');")"
+check "y entonces otro cliente lo puede usar" "true|UNICO|true" "$(as_anon "$(corder u2@x.com UNICO x 10)")"
+ORD_UNAVEZ="$(scalar "$(as_user "$USER_A" "select id from create_order('a@x.com', 'Usuario A', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550001', p_province => 'Santiago', p_coupon_code => 'UNAVEZ');")")"
+check "UNAVEZ queda a nombre de su dueño" "$USER_A" "select user_id from orders where id = '$ORD_UNAVEZ';"
+check "el mismo cliente no lo repite" "ERROR:  Ya usaste este cupon." \
+  "$(as_user "$USER_A" "$(corder a@x.com UNAVEZ x 10)")"
+check "ni validandolo (la sesion lo identifica)" "ERROR:  Ya usaste este cupon." "$(as_user "$USER_A" "$(vc UNAVEZ 1000)")"
+check "otra persona si" "true|UNAVEZ|true" "$(as_user "$USER_B" "$(corder b@x.com UNAVEZ x 10)")"
+check "un invitado con el mismo correo que ya lo uso, tampoco" "ERROR:  Ya usaste este cupon." \
+  "$(as_anon "$(corder A@X.com UNAVEZ x 10)")"
+check "y uno con otro correo si" "true|UNAVEZ|true" "$(as_anon "$(corder otro@x.com UNAVEZ x 10)")"
+
+echo "   (el pedido lo cuenta y el cupon se puede borrar)"
+# Los ids se resuelven por encima de RLS: anon no lee `orders`, y lo que se prueba es get_order().
+ORD_PCT="$(scalar "select id from orders where coupon_code = 'PCT10' order by created_at limit 1;")"
+ORD_SIN="$(scalar "select id from orders where coupon_code is null order by created_at limit 1;")"
+UNAVEZ_ID="$(scalar "select id from coupons where code = 'UNAVEZ';")"
+check "get_order dice el descuento y el cupon" "true|PCT10" \
+  "$(as_anon "select ((get_order('$ORD_PCT')->>'discount')::numeric > 0)::text || '|' || (get_order('$ORD_PCT')->>'coupon_code');")"
+check "un pedido sin cupon dice descuento 0 y cupon nulo" "0.00|" \
+  "$(as_anon "select (get_order('$ORD_SIN')->>'discount') || '|' || coalesce(get_order('$ORD_SIN')->>'coupon_code', '');")"
+check "admin_coupon_usage cuenta los usos que no estan cancelados" "2" \
+  "$(as_user "$ADMIN" "select uses from admin_coupon_usage() where coupon_id = (select id from coupons where code = 'PCT10');")"
+check "anon no invoca admin_coupon_usage" "$(denied admin_coupon_usage)" "$(as_anon 'select * from admin_coupon_usage();')"
+check "un cliente solo ve el uso de lo suyo" "1" \
+  "$(as_user "$USER_A" "select uses from admin_coupon_usage() where coupon_id = $UNAVEZ_ID;")"
+check "borrar un cupon no borra el pedido ni el codigo que quedo anotado" "UNAVEZ|true" \
+  "$(as_user "$ADMIN" "delete from coupons where code = 'UNAVEZ'; select o.coupon_code || '|' || (o.coupon_id is null)::text from orders o where o.id = '$ORD_UNAVEZ';")"
+
+echo "   (las puertas: una sola create_order, y la regla interna no se llama a mano)"
+check "queda una sola create_order (dos firmas harian PGRST203)" "1" \
+  "select count(*) from pg_proc where proname = 'create_order';"
+check "anon no invoca coupon_check" "$(denied coupon_check)" "$(as_anon "select * from coupon_check('PCT10', 1000, 0, null, null, false);")"
+check "ni un usuario" "$(denied coupon_check)" "$(as_user "$USER_A" "select * from coupon_check('PCT10', 1000, 0, null, null, false);")"
+check "anon si valida y si crea pedidos (el checkout de invitado)" "true|true" \
+  "select has_function_privilege('anon', 'public.validate_coupon(text,numeric,numeric,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.create_order(text,text,text,text,text,jsonb,text,text,text,text,text,text,boolean,text)', 'execute')::text;"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1329,8 +1462,8 @@ CHECK_DB=upgrade check "ni la funcion de contadores ni su ajuste" "1|1" \
 $PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 update hub_parts set category_id = (select id from product_categories order by id limit 1) where name = 'Sin clasificar';
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0021_drop_legacy.sql upgrade
+apply supabase/migrations/0021_drop_legacy.sql upgrade
 echo "   (aplicada dos veces, con piezas dentro)"
 CHECK_DB=upgrade check "la columna category ya no existe" "0" \
   "select count(*) from information_schema.columns where table_name = 'hub_parts' and column_name = 'category';"
@@ -1351,6 +1484,29 @@ CHECK_DB=upgrade check "el check de site_settings ya no menciona stats_mode" "0"
   "select count(*) from pg_constraint where conname = 'site_settings_value_valid' and pg_get_constraintdef(oid) like '%stats_mode%';"
 CHECK_DB=upgrade check "set_site_setting ya no acepta stats_mode" "ERROR:  Ese ajuste no existe: stats_mode." \
   "$(as_user '11111111-1111-1111-1111-111111111111' "select * from set_site_setting('stats_mode','\"real\"');")"
+
+echo "→ Camino de actualizacion de la 0022: la base real ya tiene pedidos al migrar"
+# Los pedidos anteriores no tienen cupon ni descuento: tienen que quedar igual, con
+# descuento 0 y el total que ya tenian. Y create_order() tiene que seguir funcionando
+# con la llamada de antes (sin el parametro nuevo), que es lo que hace un frontend que
+# todavia no se ha actualizado.
+CHECK_DB=upgrade check "antes de migrar hay pedidos y ninguna columna de descuento" "true|0" \
+  "select ((select count(*) from orders) > 0)::text || '|' || (select count(*) from information_schema.columns where table_name = 'orders' and column_name = 'discount');"
+UP_TOTALS="$(SCALAR_DB=upgrade scalar "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;")"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con pedidos dentro)"
+CHECK_DB=upgrade check "los pedidos viejos conservan su total" "$UP_TOTALS" \
+  "select string_agg(order_number || '=' || total, ',' order by order_number) from orders;"
+CHECK_DB=upgrade check "con descuento 0 y sin cupon" "0|0" \
+  "select (select count(*) from orders where discount <> 0) || '|' || (select count(*) from orders where coupon_id is not null or coupon_code is not null);"
+CHECK_DB=upgrade check "queda una sola create_order" "1" "select count(*) from pg_proc where proname = 'create_order';"
+CHECK_DB=upgrade check "la llamada de antes (sin cupon) sigue funcionando y no descuenta" "0.00|-" \
+  "$(as_anon "select discount || '|' || coalesce(coupon_code, '-') from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
+CHECK_DB=upgrade check "la tabla de cupones existe y anon no la lee" "ERROR:  permission denied for table coupons" \
+  "$(as_anon 'select count(*) from coupons;')"
+CHECK_DB=upgrade check "un cupon creado despues de migrar se aplica al pedido" "true" \
+  "insert into coupons (code, discount_type, discount_value) values ('ACTUALIZA', 'percent', 10); $(as_anon "select (discount > 0)::text from create_order('w@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'ACTUALIZA');")"
 
 # --- Resumen ------------------------------------------------------------------
 

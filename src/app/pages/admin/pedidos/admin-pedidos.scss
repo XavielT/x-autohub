@@ -194,6 +194,8 @@
     strong:nth-child(even) { text-align: right; color: var(--Hub); }
   }
 
+  &__discount { color: #7fdca4; }
+
   &__empty {
     background-color: var(--main-light);
     border-radius: 14px;

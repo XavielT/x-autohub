@@ -238,6 +238,7 @@
     > div { display: flex; justify-content: space-between; }
   }
 
+  &__discount { color: #7fdca4; }
   &__total { margin-top: 4px; font-family: var(--font-brand); font-size: 1.1rem; color: #fff; }
 
   &__link {

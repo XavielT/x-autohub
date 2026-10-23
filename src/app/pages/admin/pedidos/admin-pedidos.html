@@ -148,6 +148,10 @@
                     @if (order.shippingPrice === 0) { Gratis }
                     @else { RD$ {{ order.shippingPrice | number:'1.0-0' }} }
                   </span>
+                  @if (order.discount > 0) {
+                    <span>Cupón{{ order.couponCode ? ' ' + order.couponCode : '' }}</span>
+                    <span class="adm-ord__discount">−RD$ {{ order.discount | number:'1.0-0' }}</span>
+                  }
                   <strong>Total</strong><strong>RD$ {{ order.total | number:'1.0-0' }}</strong>
                 </div>
               </div>

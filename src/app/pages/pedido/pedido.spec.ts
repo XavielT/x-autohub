@@ -18,6 +18,8 @@ const VISTA: OrderView = {
   wantsInstallation: false,
   subtotal: 12050,
   shippingPrice: 450,
+  discount: 0,
+  couponCode: null,
   total: 12500,
   createdAt: new Date('2026-10-23T14:00:00Z'),
   hasProof: false,
@@ -82,6 +84,19 @@ describe('Pedido', () => {
     expect(text(el)).toMatch(/Subtotal\s*RD\$ 12,050/);
     expect(text(el)).toMatch(/Envío\s*RD\$ 450/);
     expect(text(el)).toMatch(/Total\s*RD\$ 12,500/);
+  });
+
+  it('con cupón muestra el descuento y el total ya descontado', () => {
+    const { el } = montar({ order: { ...VISTA, discount: 1205, couponCode: 'BIENVENIDO10', total: 11295 } });
+
+    expect(text(el)).toMatch(/Cupón BIENVENIDO10\s*−RD\$ 1,205/);
+    expect(text(el)).toMatch(/Total\s*RD\$ 11,295/);
+  });
+
+  it('sin cupón no hay fila de descuento', () => {
+    const { el } = montar();
+
+    expect(el.querySelector('.ped__discount')).toBeNull();
   });
 
   it('pone el título de la pestaña con el número, y pide que no se indexe', () => {

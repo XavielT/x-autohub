@@ -32,6 +32,8 @@ export interface AdminOrderModel {
   orderNotes?: string;
   subtotal: number;
   shippingPrice: number;
+  discount: number;
+  couponCode: string | null;
   total: number;
   status: OrderStatus;
   /** Compra sin cuenta: `user_id` nulo. Está permitido a propósito. */

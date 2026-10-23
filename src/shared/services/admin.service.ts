@@ -257,6 +257,8 @@ export class AdminService {
           orderNotes: row.order_notes ?? undefined,
           subtotal: Number(row.subtotal),
           shippingPrice: Number(row.shipping_price),
+          discount: Number(row.discount),
+          couponCode: row.coupon_code,
           total: Number(row.total),
           status: row.status,
           isGuest: row.user_id === null,

@@ -6,6 +6,8 @@ import {
   toProductCategory,
   toProductFitment,
   toOrderView,
+  toCoupon,
+  toCouponValidation,
   toProfileVehicle,
   toReview,
   toReviewStats,
@@ -265,6 +267,45 @@ describe('mappers', () => {
     });
   });
 
+  describe('cupones (migración 0022)', () => {
+    const row = {
+      id: 3,
+      code: 'VERANO25',
+      description: '25 con tope',
+      discount_type: 'percent' as const,
+      discount_value: '25.00' as unknown as number,
+      min_subtotal: '0.00' as unknown as number,
+      max_discount: '1500.00' as unknown as number,
+      starts_at: null,
+      ends_at: '2099-01-01T00:00:00Z',
+      max_uses: null,
+      max_uses_per_customer: 2,
+      is_active: true,
+      created_at: '2026-10-02T12:00:00Z',
+    };
+
+    it('toCoupon: los numeric llegan como texto y se vuelven números; las fechas, Date', () => {
+      const c = toCoupon(row, 7);
+
+      expect(c).toMatchObject({ id: 3, code: 'VERANO25', type: 'percent', value: 25, minSubtotal: 0, maxDiscount: 1500, maxUsesPerCustomer: 2, uses: 7 });
+      expect(c.endsAt).toBeInstanceOf(Date);
+      expect(c.startsAt).toBeNull();
+      expect(c.maxUses).toBeNull();
+    });
+
+    it('un envío gratis no trae valor ni tope: quedan nulos, no cero', () => {
+      const c = toCoupon({ ...row, discount_type: 'free_shipping', discount_value: null, max_discount: null });
+
+      expect(c).toMatchObject({ type: 'free_shipping', value: null, maxDiscount: null, uses: 0 });
+    });
+
+    it('toCouponValidation: el descuento llega como numeric (texto)', () => {
+      const v = toCouponValidation({ code: 'PCT10', discount_type: 'percent', discount_amount: '100.00' as unknown as number, description: 'x' });
+
+      expect(v).toEqual({ code: 'PCT10', type: 'percent', discount: 100, description: 'x' });
+    });
+  });
+
   describe('toSpecs', () => {
     it('deja pasar los pares de texto', () => {
       expect(toSpecs({ Material: 'Aluminio', Medida: '18x8.5' })).toEqual({ Material: 'Aluminio', Medida: '18x8.5' });
@@ -418,6 +459,8 @@ describe('mappers', () => {
       wants_installation: true,
       subtotal: '12050.00' as unknown as number,
       shipping_price: 0,
+      discount: '0.00' as unknown as number,
+      coupon_code: null as string | null,
       total: '12050.00' as unknown as number,
       created_at: '2026-10-23T14:00:00Z',
       has_proof: true,
@@ -444,6 +487,21 @@ describe('mappers', () => {
       expect(v.installationServiceId).toBe(7);
       expect(v.history[0].createdAt).toBeInstanceOf(Date);
       expect(v.history[0].fromStatus).toBeNull();
+    });
+
+    it('get_order() trae el descuento y el cupón; sin cupón, 0 y nulo', () => {
+      expect(toOrderView(json)).toMatchObject({ discount: 0, couponCode: null });
+
+      const con = toOrderView({ ...json, discount: '1205.00' as unknown as number, coupon_code: 'BIENVENIDO10' });
+      expect(con).toMatchObject({ discount: 1205, couponCode: 'BIENVENIDO10' });
+    });
+
+    it('un get_order() de antes de la 0022 (sin los campos nuevos) no rompe: descuento 0', () => {
+      const viejo = { ...json } as Record<string, unknown>;
+      delete viejo['discount'];
+      delete viejo['coupon_code'];
+
+      expect(toOrderView(viejo as unknown as typeof json)).toMatchObject({ discount: 0, couponCode: null });
     });
 
     it('my_orders() → UserOrderModel: la suma de unidades llega como bigint (texto)', () => {

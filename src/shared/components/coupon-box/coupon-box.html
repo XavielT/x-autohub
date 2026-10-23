@@ -1,0 +1,26 @@
+<div class="cpn">
+  @if (applied(); as a) {
+    <div class="cpn__applied" role="status">
+      <div class="cpn__applied-text">
+        <strong class="cpn__code">{{ a.code }}</strong>
+        <span class="cpn__saving">Ahorras RD$ {{ a.discount | number:'1.0-0' }}</span>
+        @if (a.description) { <small class="cpn__desc">{{ a.description }}</small> }
+      </div>
+      <button type="button" class="cpn__remove" (click)="remove()">Quitar</button>
+    </div>
+  } @else {
+    <form class="cpn__form" (submit)="$event.preventDefault(); apply()" novalidate>
+      <label class="cpn__label" for="cpn-code">¿Tienes un cupón?</label>
+      <div class="cpn__row">
+        <input id="cpn-code" class="cpn__input" type="text" name="coupon" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" placeholder="Escribe el código" [value]="code()" (input)="setCode($event)"
+               [attr.aria-invalid]="error() ? 'true' : null" [attr.aria-describedby]="error() ? 'cpn-error' : null" />
+        <button type="submit" class="cpn__apply" [disabled]="isChecking()">
+          {{ isChecking() ? 'Probando…' : 'Aplicar' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (error()) { <p id="cpn-error" class="cpn__error" role="alert">{{ error() }}</p> }
+</div>

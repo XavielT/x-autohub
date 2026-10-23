@@ -35,6 +35,10 @@ export interface OrderView {
   wantsInstallation: boolean;
   subtotal: number;
   shippingPrice: number;
+  /** RD$ de descuento por cupón. 0 si no hubo. `total = subtotal + shippingPrice - discount`. */
+  discount: number;
+  /** El código del cupón con el que se compró, o `null`. */
+  couponCode: string | null;
   total: number;
   createdAt: Date;
   /** Si ya subió comprobante. El archivo en sí no lo ve el cliente. */
@@ -53,6 +57,8 @@ export interface CreatedOrder {
   orderNumber: number;
   subtotal: number;
   shippingPrice: number;
+  discount: number;
+  couponCode: string | null;
   total: number;
 }
 

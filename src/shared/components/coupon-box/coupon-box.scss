@@ -1,0 +1,74 @@
+.cpn {
+  margin: 14px 0;
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-soft, #b8b8b8); }
+  &__row { display: flex; gap: 8px; }
+
+  &__input {
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: inherit;
+    font-family: var(--font-body);
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-size: 16px;
+    text-transform: uppercase;
+
+    &::placeholder { text-transform: none; }
+    &:focus { outline: none; border-color: var(--Hub); }
+    &[aria-invalid='true'] { border-color: #ff6b6b; }
+  }
+
+  &__apply {
+    min-height: 48px;
+    padding: 0 18px;
+    border: 1px solid var(--Hub);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--Hub);
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__applied {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid rgba(70, 190, 120, 0.5);
+    border-radius: 10px;
+    background-color: rgba(70, 190, 120, 0.12);
+  }
+
+  &__applied-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  &__code { font-family: var(--font-brand); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+  &__saving { font-size: 14px; color: #7fdca4; }
+  &__desc { font-size: 12px; color: var(--text-soft, #b8b8b8); }
+
+  &__remove {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-soft, #b8b8b8);
+    font-family: var(--font-body);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  &__error { margin: 8px 0 0; font-size: 13px; color: #ff8d8f; }
+}

@@ -35,6 +35,8 @@ export interface CheckoutSubmitPayload {
   paymentMethodId: string;
   wantsInstallation: boolean;
   orderNotes?: string;
+  /** El código del cupón, si puso uno. El descuento lo calcula Postgres; aquí solo va el código. */
+  couponCode?: string;
 }
 
 /** El id de la opción de envío que significa "retiro en el taller". */

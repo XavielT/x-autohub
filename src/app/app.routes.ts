@@ -253,6 +253,12 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'cupones',
+        title: `Cupones | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin/cupones/admin-cupones').then((m) => m.AdminCupones),
+      },
+      {
         path: 'inventario',
         title: `Inventario | ${BRAND}`,
         canActivate: [adminGuard],

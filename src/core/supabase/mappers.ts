@@ -38,6 +38,7 @@ import {
   CheckoutPaymentMethodOption,
   CheckoutShippingOption,
 } from '../../shared/models/checkout.model';
+import { CouponModel, CouponValidation } from '../../shared/models/coupon.model';
 import { ReviewModel, ReviewStats } from '../../shared/models/review.model';
 import { UserModel } from '../../shared/models/user.model';
 import { OrderView } from '../../shared/models/order.model';
@@ -54,6 +55,8 @@ import {
   ProductCategoryRow,
   ProductFitmentRow,
   ProfileRow,
+  CouponRow,
+  CouponTypeDb,
   ProfileVehicleRow,
   ReviewRow,
   ServiceAppointmentRow,
@@ -493,6 +496,8 @@ export function toOrderView(json: OrderViewJson): OrderView {
     wantsInstallation: json.wants_installation,
     subtotal: Number(json.subtotal),
     shippingPrice: Number(json.shipping_price),
+    discount: Number(json.discount ?? 0),
+    couponCode: json.coupon_code ?? null,
     total: Number(json.total),
     createdAt: new Date(json.created_at),
     hasProof: json.has_proof,
@@ -562,5 +567,40 @@ export function toReviewStats(row: {
     total: Number(row.total),
     average: Number(row.average),
     distribution: { 1: Number(row.c1), 2: Number(row.c2), 3: Number(row.c3), 4: Number(row.c4), 5: Number(row.c5) },
+  };
+}
+
+/** Una fila de `coupons` (solo la lee un admin). `uses` sale de `admin_coupon_usage()`. */
+export function toCoupon(row: CouponRow, uses = 0): CouponModel {
+  return {
+    id: row.id,
+    code: row.code,
+    description: row.description,
+    type: row.discount_type,
+    value: row.discount_value === null ? null : Number(row.discount_value),
+    minSubtotal: Number(row.min_subtotal),
+    maxDiscount: row.max_discount === null ? null : Number(row.max_discount),
+    startsAt: row.starts_at ? new Date(row.starts_at) : null,
+    endsAt: row.ends_at ? new Date(row.ends_at) : null,
+    maxUses: row.max_uses,
+    maxUsesPerCustomer: row.max_uses_per_customer,
+    isActive: row.is_active,
+    createdAt: new Date(row.created_at),
+    uses: Number(uses),
+  };
+}
+
+/** La fila de `validate_coupon()`: `numeric` llega como número o como texto según el cliente. */
+export function toCouponValidation(row: {
+  code: string;
+  discount_type: CouponTypeDb;
+  discount_amount: number;
+  description: string;
+}): CouponValidation {
+  return {
+    code: row.code,
+    type: row.discount_type,
+    discount: Number(row.discount_amount),
+    description: row.description,
   };
 }

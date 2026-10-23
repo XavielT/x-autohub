@@ -229,6 +229,64 @@ describe('Checkout', () => {
       expect(toast.show).toHaveBeenCalledWith('Pedido #1042 registrado.');
     });
 
+    describe('con un cupón', () => {
+      const CUPON = { code: 'BIENVENIDO10', type: 'percent' as const, discount: 200, description: '' };
+
+      it('el total estimado baja con el descuento, y la plantilla lo enseña', () => {
+        const { fixture, c, el } = hastaConfirmar();
+        const sinCupon = c.estimatedTotal();
+
+        c.coupon.set(CUPON);
+        fixture.detectChanges();
+
+        expect(c.discount()).toBe(200);
+        expect(c.estimatedTotal()).toBe(sinCupon - 200);
+        expect(el.textContent).toContain('Cupón BIENVENIDO10');
+      });
+
+      it('a create_order() solo viaja el código: el descuento lo calcula Postgres', () => {
+        const { c } = hastaConfirmar();
+        c.coupon.set(CUPON);
+
+        c.submitOrder();
+
+        const [payload] = create.mock.calls[0];
+        expect(payload.couponCode).toBe('BIENVENIDO10');
+        expect(JSON.stringify(payload)).not.toMatch(/discount|descuento|200/i);
+      });
+
+      it('sin cupón no viaja ningún código', () => {
+        const { c } = hastaConfirmar();
+
+        c.submitOrder();
+
+        expect(create.mock.calls[0][0].couponCode).toBeUndefined();
+      });
+
+      it('si Postgres descuenta distinto de lo que se vio, el aviso lo dice', () => {
+        create.mockReturnValue(
+          of({ id: 'o-1', orderNumber: 1042, subtotal: 2000, shippingPrice: 0, discount: 100, couponCode: 'BIENVENIDO10', total: 1900 }),
+        );
+        const { c } = hastaConfirmar();
+        c.coupon.set(CUPON);
+
+        c.submitOrder();
+
+        expect(toast.show.mock.calls[0][0]).toContain('Postgres lo calculó');
+      });
+
+      it('si el cupón falla al confirmar, el pedido no se crea y el mensaje sale tal cual', () => {
+        create.mockReturnValue(throwError(() => new Error('Este cupon ya se agoto.')));
+        const { c } = hastaConfirmar();
+        c.coupon.set(CUPON);
+
+        c.submitOrder();
+
+        expect(toast.show).toHaveBeenCalledWith('Este cupon ya se agoto.', 'error');
+        expect(cart.clearCart).not.toHaveBeenCalled();
+      });
+    });
+
     it('si el total de Postgres difiere del estimado, lo dice', () => {
       create.mockReturnValue(of({ id: 'o-1', orderNumber: 1042, subtotal: 2400, shippingPrice: 0, total: 2400 }));
       const { c } = hastaConfirmar();

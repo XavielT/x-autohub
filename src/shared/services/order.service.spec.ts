@@ -218,6 +218,103 @@ describe('OrderService (mock)', () => {
     });
   });
 
+  describe('cupones: el descuento lo calcula el servicio, como create_order()', () => {
+    const withCoupon = (couponCode: string, over: Partial<CheckoutSubmitPayload> = {}): CheckoutSubmitPayload => ({
+      ...PAYLOAD,
+      couponCode,
+      ...over,
+    });
+
+    it('descuenta, guarda el código en mayúsculas y el total cuadra', async () => {
+      const created = await firstValueFrom(
+        service.create(withCoupon(' bienvenido10 ', { shippingOptionId: 'express' }), [line({ id: 1, price: 1000 }, 2)]),
+      );
+
+      expect(created).toMatchObject({ subtotal: 2000, shippingPrice: 450, discount: 200, couponCode: 'BIENVENIDO10', total: 2250 });
+      expect(created.total).toBe(created.subtotal + created.shippingPrice - created.discount);
+    });
+
+    it('/pedido muestra el mismo descuento y el cupón', async () => {
+      const created = await firstValueFrom(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 }, 2)]));
+      const view = (await firstValueFrom(service.getOrder(created.id)))!;
+
+      expect(view).toMatchObject({ discount: 200, couponCode: 'BIENVENIDO10', total: created.total });
+    });
+
+    it('sin cupón (o con el código en blanco) el descuento es 0 y no hay código', async () => {
+      const none = await firstValueFrom(service.create(PAYLOAD, [line({ id: 1, price: 1000 })]));
+      const blank = await firstValueFrom(service.create(withCoupon('   '), [line({ id: 1, price: 1000 })]));
+
+      expect(none).toMatchObject({ discount: 0, couponCode: null });
+      expect(blank).toMatchObject({ discount: 0, couponCode: null });
+    });
+
+    it('un código que no existe rechaza el pedido entero: no queda ningún pedido nuevo', async () => {
+      const before = (await firstValueFrom(service.getMyOrders())).length;
+
+      expect(await errorOf(service.create(withCoupon('NOEXISTE'), [line({ id: 1, price: 1000 })]))).toBe(
+        'Ese cupon no existe o ya no esta disponible.',
+      );
+      expect((await firstValueFrom(service.getMyOrders())).length).toBe(before);
+    });
+
+    it('la compra mínima se exige al crear el pedido, aunque el checkout no la haya probado', async () => {
+      expect(await errorOf(service.create(withCoupon('DESCUENTO500'), [line({ id: 1, price: 1000 })]))).toBe(
+        'Este cupon pide una compra de al menos RD$ 3,000.',
+      );
+    });
+
+    it('un monto fijo enorme nunca deja el total en negativo', async () => {
+      service['coupons'].saveMock([
+        ...service['coupons'].mockCoupons,
+        { ...service['coupons'].mockCoupons[2], id: 99, code: 'GIGANTE', value: 99999, minSubtotal: 0, maxUses: null },
+      ]);
+
+      const created = await firstValueFrom(service.create(withCoupon('GIGANTE'), [line({ id: 1, price: 1000 })]));
+
+      expect(created.discount).toBe(1000);
+      expect(created.total).toBe(created.shippingPrice);
+    });
+
+    it('el envío gratis deja el total en el subtotal, y en un retiro no aplica', async () => {
+      const created = await firstValueFrom(
+        service.create(withCoupon('ENVIOGRATIS', { shippingOptionId: 'express' }), [line({ id: 1, price: 2500 })]),
+      );
+      expect(created).toMatchObject({ discount: 450, total: 2500 });
+
+      expect(
+        await errorOf(
+          service.create(withCoupon('ENVIOGRATIS', { fulfillment: 'pickup', shippingOptionId: 'pickup', addressLine1: '', province: '' }), [
+            line({ id: 1, price: 2500 }),
+          ]),
+        ),
+      ).toBe('Este cupon no aplica a tu pedido.');
+    });
+
+    it('un cupón de un uso por cliente: el mismo correo no lo repite, otro sí', async () => {
+      await firstValueFrom(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]));
+
+      expect(await errorOf(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupon.');
+      expect(
+        (await firstValueFrom(service.create(withCoupon('BIENVENIDO10', { contactEmail: 'otro@b.c' }), [line({ id: 1, price: 1000 })]))).discount,
+      ).toBe(100);
+    });
+
+    it('lo guardado sobrevive a una recarga: el límite se sigue acordando del correo', async () => {
+      await firstValueFrom(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]));
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [{ provide: AuthService, useValue: { user } }] });
+      const recargado = TestBed.inject(OrderService);
+
+      expect(await errorOf(recargado.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupon.');
+    });
+
+    it('el stock se valida antes que el cupón, como en la base', async () => {
+      expect(await errorOf(service.create(withCoupon('NOEXISTE'), [line({ id: 1, stock: 0 })]))).toContain('Se agoto');
+    });
+  });
+
   it('abrir WhatsApp deja constancia, solo la primera vez', async () => {
     const created = await firstValueFrom(service.create({ ...PAYLOAD, paymentMethodId: 'whatsapp' }, [line({ id: 1 })]));
 

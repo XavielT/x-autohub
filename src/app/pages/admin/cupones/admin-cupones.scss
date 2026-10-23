@@ -1,0 +1,6 @@
+@use '../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+// El código se lee en mayúsculas y con algo de aire, como en el checkout.
+.cpn-code { letter-spacing: 0.04em; text-transform: uppercase; }

@@ -35,6 +35,31 @@ export type OrderStatus =
 /** Cómo recibe el cliente el pedido. Migración 0018. */
 export type OrderFulfillmentDb = 'shipping' | 'pickup';
 
+/** El tipo de un cupón de descuento. Migración 0022. */
+export type CouponTypeDb = 'percent' | 'fixed' | 'free_shipping';
+
+/**
+ * Un cupón (migración 0022). **La tabla no se puede leer con la clave anon**: solo la lee
+ * y la escribe un admin; el público los prueba con `validate_coupon()`.
+ */
+export type CouponRow = {
+  id: number;
+  /** Mayúsculas, de 4 a 32 caracteres: `[A-Z0-9_-]`. Único. */
+  code: string;
+  description: string;
+  discount_type: CouponTypeDb;
+  /** Porcentaje (1 a 100) o monto en RD$. Nulo en `free_shipping`. */
+  discount_value: number | null;
+  min_subtotal: number;
+  max_discount: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  max_uses: number | null;
+  max_uses_per_customer: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 /** A qué se refiere una reseña. Migración 0020. */
 export type ReviewTargetDb = 'product' | 'service';
 
@@ -487,6 +512,12 @@ export type OrderRow = {
   total: number;
   status: OrderStatus;
   created_at: string;
+  // --- Migración 0022 (cupones) ---
+  /** RD$. `total = subtotal + shipping_price - discount`. */
+  discount: number;
+  coupon_id: number | null;
+  /** Copia del código: sigue ahí aunque se borre o se edite el cupón. */
+  coupon_code: string | null;
   /** El número que se le dice al cliente (#1042). Migración 0018. */
   order_number: number;
   fulfillment_type: OrderFulfillmentDb;
@@ -531,6 +562,8 @@ export type OrderViewJson = {
   wants_installation: boolean;
   subtotal: number;
   shipping_price: number;
+  discount: number;
+  coupon_code: string | null;
   total: number;
   created_at: string;
   has_proof: boolean;
@@ -799,6 +832,16 @@ export type Database = {
         Update: never;
         Relationships: ReviewRelationships;
       };
+      /**
+       * Cupones (migración 0022). Solo un admin lee y escribe; `anon` ni siquiera tiene el
+       * permiso de tabla.
+       */
+      coupons: {
+        Row: CouponRow;
+        Insert: Insert<CouponRow, 'code' | 'discount_type'>;
+        Update: Partial<CouponRow>;
+        Relationships: [];
+      };
       service_works: {
         Row: ServiceWorkRow;
         Insert: Insert<ServiceWorkRow, 'title'>;
@@ -1040,8 +1083,9 @@ export type Database = {
       /**
        * Crea un pedido (migración 0018): precios y envío de la base, stock
        * validado y descontado si es de inventario propio, estado
-       * `awaiting_payment`. Devuelve los totales **que calculó Postgres**: es lo que
-       * el cliente muestra.
+       * `awaiting_payment`. Con un cupón (migración 0022) lo revalida dentro de la
+       * transacción. Devuelve los totales **que calculó Postgres**: es lo que el
+       * cliente muestra.
        */
       create_order: {
         Args: {
@@ -1058,14 +1102,30 @@ export type Database = {
           p_fulfillment_type?: OrderFulfillmentDb;
           p_province?: string | null;
           p_wants_installation?: boolean;
+          p_coupon_code?: string | null;
         };
         Returns: {
           id: string;
           order_number: number;
           subtotal: number;
           shipping_price: number;
+          discount: number;
+          coupon_code: string | null;
           total: number;
         }[];
+      };
+      /**
+       * Cuánto descontaría un cupón con ese subtotal y envío. Solo calcula; la puede
+       * llamar un invitado y `create_order()` lo vuelve a validar (migración 0022).
+       */
+      validate_coupon: {
+        Args: { p_code: string; p_subtotal: number; p_shipping_price?: number; p_contact_email?: string | null };
+        Returns: { code: string; discount_type: CouponTypeDb; discount_amount: number; description: string }[];
+      };
+      /** Cuántas veces se usó cada cupón (sin contar los cancelados). `security invoker`. */
+      admin_coupon_usage: {
+        Args: Record<string, never>;
+        Returns: { coupon_id: number; uses: number }[];
       };
       /**
        * Promedio (1 decimal) y cuántas reseñas hay de cada estrella (`c1`…`c5`) de un
@@ -1171,6 +1231,7 @@ export type Database = {
       product_fulfillment: ProductFulfillmentDb;
       product_fitment_type: ProductFitmentTypeDb;
       review_target: ReviewTargetDb;
+      coupon_type: CouponTypeDb;
     };
     CompositeTypes: Record<string, never>;
   };

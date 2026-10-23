@@ -12,6 +12,7 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { CouponBox } from '../../../shared/components/coupon-box/coupon-box';
 import { CartService, StockIssue } from '../../../shared/services/cart.service';
 import { CheckoutOptionsService } from '../../../shared/services/checkout-options.service';
 import { OrderService } from '../../../shared/services/order.service';
@@ -29,6 +30,7 @@ import {
   CheckoutSubmitPayload,
   PICKUP_OPTION_ID,
 } from '../../../shared/models/checkout.model';
+import { CouponValidation } from '../../../shared/models/coupon.model';
 import { OrderFulfillment, PickupAddress } from '../../../shared/models/order.model';
 import { DO_LOCATIONS } from '../../../shared/data/locations';
 import { normalizeDrPhone } from '../../../shared/utils/phone';
@@ -65,7 +67,7 @@ interface RememberedCheckout {
  */
 @Component({
   selector: 'app-checkout',
-  imports: [DecimalPipe, RouterLink, FormsModule],
+  imports: [DecimalPipe, RouterLink, FormsModule, CouponBox],
   templateUrl: './checkout.html',
   styleUrl: './checkout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,8 +124,18 @@ export class Checkout implements OnInit {
 
   readonly shippingPrice = computed(() => this.selectedShipping()?.price ?? 0);
 
+  /**
+   * El cupón que probó el campo de cupón, o `null`. Lo que dice es una vista previa: al
+   * confirmar solo viaja el código y `create_order()` vuelve a validarlo y calcula.
+   */
+  readonly coupon = signal<CouponValidation | null>(null);
+
+  readonly discount = computed(() => this.coupon()?.discount ?? 0);
+
   /** Estimación: la definitiva la calcula Postgres al confirmar. */
-  readonly estimatedTotal = computed(() => this.cartService.totalPrice() + this.shippingPrice());
+  readonly estimatedTotal = computed(
+    () => this.cartService.totalPrice() + this.shippingPrice() - this.discount(),
+  );
 
   readonly selectedPayment = computed(
     () => this.paymentOptions().find((o) => o.id === this.selectedPaymentId()) ?? null,
@@ -302,6 +314,7 @@ export class Checkout implements OnInit {
       paymentMethodId: this.selectedPaymentId(),
       wantsInstallation: this.hasInstallable() && this.wantsInstallation(),
       orderNotes: this.orderNotes().trim() || undefined,
+      couponCode: this.coupon()?.code,
     };
 
     const estimate = this.estimatedTotal();

@@ -295,6 +295,9 @@
             }
           </ul>
 
+          <app-coupon-box [subtotal]="cartService.totalPrice()" [shipping]="shippingPrice()" [email]="email()"
+                          (appliedChange)="coupon.set($event)" />
+
           <div class="checkout__totals">
             <div class="checkout__total-row">
               <span>Subtotal</span>
@@ -306,6 +309,12 @@
                 @if (shippingPrice() === 0) { Gratis } @else { RD$ {{ shippingPrice() | number:'1.0-0' }} }
               </span>
             </div>
+            @if (coupon(); as c) {
+              <div class="checkout__total-row checkout__total-row--discount">
+                <span>Cupón {{ c.code }}</span>
+                <span>−RD$ {{ c.discount | number:'1.0-0' }}</span>
+              </div>
+            }
             <div class="checkout__divider"></div>
             <div class="checkout__total-row checkout__total-row--grand">
               <span>Total</span>

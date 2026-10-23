@@ -51,10 +51,11 @@ export class Admin {
       description: 'Historial de versiones del sitio',
     },
     { path: 'pedidos', label: 'Pedidos', description: 'Pedidos del catalogo y su estado' },
+    { path: 'cupones', label: 'Cupones', description: 'Codigos de descuento del checkout' },
     { path: 'taller', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
     { path: 'inventario', label: 'Inventario', description: 'Catalogo, Auto Hub y noticias' },
     { path: 'usuarios', label: 'Usuarios', description: 'Cuentas, verificacion y permisos' },
-    { path: 'ajustes', label: 'Ajustes', description: 'Que numeros muestra el home' },
+    { path: 'ajustes', label: 'Ajustes', description: 'Cuentas para transferir y direccion de retiro' },
   ];
 
   /**

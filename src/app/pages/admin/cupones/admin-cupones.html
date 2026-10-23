@@ -1,0 +1,132 @@
+<section class="tl">
+  <header class="tl__head tl__row">
+    <div>
+      <h2 class="tl__title">Cupones</h2>
+      <p class="tl__lead">
+        {{ coupons().length }} cupón(es), {{ activeCount() }} activo(s). El cliente escribe el código en el checkout.
+      </p>
+    </div>
+    @if (!draft()) { <button type="button" class="tl__btn tl__btn--small" (click)="newCoupon()">+ Nuevo cupón</button> }
+  </header>
+
+  @if (draft(); as d) {
+    <form class="tl__card" (submit)="$event.preventDefault(); save()" novalidate>
+      <h3 class="tl__name">{{ d.id === null ? 'Nuevo cupón' : 'Editar: ' + d.code }}</h3>
+
+      <div class="tl__form">
+        <label class="tl__field">
+          <span>Código <small class="tl__muted">(lo que escribe el cliente)</small></span>
+          <input class="tl__input cpn-code" type="text" name="code" maxlength="32" autocomplete="off" spellcheck="false"
+                 placeholder="BIENVENIDO10" [value]="d.code" (input)="setText('code', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Tipo</span>
+          <select class="tl__input" name="type" [value]="d.type" (change)="setType($event)">
+            @for (t of types; track t) { <option [value]="t" [selected]="d.type === t">{{ typeLabels[t] }}</option> }
+          </select>
+        </label>
+
+        @if (d.type === 'percent') {
+          <label class="tl__field">
+            <span>Porcentaje <small class="tl__muted">(1 a 100)</small></span>
+            <input class="tl__input" type="number" name="value" min="1" max="100" step="1" inputmode="numeric"
+                   [value]="d.value ?? ''" (input)="setNumber('value', $event)" />
+          </label>
+          <label class="tl__field">
+            <span>Descuento máximo RD$ <small class="tl__muted">(vacío = sin tope)</small></span>
+            <input class="tl__input" type="number" name="maxDiscount" min="1" step="50" inputmode="numeric"
+                   [value]="d.maxDiscount ?? ''" (input)="setNumber('maxDiscount', $event)" />
+          </label>
+        } @else if (d.type === 'fixed') {
+          <label class="tl__field">
+            <span>Monto del descuento RD$</span>
+            <input class="tl__input" type="number" name="value" min="1" step="50" inputmode="numeric"
+                   [value]="d.value ?? ''" (input)="setNumber('value', $event)" />
+          </label>
+        } @else {
+          <p class="tl__muted tl__field--wide">El envío gratis descuenta lo que cuesta el envío; en un retiro en el taller no aplica.</p>
+        }
+
+        <label class="tl__field tl__field--wide">
+          <span>Descripción <small class="tl__muted">(la ve el cliente al aplicarlo)</small></span>
+          <input class="tl__input" type="text" name="description" maxlength="140" [value]="d.description"
+                 (input)="setText('description', $event)" />
+        </label>
+
+        <label class="tl__field">
+          <span>Compra mínima RD$ <small class="tl__muted">(0 = sin mínimo)</small></span>
+          <input class="tl__input" type="number" name="minSubtotal" min="0" step="100" inputmode="numeric"
+                 [value]="d.minSubtotal" (input)="setMin($event)" />
+        </label>
+        <label class="tl__field">
+          <span>Empieza <small class="tl__muted">(vacío = ya)</small></span>
+          <input class="tl__input" type="datetime-local" name="startsAt" [value]="d.startsAt" (input)="setText('startsAt', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Vence <small class="tl__muted">(vacío = no vence)</small></span>
+          <input class="tl__input" type="datetime-local" name="endsAt" [value]="d.endsAt" (input)="setText('endsAt', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Usos en total <small class="tl__muted">(vacío = sin límite)</small></span>
+          <input class="tl__input" type="number" name="maxUses" min="1" step="1" inputmode="numeric"
+                 [value]="d.maxUses ?? ''" (input)="setNumber('maxUses', $event)" />
+        </label>
+        <label class="tl__field">
+          <span>Usos por cliente <small class="tl__muted">(vacío = sin límite)</small></span>
+          <input class="tl__input" type="number" name="maxUsesPerCustomer" min="1" step="1" inputmode="numeric"
+                 [value]="d.maxUsesPerCustomer ?? ''" (input)="setNumber('maxUsesPerCustomer', $event)" />
+        </label>
+        <label class="tl__field tl__field--check">
+          <input type="checkbox" name="isActive" [checked]="d.isActive" (change)="setActiveFlag($event)" />
+          Activo (se puede usar)
+        </label>
+      </div>
+
+      <p class="tl__muted">
+        El límite por cliente reconoce a la persona por su cuenta o, si compra sin cuenta, por su correo. Un invitado puede
+        cambiar de correo: para un tope firme usa también los usos en total.
+      </p>
+
+      <div class="tl__actions">
+        <button type="button" class="tl__btn tl__btn--ghost" (click)="cancel()" [disabled]="isSaving()">Cancelar</button>
+        <button type="submit" class="tl__btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando…' : 'Guardar' }}</button>
+      </div>
+    </form>
+  } @else if (isLoading()) {
+    <p class="tl__empty">Cargando los cupones...</p>
+  } @else if (coupons().length === 0) {
+    <p class="tl__empty">Todavía no hay cupones. Crea el primero con "+ Nuevo cupón".</p>
+  } @else {
+    <ul class="tl__list">
+      @for (c of coupons(); track c.id) {
+        <li class="tl__card" [class.is-off]="statusOf(c) !== 'active'">
+          <div class="tl__row">
+            <span class="tl__name cpn-code">{{ c.code }}</span>
+            <span class="tl__badge" [class.tl__badge--ok]="statusOf(c) === 'active'" [class.tl__badge--bad]="statusOf(c) !== 'active'">
+              {{ statusLabel(c) }}
+            </span>
+          </div>
+          <p class="tl__sub">
+            <strong>{{ valueText(c) }}</strong>
+            @if (c.description) { · {{ c.description }} }
+          </p>
+          @if (conditions(c).length > 0) {
+            <p class="tl__sub">{{ conditions(c).join(' · ') }}</p>
+          }
+          <p class="tl__sub">
+            Usado {{ c.uses }} {{ c.uses === 1 ? 'vez' : 'veces' }}@if (c.maxUses !== null) { de {{ c.maxUses }} }
+            @if (c.startsAt) { · desde {{ c.startsAt | date:'d MMM y' }} }
+            @if (c.endsAt) { · hasta {{ c.endsAt | date:'d MMM y' }} }
+          </p>
+          <div class="tl__actions">
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="edit(c)">Editar</button>
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="toggle(c)">{{ c.isActive ? 'Apagar' : 'Encender' }}</button>
+            <button type="button" class="tl__btn tl__btn--danger" [class.tl__btn--confirm]="confirmingDeleteId() === c.id" (click)="remove(c)">
+              {{ confirmingDeleteId() === c.id ? '¿Seguro? Toca otra vez' : 'Borrar' }}
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

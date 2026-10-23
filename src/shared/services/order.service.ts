@@ -11,17 +11,21 @@ import {
 } from '../models/order.model';
 import { UserOrderModel } from '../models/user-order.model';
 import { CHECKOUT_SHIPPING_OPTIONS_MOCK } from '../data/checkout-options.mock';
+import { MOCK_ORDERS_STORAGE_KEY } from '../data/mock-orders-usage';
 import { CartItem } from './cart.service';
 import { AuthService } from './auth.service';
+import { CouponService } from './coupon.service';
 import { StorageService } from './storage.service';
 
 /** Dónde guarda el modo simulado sus pedidos entre recargas. */
-const MOCK_STORAGE_KEY = 'x-autohub.mock-orders';
+const MOCK_STORAGE_KEY = MOCK_ORDERS_STORAGE_KEY;
 
 /** Un pedido del modo simulado: el mismo que ve /pedido/:id, y de quién es. */
 interface MockOrder {
   /** `null` = invitado. `'demo'` = de ejemplo, lo ve cualquiera con sesión. */
   userId: string | null;
+  /** El correo con el que compró: el límite de un cupón "por cliente" lo usa si no hay cuenta. */
+  email?: string;
   view: OrderView;
 }
 
@@ -53,6 +57,7 @@ export class OrderService {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthService);
   private readonly storage = inject(StorageService);
+  private readonly coupons = inject(CouponService);
 
   /**
    * Los pedidos del modo simulado. Viven en `localStorage` y no solo en memoria:
@@ -83,6 +88,7 @@ export class OrderService {
         p_fulfillment_type: payload.fulfillment,
         p_province: payload.province || null,
         p_wants_installation: payload.wantsInstallation,
+        p_coupon_code: payload.couponCode?.trim() || null,
       }),
     ).pipe(
       map((res) => unwrap(res)),
@@ -97,6 +103,8 @@ export class OrderService {
           orderNumber: order.order_number,
           subtotal: Number(order.subtotal),
           shippingPrice: Number(order.shipping_price),
+          discount: Number(order.discount),
+          couponCode: order.coupon_code,
           total: Number(order.total),
         };
       }),
@@ -227,6 +235,21 @@ export class OrderService {
     if (!shipping) return throwError(() => new Error('Metodo de envio no valido.'));
 
     const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
+
+    // El cupón, igual que `create_order()`: se valida aquí y no se confía en lo que enseñó
+    // el checkout. Un cupón que falla rechaza el pedido entero.
+    let discount = 0;
+    let couponCode: string | null = null;
+    if (payload.couponCode?.trim()) {
+      try {
+        const resolved = this.coupons.resolveMock(payload.couponCode, subtotal, shipping.price, payload.contactEmail);
+        discount = resolved.discount;
+        couponCode = resolved.coupon.code;
+      } catch (error) {
+        return throwError(() => error);
+      }
+    }
+
     const orderNumber = Math.max(1000, ...this.mockOrders.map((o) => o.view.orderNumber)) + 1;
     const createdAt = new Date();
     const status = 'awaiting_payment' as const;
@@ -240,7 +263,9 @@ export class OrderService {
       wantsInstallation: payload.wantsInstallation && items.some((i) => i.part.installable),
       subtotal,
       shippingPrice: shipping.price,
-      total: subtotal + shipping.price,
+      discount,
+      couponCode,
+      total: subtotal + shipping.price - discount,
       createdAt,
       hasProof: false,
       whatsappOpenedAt: null,
@@ -250,7 +275,10 @@ export class OrderService {
       history: [{ fromStatus: null, toStatus: status, note: null, createdAt }],
     };
 
-    this.mockOrders = [{ userId: this.auth.user()?.id ?? null, view }, ...this.mockOrders];
+    this.mockOrders = [
+      { userId: this.auth.user()?.id ?? null, email: payload.contactEmail.trim(), view },
+      ...this.mockOrders,
+    ];
     writeMockOrders(this.mockOrders);
 
     return of({
@@ -258,6 +286,8 @@ export class OrderService {
       orderNumber,
       subtotal: view.subtotal,
       shippingPrice: view.shippingPrice,
+      discount: view.discount,
+      couponCode: view.couponCode,
       total: view.total,
     });
   }
@@ -290,6 +320,8 @@ const DEMO_ORDERS = (): MockOrder[] => {
         wantsInstallation: false,
         subtotal: 15800,
         shippingPrice: 0,
+        discount: 0,
+        couponCode: null,
         total: 15800,
         createdAt: new Date('2026-08-09T15:20:00Z'),
         hasProof: true,
@@ -314,6 +346,8 @@ const DEMO_ORDERS = (): MockOrder[] => {
         wantsInstallation: false,
         subtotal: 3300,
         shippingPrice: 0,
+        discount: 0,
+        couponCode: null,
         total: 3300,
         createdAt: new Date('2026-08-12T11:05:00Z'),
         hasProof: false,
