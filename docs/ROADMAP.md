@@ -208,13 +208,30 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 - **Notificaciones push.** La PWA ya es instalable; falta avisar "tu pedido salió" o "tu
   cita se confirmó" (hoy el equipo escribe a mano). Pide una Edge Function y un permiso
   explícito del usuario.
-- **Variantes de producto (color, talla).** Un accesorio con tres colores hoy son tres
-  productos. Tocan el carrito, el stock y el pedido a la vez.
 - **Inventario multi-almacén** y **facturación con NCF.** Solo tienen sentido con más de un
   punto de venta y con volumen que obligue a facturar.
 - **Renderizado en servidor** (o prerender) para el SEO: hoy el JSON-LD y el contenido los
   pone JavaScript. Es un proyecto aparte.
 - **Trabajo nuevo en Social Hub**, que sigue sin desarrollarse a propósito.
+
+---
+
+## Variantes de producto (2.7.0) ✅
+
+Hecho: un producto con opciones (color, talla…), cada una con su propio stock; la ficha, la tarjeta, el
+carrito, el checkout y el pedido las dicen, y el panel las edita (`product_variants`, migración 0023). El
+stock del producto es la suma de las opciones activas. Ver "Variantes de producto" en `docs/BACKEND.md`.
+
+**Lo que queda fuera, a propósito (y por qué):**
+
+- **Una sola dimensión.** "Rojo / M" se escribe en el nombre. Una matriz color × talla con stock por celda
+  es otro proyecto, y casi todo accesorio es una cosa o la otra.
+- **Precio por opción.** Todas comparten el precio del producto: la tarjeta, el JSON-LD y los cupones hablan
+  de uno solo. Si una talla cuesta distinto, es otro producto.
+- **Fotos por opción.** La galería es del producto; que cambie al elegir un color pide una imagen por
+  opción en la tabla y en el formulario.
+- **Reseñas por opción.** Las reseñas son del producto.
+- **Elegir la opción desde la tarjeta.** Hoy el botón lleva a la ficha.
 
 ---
 

@@ -12,7 +12,7 @@ estructura, actualiza este archivo en el mismo commit.
 > pedidos" y el panel) y el taller (fase 5: catálogo de servicios, cotizar por WhatsApp,
 > agenda de citas, "Mis citas", trabajos realizados y las cuatro pestañas del taller
 > en el panel) y la PWA (fase 6: instalable, caché del shell y aviso de versión nueva). y, en la fase 7, las reseñas verificadas, el SEO de producto (JSON-LD, sitemap, robots) y la
-> limpieza del código muerto. Lo que sigue (pasarela de tarjeta, push, variantes, cupones) está en
+> limpieza del código muerto. Lo que sigue (pasarela de tarjeta, push) está en
 > `docs/ROADMAP.md`; el plan original, en `docs/PIVOT-2026-10.md`.
 
 ## Estructura de carpetas
@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0022 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0023 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -258,6 +258,25 @@ revisar cuando las fotos reales estén en Storage.
 - `vercel.json` fija `buildCommand: npm run build` para que el `prebuild` (el sitemap)
   corra también en Vercel.
 
+## Variantes de producto (color, talla…)
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `ProductVariantModel` | `shared/models/product.model.ts` | Una opción: nombre, SKU, **stock propio**, orden, si se ofrece. `ProductModel` gana `hasVariants` y `variantLabel` |
+| `ProductService.getVariants()` / `getVariantsFor()` | `shared/services` | Las opciones activas de un producto, o de varios en una sola lectura (el carrito) |
+| `CartItem.variant` | `shared/services/cart.service.ts` | Una línea del carrito es la pareja **producto + opción**: el mismo producto en dos colores son dos líneas. `addToCart()` devuelve `false` si el producto tiene opciones y no se eligió una. `lineStock()` y `lineName()` dicen el stock y el nombre de una línea |
+| `availabilityOf(producto, opción?)` | `shared/utils/product-availability.ts` | Con opción, las existencias son las de la opción; sin ella, la suma |
+| La ficha | `pages/producto` | Selector de opciones (`role="radiogroup"`); la agotada se marca y no se puede elegir; "Agregar" sin elegir pide elegir |
+| La tarjeta | `shared/components/catalogo-card` | Con opciones dice "Elige color" y el botón lleva a la ficha en vez de agregar |
+| `AdminCatalogService.getVariants()` / `saveVariants()` | `shared/services` | Lo del panel. `saveVariants` **no borra y reinserta** (una opción tiene identidad): compara con lo que había al abrir el formulario y solo toca lo que cambió, así que el stock de una opción no se pisa si alguien compró mientras estaba abierto |
+| `<app-variant-editor>` | `pages/admin/inventario/variant-editor` | La lista editable: nombre, existencias, SKU, "se ofrece", subir/bajar y quitar |
+| `variant-rules.ts` | `shared/utils` | Las reglas de la lista (nombre, repetidos, stock entero, SKU) para avisar antes de ir a la red |
+
+- **El stock de una pieza con opciones no se edita a mano**: el panel lo enseña como la suma y la
+  lista de piezas no ofrece el campo; lo recalcula un trigger de la base al guardar las opciones.
+- Si cambias la forma en que se descuenta el stock, cámbiala en `create_order()`, en `set_order_status()`
+  y en el modo simulado de `OrderService` (mismos mensajes que la base).
+
 ## Cupones y descuentos
 
 | Pieza | Dónde | Qué hace |
@@ -327,7 +346,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 
 ## Base de datos
 
-23 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
+24 tablas en Postgres. Ver `supabase/migrations/` y `docs/BACKEND.md`.
 
 | Grupo                | Tablas                                                        |
 | -------------------- | ------------------------------------------------------------- |
@@ -337,6 +356,7 @@ N", "Bajo pedido: llega en N días" y "Agotado"; la tarjeta y la ficha la leen d
 | Inventario propio    | `auto_hub_vehicles`, `hub_parts`, `services`, `news`           |
 | Comunidad            | `hub_market_items`, `social_posts`, `social_clubs`, `social_events` |
 | Comercio             | `shipping_options`, `payment_methods`, `orders`, `order_items` |
+| Opciones             | `product_variants` (color, talla…; cada una con su stock, y el del producto es la suma de las activas) |
 | Cupones              | `coupons` (solo admin; los pedidos guardan `discount`, `coupon_id` y una copia de `coupon_code`) |
 | Reseñas              | `reviews` (de productos y servicios; la compra verificada la calcula un trigger) |
 | Marketing            | `club_subscriptions`                                           |
@@ -368,7 +388,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 122 archivos, 1224 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 124 archivos, 1298 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

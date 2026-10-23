@@ -45,6 +45,7 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 20    | `supabase/migrations/0020_reviews.sql`         | Reseñas de productos y servicios, con compra verificada |
 | 21    | `supabase/migrations/0021_drop_legacy.sql`     | Se retiran `hub_parts.category` y el contador del home |
 | 22    | `supabase/migrations/0022_coupons.sql`         | Cupones y descuentos: tabla, `validate_coupon()` y `create_order()` con cupón |
+| 23    | `supabase/migrations/0023_product_variants.sql` | Variantes de producto (color, talla…): tabla con stock propio, trigger que suma, `create_order()`, `set_order_status()` y `search_products()` |
 | 23    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
@@ -471,6 +472,44 @@ monto en RD$) y `free_shipping` (descuenta el envío, no el subtotal). Con compr
   funcionaría contra la vieja.
 - **La base arranca sin cupones.** Los crea el equipo desde `/admin/cupones`; los de demostración
   de `coupon.mock.ts` solo existen en el modo simulado.
+
+### Variantes de producto (migración 0023)
+
+Un producto con **opciones** (color, talla…), cada una con su propio stock: "Alfombras all-weather"
+con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus reseñas.
+
+| Pieza | Para qué |
+| ----- | -------- |
+| `product_variants` | Las opciones: `name` (1 a 40, sin espacios a los lados, único por producto sin importar mayúsculas), `sku` opcional (único), `stock`, `sort_order`, `is_active`. La ve quien ve el producto; solo un admin escribe |
+| `hub_parts.variant_label` | Cómo se llama lo que se elige ("Color", "Talla"). Solo texto de la ficha |
+| `hub_parts.has_variants` y `stock` | **Los mantiene un trigger** (`product_variants_sync`): `has_variants` es "hay opciones activas" y `stock` es la **suma del stock de las activas**. Así la tarjeta, el filtro "solo en stock" y `search_products()` siguen diciendo la verdad sin tocar su lógica |
+| `order_items.variant_id` | Qué opción se compró (`on delete restrict`) |
+| `create_order()` | Misma firma; las opciones viajan dentro de `p_items` (`{part_id, quantity, variant_id}`). Valida y descuenta **en la opción** |
+| `set_order_status()` | Cancelar devuelve el stock a la opción, y lo de una línea sin opción, al producto |
+| `search_products()` | Devuelve también `has_variants` y `variant_label` (la tarjeta necesita saber si hay que elegir antes de agregar) |
+
+**Decisiones que conviene conocer**
+
+- **Una sola dimensión.** Una opción es un nombre ("Rojo", "Talla M", "Rojo / M"). Una matriz real (color ×
+  talla, con stock por celda) es otro proyecto, y casi todo accesorio es una cosa o la otra.
+- **Las opciones comparten el precio del producto.** La tarjeta, el JSON-LD y los cupones hablan de un solo
+  precio; enseñar "RD$ 1,000" para algo que en talla L cuesta 1,200 sería mentir. Si cuesta distinto, es
+  otro producto.
+- **Un producto con opciones activas exige elegir una al comprar, y uno sin opciones no acepta ninguna.**
+  `create_order()` lo comprueba por dentro (el navegador no manda precios, pero sí una opción).
+- **El nombre de la línea del pedido es "Producto · Opción"** y se congela como el resto
+  (`order_items.name`): el pedido, el panel y el WhatsApp lo muestran sin cambiar nada.
+- **Una opción que ya tuvo pedidos no se borra** (`restrict`): borrarla dejaría una línea que no sabe a qué
+  stock devolver si se cancela. Se apaga (`is_active = false`). Por lo mismo, un producto con pedidos de
+  opciones tampoco se puede borrar; se apaga. El panel lo hace solo: intenta borrar y, si la base lo
+  impide, apaga la opción y lo avisa.
+- **Si se apagan todas las opciones**, `has_variants` pasa a `false` y `stock` se queda como estaba (el
+  último que calculó el trigger), para que el panel lo vuelva a editar a mano.
+- **Las filas se bloquean siempre en el mismo orden** dentro de `create_order()`: primero las piezas, por id,
+  y luego las opciones, por id. Dos pedidos con las mismas cosas en distinto orden no se bloquean entre sí.
+- **Orden de despliegue: primero la migración, después el frontend.** `create_order()` conserva su firma, así
+  que el frontend anterior sigue funcionando (ningún producto tiene opciones hasta que el equipo cree la
+  primera), pero el frontend nuevo pide `has_variants` y `variant_label`, que antes no existían.
 
 ### Pedidos, pago y comprobantes (migración 0018)
 

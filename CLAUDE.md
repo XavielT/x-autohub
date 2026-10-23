@@ -146,7 +146,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 422 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 480 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -187,7 +187,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 122 archivos, 1224 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 124 archivos, 1298 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -217,6 +217,13 @@ Cosas que ya causaron un bug. No las repitas:
   mensajes: si cambias una, cambia la otra y las pruebas de `verify-migrations.sh`. El navegador
   manda solo el código, nunca un monto. La tabla `coupons` no la lee `anon` (si no, cualquiera
   descargaría los códigos), y los usos se cuentan de los pedidos no cancelados, no en un contador.
+- **El stock de un producto con opciones es derivado, y se descuenta en tres sitios.** `product_variants_sync`
+  deja `hub_parts.stock` como la suma de las opciones activas (y `has_variants`); no lo escribas a mano
+  ni lo mandes desde un formulario como si fuera libre. Lo que se descuenta o se devuelve de una
+  opción lo hacen `create_order()` y `set_order_status()` (y el modo simulado de `OrderService`): si
+  cambias uno, cambia los tres. Una opción con pedidos no se borra (`restrict`), se apaga; y
+  `saveVariants()` no borra y reinserta (los pedidos apuntan a la opción): compara con lo que había al
+  abrir el formulario y solo toca lo que cambió, para no pisar el stock de una compra reciente.
 - **Cambiar la firma de `create_order()` obliga a retirar la anterior**, o PostgREST responde
   `PGRST203`. Si el parámetro nuevo va al final con valor por defecto, el frontend viejo sigue
   funcionando contra la función nueva: se migra primero y se despliega después (lo contrario que
