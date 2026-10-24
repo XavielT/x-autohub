@@ -19,8 +19,6 @@ import { isIosSafari, isStandalone } from '../utils/pwa-env';
  */
 export type PushState = 'unsupported' | 'needs-install' | 'blocked' | 'off' | 'on';
 
-export type PushKind = 'order' | 'appointment';
-
 export interface PushResult {
   ok: boolean;
   /** Qué decirle a la persona si no salió. */
@@ -28,11 +26,11 @@ export interface PushResult {
 }
 
 /**
- * Avisos al dispositivo (Web Push): activarlos, desactivarlos, y —desde el panel— avisarle
- * a un cliente que su pedido o su cita cambió.
+ * Avisos al dispositivo (Web Push): activarlos y desactivarlos.
  *
- * Es el lado del navegador. Guardar el dispositivo es `register_push_subscription()` y avisar
- * es la Edge Function `send-push` (ver `docs/BACKEND.md`). El service worker de Angular
+ * Es el lado del navegador. Guardar el dispositivo es `register_push_subscription()`; avisar de un
+ * cambio de estado lo pide la base con un trigger (migración 0028) a la Edge Function `send-push`
+ * (ver `docs/BACKEND.md`). El service worker de Angular
  * muestra el aviso y abre la ruta al tocarlo; aquí no hay código para eso.
  *
  * `SwPush` es opcional a propósito: en desarrollo y en las pruebas no hay service worker.
@@ -147,25 +145,6 @@ export class PushService {
     } catch (error) {
       console.warn('[push] no se pudieron desactivar los avisos', error);
       return { ok: false, message: 'No pudimos desactivar los avisos. Intenta de nuevo.' };
-    }
-  }
-
-  /**
-   * Le avisa al dueño de un pedido o de una cita que cambió de estado. Solo lo llama el
-   * panel, justo después de un cambio de estado que salió bien; la función `send-push`
-   * comprueba que quien llama sea admin y arma el texto con lo que lee de la base.
-   *
-   * **Nunca falla**: el estado ya cambió, y un aviso que no sale no es motivo para decirle
-   * al equipo que el cambio falló. En modo simulado no hace nada.
-   */
-  async notify(kind: PushKind, id: string): Promise<void> {
-    if (this.supabase.shouldUseMockData() || !this.publicKey) return;
-
-    try {
-      const { error } = await this.supabase.db.functions.invoke('send-push', { body: { kind, id } });
-      if (error) console.warn('[push] no se pudo avisar al cliente', error);
-    } catch (error) {
-      console.warn('[push] no se pudo avisar al cliente', error);
     }
   }
 }

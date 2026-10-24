@@ -5,18 +5,21 @@
 // Corre en el Edge Runtime de Supabase (Deno), no en la app. Se despliega aparte y
 // **no** se compila con el resto del proyecto (los dos `tsconfig` solo miran `src/`).
 //
-// Que hace: recibe `{ kind: 'order' | 'appointment', id }`, comprueba que quien llama
-// es un admin, lee el pedido o la cita de la base, arma el aviso segun su estado
-// actual y lo manda a todos los dispositivos del dueño (`push_subscriptions`).
+// Que hace: recibe `{ kind: 'order' | 'appointment', id }`, comprueba quien llama, lee el
+// pedido o la cita de la base, arma el aviso segun su estado actual y lo manda a todos los
+// dispositivos del dueño (`push_subscriptions`).
 //
-// Lo llama el panel justo despues de `set_order_status()` / `set_appointment_status()`
-// (ver `push.service.ts`). Responde `{ sent, removed }` o `{ sent: 0, reason }`: nunca
-// falla de forma que le importe al panel, porque el estado ya cambio y un aviso que no
-// sale no es motivo para decirle al equipo que el cambio fallo.
+// La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
+// pg_net cuando cambia el estado de un pedido o de una cita, con la cabecera
+// `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
+// ya no usa el panel). Responde `{ sent, removed }` o `{ sent: 0, reason }`: nunca falla de
+// forma que le importe a quien llama, porque el estado ya cambio y un aviso que no sale no
+// es motivo para decir que el cambio fallo.
 //
-// **El navegador no dice que se avisa.** Solo dice cual pedido o cual cita; el texto, el
+// **Quien llama no dice que se avisa.** Solo dice cual pedido o cual cita; el texto, el
 // destinatario y el enlace salen de la base y de esta funcion. Por eso tampoco puede
-// usarse para escribirle a un tercero lo que sea, aunque alguien tuviera la sesion de un admin.
+// usarse para escribirle a un tercero lo que sea, aunque alguien tuviera la sesion de un admin
+// o el secreto.
 //
 // Secretos que espera (`supabase secrets set` — ver docs/BACKEND.md):
 //
@@ -24,11 +27,13 @@
 //                       `environment.vapidPublicKey` del frontend.
 //   VAPID_PRIVATE_KEY   la clave privada (base64url, 32 bytes). SOLO aqui.
 //   VAPID_SUBJECT       un contacto: `mailto:equipo@xautohubrd.com`.
+//   PUSH_WEBHOOK_SECRET el secreto que manda el trigger de la base en `x-push-secret` (el mismo
+//                       valor que `send_push_secret` en el Vault). Sin el, solo entra un admin.
 //   SITE_URL            opcional. Base de los enlaces y de los iconos.
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de la migracion **0024** (`push_subscriptions`). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`) y **0028** (el trigger que la llama). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -38,7 +43,7 @@ const TIME_ZONE = 'America/Santo_Domingo';
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-secret',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -99,6 +104,15 @@ async function rest<T>(supabaseUrl: string, key: string, path: string, init?: Re
     return null;
   }
   return res.status === 204 ? (null as T) : ((await res.json()) as T);
+}
+
+/** Compara dos textos sin cortarse en el primer caracter distinto (no filtra cuanto acerto quien adivina). */
+function sameSecret(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
 }
 
 /** ¿Quien llama es admin? Se le pregunta a la base con **su** sesion, no con la del servicio. */
@@ -166,9 +180,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const siteUrl = (Deno.env.get('SITE_URL') || DEFAULT_SITE_URL).replace(/\/+$/, '');
 
-  const authorization = req.headers.get('Authorization') ?? '';
-  if (!authorization || !(await callerIsAdmin(supabaseUrl, anonKey, authorization))) {
-    return refuse(403, 'forbidden');
+  // O la base (con el secreto compartido) o un admin con su sesion. Un secreto vacio o sin
+  // configurar no abre nada: si no hay `PUSH_WEBHOOK_SECRET`, solo queda el camino del admin.
+  const webhookSecret = Deno.env.get('PUSH_WEBHOOK_SECRET') ?? '';
+  const sentSecret = req.headers.get('x-push-secret') ?? '';
+  const fromDatabase = webhookSecret !== '' && sameSecret(sentSecret, webhookSecret);
+  if (!fromDatabase) {
+    const authorization = req.headers.get('Authorization') ?? '';
+    if (!authorization || !(await callerIsAdmin(supabaseUrl, anonKey, authorization))) {
+      return refuse(403, 'forbidden');
+    }
   }
 
   let input: { kind?: unknown; id?: unknown };

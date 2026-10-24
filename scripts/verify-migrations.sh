@@ -150,12 +150,12 @@ grant select, insert, update, delete on storage.objects to anon, authenticated, 
 --   · cron.schedule() hace upsert por nombre, como el de verdad;
 --   · vault.decrypted_secrets es una tabla simple.
 create schema net;
-create table net.calls (id bigserial primary key, url text not null);
+create table net.calls (id bigserial primary key, url text not null, body jsonb, headers jsonb);
 create function net.http_post(
   url text, body jsonb default '{}', params jsonb default '{}',
   headers jsonb default '{}', timeout_milliseconds integer default 5000
 ) returns bigint language sql as $$
-  insert into net.calls (url) values (url) returning id;
+  insert into net.calls (url, body, headers) values (url, body, headers) returning id;
 $$;
 create schema cron;
 create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
@@ -1619,6 +1619,49 @@ check "y el estado lo dice para que el panel lo avise" "false" \
 check "las dos funciones: anon no, un usuario con sesion si (y por dentro piden admin)" "false|true|false|true" \
   "select has_function_privilege('anon', 'public.site_rebuild_status()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.site_rebuild_status()', 'execute')::text || '|' || has_function_privilege('anon', 'public.request_site_rebuild()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.request_site_rebuild()', 'execute')::text;"
 
+echo "→ Los avisos push salen de la base (migracion 0028)"
+# El trigger no mira quien manda el cambio por el rol, sino por `auth.uid()`: aqui se finge con los
+# claims de la sesion (como PostgREST) sin cambiar de rol, para no depender de las reglas de
+# cada funcion de estado (ya comprobadas arriba).
+OW_ORDER="$(scalar "select id from orders where user_id = '$USER_A' limit 1;")"
+GUEST_ORDER="$(scalar "select id from orders where user_id is null limit 1;")"
+OW_APPT="$(scalar "select id from service_appointments where user_id = '$USER_A' limit 1;")"
+PN_COUNT0="create temp table if not exists pn0 (c bigint); truncate pn0; insert into pn0 select count(*) from net.calls;"
+PN_DELTA="select ((select count(*) from net.calls) - (select c from pn0))::text;"
+as_claims() { echo "set request.jwt.claim.sub = '$1';"; }
+check "hay un pedido de USER_A, uno de invitado y una cita de USER_A para probar" "1|1|1" \
+  "select (select least(count(*), 1) from orders where user_id = '$USER_A') || '|' || (select least(count(*), 1) from orders where user_id is null) || '|' || (select least(count(*), 1) from service_appointments where user_id = '$USER_A');"
+check "sin los secretos en el Vault, cambiar el estado funciona y no avisa" "0" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'paid' where id = '$OW_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "y el estado cambio" "paid" "select status from orders where id = '$OW_ORDER';"
+
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "un admin cambia el estado de un pedido con dueño: se pide un aviso" "1" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'preparing' where id = '$OW_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "va a la funcion, con kind, id, el JWT anon y el secreto" "https://f.example/functions/v1/send-push|order|true|Bearer anon-key|s3cr3t" \
+  "select url || '|' || (body->>'kind') || '|' || (body->>'id' = '$OW_ORDER')::text || '|' || (headers->>'Authorization') || '|' || (headers->>'x-push-secret') from net.calls order by id desc limit 1;"
+check "el cuerpo lleva solo el tipo y el id: el texto no sale de aqui" "2" \
+  "select count(*) from jsonb_object_keys((select body from net.calls order by id desc limit 1));"
+check "un update que no cambia el estado no avisa" "0" \
+  "$PN_COUNT0 update orders set status = status where id = '$OW_ORDER'; $PN_DELTA"
+check "un pedido de invitado no tiene a quien avisar: no se pide nada" "0" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'paid' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "un cliente que cambia lo suyo no se avisa a si mismo" "0" \
+  "$PN_COUNT0 $(as_claims "$USER_A") update orders set status = 'cancelled' where id = '$OW_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "una cita con dueño avisa como cita" "1|appointment" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'confirmed' where id = '$OW_APPT'; reset request.jwt.claim.sub; select (select count(*) from net.calls) - (select c from pn0) || '|' || (select body->>'kind' from net.calls order by id desc limit 1);"
+check "el dueño que cancela su cita no se avisa a si mismo" "0" \
+  "$PN_COUNT0 $(as_claims "$USER_A") update service_appointments set status = 'cancelled' where id = '$OW_APPT'; reset request.jwt.claim.sub; $PN_DELTA"
+check "si pg_net falla, el cambio de estado sigue adelante" "preparing" \
+  "alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; update orders set status = 'paid' where id = '$OW_ORDER'; update orders set status = 'preparing' where id = '$OW_ORDER'; select status from orders where id = '$OW_ORDER';"
+$PSQL -d postgres -c "drop function net.http_post(text, jsonb, jsonb, jsonb, integer); alter function net.http_post_ok(text, jsonb, jsonb, jsonb, integer) rename to http_post;" >/dev/null
+check "las dos funciones de pg_net quedaron como estaban" "1" "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'net' and p.proname = 'http_post';"
+check "el trigger no se invoca por rpc" "false|false" \
+  "select has_function_privilege('anon', 'public.notify_status_change()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.notify_status_change()', 'execute')::text;"
+check "hay un trigger en pedidos y otro en citas, solo por el estado" "1|1" \
+  "select (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
+$PSQL -d postgres -c "delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');" >/dev/null
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1890,11 +1933,20 @@ CHECK_DB=upgrade check "un solo trabajo de cron y una sola fire_site_rebuild" "1
 CHECK_DB=upgrade check "cambiar un precio despues de migrar si marca" "true"   "update hub_parts set price = price + 1 where id = 1; select (dirty_since is not null)::text from site_rebuild;"
 
 echo "→ Camino de actualizacion de la 0027: la base real ya tiene la 0026 y resenas al migrar"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0027_site_rebuild_panel.sql upgrade
+apply supabase/migrations/0027_site_rebuild_panel.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "queda un solo trigger de resenas y una sola de cada funcion" "1|1|1" \
   "select (select count(*) from pg_trigger where tgname = 'reviews_mark_site_dirty') || '|' || (select count(*) from pg_proc where proname = 'site_rebuild_status') || '|' || (select count(*) from pg_proc where proname = 'request_site_rebuild');"
+
+echo "→ Camino de actualizacion de la 0028: la base real ya tiene pedidos y citas al migrar"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con pedidos dentro)"
+CHECK_DB=upgrade check "un trigger en pedidos, uno en citas y una sola funcion" "1|1|1" \
+  "select (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status') || '|' || (select count(*) from pg_proc where proname = 'notify_status_change');"
+CHECK_DB=upgrade check "los pedidos de antes siguen ahi y migrar no los toco" "true" \
+  "select (count(*) > 0)::text from orders;"
 
 # --- Resumen ------------------------------------------------------------------
 

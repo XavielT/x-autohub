@@ -204,42 +204,4 @@ describe('PushService', () => {
       expect(service.state()).toBe('off');
     });
   });
-
-  describe('notify() (lo que usa el panel)', () => {
-    it('le pide a send-push avisar de un pedido o de una cita, solo con el id', async () => {
-      const service = montar();
-
-      await service.notify('order', 'abc');
-      await service.notify('appointment', 'def');
-
-      expect(invoke).toHaveBeenNthCalledWith(1, 'send-push', { body: { kind: 'order', id: 'abc' } });
-      expect(invoke).toHaveBeenNthCalledWith(2, 'send-push', { body: { kind: 'appointment', id: 'def' } });
-    });
-
-    it('en modo simulado no hace nada', async () => {
-      const service = montar({ mock: true });
-
-      await service.notify('order', 'abc');
-
-      expect(invoke).not.toHaveBeenCalled();
-    });
-
-    it('sin la clave del sitio tampoco llama a la función', async () => {
-      (environment as { vapidPublicKey?: string }).vapidPublicKey = '';
-      const service = montar();
-
-      await service.notify('order', 'abc');
-
-      expect(invoke).not.toHaveBeenCalled();
-    });
-
-    it('nunca falla, ni con un error de la función ni con una excepción', async () => {
-      const service = montar();
-      invoke.mockResolvedValueOnce({ data: null, error: new Error('500') });
-      await expect(service.notify('order', 'abc')).resolves.toBeUndefined();
-
-      invoke.mockRejectedValueOnce(new Error('sin red'));
-      await expect(service.notify('order', 'abc')).resolves.toBeUndefined();
-    });
-  });
 });

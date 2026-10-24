@@ -85,10 +85,10 @@ function reset() {
     devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
   };
 }
-const ask = async (body, token = 'token-admin', method = 'POST') => {
+const ask = async (body, token = 'token-admin', method = 'POST', extra = {}) => {
   const res = await handler(new Request('https://f.supabase.co/functions/v1/send-push', {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
     body: method === 'POST' ? JSON.stringify(body) : undefined,
   }));
   return { status: res.status, body: res.status === 204 ? null : await res.json() };
@@ -103,6 +103,30 @@ let r = await ask({ kind: 'order', id: ORDER_ID }, 'token-cliente');
 check('un cliente (no admin) recibe 403 y no se manda nada', r.status === 403 && r.body.reason === 'forbidden' && pushes().length === 0);
 r = await ask({ kind: 'order', id: ORDER_ID }, null);
 check('sin sesion tambien 403', r.status === 403);
+
+console.log('→ La base la llama con su secreto (migracion 0028)');
+reset();
+env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
+const isAdminCalls = () => calls.filter((c) => c.url.endsWith('/rest/v1/rpc/is_admin')).length;
+r = await ask({ kind: 'order', id: ORDER_ID }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('con el secreto correcto avisa, aunque el JWT sea el anon', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('y no le pregunta a la base si es admin', isAdminCalls() === 0);
+r = await ask({ kind: 'appointment', id: APPT_ID }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('tambien avisa de una cita', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+calls = [];
+r = await ask({ kind: 'order', id: ORDER_ID }, 'anon', 'POST', { 'x-push-secret': 'otro-secreto' });
+check('un secreto equivocado es 403 y no se manda nada', r.status === 403 && pushes().length === 0);
+r = await ask({ kind: 'order', id: ORDER_ID }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base-y-mas' });
+check('uno que solo empieza igual, tambien', r.status === 403);
+r = await ask({ kind: 'order', id: ORDER_ID }, 'token-cliente');
+check('con el secreto configurado, sin mandarlo, un cliente sigue sin entrar', r.status === 403);
+r = await ask({ kind: 'order', id: ORDER_ID }, 'token-admin');
+check('y un admin con su sesion sigue entrando', r.status === 200 && r.body.sent === 1);
+r = await ask({ kind: 'order', id: "1; drop table orders" }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('con el secreto tampoco se salta la validacion del id', r.status === 400);
+reset();
+r = await ask({ kind: 'order', id: ORDER_ID }, 'anon', 'POST', { 'x-push-secret': '' });
+check('sin PUSH_WEBHOOK_SECRET configurado, un secreto vacio no abre nada', r.status === 403 && pushes().length === 0);
 
 console.log('→ Lo que se le pide');
 reset();
