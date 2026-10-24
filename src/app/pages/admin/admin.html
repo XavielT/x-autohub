@@ -24,6 +24,10 @@
     }
   </nav>
 
+  @if (isAdmin()) {
+    <app-admin-publicar />
+  }
+
   <main class="admin__content">
     <router-outlet />
   </main>

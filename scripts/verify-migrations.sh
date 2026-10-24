@@ -1586,6 +1586,39 @@ check "ni invoca el trigger por rpc" "false|false|false|false" \
 check "un admin sigue editando el catalogo (el trigger escribe como definer, no como el)" "1" \
   "$(as_user "$ADMIN" "with u as (update hub_parts set price = price where id = 1 returning 1) select count(*) from u;")"
 
+echo "→ Publicar ahora desde el panel (migracion 0027)"
+check "una resena nueva marca el sitio (tambien la de un servicio, que no toca hub_parts)" "true" \
+  "$RB_RESET insert into reviews (target_type, target_id, user_id, rating) select 'service', min(id), '$ADMIN', 5 from services; $RB_DIRTY"
+check "y borrarla tambien" "true" \
+  "$RB_RESET delete from reviews where target_type = 'service' and user_id = '$ADMIN'; $RB_DIRTY"
+check "un admin lee el estado, con el enlace cargado" "true|0" \
+  "$(as_user "$ADMIN" "select hook_configured::text || '|' || fired_count from site_rebuild_status();")"
+check "el estado no devuelve el enlace, solo si existe" "false" \
+  "$(as_user "$ADMIN" "select (to_jsonb(s)::text like '%hook.example%')::text from site_rebuild_status() s;")"
+check "un usuario normal no lo lee" "ERROR:  Solo un administrador puede ver el estado de la publicacion." \
+  "$(as_user "$USER_A" 'select * from site_rebuild_status();')"
+check "anon no lo invoca" "$(denied site_rebuild_status)" "$(as_anon 'select * from site_rebuild_status();')"
+check "un usuario normal no publica" "ERROR:  Solo un administrador puede publicar el sitio." \
+  "$(as_user "$USER_A" 'select public.request_site_rebuild();')"
+check "anon no publica" "$(denied request_site_rebuild)" "$(as_anon 'select public.request_site_rebuild();')"
+check "un admin no publica si ya se pidio hace menos de un minuto" "too_soon" \
+  "update site_rebuild set last_fired_at = now() - interval '20 seconds'; $(as_user "$ADMIN" 'select public.request_site_rebuild();')"
+check "no hubo otra llamada" "3" "select count(*) from net.calls;"
+check "pasado el minuto, publica aunque no haya nada pendiente" "requested" \
+  "update site_rebuild set last_fired_at = now() - interval '2 minutes', dirty_since = null; $(as_user "$ADMIN" 'select public.request_site_rebuild();')"
+check "llamo al enlace, dejo el estado limpio y lo conto" "4|true|1" \
+  "select (select count(*) from net.calls) || '|' || (dirty_since is null and last_fired_at > now() - interval '1 minute')::text || '|' || fired_count from site_rebuild;"
+check "publicar tambien limpia lo que estaba pendiente" "false" \
+  "update site_rebuild set dirty_since = now() - interval '1 minute', last_change_at = now(), last_fired_at = now() - interval '2 minutes'; $(as_user "$ADMIN" 'select public.request_site_rebuild();') reset role; select (dirty_since is not null)::text from site_rebuild;"
+check "sin el enlace en el Vault, lo dice" "no_hook" \
+  "delete from vault.decrypted_secrets where name = 'vercel_deploy_hook'; update site_rebuild set last_fired_at = now() - interval '2 minutes'; $(as_user "$ADMIN" 'select public.request_site_rebuild();')"
+check "y no pidio nada (la llamada de arriba fue la quinta)" "5" \
+  "select count(*) from net.calls;"
+check "y el estado lo dice para que el panel lo avise" "false" \
+  "$(as_user "$ADMIN" 'select hook_configured::text from site_rebuild_status();')"
+check "las dos funciones: anon no, un usuario con sesion si (y por dentro piden admin)" "false|true|false|true" \
+  "select has_function_privilege('anon', 'public.site_rebuild_status()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.site_rebuild_status()', 'execute')::text || '|' || has_function_privilege('anon', 'public.request_site_rebuild()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.request_site_rebuild()', 'execute')::text;"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1849,12 +1882,19 @@ CHECK_DB=upgrade check "y una foto se guarda despues de migrar" "assets/imgs/x.j
 
 echo "→ Camino de actualizacion de la 0026: la base real ya tiene catalogo, pedidos y cuentas al migrar"
 CHECK_DB=upgrade check "antes de migrar no existe site_rebuild" "0"   "select count(*) from information_schema.tables where table_name = 'site_rebuild';"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0026_site_rebuild.sql upgrade
+apply supabase/migrations/0026_site_rebuild.sql upgrade
 echo "   (aplicada dos veces, con catalogo dentro)"
 CHECK_DB=upgrade check "queda una sola fila de estado, sin nada pendiente, y la migracion no la marco" "1|false"   "select (select count(*) from site_rebuild) || '|' || (select (dirty_since is not null)::text from site_rebuild);"
 CHECK_DB=upgrade check "un solo trabajo de cron y una sola fire_site_rebuild" "1|1"   "select (select count(*) from cron.job where jobname = 'site-rebuild') || '|' || (select count(*) from pg_proc where proname = 'fire_site_rebuild');"
 CHECK_DB=upgrade check "cambiar un precio despues de migrar si marca" "true"   "update hub_parts set price = price + 1 where id = 1; select (dirty_since is not null)::text from site_rebuild;"
+
+echo "→ Camino de actualizacion de la 0027: la base real ya tiene la 0026 y resenas al migrar"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "queda un solo trigger de resenas y una sola de cada funcion" "1|1|1" \
+  "select (select count(*) from pg_trigger where tgname = 'reviews_mark_site_dirty') || '|' || (select count(*) from pg_proc where proname = 'site_rebuild_status') || '|' || (select count(*) from pg_proc where proname = 'request_site_rebuild');"
 
 # --- Resumen ------------------------------------------------------------------
 

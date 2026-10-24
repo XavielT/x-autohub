@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../shared/services/auth.service';
+import { AdminPublicar } from './publicar/admin-publicar';
 
 interface AdminSection {
   path: string;
@@ -24,7 +25,7 @@ interface AdminSection {
  */
 @Component({
   selector: 'app-admin',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminPublicar],
   templateUrl: './admin.html',
   styleUrl: './admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

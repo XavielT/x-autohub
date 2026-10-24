@@ -1,0 +1,32 @@
+<section class="adm-pub" aria-label="Publicacion del sitio">
+  @if (status(); as s) {
+    <div class="adm-pub__text">
+      @if (!s.hookConfigured) {
+        <p class="adm-pub__line adm-pub__line--warn">
+          Falta el enlace de publicacion: los cambios no se publican solos.
+        </p>
+      } @else if (s.pendingSince) {
+        <p class="adm-pub__line adm-pub__line--pending">
+          Hay cambios sin publicar desde hace {{ pendingMinutes() }} min. Se publican solos unos minutos despues del
+          ultimo cambio.
+        </p>
+      } @else {
+        <p class="adm-pub__line">El sitio esta al dia.</p>
+      }
+
+      @if (s.lastFiredAt) {
+        <p class="adm-pub__meta">Ultima publicacion pedida: {{ s.lastFiredAt | date: 'd MMM, h:mm a' }}</p>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="adm-pub__btn"
+      [disabled]="isSending() || !s.hookConfigured"
+      (click)="publishNow()">
+      {{ isSending() ? 'Pidiendo...' : 'Publicar ahora' }}
+    </button>
+  } @else if (failed()) {
+    <p class="adm-pub__line adm-pub__line--warn">No pudimos leer el estado de la publicacion.</p>
+  }
+</section>

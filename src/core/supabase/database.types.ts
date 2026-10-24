@@ -270,6 +270,15 @@ export type PushSubscriptionRow = {
   created_at: string;
 }
 
+/** Fila que devuelve `site_rebuild_status()` (migración 0027), no un select: la tabla no se lee desde el navegador. */
+export type SiteRebuildStatusRow = {
+  dirty_since: string | null;
+  last_change_at: string | null;
+  last_fired_at: string | null;
+  fired_count: number;
+  hook_configured: boolean;
+}
+
 /** Dos niveles como máximo: `parent_id` nulo es primer nivel. Migración 0017. */
 export type ProductCategoryRow = {
   id: number;
@@ -1044,6 +1053,16 @@ export type Database = {
       admin_list_users: {
         Args: Record<string, never>;
         Returns: AdminUserRow[];
+      };
+      /** Solo admin: si hay cambios sin publicar y si el enlace del hook está cargado (migración 0027). */
+      site_rebuild_status: {
+        Args: Record<string, never>;
+        Returns: SiteRebuildStatusRow[];
+      };
+      /** Solo admin: "Publicar ahora". Devuelve `requested`, `too_soon` o `no_hook` (migración 0027). */
+      request_site_rebuild: {
+        Args: Record<string, never>;
+        Returns: string;
       };
       /**
        * Da o quita admin y verificado a otro usuario.
