@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0026 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0027 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -336,6 +336,8 @@ formularios) sigue en el navegador.
 | `AdminCouponsService` | `shared/services` | Crear, editar, apagar y borrar (`/admin/cupones`); la lista trae los usos (`admin_coupon_usage()`) |
 | `coupon-rules.ts` | `shared/utils` | **Espejo de `coupon_check()`**: mismas reglas, mismo orden, mismos mensajes. Lo usa el modo simulado y valida el formulario del panel |
 | `<app-coupon-box>` | `shared/components/coupon-box` | Prueba el código, enseña el ahorro y, con un cupón puesto, **lo vuelve a probar** si cambia el subtotal, el envío o el correo (un envío gratis deja de valer al pasar a retiro) |
+| `SiteRebuildService` | `shared/services` | `site_rebuild_status()` y `request_site_rebuild()` (solo admin): si hay cambios del catálogo sin publicar y "Publicar ahora". En modo simulado el estado vive en memoria |
+| `AdminPublicar` | `pages/admin/publicar` | La barra de arriba de `/admin` (solo admins, no moderadores): "El sitio está al día" / "Hay cambios sin publicar desde hace N min", la última publicación y el botón "Publicar ahora" |
 | `AdminCupones` | `pages/admin/cupones` | La pestaña del panel: estado de cada cupón (activo, apagado, vencido, por empezar, agotado) y su formulario |
 
 - **El checkout manda solo el código** (`CheckoutSubmitPayload.couponCode`); el descuento que se ve
@@ -440,7 +442,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 130 archivos, 1360 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 132 archivos, 1371 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

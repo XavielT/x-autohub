@@ -211,17 +211,19 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 
 ---
 
-## Republicación automática (2.11.0) ✅
+## Republicación automática (2.11.0 y 2.12.0) ✅
 
 Hecho: un cambio de producto, opción, categoría, servicio o ajuste del sitio hace que la base pida un despliegue a Vercel
 (*deploy hook*) 3 minutos después del último cambio, con un tope de uno cada 10 minutos. Las compras no cuentan (solo el
 stock que llega a cero o sale de él). Ver "Republicar el sitio" en `docs/BACKEND.md`.
 
+La 2.12.0 le sumó la barra de `/admin` (hay cambios sin publicar o el sitio está al día) con el botón "Publicar ahora", y que una
+reseña nueva o borrada también cuente.
+
 **Lo que queda fuera:**
 
-- **Un botón "Publicar ahora" en el panel**, y que `/admin` muestre si hay cambios pendientes. Hoy se mira con SQL.
-- **Que reseñas nuevas republiquen.** El JSON-LD `aggregateRating` sale del build; una reseña nueva aparece cuando haya otro
-  despliegue por otro motivo.
+- **Saber si el build terminó bien.** La barra dice cuándo se *pidió* el despliegue, no si Vercel lo completó o lo rechazó
+  (`verify-prerender.mjs`). Para eso habría que leer la API de Vercel o recibir un webhook de vuelta.
 
 ---
 

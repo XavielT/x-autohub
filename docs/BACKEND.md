@@ -49,7 +49,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 24    | `supabase/migrations/0024_push_subscriptions.sql` | Notificaciones push: los dispositivos de cada usuario y `register_push_subscription()` |
 | 25    | `supabase/migrations/0025_variant_images.sql`  | Foto por opción: `product_variants.image_url` |
 | 26    | `supabase/migrations/0026_site_rebuild.sql`    | Republicar el sitio cuando cambia el catálogo: estado, triggers, `fire_site_rebuild()` y el cron |
-| 27    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 27    | `supabase/migrations/0027_site_rebuild_panel.sql` | "Publicar ahora": `site_rebuild_status()`, `request_site_rebuild()` y el trigger de reseñas |
+| 28    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -607,12 +608,18 @@ cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstru
 - **El hook reconstruye `main`**, no tu carpeta de trabajo. Un cambio de catálogo publica los datos nuevos con el código que
   esté en `main`, que por la regla de las versiones es siempre el último release. Si el build falla (`verify-prerender.mjs`),
   Vercel conserva el despliegue anterior y el estado queda limpio igual: el siguiente cambio vuelve a intentarlo.
-- **El panel no se entera.** No hay botón ni aviso en `/admin`: es un proceso de fondo. Para ver qué pasa:
-  `select * from site_rebuild;` y `select public.fire_site_rebuild();` (si no toca, te dice por qué).
+- **El panel lo muestra y lo puede pedir (migración 0027).** La barra de `/admin` (solo admins) dice si hay cambios sin publicar
+  y trae "Publicar ahora". Lo hacen dos funciones `security definer` que piden `is_admin()` por dentro:
+  `site_rebuild_status()` (cuándo empezaron los cambios, el último despliegue, y si el enlace del hook **existe**, nunca el enlace)
+  y `request_site_rebuild()`, que devuelve `requested`, `too_soon` o `no_hook`. "Publicar ahora" se salta los 3 minutos de
+  silencio pero no pide dos despliegues con menos de **1 minuto** de por medio, y publica aunque no haya nada pendiente
+  (sirve para reintentar un build que falló). Una reseña nueva o borrada también marca el sitio (el `aggregateRating` sale del
+  build). A mano: `select * from site_rebuild;` y `select public.fire_site_rebuild();`.
 - **Probado con `pg_net`, `pg_cron` y Vault de mentira.** `verify-migrations.sh` los reemplaza por un esquema mínimo que anota
   las llamadas; comprueba la lógica (qué marca, cuándo dispara, permisos), **no** que Vercel reciba el POST. Eso se ve en el
   primer despliegue real.
-- **Orden de despliegue:** migración → crear el hook en Vercel → cargarlo en el Vault. No hay cambios de frontend.
+- **Orden de despliegue:** 0026 → crear el hook en Vercel → cargarlo en el Vault. La 0027 va **antes** del frontend (la barra
+  llama a sus funciones); el frontend anterior no sabe nada de ella.
 
 **Puesta en marcha (una sola vez)**
 
