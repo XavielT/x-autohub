@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, catchError, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { SiteRebuildStatusRow } from '../../core/supabase/database.types';
 import { unwrap } from '../../core/supabase/supabase-error';
-import { SiteRebuildResult, SiteRebuildStatus } from '../models/site-rebuild.model';
+import { SiteBuild, SiteBuildState, SiteRebuildResult, SiteRebuildStatus } from '../models/site-rebuild.model';
 
 /** Lo mismo que `c_min_gap` de `request_site_rebuild()`: un doble clic no pide dos despliegues. */
 const MIN_GAP_MS = 60_000;
@@ -45,6 +45,27 @@ export class SiteRebuildService {
     );
   }
 
+  /**
+   * Cómo va el último despliegue de producción, preguntándoselo a Vercel por la Edge Function
+   * `build-status` (solo admin). `null` cuando no se puede saber: modo simulado, la función sin
+   * desplegar o sin su token, Vercel caído. **Nunca falla**: la barra es informativa y sin esto
+   * sigue diciendo lo que ya sabía (cuándo se pidió el despliegue).
+   */
+  getBuild(): Observable<SiteBuild | null> {
+    if (this.supabase.shouldUseMockData()) return of(null);
+
+    return from(this.supabase.db.functions.invoke('build-status')).pipe(
+      map(({ data, error }) => {
+        if (error) console.warn('[build-status] no se pudo leer el despliegue', error);
+        return error ? null : toBuildFromResponse(data);
+      }),
+      catchError((error) => {
+        console.warn('[build-status] no se pudo leer el despliegue', error);
+        return of(null);
+      }),
+    );
+  }
+
   /** "Publicar ahora": pide el despliegue sin esperar a que el panel se calle. */
   requestNow(): Observable<SiteRebuildResult> {
     if (this.supabase.shouldUseMockData()) {
@@ -69,6 +90,23 @@ const EMPTY_STATUS: SiteRebuildStatus = {
   fireCount: 0,
   hookConfigured: false,
 };
+
+const BUILD_STATES: readonly SiteBuildState[] = ['queued', 'building', 'ready', 'error', 'canceled', 'unknown'];
+
+/** La respuesta de `build-status` → un `SiteBuild`, o `null` si no trae un despliegue que enseñar. */
+export function toBuildFromResponse(data: unknown): SiteBuild | null {
+  const body = data as { configured?: boolean; available?: boolean; build?: Partial<SiteBuild> } | null;
+  if (!body?.configured || !body.available || !body.build) return null;
+
+  const { build } = body;
+  return {
+    state: BUILD_STATES.includes(build.state as SiteBuildState) ? (build.state as SiteBuildState) : 'unknown',
+    createdAt: build.createdAt ?? null,
+    readyAt: build.readyAt ?? null,
+    message: build.message ?? '',
+    inspectorUrl: build.inspectorUrl ?? null,
+  };
+}
 
 export function toStatus(row: SiteRebuildStatusRow): SiteRebuildStatus {
   return {

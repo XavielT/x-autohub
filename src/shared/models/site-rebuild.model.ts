@@ -20,3 +20,19 @@ export interface SiteRebuildStatus {
  * menos de un minuto) o `no_hook` (falta el enlace en el Vault).
  */
 export type SiteRebuildResult = 'requested' | 'too_soon' | 'no_hook';
+
+/** Cómo va un despliegue de producción en Vercel (Edge Function `build-status`). */
+export type SiteBuildState = 'queued' | 'building' | 'ready' | 'error' | 'canceled' | 'unknown';
+
+/** El último despliegue de producción: lo que la barra del panel enseña. */
+export interface SiteBuild {
+  state: SiteBuildState;
+  /** Cuándo se creó (ISO). */
+  createdAt: string | null;
+  /** Cuándo quedó listo (ISO). Solo si terminó bien. */
+  readyAt: string | null;
+  /** La primera línea del mensaje del commit que se desplegó. */
+  message: string;
+  /** Enlace al despliegue en Vercel, para ver por qué falló. Siempre de vercel.com. */
+  inspectorUrl: string | null;
+}

@@ -14,7 +14,38 @@
         <p class="adm-pub__line">El sitio esta al dia.</p>
       }
 
-      @if (s.lastFiredAt) {
+      @if (build(); as b) {
+        @switch (b.state) {
+          @case ('queued') {
+            <p class="adm-pub__meta adm-pub__meta--busy" role="status">En cola en Vercel...</p>
+          }
+          @case ('building') {
+            <p class="adm-pub__meta adm-pub__meta--busy" role="status">Construyendo la version nueva...</p>
+          }
+          @case ('ready') {
+            <p class="adm-pub__meta">
+              Ultimo despliegue: listo
+              @if (b.readyAt) {
+                el {{ b.readyAt | date: 'd MMM, h:mm a' }}
+              }
+              @if (b.message) {
+                · {{ b.message }}
+              }
+            </p>
+          }
+          @case ('error') {
+            <p class="adm-pub__meta adm-pub__meta--error" role="alert">
+              El ultimo despliegue fallo: el sitio sigue con la version anterior.
+              @if (b.inspectorUrl) {
+                <a [href]="b.inspectorUrl" target="_blank" rel="noopener noreferrer">Ver por que en Vercel</a>
+              }
+            </p>
+          }
+          @case ('canceled') {
+            <p class="adm-pub__meta">El ultimo despliegue se cancelo.</p>
+          }
+        }
+      } @else if (s.lastFiredAt) {
         <p class="adm-pub__meta">Ultima publicacion pedida: {{ s.lastFiredAt | date: 'd MMM, h:mm a' }}</p>
       }
     </div>
@@ -22,9 +53,9 @@
     <button
       type="button"
       class="adm-pub__btn"
-      [disabled]="isSending() || !s.hookConfigured"
+      [disabled]="isSending() || isBuilding() || !s.hookConfigured"
       (click)="publishNow()">
-      {{ isSending() ? 'Pidiendo...' : 'Publicar ahora' }}
+      {{ isSending() ? 'Pidiendo...' : isBuilding() ? 'Publicando...' : 'Publicar ahora' }}
     </button>
   } @else if (failed()) {
     <p class="adm-pub__line adm-pub__line--warn">No pudimos leer el estado de la publicacion.</p>

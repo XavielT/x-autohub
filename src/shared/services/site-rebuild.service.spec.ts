@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { SiteRebuildService, toResult, toStatus } from './site-rebuild.service';
+import { SiteRebuildService, toBuildFromResponse, toResult, toStatus } from './site-rebuild.service';
 
 describe('SiteRebuildService (migración 0027)', () => {
   let service: SiteRebuildService;
@@ -51,6 +51,36 @@ describe('SiteRebuildService (migración 0027)', () => {
       lastFiredAt: null,
       fireCount: 3,
       hookConfigured: false,
+    });
+  });
+
+  it('en modo simulado no hay despliegue que leer', async () => {
+    expect(await firstValueFrom(service.getBuild())).toBeNull();
+  });
+
+  describe('toBuildFromResponse (la respuesta de build-status)', () => {
+    const build = { state: 'ready', createdAt: '2026-10-24T20:00:00Z', readyAt: '2026-10-24T20:01:00Z', message: 'Bump', inspectorUrl: null };
+
+    it('un despliegue disponible se traduce tal cual', () => {
+      expect(toBuildFromResponse({ configured: true, available: true, build })).toEqual(build);
+    });
+
+    it('sin configurar, sin disponible o sin despliegue es null (no hay nada que enseñar)', () => {
+      expect(toBuildFromResponse({ configured: false })).toBeNull();
+      expect(toBuildFromResponse({ configured: true, available: false })).toBeNull();
+      expect(toBuildFromResponse({ configured: true, available: true })).toBeNull();
+      expect(toBuildFromResponse(null)).toBeNull();
+      expect(toBuildFromResponse('x')).toBeNull();
+    });
+
+    it('un estado que no se conoce cae en unknown y los campos que faltan en vacio', () => {
+      expect(toBuildFromResponse({ configured: true, available: true, build: { state: 'raro' } })).toEqual({
+        state: 'unknown',
+        createdAt: null,
+        readyAt: null,
+        message: '',
+        inspectorUrl: null,
+      });
     });
   });
 

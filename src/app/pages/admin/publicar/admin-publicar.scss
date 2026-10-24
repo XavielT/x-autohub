@@ -36,6 +36,20 @@
     color: var(--text-soft);
   }
 
+  &__meta--busy {
+    color: var(--Hub);
+  }
+
+  &__meta--error {
+    color: var(--HubDark);
+
+    a {
+      margin-left: 6px;
+      color: inherit;
+      text-decoration: underline;
+    }
+  }
+
   &__btn {
     font-family: var(--font-btns);
     background-color: var(--Hub);

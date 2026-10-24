@@ -4,7 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AdminPublicar } from './admin-publicar';
 import { SiteRebuildService } from '../../../../shared/services/site-rebuild.service';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { SiteRebuildResult, SiteRebuildStatus } from '../../../../shared/models/site-rebuild.model';
+import { SiteBuild, SiteRebuildResult, SiteRebuildStatus } from '../../../../shared/models/site-rebuild.model';
 
 const AL_DIA: SiteRebuildStatus = {
   pendingSince: null,
@@ -14,15 +14,31 @@ const AL_DIA: SiteRebuildStatus = {
   hookConfigured: true,
 };
 
+const build = (patch: Partial<SiteBuild> = {}): SiteBuild => ({
+  state: 'ready',
+  createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+  readyAt: new Date(Date.now() - 4 * 60_000).toISOString(),
+  message: 'Bump version to 2.13.0',
+  inspectorUrl: null,
+  ...patch,
+});
+
 describe('AdminPublicar', () => {
-  function montar(opts: { status?: SiteRebuildStatus; result?: SiteRebuildResult; fail?: boolean } = {}) {
+  afterEach(() => vi.useRealTimers());
+
+  function montar(
+    opts: { status?: SiteRebuildStatus; result?: SiteRebuildResult; fail?: boolean; builds?: (SiteBuild | null)[] } = {},
+  ) {
     const requestNow = vi.fn(() => of<SiteRebuildResult>(opts.result ?? 'requested'));
     const getStatus = vi.fn(() => (opts.fail ? throwError(() => new Error('x')) : of(opts.status ?? AL_DIA)));
     const show = vi.fn();
+    // Cada pregunta por el despliegue saca la siguiente de la lista; la ultima se repite.
+    const queue = [...(opts.builds ?? [null])];
+    const getBuild = vi.fn(() => of(queue.length > 1 ? queue.shift()! : queue[0]));
 
     TestBed.configureTestingModule({
       providers: [
-        { provide: SiteRebuildService, useValue: { getStatus, requestNow } },
+        { provide: SiteRebuildService, useValue: { getStatus, requestNow, getBuild } },
         { provide: ToastService, useValue: { show } },
       ],
     });
@@ -30,7 +46,7 @@ describe('AdminPublicar', () => {
     const fixture = TestBed.createComponent(AdminPublicar);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    return { fixture, el, requestNow, getStatus, show };
+    return { fixture, el, requestNow, getStatus, getBuild, show };
   }
 
   it('sin cambios dice que el sitio esta al dia', () => {
@@ -56,7 +72,7 @@ describe('AdminPublicar', () => {
 
     expect(requestNow).toHaveBeenCalledTimes(1);
     expect(show).toHaveBeenCalledWith(expect.stringContaining('Publicacion pedida'));
-    expect(getStatus).toHaveBeenCalledTimes(2);
+    expect(getStatus.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('si ya se pidio hace un momento, lo dice como error', () => {
@@ -71,5 +87,92 @@ describe('AdminPublicar', () => {
     const { el } = montar({ fail: true });
     expect(el.textContent).toContain('No pudimos leer el estado');
     expect(el.querySelector('button')).toBeNull();
+  });
+
+  describe('el estado del despliegue (build-status)', () => {
+    it('un despliegue listo dice cuando y con que mensaje', () => {
+      const { el } = montar({ builds: [build()] });
+      expect(el.textContent).toContain('Ultimo despliegue: listo');
+      expect(el.textContent).toContain('Bump version to 2.13.0');
+    });
+
+    it('uno que fallo avisa que el sitio sigue con la version anterior, con el enlace a Vercel', () => {
+      const { el } = montar({ builds: [build({ state: 'error', readyAt: null, inspectorUrl: 'https://vercel.com/equipo/x/abc' })] });
+
+      expect(el.textContent).toContain('El ultimo despliegue fallo');
+      expect(el.querySelector('[role=alert] a')?.getAttribute('href')).toBe('https://vercel.com/equipo/x/abc');
+    });
+
+    it('sin saber nada del despliegue (null) no dibuja esa linea y sigue diciendo lo de antes', () => {
+      const { el } = montar({ status: { ...AL_DIA, lastFiredAt: '2026-10-24T20:00:00Z' }, builds: [null] });
+
+      expect(el.textContent).not.toContain('despliegue');
+      expect(el.textContent).toContain('Ultima publicacion pedida');
+    });
+
+    it('mientras se construye, lo dice, bloquea el boton y vuelve a preguntar hasta que termina', () => {
+      vi.useFakeTimers();
+      const { el, getBuild, fixture } = montar({
+        builds: [build({ state: 'building', readyAt: null }), build({ state: 'building', readyAt: null }), build()],
+      });
+
+      expect(el.textContent).toContain('Construyendo la version nueva');
+      expect((el.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
+      expect(getBuild).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(10_000);
+      expect(getBuild).toHaveBeenCalledTimes(2);
+
+      vi.advanceTimersByTime(10_000);
+      fixture.detectChanges();
+      expect(getBuild).toHaveBeenCalledTimes(3);
+      expect(el.textContent).toContain('Ultimo despliegue: listo');
+      expect((el.querySelector('button') as HTMLButtonElement).disabled).toBe(false);
+
+      // Ya termino: no se sigue preguntando.
+      vi.advanceTimersByTime(60_000);
+      expect(getBuild).toHaveBeenCalledTimes(3);
+    });
+
+    it('despues de Publicar ahora espera el despliegue nuevo, aunque primero llegue el viejo', () => {
+      vi.useFakeTimers();
+      const viejo = build();
+      const nuevo = build({ state: 'ready', createdAt: new Date(Date.now() + 5_000).toISOString() });
+      const { el, getBuild, fixture } = montar({ builds: [viejo, viejo, nuevo] });
+
+      (el.querySelector('button') as HTMLButtonElement).click();
+      // 1 lectura al abrir + 1 al pedir: lo que llega es todavia el despliegue viejo.
+      expect(getBuild).toHaveBeenCalledTimes(2);
+
+      vi.advanceTimersByTime(10_000);
+      fixture.detectChanges();
+      expect(getBuild).toHaveBeenCalledTimes(3);
+
+      vi.advanceTimersByTime(60_000);
+      expect(getBuild).toHaveBeenCalledTimes(3);
+    });
+
+    it('si el despliegue nuevo no aparece nunca, se rinde a los 6 minutos', () => {
+      vi.useFakeTimers();
+      const { el, getBuild } = montar({ builds: [build()] });
+
+      (el.querySelector('button') as HTMLButtonElement).click();
+      vi.advanceTimersByTime(7 * 60_000);
+      const lecturas = getBuild.mock.calls.length;
+
+      vi.advanceTimersByTime(5 * 60_000);
+      expect(getBuild.mock.calls.length).toBe(lecturas);
+      expect(lecturas).toBeLessThanOrEqual(2 + 36);
+    });
+
+    it('al cerrar el panel se deja de preguntar', () => {
+      vi.useFakeTimers();
+      const { fixture, getBuild } = montar({ builds: [build({ state: 'building', readyAt: null })] });
+
+      fixture.destroy();
+      vi.advanceTimersByTime(60_000);
+
+      expect(getBuild).toHaveBeenCalledTimes(1);
+    });
   });
 });
