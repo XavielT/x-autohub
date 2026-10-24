@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0027 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0028 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -298,9 +298,9 @@ formularios) sigue en el navegador.
 
 | Pieza | Dónde | Qué hace |
 | ----- | ----- | -------- |
-| `PushService` | `shared/services/push.service.ts` | `state` (`unsupported`, `needs-install`, `blocked`, `off`, `on`), `enable()`, `disable()` y `notify(kind, id)`. `SwPush` es opcional: en desarrollo y en las pruebas no hay service worker. Si guardar el dispositivo falla, deshace la suscripción del navegador |
+| `PushService` | `shared/services/push.service.ts` | `state` (`unsupported`, `needs-install`, `blocked`, `off`, `on`), `enable()` y `disable()`. `SwPush` es opcional: en desarrollo y en las pruebas no hay service worker. Si guardar el dispositivo falla, deshace la suscripción del navegador |
 | `<app-avisos>` | `pages/perfil/avisos` | "Avisos en este dispositivo". No se pinta donde no se pueden activar; en iPhone sin instalar sí, para explicar qué falta |
-| `AdminService.setOrderStatus()` / `AdminServicesService.setAppointmentStatus()` | `shared/services` | Tras un cambio de estado que **salió bien**, llaman a `push.notify()`. Nunca hacen fallar el cambio |
+| `notify_status_change()` | trigger en `orders` y `service_appointments` (migración 0028) | Cuando cambia el `status` de un pedido o una cita con dueño, la base le pide a `send-push` avisar (`pg_net`). El panel ya no interviene |
 | `send-push` + `webpush.mjs` | `supabase/functions/send-push` | La Edge Function y la criptografía de Web Push. No se compilan con la app |
 | `environment.vapidPublicKey` | `src/environments` | La clave pública VAPID. La privada es un secreto de la función |
 
@@ -442,7 +442,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 132 archivos, 1371 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 131 archivos, 1363 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

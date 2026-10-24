@@ -245,16 +245,17 @@ en WhatsApp. Ver "Prerenderizado" en `docs/ARCHITECTURE.md`.
 
 ---
 
-## Notificaciones push (2.8.0) ✅
+## Notificaciones push (2.8.0 y 2.13.0) ✅
 
 Hecho: la sección "Avisos en este dispositivo" del perfil, la tabla `push_subscriptions`, la Edge Function
 `send-push` y el aviso automático cuando el equipo cambia el estado de un pedido o una cita. Ver "Notificaciones
 push" en `docs/BACKEND.md`.
 
+La 2.13.0 los pasó de la mano del panel a un trigger de la base (`pg_net`): un cambio de estado hecho por cualquier
+camino avisa. Sigue necesitando los secretos VAPID y los del Vault.
+
 **Lo que queda fuera, a propósito (y por qué):**
 
-- **Que lo dispare la base y no el panel.** Hoy un cambio de estado hecho fuera del panel no avisa. Un trigger con
-  `pg_net` lo resolvería, pero guarda un secreto en la base y no se puede probar en `verify-migrations.sh`.
 - **Avisos a invitados.** Un pedido sin cuenta no tiene dueño; avisarle pediría pedir el permiso en el checkout y
   atar la suscripción al pedido.
 - **Avisos de marketing** (ofertas, el club). Es otro permiso y otra conversación: hoy solo son avisos de lo que

@@ -149,7 +149,7 @@ node scripts/verify-send-push.mjs       # el handler de send-push, con una base 
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 566 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 583 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -190,7 +190,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 132 archivos, 1371 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 131 archivos, 1363 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -246,9 +246,13 @@ Cosas que ya causaron un bug. No las repitas:
 - **La clave privada VAPID no va en el repositorio, nunca.** La pública está en `environment.vapidPublicKey`; la
   privada es solo un secreto de la Edge Function `send-push`. Si se pierde o se cambia, toca generar otro par y
   volver a activar los avisos en cada dispositivo (una suscripción solo sirve con la clave con la que se creó).
-  Los avisos los dispara el **panel** después de un cambio de estado, no la base: un cambio de estado hecho por otro
-  camino no avisa. Y `send-push` recibe solo un id: el texto sale de la base, no del navegador. Las funciones de
-  `supabase/functions` no se compilan con la app ni se prueban con `ng test`; por eso existen los dos scripts de arriba.
+  Los avisos los pide la **base** (trigger `notify_status_change()`, 0028) cuando cambia el `status` de un pedido o una
+  cita con dueño, con `pg_net` y tres secretos del Vault (`send_push_url`, `send_push_anon_key`, `send_push_secret`); sin
+  ellos no avisa y **tampoco falla** el cambio de estado. `send-push` acepta ese secreto (`PUSH_WEBHOOK_SECRET`, el mismo
+  valor, en la cabecera `x-push-secret`) o a un admin con su sesión. **El panel ya no llama a `send-push`**: si alguien
+  lo vuelve a poner, cada cambio avisará dos veces. Y `send-push` recibe solo un id: el texto sale de la base, no de quien
+  llama. Las funciones de `supabase/functions` no se compilan con la app ni se prueban con `ng test`; por eso existen los
+  dos scripts de arriba.
 - **Las estrellas de un producto no prueban que haya reseñas.** `hub_parts.stars_rating`
   es el dato sembrado hasta que entra la primera reseña real (entonces es el promedio), y
   `ProductModel.starsRating` no distingue una cosa de la otra. Para "¿hay opiniones de

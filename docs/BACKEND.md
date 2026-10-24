@@ -50,7 +50,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 25    | `supabase/migrations/0025_variant_images.sql`  | Foto por opción: `product_variants.image_url` |
 | 26    | `supabase/migrations/0026_site_rebuild.sql`    | Republicar el sitio cuando cambia el catálogo: estado, triggers, `fire_site_rebuild()` y el cron |
 | 27    | `supabase/migrations/0027_site_rebuild_panel.sql` | "Publicar ahora": `site_rebuild_status()`, `request_site_rebuild()` y el trigger de reseñas |
-| 28    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 28    | `supabase/migrations/0028_push_from_database.sql` | Los avisos push salen de la base: trigger `notify_status_change()` |
+| 29    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -533,28 +534,38 @@ Web Push: llega al teléfono o a la computadora donde la persona los activó en 
 | `register_push_subscription()` | La única forma de guardar un dispositivo. Si ese `endpoint` estaba a nombre de otra cuenta (alguien cerró sesión y entró otra persona), la fila cambia de dueño, y pone un tope de 10 dispositivos por cuenta |
 | `supabase/functions/send-push` | La Edge Function que avisa. Recibe `{ kind: 'order' | 'appointment', id }`, comprueba que quien llama es admin (le pregunta `is_admin()` a la base con **su** sesión), lee el pedido o la cita, arma el texto y lo manda a los dispositivos del dueño |
 | `supabase/functions/send-push/webpush.mjs` | La criptografía de Web Push (cifrado aes128gcm y firma VAPID) con solo WebCrypto y `fetch`, sin `npm:web-push` |
-| `PushService` / `<app-avisos>` | El lado del navegador: activar y desactivar, y `notify()`, que llama a la función desde el panel |
+| `PushService` / `<app-avisos>` | El lado del navegador: activar y desactivar los avisos |
 
 **Cómo fluye:** el admin cambia el estado de un pedido o una cita (`set_order_status()` /
-`set_appointment_status()`) → si salió bien, el panel llama a `send-push` con el id → la función avisa →
+`set_appointment_status()`) → el trigger `notify_status_change()` (0028) le pide a `send-push` avisar, con el id → la función avisa →
 el service worker de Angular muestra la notificación y, al tocarla, abre `/pedido/:id` (o `/perfil`).
 
 **Decisiones que conviene conocer**
 
 - **Solo cuentas.** Un pedido o una cita de invitado no tiene dueño, así que no hay a quién avisar.
-- **El navegador no dice qué se avisa.** Solo manda el id; el texto, el destinatario y el enlace salen de la
-  base y de la función. Aunque alguien tuviera la sesión de un admin, no puede escribirle a un tercero lo que quiera.
+- **Quien llama no dice qué se avisa.** Solo manda el id; el texto, el destinatario y el enlace salen de la
+  base y de la función. Aunque alguien tuviera el secreto o la sesión de un admin, no puede escribirle a un tercero lo que quiera.
 - **Los estados que avisan** — pedidos: pagado, preparando, enviado, listo para retirar, entregado y cancelado;
   citas: confirmada, en curso, lista y cancelada. Los demás (esperando pago, solicitada, no se presentó) no.
-- **Lo dispara el panel, no la base.** Si el admin cambia el estado y cierra la pestaña antes de que salga la
-  llamada, ese aviso se pierde; el estado sí queda. Un trigger con `pg_net` lo haría independiente del navegador,
-  pero obliga a guardar un secreto en la base y no se puede probar en `verify-migrations.sh` (Postgres sin
-  `pg_net`). Si algún día se cambian estados fuera del panel (un webhook de pago), ahí toca.
+- **Lo pide la base (migración 0028), no el panel.** Un trigger `after update of status` en `orders` y en
+  `service_appointments` hace el POST con `pg_net` cuando la transacción se confirma: sirve igual si el estado lo cambia el
+  panel, el editor de SQL o un webhook de pago futuro, y un cambio que se revierte no avisa. **Nunca hace fallar el cambio**
+  (todo va en un bloque `exception when others`: queda un `warning`). No avisa a invitados (sin dueño) ni a quien cambia lo
+  suyo (`auth.uid()` es el dueño: un cliente que cancela su cita), y solo cuando el `status` cambia de verdad.
+- **Dos credenciales.** El trigger no tiene sesión de admin, así que `send-push` acepta también la cabecera `x-push-secret`
+  igual al secreto `PUSH_WEBHOOK_SECRET` de la función (comparación sin cortarse en el primer carácter distinto; un secreto
+  vacío o sin configurar no abre nada). El camino del admin con su sesión sigue ahí. Como la función tiene `verify_jwt`, el
+  trigger manda además la clave `anon` (pública) en `Authorization`.
+- **Tres secretos en el Vault**, sin migración que los ponga: `send_push_url`, `send_push_anon_key` y `send_push_secret`. Sin
+  los tres el trigger no hace nada.
+- **El frontend ya no llama a `send-push`.** Se quitó `PushService.notify()` y sus llamadas en `setOrderStatus()` y
+  `setAppointmentStatus()`: con el trigger, cada cambio avisaría dos veces.
 - **Un dispositivo que ya no existe se borra solo:** el servicio de push responde 404 o 410 y la función borra la fila.
 - **iPhone y iPad:** iOS solo manda avisos a una app **instalada** en la pantalla de inicio (iOS 16.4 o más).
   En Safari sin instalar, la sección de avisos lo explica en vez de ofrecer un botón que no funcionaría.
 - **Sin las claves la función no falla:** responde `not-configured` y el panel sigue igual.
-- **Orden de despliegue:** migración → función (con sus secretos) → frontend. El frontend anterior no sabe nada de esto.
+- **Orden de despliegue:** migración 0028 → función nueva (con `PUSH_WEBHOOK_SECRET`) → secretos del Vault → frontend. El
+  frontend nuevo deja de avisar desde el panel, así que no puede ir antes que lo demás; el anterior, con todo puesto, avisaría dos veces.
 
 **Puesta en marcha (una sola vez)**
 
@@ -572,7 +583,21 @@ el service worker de Angular muestra la notificación y, al tocarla, abre `/pedi
 
    (Si cambias de claves, hay que volver a activar los avisos en cada dispositivo: una suscripción solo sirve con la
    clave pública con la que se creó.)
-2. Probarlo: entra con tu cuenta en un teléfono (en iPhone, con la app instalada), activa los avisos en tu perfil,
+2. Para que **la base** pueda avisar (0028), el mismo secreto en los dos lados. Un valor aleatorio largo (p. ej.
+   `openssl rand -hex 32`):
+
+   ```bash
+   supabase secrets set PUSH_WEBHOOK_SECRET=<el secreto> --project-ref <ref>
+   ```
+
+   y en el SQL Editor (los valores **no** se escriben en ningún archivo):
+
+   ```sql
+   select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'send_push_url');
+   select vault.create_secret('<la clave anon>', 'send_push_anon_key');
+   select vault.create_secret('<el mismo secreto>', 'send_push_secret');
+   ```
+3. Probarlo: entra con tu cuenta en un teléfono (en iPhone, con la app instalada), activa los avisos en tu perfil,
    haz un pedido, y desde el panel (con otra sesión) muévelo a "Pagado".
 
 **Cómo se prueba sin desplegar:** `node scripts/verify-webpush.mjs` (el cifrado y la firma, descifrando como lo
