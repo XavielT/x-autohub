@@ -136,7 +136,8 @@ funciona sin credenciales (cae a los mocks); ver `docs/BACKEND.md` para conectar
 
 ```bash
 npm start                              # dev server en http://localhost:4200
-npm run build                          # build de producción a dist/
+npm run build                          # build de producción a dist/, con prerenderizado y su comprobación
+npx ng build --configuration production # lo mismo sin prerenderizar (rápido, no necesita red)
 npm test                               # Vitest, una corrida (sin watch)
 npx ng test --watch=false              # lo mismo, explícito
 npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
@@ -189,7 +190,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 127 archivos, 1344 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 130 archivos, 1360 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -261,6 +262,20 @@ Cosas que ya causaron un bug. No las repitas:
   llega a `ProductModel` por ahí: hay que recrear la función (no sirve `create or replace`
   con otras columnas de salida). Por eso `review_count` existe en la tabla pero no en el
   modelo.
+- **El prerenderizado vive en su propia configuración (`prerender`), no en `production`.** Si `server`/`outputMode` se meten
+  en `production`, `ng test` los hereda y las pruebas dejan de arrancar ("PlatformLocation needs to be compiled using the JIT
+  compiler"). `npm run build` ya usa `--configuration production,prerender`; un `ng build` pelado no prerenderiza.
+- **Una página prerenderizada puede quedar congelada en "Cargando…" y publicarse así.** La app no usa zone.js, así que Angular
+  solo espera lo que se registre como tarea pendiente: el `fetch` de `SupabaseService` lo hace, y en el servidor además lee el
+  cuerpo y suelta la tarea un instante después (`SERVER_SETTLE_MS`), porque una consulta suele disparar la siguiente.
+  `scripts/verify-prerender.mjs` (`postbuild`) falla el build si pasa. Cualquier otra fuente de datos asíncrona que no pase por
+  Supabase (otro `fetch`, un temporizador) tendría que registrar su tarea con `PendingTasks`.
+- **El cliente de Supabase pide un `WebSocket` al crearse**, aunque nadie use Realtime, y Node 20 no lo trae: sin el
+  `NoWebSocket` de `supabase.service.ts` el prerenderizado revienta. No importes `@angular/common` en ese archivo: casi todo el
+  proyecto lo carga primero y rompe el arranque de las pruebas.
+- **No pongas `provideClientHydration` ni `withEventReplay`.** Sin `TransferState` los datos no coinciden en el primer pintado y
+  el replay de eventos mete un `<script>` en línea que la CSP (`script-src 'self'`) bloquea. La continuidad visual la da
+  `prerender-snapshot.ts`.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y
@@ -276,6 +291,10 @@ Cosas que ya causaron un bug. No las repitas:
   `no-cache`; si alguien lo quita, el navegador sirve el worker viejo y los usuarios se
   quedan en la versión anterior sin enterarse. Cada despliegue cambia los hashes de
   `ngsw.json`: es lo que dispara el aviso "Hay una versión nueva".
+- **Los paquetes de Angular se instalan con la misma versión que `@angular/core`** (hoy 21.2.20), con
+  `--legacy-peer-deps` si hace falta. `@angular/platform-server` sin fijar se resolvió a la última (21.2.25), que exige
+  `core` 21.2.25: el árbol quedó inválido y `npm ci` (el de Vercel) habría fallado. Y `@angular/ssr` tiene que ser
+  `>= 21.2.21` porque `@angular/build` lo pide como peer. Comprueba siempre con `npm ci --dry-run --ignore-scripts`.
 - **`npm install` en Windows le quita los campos `libc` a `package-lock.json`**, y eso
   puede cambiar qué binarios nativos baja Linux (Vercel). Al agregar una dependencia, revisa
   `git diff package-lock.json`: tiene que mostrar solo el paquete nuevo.

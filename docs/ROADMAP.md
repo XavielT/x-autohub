@@ -207,9 +207,26 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
   función que no filtre la clave del comercio, conciliación y el manejo de contracargos.
 - **Inventario multi-almacén** y **facturación con NCF.** Solo tienen sentido con más de un
   punto de venta y con volumen que obligue a facturar.
-- **Renderizado en servidor** (o prerender) para el SEO: hoy el JSON-LD y el contenido los
-  pone JavaScript. Es un proyecto aparte.
 - **Trabajo nuevo en Social Hub**, que sigue sin desarrollarse a propósito.
+
+---
+
+## Prerenderizado (2.10.0) ✅
+
+Hecho: 61 páginas (home, tienda, categorías, fichas de producto, taller y servicios, términos) salen como HTML estático en
+cada build, con su título, descripción, JSON-LD y etiquetas `og:*` y canónico; los enlaces de una ficha ya enseñan el producto
+en WhatsApp. Ver "Prerenderizado" en `docs/ARCHITECTURE.md`.
+
+**Lo que queda fuera, a propósito (y por qué):**
+
+- **Hidratación.** Haría que el cliente reutilice el DOM del servidor, pero obliga a que cada página pinte en su primer
+  cuadro lo mismo que el servidor (con los datos ya en la mano, por `TransferState`); con datos que llegan por `fetch` hay que
+  tocar los servicios uno a uno. Mientras tanto, una capa mantiene el HTML visible hasta que la app está lista.
+- **Que un cambio en el panel republique el sitio.** Hoy el HTML es la foto del último despliegue. Un webhook de Supabase que
+  dispare un despliegue en Vercel al cambiar un producto lo resolvería.
+- **Auto Hub, Hub Market y Social Hub.** Son contenido de la comunidad y de poca prioridad de búsqueda; se prerenderizan
+  agregando su ruta a `app.routes.server.ts` (y al `verify-prerender.mjs`).
+- **Prerenderizar `/buscar` y las páginas con filtros** (`/tienda?marca=…`): dependen de la consulta, no de una ruta.
 
 ---
 

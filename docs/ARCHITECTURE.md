@@ -258,6 +258,40 @@ revisar cuando las fotos reales estén en Storage.
 - `vercel.json` fija `buildCommand: npm run build` para que el `prebuild` (el sitemap)
   corra también en Vercel.
 
+## Prerenderizado (SEO y vista previa de enlaces)
+
+Al construir (`npm run build`) se prerenderizan 61 páginas a HTML estático: el home, la tienda, cada categoría, **cada
+ficha de producto**, el taller, cada servicio y los términos. Un buscador o la vista previa de WhatsApp lee ahí el nombre,
+el precio, el JSON-LD y las etiquetas `og:*` sin ejecutar JavaScript. Lo demás (carrito, pedidos, cuenta, panel,
+formularios) sigue en el navegador.
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| Configuración `prerender` | `angular.json` | `server` + `outputMode: "static"`. **Es una configuración aparte** y no va en `production`: `npm run build` usa `--configuration production,prerender`, y `ng test` / `ng serve` no la ven |
+| `main.server.ts`, `app.config.server.ts` | `src/` | El arranque en Node, una vez por ruta |
+| `app.routes.server.ts` | `src/app/` | Qué rutas se prerenderizan (`RenderMode.Prerender`) y cuáles no (`RenderMode.Client`). Los `:slug` salen de los servicios (el catálogo activo que ve un visitante sin sesión) |
+| `SeoService` | `shared/services` | Título, descripción, Open Graph, Twitter y canónico de cada página, con URLs absolutas. Lo usan la ficha y el servicio; `reset()` al salir |
+| El `fetch` de `SupabaseService` | `core/supabase` | Cuenta cada consulta como tarea pendiente (la app no usa zone.js): al prerenderizar, Angular espera a que lleguen los datos antes de guardar el HTML |
+| `holdPrerenderedPage()` | `src/prerender-snapshot.ts` | Ver abajo |
+| `scripts/verify-prerender.mjs` | `postbuild` | Falla el build si una página prerenderizada quedó con un "Cargando…", con el título genérico o con otra URL canónica |
+
+- **Sin hidratación, a propósito.** La app arranca desde cero en el navegador (no `provideClientHydration`): con datos que
+  llegan por `fetch`, el DOM del cliente no coincidiría con el del servidor en su primer pintado. Para que quien abre un
+  enlace no vea el producto, luego un "Cargando…" y luego el producto otra vez, `main.ts` pasa el HTML prerenderizado a
+  una capa (`#prerender-snapshot`, sin interacción y oculta a los lectores de pantalla) y la quita cuando la app ya
+  tiene sus datos; se quita sola a los 4 s pase lo que pase. Con el service worker activo (visitas repetidas) la
+  navegación se sirve desde `index.csr.html` y esta capa no interviene.
+- **`vercel.json`** reescribe todo lo que no sea un archivo a `index.csr.html` (la página vacía de las rutas del navegador).
+  Las páginas prerenderizadas son archivos (`tienda/p/<slug>/index.html`) y se sirven antes que la reescritura.
+- **El HTML prerenderizado es una foto del momento del build.** Un precio o un stock cambiado en el panel se ve
+  en la ficha en cuanto carga el JavaScript (la app vuelve a pedir los datos), pero un buscador o una vista previa pueden
+  tener el valor del último despliegue. Si hace falta que se refresque, se vuelve a desplegar.
+- **Escribir código que sirva en el servidor:** nada de `window`, `document` ni `localStorage` sueltos al cargar un módulo
+  o en un constructor; usa `DOCUMENT` (`this.doc.defaultView`) y envuelve el storage en `try/catch`. Lo que solo existe en el
+  navegador va en un `afterNextRender` o detrás de una comprobación de `PLATFORM_ID`.
+- El build de producción ya no funciona sin red: lee la base para saber qué prerenderizar (como el sitemap) y, si no puede, el
+  `postbuild` lo detiene. Para una compilación rápida sin red: `npx ng build --configuration production` (sin prerenderizado).
+
 ## Notificaciones push
 
 | Pieza | Dónde | Qué hace |
@@ -404,7 +438,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 127 archivos, 1344 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 130 archivos, 1360 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.
