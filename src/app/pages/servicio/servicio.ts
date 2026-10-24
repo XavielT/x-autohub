@@ -9,6 +9,7 @@ import { Reviews } from '../../../shared/components/reviews/reviews';
 import { ServiceWorks } from '../../../shared/components/service-works/service-works';
 import { SERVICE_CATEGORY_LABELS, ServiceModel, ServiceWorkModel } from '../../../shared/models/service.model';
 import { ReviewStats } from '../../../shared/models/review.model';
+import { SeoService } from '../../../shared/services/seo.service';
 import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
@@ -34,6 +35,7 @@ export class Servicio {
   private readonly title = inject(Title);
   private readonly destroyRef = inject(DestroyRef);
   private readonly jsonLd = inject(JsonLdService);
+  private readonly seo = inject(SeoService);
 
   readonly state = signal<LoadState>('loading');
   readonly service = signal<ServiceModel | undefined>(undefined);
@@ -54,7 +56,10 @@ export class Servicio {
   });
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.jsonLd.set('service', null));
+    this.destroyRef.onDestroy(() => {
+      this.jsonLd.set('service', null);
+      this.seo.reset();
+    });
 
     // JSON-LD Service. Sin precio ("a cotizar") no declara oferta.
     effect(() => {
@@ -75,7 +80,17 @@ export class Servicio {
           // Las del servicio anterior no valen para este: el bloque de reseñas las vuelve a avisar.
           this.reviewStats.set(null);
           this.state.set(service ? 'ready' : 'missing');
-          this.title.setTitle(service ? `${service.title} — Taller | X AutoHub` : 'Servicio no encontrado | X AutoHub');
+          if (service) {
+            const text = (service.description || service.longDescription).trim();
+            this.seo.set({
+              title: `${service.title} — Taller | X AutoHub`,
+              description: text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text,
+              path: `/servicios/${service.slug}`,
+              image: service.images[0],
+            });
+          } else {
+            this.title.setTitle('Servicio no encontrado | X AutoHub');
+          }
 
           if (service) {
             this.catalog.getWorks(service.id).subscribe({ next: (w) => this.works.set(w), error: () => undefined });

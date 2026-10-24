@@ -1,7 +1,6 @@
 import { DOCUMENT, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Meta, Title } from '@angular/platform-browser';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
@@ -19,6 +18,7 @@ import { ServiceModel } from '../../../shared/models/service.model';
 import { CartService } from '../../../shared/services/cart.service';
 import { CategoryService } from '../../../shared/services/category.service';
 import { JsonLdService } from '../../../shared/services/json-ld.service';
+import { SeoService } from '../../../shared/services/seo.service';
 import { ProductService } from '../../../shared/services/product.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -28,10 +28,6 @@ import { availabilityOf } from '../../../shared/utils/product-availability';
 import { compatibilityOf } from '../../../shared/utils/product-compat';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { productJsonLd } from '../../../shared/utils/structured-data';
-
-/** El `description` que trae `index.html`: el que vuelve al salir de una ficha. */
-const DEFAULT_DESCRIPTION =
-  'Accesorios y piezas para tu carro, con taller propio, en Republica Dominicana. Encuentra lo que le sirve a tu vehiculo, instalalo con nosotros y mira ademas vehiculos y la comunidad automotriz.';
 
 /** Una fila de compatibilidad con nombres: "Toyota Corolla · 2010–2020". */
 export interface FitmentLine {
@@ -66,8 +62,7 @@ export class Producto {
   private readonly picker = inject(VehiclePickerService);
   private readonly cart = inject(CartService);
   private readonly toast = inject(ToastService);
-  private readonly title = inject(Title);
-  private readonly meta = inject(Meta);
+  private readonly seo = inject(SeoService);
   private readonly document = inject(DOCUMENT);
   private readonly jsonLd = inject(JsonLdService);
 
@@ -167,7 +162,7 @@ export class Producto {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
-      this.meta.updateTag({ name: 'description', content: DEFAULT_DESCRIPTION });
+      this.seo.reset();
       this.jsonLd.set('product', null);
     });
 
@@ -233,14 +228,21 @@ export class Producto {
   /** El título y la descripción de la ficha: lo que ve la pestaña y lo que indexan los buscadores. */
   private applySeo(product: ProductModel | undefined): void {
     if (!product) {
-      this.title.setTitle('Producto no encontrado | X AutoHub');
+      this.seo.reset();
+      this.seo.set({
+        title: 'Producto no encontrado | X AutoHub',
+        description: 'Ese producto ya no está en la tienda.',
+        path: '/tienda',
+      });
       return;
     }
-    this.title.setTitle(`${product.name} | X AutoHub`);
     const text = (product.shortDescription || product.description).trim();
-    this.meta.updateTag({
-      name: 'description',
-      content: text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text,
+    this.seo.set({
+      title: `${product.name} | X AutoHub`,
+      description: text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text,
+      path: `/tienda/p/${product.slug}`,
+      image: product.images?.[0] || product.imgUrl,
+      type: 'product',
     });
   }
 

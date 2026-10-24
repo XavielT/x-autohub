@@ -48,6 +48,10 @@
             ]
           },
           "configurations": {
+            "prerender": {
+              "server": "src/main.server.ts",
+              "outputMode": "static"
+            },
             "production": {
               "serviceWorker": "ngsw-config.json",
               "fileReplacements": [
