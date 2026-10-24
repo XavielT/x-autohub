@@ -143,6 +143,29 @@ grant usage on schema storage to anon, authenticated, service_role;
 -- grant, las politicas de payment-proofs (0018) no se ejercitarian: un insert de
 -- anon fallaria antes, por permisos de tabla, y la comprobacion no probaria nada.
 grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
+
+-- pg_net, pg_cron y Vault (0026). En Supabase vienen instalados; aqui se reemplazan por
+-- lo minimo que la migracion usa, y las llamadas quedan anotadas para poder comprobarlas:
+--   · net.http_post() guarda la URL en net.calls en vez de salir a la red;
+--   · cron.schedule() hace upsert por nombre, como el de verdad;
+--   · vault.decrypted_secrets es una tabla simple.
+create schema net;
+create table net.calls (id bigserial primary key, url text not null);
+create function net.http_post(
+  url text, body jsonb default '{}', params jsonb default '{}',
+  headers jsonb default '{}', timeout_milliseconds integer default 5000
+) returns bigint language sql as $$
+  insert into net.calls (url) values (url) returning id;
+$$;
+create schema cron;
+create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
+create function cron.schedule(job_name text, schedule text, command text) returns bigint language sql as $$
+  insert into cron.job (jobname, schedule, command) values (job_name, schedule, command)
+  on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command
+  returning jobid;
+$$;
+create schema vault;
+create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
 SQL
 echo "→ Andamio de Supabase puesto"
 
@@ -1485,6 +1508,84 @@ check "ni una de mas de 2048 caracteres" 'ERROR:  new row for relation "product_
 check "quitarla la deja nula" "t" \
   "$(as_user "$ADMIN" "update product_variants set image_url = null where id = $VAR_NEGRO returning (image_url is null);")"
 
+echo "→ Republicar el sitio cuando cambia el catalogo (migracion 0026)"
+RB_RESET="update site_rebuild set dirty_since = null, last_change_at = null, last_fired_at = null, fired_count = 0;"
+RB_DIRTY="select (dirty_since is not null)::text from site_rebuild;"
+# Lo que se ve en las paginas prerenderizadas marca el sitio como pendiente; lo que cambia con cada
+# compra (stock, ventas) no.
+check "hay una sola fila de estado" "1" "select count(*) from site_rebuild;"
+$PSQL -d postgres -c "$RB_RESET" >/dev/null
+check "una compra (stock y ventas) no marca nada" "false" \
+  "$(as_anon "select discount from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '[{\"part_id\": 1, \"quantity\": 1}]'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');") reset role; $RB_DIRTY"
+check "cambiar el stock sin cruzar el cero no marca nada" "false" \
+  "update hub_parts set stock = 20 where id = 1; $RB_RESET update hub_parts set stock = 21, sold_count = sold_count + 1 where id = 1; $RB_DIRTY"
+check "cambiar el precio si marca" "true" \
+  "$RB_RESET update hub_parts set price = price + 1 where id = 1; $RB_DIRTY"
+check "agotar una pieza (cruzar el cero) si marca" "true" \
+  "$RB_RESET update hub_parts set stock = 0 where id = 1; $RB_DIRTY"
+check "y volver a tener stock tambien" "true" \
+  "$RB_RESET update hub_parts set stock = 5 where id = 1; $RB_DIRTY"
+check "el stock de una opcion sin cruzar el cero no marca nada (ni el que suma al producto)" "false" \
+  "update product_variants set stock = 50 where id = $VAR_NEGRO; $RB_RESET update product_variants set stock = 51 where id = $VAR_NEGRO; $RB_DIRTY"
+check "la foto de una opcion si marca" "true" \
+  "$RB_RESET update product_variants set image_url = 'assets/imgs/x.jpg' where id = $VAR_NEGRO; $RB_DIRTY"
+check "un servicio nuevo o editado marca" "true" \
+  "$RB_RESET update services set title = title || ' ' where id = (select min(id) from services); $RB_DIRTY"
+check "una categoria marca" "true" \
+  "$RB_RESET update product_categories set name = name || ' ' where id = (select min(id) from product_categories); $RB_DIRTY"
+check "un ajuste del sitio marca" "true" \
+  "insert into site_settings (key, value) values ('tmp_rebuild', '\"a\"'); $RB_RESET update site_settings set value = '\"b\"' where key = 'tmp_rebuild'; $RB_DIRTY"
+check "pero tocar solo su marca de tiempo no" "false" \
+  "$RB_RESET update site_settings set updated_at = now() where key = 'tmp_rebuild'; $RB_DIRTY; delete from site_settings where key = 'tmp_rebuild';"
+check "borrar una fila tambien marca" "true" \
+  "$RB_RESET insert into product_categories (slug, name) values ('tmp-rebuild', 'Temporal'); $RB_RESET delete from product_categories where slug = 'tmp-rebuild'; $RB_DIRTY"
+check "marcar no pisa el primer cambio: dirty_since se queda" "true" \
+  "$RB_RESET update site_rebuild set dirty_since = now() - interval '2 minutes'; update hub_parts set price = price where id = 1; update hub_parts set price = price + 1 where id = 1; select (dirty_since < now() - interval '1 minute' and last_change_at > now() - interval '1 minute')::text from site_rebuild;"
+
+# fire_site_rebuild(): cuando toca, y que pasa sin enlace.
+check "sin cambios, no hay nada que publicar" "nada que publicar" \
+  "$RB_RESET select public.fire_site_rebuild();"
+check "con cambios recien hechos espera a que el panel se calle" "esperando a que terminen los cambios" \
+  "$RB_RESET update site_rebuild set dirty_since = now() - interval '1 minute', last_change_at = now() - interval '30 seconds'; select public.fire_site_rebuild();"
+check "pasado el silencio pero sin enlace en el Vault, no hace nada" "sin enlace de despliegue en el Vault" \
+  "$RB_RESET update site_rebuild set dirty_since = now() - interval '10 minutes', last_change_at = now() - interval '4 minutes'; select public.fire_site_rebuild();"
+check "y lo pendiente sigue anotado (no se pierde)" "true|0" \
+  "select (dirty_since is not null)::text || '|' || (select count(*) from net.calls) from site_rebuild;"
+check "con el enlace cargado, pide el despliegue" "despliegue pedido" \
+  "insert into vault.decrypted_secrets (name, decrypted_secret) values ('vercel_deploy_hook', 'https://hook.example/deploy/abc'); select public.fire_site_rebuild();"
+check "llamo una vez, a ese enlace" "1|https://hook.example/deploy/abc" \
+  "select count(*) || '|' || min(url) from net.calls;"
+check "y deja el estado limpio, con el despliegue contado" "true|1" \
+  "select (dirty_since is null and last_fired_at is not null)::text || '|' || fired_count from site_rebuild;"
+check "otro cambio enseguida no despliega otra vez (minimo 10 minutos entre uno y otro)" "muy pronto despues del ultimo despliegue" \
+  "update site_rebuild set dirty_since = now() - interval '10 minutes', last_change_at = now() - interval '4 minutes'; select public.fire_site_rebuild();"
+check "no hubo una segunda llamada" "1" "select count(*) from net.calls;"
+check "pasados los 10 minutos, si" "despliegue pedido" \
+  "update site_rebuild set last_fired_at = now() - interval '11 minutes'; select public.fire_site_rebuild();"
+check "si el panel no se calla nunca, a los 30 minutos se despliega igual" "despliegue pedido" \
+  "update site_rebuild set dirty_since = now() - interval '31 minutes', last_change_at = now(), last_fired_at = now() - interval '11 minutes'; select public.fire_site_rebuild();"
+check "tres llamadas en total" "3" "select count(*) from net.calls;"
+check "el enlace no queda en ninguna tabla del esquema public" "0" \
+  "select count(*) from site_rebuild t where t::text like '%hook.example%';"
+
+# El cron y los permisos.
+check "el trabajo de cron esta programado, una sola vez, cada 5 minutos" "1|*/5 * * * *" \
+  "select count(*) || '|' || min(schedule) from cron.job where jobname = 'site-rebuild' and command like '%fire_site_rebuild%';"
+check "anon no lee el estado" 'ERROR:  permission denied for table site_rebuild' \
+  "$(as_anon 'select count(*) from site_rebuild;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table site_rebuild' \
+  "$(as_user "$ADMIN" 'select count(*) from site_rebuild;')"
+check "ni un admin escribe en el: el estado lo llevan el trigger y el cron" 'ERROR:  permission denied for table site_rebuild' \
+  "$(as_user "$ADMIN" 'update site_rebuild set dirty_since = null;')"
+check "anon no pide un despliegue" "$(denied fire_site_rebuild)" \
+  "$(as_anon 'select public.fire_site_rebuild();')"
+check "un admin tampoco: es del cron" "$(denied fire_site_rebuild)" \
+  "$(as_user "$ADMIN" 'select public.fire_site_rebuild();')"
+check "ni invoca el trigger por rpc" "false|false|false|false" \
+  "select has_function_privilege('anon', 'public.mark_site_dirty()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.mark_site_dirty()', 'execute')::text || '|' || has_function_privilege('anon', 'public.fire_site_rebuild()', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.fire_site_rebuild()', 'execute')::text;"
+check "un admin sigue editando el catalogo (el trigger escribe como definer, no como el)" "1" \
+  "$(as_user "$ADMIN" "with u as (update hub_parts set price = price where id = 1 returning 1) select count(*) from u;")"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1738,13 +1839,22 @@ insert into product_variants (product_id, name, stock) values (1, 'Anterior', 2)
 SQL
 CHECK_DB=upgrade check "antes de migrar no existe image_url" "0" \
   "select count(*) from information_schema.columns where table_name = 'product_variants' and column_name = 'image_url';"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0025_variant_images.sql upgrade
+apply supabase/migrations/0025_variant_images.sql upgrade
 echo "   (aplicada dos veces, con opciones dentro)"
 CHECK_DB=upgrade check "las opciones de antes siguen ahi, sin foto" "true|0" \
   "select (count(*) > 0)::text || '|' || count(image_url) from product_variants;"
 CHECK_DB=upgrade check "y una foto se guarda despues de migrar" "assets/imgs/x.jpg" \
   "update product_variants set image_url = 'assets/imgs/x.jpg' where name = 'Anterior'; select image_url from product_variants where name = 'Anterior';"
+
+echo "→ Camino de actualizacion de la 0026: la base real ya tiene catalogo, pedidos y cuentas al migrar"
+CHECK_DB=upgrade check "antes de migrar no existe site_rebuild" "0"   "select count(*) from information_schema.tables where table_name = 'site_rebuild';"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con catalogo dentro)"
+CHECK_DB=upgrade check "queda una sola fila de estado, sin nada pendiente, y la migracion no la marco" "1|false"   "select (select count(*) from site_rebuild) || '|' || (select (dirty_since is not null)::text from site_rebuild);"
+CHECK_DB=upgrade check "un solo trabajo de cron y una sola fire_site_rebuild" "1|1"   "select (select count(*) from cron.job where jobname = 'site-rebuild') || '|' || (select count(*) from pg_proc where proname = 'fire_site_rebuild');"
+CHECK_DB=upgrade check "cambiar un precio despues de migrar si marca" "true"   "update hub_parts set price = price + 1 where id = 1; select (dirty_since is not null)::text from site_rebuild;"
 
 # --- Resumen ------------------------------------------------------------------
 
