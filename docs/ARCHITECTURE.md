@@ -306,7 +306,7 @@ formularios) sigue en el navegador.
 
 - El service worker de Angular ya sabe mostrar el aviso y abrir la ruta al tocarlo (`data.onActionClick`): no hay código propio
   para eso. El formato del mensaje lo arma `send-push`.
-- Dos scripts prueban lo que `ng test` no ve: `scripts/verify-webpush.mjs` y `scripts/verify-send-push.mjs`.
+- Tres scripts prueban lo que `ng test` no ve: `scripts/verify-webpush.mjs`, `scripts/verify-send-push.mjs` y `scripts/verify-build-status.mjs`.
 
 ## Variantes de producto (color, talla…)
 
@@ -336,8 +336,9 @@ formularios) sigue en el navegador.
 | `AdminCouponsService` | `shared/services` | Crear, editar, apagar y borrar (`/admin/cupones`); la lista trae los usos (`admin_coupon_usage()`) |
 | `coupon-rules.ts` | `shared/utils` | **Espejo de `coupon_check()`**: mismas reglas, mismo orden, mismos mensajes. Lo usa el modo simulado y valida el formulario del panel |
 | `<app-coupon-box>` | `shared/components/coupon-box` | Prueba el código, enseña el ahorro y, con un cupón puesto, **lo vuelve a probar** si cambia el subtotal, el envío o el correo (un envío gratis deja de valer al pasar a retiro) |
-| `SiteRebuildService` | `shared/services` | `site_rebuild_status()` y `request_site_rebuild()` (solo admin): si hay cambios del catálogo sin publicar y "Publicar ahora". En modo simulado el estado vive en memoria |
-| `AdminPublicar` | `pages/admin/publicar` | La barra de arriba de `/admin` (solo admins, no moderadores): "El sitio está al día" / "Hay cambios sin publicar desde hace N min", la última publicación y el botón "Publicar ahora" |
+| `SiteRebuildService` | `shared/services` | `site_rebuild_status()` y `request_site_rebuild()` (solo admin): si hay cambios del catálogo sin publicar y "Publicar ahora"; y `getBuild()`, que le pregunta a la Edge Function `build-status` cómo va el último despliegue (`null` si no se puede saber, nunca falla). En modo simulado el estado vive en memoria |
+| `AdminPublicar` | `pages/admin/publicar` | La barra de arriba de `/admin` (solo admins, no moderadores): "El sitio está al día" / "Hay cambios sin publicar desde hace N min", y el botón "Publicar ahora". Además dice cómo terminó el despliegue (en cola, construyendo, listo, falló con enlace a Vercel) y, mientras se construye, vuelve a preguntar cada 10 s |
+| `build-status` | `supabase/functions/build-status` | La Edge Function que lee el último despliegue de producción de la API de Vercel. Solo admin. No se compila con la app; se prueba con `scripts/verify-build-status.mjs` |
 | `AdminCupones` | `pages/admin/cupones` | La pestaña del panel: estado de cada cupón (activo, apagado, vencido, por empezar, agotado) y su formulario |
 
 - **El checkout manda solo el código** (`CheckoutSubmitPayload.couponCode`); el descuento que se ve
@@ -442,7 +443,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 131 archivos, 1363 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 131 archivos, 1374 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

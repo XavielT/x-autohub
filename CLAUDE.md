@@ -145,6 +145,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 ./scripts/verify-migrations.sh          # las migraciones contra un Postgres de verdad
 node scripts/verify-webpush.mjs         # el cifrado y la firma de Web Push
 node scripts/verify-send-push.mjs       # el handler de send-push, con una base de mentira
+node scripts/verify-build-status.mjs    # el handler de build-status, con una base y una API de Vercel de mentira
 ```
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
@@ -190,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 131 archivos, 1363 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 131 archivos, 1374 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -285,6 +286,11 @@ Cosas que ya causaron un bug. No las repitas:
   `vercel_deploy_hook`. Si el secreto falta, no falla: responde `sin enlace…` y deja todo anotado. Una columna de `hub_parts`
   que cambie con cada compra tiene que ir en la lista que ignora el trigger, o cada venta lanzará un build. La URL del hook
   nunca va en el repositorio.
+- **La línea "cómo terminó el despliegue" de la barra de `/admin` sale de Vercel, con un token que no está en el repo.** La Edge
+  Function `build-status` (solo admin, con su JWT) lee el último despliegue de producción con `VERCEL_TOKEN`,
+  `VERCEL_PROJECT_ID` y `VERCEL_TEAM_ID`, secretos de la función. Sin ellos responde `configured: false` y la barra simplemente
+  no dice nada del despliegue: no es un error. `getBuild()` nunca falla. Mientras un despliegue se construye, la barra vuelve a
+  preguntar cada 10 s (hasta 6 min tras "Publicar ahora", 10 si ya venía en marcha) y para al cerrar el panel.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

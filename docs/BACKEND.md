@@ -659,6 +659,30 @@ cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstru
    (`fired_count` sube) y el despliegue nuevo en Vercel. Si algún día hay que apagarlo:
    `select cron.unschedule('site-rebuild');`.
 
+**Cómo terminó el despliegue (Edge Function `build-status`)**
+
+La barra de `/admin` dice, además de cuándo se pidió el despliegue, **cómo va**: en cola, construyendo, listo (con la hora y el
+mensaje del commit) o fallido (con un enlace a Vercel y el aviso de que el sitio sigue con la versión anterior).
+
+- La función `supabase/functions/build-status` le pregunta a la API de Vercel (`GET /v6/deployments?projectId=…&target=production&limit=1`).
+  **Solo la llama un admin con su sesión** (`is_admin()` con su JWT, como `send-push`). Lo que devuelve es el estado, las horas, la
+  primera línea del mensaje del commit y un enlace que siempre es de `vercel.com`; **el token nunca sale**.
+- **No hace falta migración.** Secretos de la función: `VERCEL_TOKEN` (Account Settings → Tokens, con acceso al equipo del proyecto),
+  `VERCEL_PROJECT_ID` (`prj_…`, en `.vercel/project.json`) y `VERCEL_TEAM_ID` (`team_…`). Sin ellos responde `configured: false` y la
+  barra no muestra esa línea: nada se rompe.
+- Un fallo de Vercel (500, sin red, proyecto sin despliegues) responde `available: false` con 200: a la barra le llega como "no se sabe",
+  no como un error. `SiteRebuildService.getBuild()` devuelve `null` en todos esos casos y **nunca falla**.
+- Mientras un despliegue se construye, la barra vuelve a preguntar cada 10 s: hasta 6 minutos después de "Publicar ahora" (espera el
+  despliegue *nuevo*, aunque primero llegue el anterior) y hasta 10 si ya venía en marcha al abrir el panel. Al cerrar el panel para.
+  Mientras se construye, el botón "Publicar ahora" está bloqueado.
+- Se prueba con `node scripts/verify-build-status.mjs` (el handler con una base y una API de Vercel de mentira). **No habla con Vercel de
+  verdad**: el primer despliegue real con el token cargado es la prueba definitiva.
+
+```bash
+supabase secrets set VERCEL_TOKEN=<el token> VERCEL_PROJECT_ID=<prj_…> VERCEL_TEAM_ID=<team_…> --project-ref <ref>
+supabase functions deploy build-status --project-ref <ref>
+```
+
 ### Pedidos, pago y comprobantes (migración 0018)
 
 Cuarta fase del pivote (`docs/PIVOT-2026-10.md`, §3 y §4). Sin pasarela de tarjeta:

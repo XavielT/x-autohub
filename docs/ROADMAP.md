@@ -211,19 +211,20 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 
 ---
 
-## Republicación automática (2.11.0 y 2.12.0) ✅
+## Republicación automática (2.11.0 a 2.14.0) ✅
 
 Hecho: un cambio de producto, opción, categoría, servicio o ajuste del sitio hace que la base pida un despliegue a Vercel
 (*deploy hook*) 3 minutos después del último cambio, con un tope de uno cada 10 minutos. Las compras no cuentan (solo el
 stock que llega a cero o sale de él). Ver "Republicar el sitio" en `docs/BACKEND.md`.
 
 La 2.12.0 le sumó la barra de `/admin` (hay cambios sin publicar o el sitio está al día) con el botón "Publicar ahora", y que una
-reseña nueva o borrada también cuente.
+reseña nueva o borrada también cuente. La 2.14.0 le sumó **cómo terminó el despliegue** (en cola, construyendo, listo, falló), leído de
+la API de Vercel por la Edge Function `build-status`.
 
 **Lo que queda fuera:**
 
-- **Saber si el build terminó bien.** La barra dice cuándo se *pidió* el despliegue, no si Vercel lo completó o lo rechazó
-  (`verify-prerender.mjs`). Para eso habría que leer la API de Vercel o recibir un webhook de vuelta.
+- **Avisar cuando un despliegue falla sin que nadie tenga abierto el panel.** La barra solo se entera cuando alguien la mira. Un
+  webhook de Vercel (plan Pro) o un aviso push al admin cerrarían ese hueco.
 
 ---
 
