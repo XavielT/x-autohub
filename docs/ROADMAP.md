@@ -211,6 +211,20 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 
 ---
 
+## Republicación automática (2.11.0) ✅
+
+Hecho: un cambio de producto, opción, categoría, servicio o ajuste del sitio hace que la base pida un despliegue a Vercel
+(*deploy hook*) 3 minutos después del último cambio, con un tope de uno cada 10 minutos. Las compras no cuentan (solo el
+stock que llega a cero o sale de él). Ver "Republicar el sitio" en `docs/BACKEND.md`.
+
+**Lo que queda fuera:**
+
+- **Un botón "Publicar ahora" en el panel**, y que `/admin` muestre si hay cambios pendientes. Hoy se mira con SQL.
+- **Que reseñas nuevas republiquen.** El JSON-LD `aggregateRating` sale del build; una reseña nueva aparece cuando haya otro
+  despliegue por otro motivo.
+
+---
+
 ## Prerenderizado (2.10.0) ✅
 
 Hecho: 61 páginas (home, tienda, categorías, fichas de producto, taller y servicios, términos) salen como HTML estático en
@@ -222,8 +236,7 @@ en WhatsApp. Ver "Prerenderizado" en `docs/ARCHITECTURE.md`.
 - **Hidratación.** Haría que el cliente reutilice el DOM del servidor, pero obliga a que cada página pinte en su primer
   cuadro lo mismo que el servidor (con los datos ya en la mano, por `TransferState`); con datos que llegan por `fetch` hay que
   tocar los servicios uno a uno. Mientras tanto, una capa mantiene el HTML visible hasta que la app está lista.
-- **Que un cambio en el panel republique el sitio.** Hoy el HTML es la foto del último despliegue. Un webhook de Supabase que
-  dispare un despliegue en Vercel al cambiar un producto lo resolvería.
+- **Que un cambio en el panel republique el sitio** — hecho en la 2.11.0 (ver abajo).
 - **Auto Hub, Hub Market y Social Hub.** Son contenido de la comunidad y de poca prioridad de búsqueda; se prerenderizan
   agregando su ruta a `app.routes.server.ts` (y al `verify-prerender.mjs`).
 - **Prerenderizar `/buscar` y las páginas con filtros** (`/tienda?marca=…`): dependen de la consulta, no de una ruta.

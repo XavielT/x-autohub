@@ -48,7 +48,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 23    | `supabase/migrations/0023_product_variants.sql` | Variantes de producto (color, talla…): tabla con stock propio, trigger que suma, `create_order()`, `set_order_status()` y `search_products()` |
 | 24    | `supabase/migrations/0024_push_subscriptions.sql` | Notificaciones push: los dispositivos de cada usuario y `register_push_subscription()` |
 | 25    | `supabase/migrations/0025_variant_images.sql`  | Foto por opción: `product_variants.image_url` |
-| 26    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 26    | `supabase/migrations/0026_site_rebuild.sql`    | Republicar el sitio cuando cambia el catálogo: estado, triggers, `fire_site_rebuild()` y el cron |
+| 27    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -577,6 +578,54 @@ el service worker de Angular muestra la notificación y, al tocarla, abre `/pedi
 haría el navegador) y `node scripts/verify-send-push.mjs` (el handler completo con una base y un servicio de push
 de mentira: quién puede llamarla, qué texto sale, invitados, dispositivos caídos, sin claves). **No sustituyen una
 prueba en un dispositivo real**: ninguna de las dos habla con Google, Mozilla o Apple.
+
+### Republicar el sitio cuando cambia el catálogo (migración 0026)
+
+Desde la 2.10.0 las páginas públicas son HTML estático, una foto del último despliegue. Esta migración hace que el propio
+catálogo pida el despliegue: cuando cambia algo que sale en esas páginas, la base lo anota, y pasados unos minutos sin más
+cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstruye lo que hay en `main`).
+
+| Pieza | Qué hace |
+| ----- | -------- |
+| `site_rebuild` | Una sola fila: `dirty_since` (el primer cambio sin publicar; nulo si no hay), `last_change_at`, `last_fired_at`, `fired_count`. RLS sin políticas y sin permisos para `anon` ni `authenticated`: no es de nadie del navegador |
+| `mark_site_dirty()` | Trigger de fila `after insert/update/delete` en `hub_parts`, `product_variants`, `product_categories`, `services` y `site_settings` |
+| `fire_site_rebuild()` | Decide si ya toca y llama al hook con `net.http_post()` (pg_net). Devuelve un texto con lo que hizo, para leerlo a mano |
+| Trabajo `site-rebuild` | `pg_cron`, cada 5 minutos: `select public.fire_site_rebuild()` |
+
+**Decisiones que conviene conocer**
+
+- **Qué cuenta como cambio.** Un update que solo toca `stock`, `sold_count`, `updated_at` o `search_vector` no marca nada:
+  es lo que hace cada compra. El stock sí marca cuando **cruza el cero** (`Disponible` ↔ `Agotado` en el JSON-LD). Un insert o un
+  delete siempre marca. Si una columna nueva cambia con cada compra, hay que sumarla a esa lista en `mark_site_dirty()`,
+  o cada venta pedirá un despliegue.
+- **Se espera a que el panel se calle.** Editar un producto son varios guardados seguidos. Se despliega **3 minutos
+  después del último cambio**, y a más tardar **30 minutos después del primero** aunque no se callen; y **nunca más de uno
+  cada 10 minutos** (cada build son minutos de Vercel). Las tres constantes están al principio de `fire_site_rebuild()`.
+- **El enlace del hook es un secreto** (quien lo conozca lanza builds): vive en **Supabase Vault** con el nombre
+  `vercel_deploy_hook`. Sin él, `fire_site_rebuild()` responde `sin enlace de despliegue en el Vault` y **deja los cambios
+  anotados**: cargarlo después publica lo pendiente. No hay migración que lo ponga, porque la URL no puede estar en el repositorio.
+- **El hook reconstruye `main`**, no tu carpeta de trabajo. Un cambio de catálogo publica los datos nuevos con el código que
+  esté en `main`, que por la regla de las versiones es siempre el último release. Si el build falla (`verify-prerender.mjs`),
+  Vercel conserva el despliegue anterior y el estado queda limpio igual: el siguiente cambio vuelve a intentarlo.
+- **El panel no se entera.** No hay botón ni aviso en `/admin`: es un proceso de fondo. Para ver qué pasa:
+  `select * from site_rebuild;` y `select public.fire_site_rebuild();` (si no toca, te dice por qué).
+- **Probado con `pg_net`, `pg_cron` y Vault de mentira.** `verify-migrations.sh` los reemplaza por un esquema mínimo que anota
+  las llamadas; comprueba la lógica (qué marca, cuándo dispara, permisos), **no** que Vercel reciba el POST. Eso se ve en el
+  primer despliegue real.
+- **Orden de despliegue:** migración → crear el hook en Vercel → cargarlo en el Vault. No hay cambios de frontend.
+
+**Puesta en marcha (una sola vez)**
+
+1. En Vercel: proyecto → *Settings* → *Git* → *Deploy Hooks* → crear uno para la rama `main` (o con la CLI:
+   `vercel api /v1/projects/<id>/deploy-hooks -X POST`). Copia la URL.
+2. En el SQL Editor de Supabase (la URL **no** se escribe en ningún archivo):
+
+   ```sql
+   select vault.create_secret('https://api.vercel.com/v1/integrations/deploy/…', 'vercel_deploy_hook');
+   ```
+3. Probarlo: cambia el precio de un producto en el panel, espera unos minutos y mira `select * from site_rebuild;`
+   (`fired_count` sube) y el despliegue nuevo en Vercel. Si algún día hay que apagarlo:
+   `select cron.unschedule('site-rebuild');`.
 
 ### Pedidos, pago y comprobantes (migración 0018)
 

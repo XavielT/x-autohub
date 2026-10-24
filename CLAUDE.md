@@ -149,7 +149,7 @@ node scripts/verify-send-push.mjs       # el handler de send-push, con una base 
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 509 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 548 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -276,6 +276,11 @@ Cosas que ya causaron un bug. No las repitas:
 - **No pongas `provideClientHydration` ni `withEventReplay`.** Sin `TransferState` los datos no coinciden en el primer pintado y
   el replay de eventos mete un `<script>` en línea que la CSP (`script-src 'self'`) bloquea. La continuidad visual la da
   `prerender-snapshot.ts`.
+- **La republicación del sitio vive en la base (0026), y se apaga o se rompe sin ruido.** `mark_site_dirty()` anota los
+  cambios del catálogo, `fire_site_rebuild()` (pg_cron cada 5 minutos) llama al deploy hook de Vercel guardado en el Vault como
+  `vercel_deploy_hook`. Si el secreto falta, no falla: responde `sin enlace…` y deja todo anotado. Una columna de `hub_parts`
+  que cambie con cada compra tiene que ir en la lista que ignora el trigger, o cada venta lanzará un build. La URL del hook
+  nunca va en el repositorio.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

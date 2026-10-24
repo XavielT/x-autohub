@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0025 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0026 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -285,7 +285,9 @@ formularios) sigue en el navegador.
   Las páginas prerenderizadas son archivos (`tienda/p/<slug>/index.html`) y se sirven antes que la reescritura.
 - **El HTML prerenderizado es una foto del momento del build.** Un precio o un stock cambiado en el panel se ve
   en la ficha en cuanto carga el JavaScript (la app vuelve a pedir los datos), pero un buscador o una vista previa pueden
-  tener el valor del último despliegue. Si hace falta que se refresque, se vuelve a desplegar.
+  tener el valor del último despliegue. Por eso, desde la 2.11.0, la base pide sola un despliegue (un *deploy hook* de
+  Vercel) unos minutos después de un cambio de catálogo: triggers + `pg_cron` + `pg_net`, ver "Republicar el sitio" en
+  `docs/BACKEND.md`. Sigue sin ser instantáneo: pasan de 3 a ~8 minutos hasta el cambio y lo que dura el build.
 - **Escribir código que sirva en el servidor:** nada de `window`, `document` ni `localStorage` sueltos al cargar un módulo
   o en un constructor; usa `DOCUMENT` (`this.doc.defaultView`) y envuelve el storage en `try/catch`. Lo que solo existe en el
   navegador va en un `afterNextRender` o detrás de una comprobación de `PLATFORM_ID`.
