@@ -223,8 +223,21 @@ la API de Vercel por la Edge Function `build-status`.
 
 **Lo que queda fuera:**
 
-- **Avisar cuando un despliegue falla sin que nadie tenga abierto el panel.** La barra solo se entera cuando alguien la mira. Un
-  webhook de Vercel (plan Pro) o un aviso push al admin cerrarían ese hueco.
+- **Avisar cuando un despliegue falla sin que nadie tenga abierto el panel.** Hecho en la 2.19.0 (ver abajo).
+
+---
+
+## Aviso si falla un despliegue (2.19.0) ✅
+
+Hecho: si el último despliegue de producción termina en error, los admins reciben un aviso push ("Falló el despliegue del sitio") con el
+primer renglón del mensaje del commit, aunque nadie tenga el panel abierto. La base pregunta cada 10 minutos (migración 0032) y
+`send-push` mira Vercel; un aviso por despliegue fallido.
+
+**Lo que queda fuera:**
+
+- **Avisar que ya se arregló.** Cuando el siguiente despliegue sale bien no llega nada; la barra de `/admin` lo muestra.
+- **Webhook de Vercel.** Se descartó a propósito: pide plan Pro y el sondeo cada 10 minutos basta para un aviso que tarda, como mucho, 10 minutos.
+- **Reintentar si nadie tenía los avisos activados.** Se anota y no se repite.
 
 ---
 

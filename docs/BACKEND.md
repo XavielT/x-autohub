@@ -54,7 +54,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 29    | `supabase/migrations/0029_site_rebuild_community.sql` | `mark_site_dirty()` también en `auto_hub_vehicles` y `hub_market_items` |
 | 30    | `supabase/migrations/0030_publication_lifecycle.sql` | `sold_at` y `expires_at` en `hub_market_items`, `mark_publication_sold()`, `renew_publication()` y el cron `expire-publications` |
 | 31    | `supabase/migrations/0031_publication_expiry_notice.sql` | `publication_expiry_notices` y el cron `warn-expiring-publications`: aviso push a siete días de vencer |
-| 32    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 32    | `supabase/migrations/0032_deploy_failure_notice.sql` | `deploy_alerts` y el cron `check-deploy-failures`: aviso push a los admins si falla un despliegue |
+| 33    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -641,6 +642,11 @@ cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstru
   publicación todavía pendiente (que nadie ve): moderar es lo que publica o quita una ficha, y repetir las reglas de RLS dentro del
   trigger no valía el costo de un despliegue de más (máximo uno cada 10 minutos). Ninguna de las dos tablas lleva contadores de
   visitas; si se agrega uno, hay que sumarlo a la lista que ignora `mark_site_dirty()`.
+- **Aviso de despliegue fallido (migración 0032).** `check_deploy_failures()` (pg_cron `check-deploy-failures`, cada 10 minutos) manda un POST `{ kind: 'deploy' }`
+  a `send-push` (los tres secretos del Vault de la 0028) y borra de `deploy_alerts` lo de más de 90 días. La base no sabe nada de Vercel: `send-push`
+  lee el último despliegue de producción y avisa a los admins solo si falló y no se avisó ya de ese `uid`. `deploy_alerts` tiene RLS y ningún
+  permiso para el navegador; solo `service_role` la toca. Para que avise hay que tener cargados los secretos de Vercel (los de `build-status`) y que
+  algún admin haya activado los avisos en su dispositivo (si no, igual queda anotado y no se reintenta).
 - **Aviso de vencimiento (migración 0031).** `warn_expiring_publications()` (pg_cron `warn-expiring-publications`, 09:00 de República Dominicana)
   busca las publicaciones aprobadas, activas, a la venta, de un vendedor real y que no son de prueba, que vencen en los próximos 7 días y no
   avisaron para su `expires_at` actual, y por cada una hace un `net.http_post` a `send-push` con `{ kind: 'listing', id }` (los mismos tres

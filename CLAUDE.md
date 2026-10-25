@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 640 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 657 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -311,6 +311,11 @@ Cosas que ya causaron un bug. No las repitas:
   `hub_market_items` dispararía `mark_site_dirty()` y un despliegue por aviso). Con la migración puesta y la función vieja, `send-push`
   respondería 400 y cada publicación quedaría marcada como avisada sin que nadie recibiera nada. `send-push` vuelve a comprobar que la
   publicación esté por vencer: el secreto no sirve para escribirle a un vendedor por otra cosa.
+- **El aviso de "falló el despliegue" lo pide la base cada 10 minutos, y quien mira Vercel es `send-push`.** `check_deploy_failures()` (0032) solo hace de
+  reloj: manda `{ kind: 'deploy' }` y nada más. `send-push` lee el último despliegue de producción con `VERCEL_TOKEN`/`VERCEL_PROJECT_ID`/`VERCEL_TEAM_ID`
+  (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, lo anota **antes** de
+  mandar y avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Si hay un despliegue posterior que salió bien, no avisa. Sin esos
+  secretos no pregunta ni avisa, sin error. `deploy_alerts` no la lee nadie del navegador; `send-push` entra con `service_role` (que se salta RLS).
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y
