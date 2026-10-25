@@ -56,7 +56,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 31    | `supabase/migrations/0031_publication_expiry_notice.sql` | `publication_expiry_notices` y el cron `warn-expiring-publications`: aviso push a siete días de vencer |
 | 32    | `supabase/migrations/0032_deploy_failure_notice.sql` | `deploy_alerts` y el cron `check-deploy-failures`: aviso push a los admins si falla un despliegue |
 | 33    | `supabase/migrations/0033_variant_photos.sql`  | Varias fotos por opción: `product_variants.image_urls` y su trigger de espejo |
-| 34    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 34    | `supabase/migrations/0034_guest_order_push.sql` | `order_push_subscriptions`, `register_order_push()` y `unregister_order_push()`: avisos push de un pedido de invitado |
+| 35    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -500,6 +501,12 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 **Decisiones que conviene conocer**
 
+- **Avisos de un pedido de invitado (migración 0034).** `order_push_subscriptions` (`order_id`, `endpoint`, claves; única por pedido y dispositivo; `on delete cascade`) guarda
+  los dispositivos de quien compró sin cuenta. La escribe `register_order_push()` (`anon` y `authenticated`; el uuid del pedido es la llave) y la quita
+  `unregister_order_push()`; la tabla no tiene permisos ni políticas para el navegador, la lee `send-push` con la clave de servicio. Rechaza (con `22023` y un
+  mensaje en español) un pedido que no existe, uno **con dueño** (sus avisos van a la cuenta), uno entregado o cancelado, y un cuarto dispositivo. `notify_status_change()`
+  ya no ignora los pedidos sin dueño: avisa si tienen dispositivos. `send-push` los lee de esa tabla cuando `orders.user_id` es nulo y los borra al avisar un estado
+  final. En el navegador: la tarjeta de `/pedido/:id` (`app-pedido-avisos`), solo para quien no tiene sesión. **`send-push` primero, luego la migración, luego el frontend.**
 - **Varias fotos por opción (migración 0033).** `product_variants.image_urls` (`text[]`, nunca nula, máximo 8) guarda las fotos de la opción, de las del
   producto, en el orden en que la ficha las enseña; la primera es la portada. `image_url` (0025) **se queda como espejo** de la primera, mantenida por el trigger
   `product_variants_photos_sync`: al insertar, si solo viene `image_url` (frontend anterior) la lista pasa a ser esa foto, y si no `image_url` sigue a la lista; al
@@ -552,7 +559,8 @@ el service worker de Angular muestra la notificación y, al tocarla, abre `/pedi
 
 **Decisiones que conviene conocer**
 
-- **Solo cuentas.** Un pedido o una cita de invitado no tiene dueño, así que no hay a quién avisar.
+- **Solo cuentas** (hasta la 0034). Un pedido o una cita de invitado no tiene dueño, así que no había a quién avisar. Desde la 0034 un invitado puede activar los
+  avisos de **su pedido** (ver abajo); las citas de invitado siguen sin avisar.
 - **Quien llama no dice qué se avisa.** Solo manda el id; el texto, el destinatario y el enlace salen de la
   base y de la función. Aunque alguien tuviera el secreto o la sesión de un admin, no puede escribirle a un tercero lo que quiera.
 - **Los estados que avisan** — pedidos: pagado, preparando, enviado, listo para retirar, entregado y cancelado;

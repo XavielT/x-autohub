@@ -227,6 +227,20 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Avisos a invitados (2.21.0) ✅
+
+Hecho: quien compró sin cuenta puede activar, desde la página de su pedido, avisos push de ese pedido (pago confirmado, en camino, listo para retirar…). La
+suscripción queda atada al pedido y no a una cuenta; el uuid del pedido es la llave, como para ver la página. Hasta 3 dispositivos por pedido, solo mientras
+el pedido está en marcha, y se borran al entregarse o cancelarse (migración 0034).
+
+**Lo que queda fuera:**
+
+- **Citas de invitado.** El mismo mecanismo serviría para las citas del taller; hoy solo son pedidos.
+- **Ofrecerlo en el checkout.** Pedir el permiso de notificaciones antes de comprar estorba; se ofrece ya con el pedido hecho.
+- **Quien guardó el enlace en otro navegador.** Los avisos son del dispositivo donde se activaron.
+
+---
+
 ## Varias fotos por opción (2.20.0) ✅
 
 Hecho: cada opción de un producto (color, medida) puede tener hasta 8 fotos, elegidas entre las del producto con casillas en el panel. Al elegir una
@@ -340,8 +354,7 @@ camino avisa. Sigue necesitando los secretos VAPID y los del Vault.
 
 **Lo que queda fuera, a propósito (y por qué):**
 
-- **Avisos a invitados.** Un pedido sin cuenta no tiene dueño; avisarle pediría pedir el permiso en el checkout y
-  atar la suscripción al pedido.
+- **Avisos a invitados.** Hecho en la 2.21.0 (ver abajo), desde `/pedido/:id` y no en el checkout.
 - **Avisos de marketing** (ofertas, el club). Es otro permiso y otra conversación: hoy solo son avisos de lo que
   el cliente ya pidió.
 - **Reintentos.** Si el servicio de push falla (un 500), el aviso se pierde; no hay cola.
