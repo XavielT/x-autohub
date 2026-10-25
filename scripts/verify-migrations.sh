@@ -1663,6 +1663,78 @@ check "hay un trigger en pedidos y otro en citas, solo por el estado" "1|1" \
   "select (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 $PSQL -d postgres -c "delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');" >/dev/null
 
+echo "→ Avisos push para quien compro sin cuenta (migracion 0034)"
+KEY_A="$(printf 'B%.0s' $(seq 1 87))"
+KEY_B="$(printf 'a%.0s' $(seq 1 22))"
+reg() { echo "select register_order_push('$1', '$2', '$KEY_A', '$KEY_B', 'prueba');"; }
+unreg() { echo "select unregister_order_push('$1', '$2');"; }
+devices() { echo "select count(*) from order_push_subscriptions where order_id = '$1';"; }
+
+check "la tabla de dispositivos de pedido tiene RLS" "true" \
+  "select relrowsecurity::text from pg_class where relname = 'order_push_subscriptions';"
+check "anon no la lee" 'ERROR:  permission denied for table order_push_subscriptions' \
+  "$(as_anon 'select * from order_push_subscriptions;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table order_push_subscriptions' \
+  "$(as_user "$USER_A" 'select * from order_push_subscriptions;')"
+check "ni escribe en ella" 'ERROR:  permission denied for table order_push_subscriptions' \
+  "$(as_anon "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'https://x.example/1', '$KEY_A', '$KEY_B');")"
+check "las dos funciones las pueden llamar anon y authenticated" "true|true|true|true" \
+  "select has_function_privilege('anon', 'public.register_order_push(uuid,text,text,text,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.register_order_push(uuid,text,text,text,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.unregister_order_push(uuid,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.unregister_order_push(uuid,text)', 'execute')::text;"
+check "los dispositivos se borran con el pedido" "c" \
+  "select confdeltype::text from pg_constraint where conrelid = 'public.order_push_subscriptions'::regclass and contype = 'f';"
+
+check "un invitado activa los avisos de su pedido" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno)")"
+check "y queda un dispositivo" "1" "$(devices "$GUEST_ORDER")"
+check "registrar el mismo dispositivo otra vez no lo duplica" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno)")"
+check "sigue siendo uno" "1" "$(devices "$GUEST_ORDER")"
+check "la tabla no se puede leer despues desde el navegador (la lee send-push)" 'ERROR:  permission denied for table order_push_subscriptions' \
+  "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno) select count(*) from order_push_subscriptions;")"
+check "un pedido con dueño rechaza el aviso de invitado" 'ERROR:  Este pedido es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
+  "$(as_anon "$(reg "$OW_ORDER" https://push.example/uno)")"
+check "un pedido que no existe, tambien" 'ERROR:  Ese pedido no existe.' \
+  "$(as_anon "$(reg 99999999-9999-4999-8999-999999999999 https://push.example/uno)")"
+
+check "dos dispositivos mas caben" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/dos) $(reg "$GUEST_ORDER" https://push.example/tres)")"
+check "son 3, el tope" "3" "$(devices "$GUEST_ORDER")"
+check "el cuarto no" 'ERROR:  Este pedido ya avisa a 3 dispositivos.' \
+  "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/cuatro)")"
+check "pero un dispositivo que ya estaba puede volver a registrarse" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/tres)")"
+check "un endpoint que no es https se rechaza" 'ERROR:  new row for relation "order_push_subscriptions" violates check constraint "order_push_subscriptions_endpoint_check"' \
+  "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'http://x.example/1', '$KEY_A', '$KEY_B');"
+
+check "quitar un dispositivo" "" "$(as_anon "$(unreg "$GUEST_ORDER" https://push.example/uno)")"
+check "borra solo ese" "2" "$(devices "$GUEST_ORDER")"
+check "con el endpoint de otro pedido no se borra nada" "" "$(as_anon "$(unreg "$OW_ORDER" https://push.example/dos)")"
+check "los dos que quedan siguen" "2" "$(devices "$GUEST_ORDER")"
+
+# Un pedido de invitado ya terminado.
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+select create_order('final@correo.com','Cliente Final','Calle 2','standard','transfer','[{"part_id": 1, "quantity": 1}]'::jsonb, p_contact_phone => '8095550001', p_province => 'Santiago');
+SQL
+DONE_ORDER="$(scalar "select id from orders where contact_email = 'final@correo.com' limit 1;")"
+$PSQL -d postgres -c "set request.jwt.claim.role='service_role'; update orders set status = 'delivered' where id = '$DONE_ORDER';" >/dev/null
+check "un pedido ya entregado no admite avisos: no va a cambiar" 'ERROR:  Este pedido ya termino: no va a cambiar de estado.' \
+  "$(as_anon "$(reg "$DONE_ORDER" https://push.example/uno)")"
+
+echo "   (el trigger: ya no ignora los pedidos sin dueño)"
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "un pedido de invitado CON dispositivos pide un aviso al cambiar de estado" "1" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'preparing' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "con el id del pedido y de tipo order, como cualquier otro" "order|true" \
+  "select (body->>'kind') || '|' || (body->>'id' = '$GUEST_ORDER')::text from net.calls order by id desc limit 1;"
+$PSQL -d postgres -c "delete from order_push_subscriptions where order_id = '$GUEST_ORDER';" >/dev/null
+check "sin dispositivos no llama a nadie: no hay a quien avisar" "0" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'shipped' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+check "una cita de invitado sigue sin avisar" "0" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'confirmed' where id = '$APPT1'; update service_appointments set status = 'in_progress' where id = '$APPT1'; reset request.jwt.claim.sub; $PN_DELTA"
+check "un pedido con dueño sigue avisando a su cuenta" "1" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'shipped' where id = '$OW_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from order_push_subscriptions;
+delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
+SQL
+
 echo "→ Auto Hub y Hub Market tambien republican el sitio (migracion 0029)"
 check "un cambio en un vehiculo de Auto Hub marca el sitio" "true" \
   "$RB_RESET update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); $RB_DIRTY"
@@ -2240,13 +2312,20 @@ insert into product_variants (product_id, name, stock, image_url)
 values ((select min(id) from hub_parts), 'Opcion de antes', 2, 'assets/imgs/antes.jpg'),
        ((select min(id) from hub_parts), 'Opcion sin foto', 1, null);
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0033_variant_photos.sql upgrade
+apply supabase/migrations/0033_variant_photos.sql upgrade
 echo "   (aplicada dos veces, con opciones dentro)"
 CHECK_DB=upgrade check "la foto de antes pasa a ser la primera de la lista, y la portada sigue igual" "{assets/imgs/antes.jpg}|assets/imgs/antes.jpg"   "select image_urls::text || '|' || image_url from product_variants where name = 'Opcion de antes';"
 CHECK_DB=upgrade check "la opcion sin foto queda con la lista vacia" "{}"   "select image_urls::text from product_variants where name = 'Opcion sin foto';"
 CHECK_DB=upgrade check "volver a aplicar no pisa lo que el panel guardo despues" "{x.jpg,y.jpg}"   "update product_variants set image_urls = array['x.jpg','y.jpg'] where name = 'Opcion de antes'; select image_urls::text from product_variants where name = 'Opcion de antes';"
 CHECK_DB=upgrade check "y un solo trigger de fotos" "1"   "select count(*) from pg_trigger where tgname = 'product_variants_photos_sync';"
+
+echo "→ Camino de actualizacion de la 0034"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y el trigger de avisos sigue una sola vez por tabla" "0|1|1" \
+  "select (select count(*) from order_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 
 # --- Resumen ------------------------------------------------------------------
 

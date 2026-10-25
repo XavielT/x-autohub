@@ -1,0 +1,28 @@
+@if (visible()) {
+  <section class="pavisos" aria-labelledby="pavisos-title">
+    <div class="pavisos__text">
+      <h2 id="pavisos-title" class="pavisos__title">Avísame cuando mi pedido cambie</h2>
+      @switch (state()) {
+        @case ('on') {
+          <p class="pavisos__desc">Activados. Te avisamos en este dispositivo cuando tu pedido avance, aunque no tengas esta página abierta.</p>
+        }
+        @case ('off') {
+          <p class="pavisos__desc">Recibe una notificación cuando confirmemos tu pago, salga tu pedido o esté listo para retirar. No necesitas cuenta.</p>
+        }
+        @case ('blocked') {
+          <p class="pavisos__desc">Bloqueaste las notificaciones en este navegador. Para recibirlas, permítelas en la configuración de este sitio.</p>
+        }
+        @case ('needs-install') {
+          <p class="pavisos__desc">En iPhone los avisos llegan a la app instalada: toca Compartir, "Agregar a pantalla de inicio" y abre este enlace desde ahí.</p>
+        }
+      }
+    </div>
+
+    @if (state() === 'on' || state() === 'off') {
+      <button type="button" class="pavisos__btn" [class.pavisos__btn--off]="state() === 'on'"
+              [disabled]="isWorking()" [attr.aria-pressed]="state() === 'on'" (click)="toggle()">
+        {{ isWorking() ? 'Un momento…' : state() === 'on' ? 'Desactivar' : 'Activar avisos' }}
+      </button>
+    }
+  </section>
+}

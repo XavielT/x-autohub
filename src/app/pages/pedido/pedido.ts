@@ -15,6 +15,7 @@ import {
   timelineFor,
 } from '../../../shared/utils/order-status';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
+import { PedidoAvisos } from './pedido-avisos/pedido-avisos';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -33,7 +34,7 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
  */
 @Component({
   selector: 'app-pedido',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink, PedidoAvisos],
   templateUrl: './pedido.html',
   styleUrl: './pedido.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

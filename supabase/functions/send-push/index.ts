@@ -7,7 +7,8 @@
 //
 // Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }` o `{ kind: 'deploy' }`, comprueba quien llama,
 // lee el pedido, la cita, la publicacion o el ultimo despliegue, arma el aviso segun su estado actual y lo
-// manda a todos los dispositivos del dueño (o, en un despliegue fallido, de los admins) (`push_subscriptions`).
+// manda a todos los dispositivos del dueño (o, en un despliegue fallido, de los admins) (`push_subscriptions`). Un pedido
+// de invitado no tiene dueño: avisa a los dispositivos que se suscribieron a **ese pedido** (`order_push_subscriptions`).
 //
 // La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
 // pg_net cuando cambia el estado de un pedido o de una cita, y `warn_expiring_publications()`
@@ -36,7 +37,7 @@
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento) y **0032** (el de despliegue fallido). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento), **0032** (el de despliegue fallido) y **0034** (los avisos de un pedido de invitado). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -99,7 +100,14 @@ interface Notice {
   path: string;
   /** Agrupa avisos: uno nuevo con la misma etiqueta reemplaza al anterior. Por defecto, la ruta. */
   tag?: string;
+  /** Un pedido de invitado: los dispositivos salen de `order_push_subscriptions` y no de una cuenta. */
+  guestOrderId?: string;
+  /** El estado ya no va a cambiar (entregado, cancelado): tras avisar se borran los dispositivos del pedido. */
+  final?: boolean;
 }
+
+/** Los estados de un pedido que no cambian más. */
+const FINAL_ORDER_STATUSES = ['delivered', 'cancelled'];
 
 /** Cuantos dias antes de vencer se avisa. Es el mismo `RENEW_WARNING_DAYS` del frontend y la ventana de la migracion 0031. */
 const LISTING_WARNING_DAYS = 7;
@@ -151,7 +159,15 @@ async function orderNotice(supabaseUrl: string, serviceKey: string, id: string):
 
   const body = ORDER_MESSAGES[order.status];
   if (!body) return 'no-message';
-  return { userId: order.user_id, title: `Pedido #${order.order_number}`, body, path: `/pedido/${id}` };
+  return {
+    userId: order.user_id,
+    // Sin dueño, el aviso va a quien activó los avisos de este pedido desde /pedido/:id.
+    guestOrderId: order.user_id ? undefined : id,
+    final: FINAL_ORDER_STATUSES.includes(order.status),
+    title: `Pedido #${order.order_number}`,
+    body,
+    path: `/pedido/${id}`,
+  };
 }
 
 async function appointmentNotice(supabaseUrl: string, serviceKey: string, id: string): Promise<Notice | 'not-found' | 'no-message'> {
@@ -317,21 +333,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
           : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
     if (notice === 'not-found') return refuse(404, 'not-found');
     if (notice === 'no-message') return refuse(200, 'no-message');
-    // Un pedido o una cita de invitado no tiene dueño: no hay a quien avisar.
-    if (!notice.admins && !notice.userId) return refuse(200, 'guest');
+    // Una cita de invitado, o un pedido sin dueño y sin dispositivos, no tiene a quien avisar.
+    if (!notice.admins && !notice.userId && !notice.guestOrderId) return refuse(200, 'guest');
 
-    // El dueño, o todos los admins si el aviso es para ellos.
-    let owners = notice.userId ? `eq.${notice.userId}` : '';
-    if (notice.admins) {
-      const admins = await rest<{ id: string }[]>(supabaseUrl, serviceKey, 'profiles?select=id&role=eq.admin');
-      if (!admins || admins.length === 0) return refuse(200, 'no-devices');
-      owners = `in.(${admins.map((a) => a.id).join(',')})`;
+    // El dueño, todos los admins, o los dispositivos de un pedido de invitado.
+    let source = '';
+    if (notice.guestOrderId) {
+      source = `order_push_subscriptions?select=id,endpoint,p256dh,auth&order_id=eq.${notice.guestOrderId}`;
+    } else {
+      let owners = notice.userId ? `eq.${notice.userId}` : '';
+      if (notice.admins) {
+        const admins = await rest<{ id: string }[]>(supabaseUrl, serviceKey, 'profiles?select=id&role=eq.admin');
+        if (!admins || admins.length === 0) return refuse(200, 'no-devices');
+        owners = `in.(${admins.map((a) => a.id).join(',')})`;
+      }
+      source = `push_subscriptions?select=id,endpoint,p256dh,auth&user_id=${owners}`;
     }
-    const devices = await rest<{ id: number; endpoint: string; p256dh: string; auth: string }[]>(
-      supabaseUrl,
-      serviceKey,
-      `push_subscriptions?select=id,endpoint,p256dh,auth&user_id=${owners}`,
-    );
+    const devices = await rest<{ id: number; endpoint: string; p256dh: string; auth: string }[]>(supabaseUrl, serviceKey, source);
     if (!devices || devices.length === 0) return refuse(200, 'no-devices');
 
     // El formato que entiende el service worker de Angular: lo muestra y, al tocarlo,
@@ -366,8 +384,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
 
     // Un dispositivo que ya no existe no se vuelve a intentar.
+    const table = notice.guestOrderId ? 'order_push_subscriptions' : 'push_subscriptions';
     if (gone.length > 0) {
-      await rest(supabaseUrl, serviceKey, `push_subscriptions?id=in.(${gone.join(',')})`, { method: 'DELETE' });
+      await rest(supabaseUrl, serviceKey, `${table}?id=in.(${gone.join(',')})`, { method: 'DELETE' });
+    }
+    // Un pedido de invitado que terminó no va a cambiar más: sus dispositivos ya no sirven.
+    if (notice.guestOrderId && notice.final) {
+      await rest(supabaseUrl, serviceKey, `order_push_subscriptions?order_id=eq.${notice.guestOrderId}`, { method: 'DELETE' });
     }
 
     return answer(200, { sent, removed: gone.length });

@@ -82,6 +82,10 @@ globalThis.fetch = async (url, init = {}) => {
     return json([row], 201);
   }
   if (url.includes('/rest/v1/hub_market_items?')) return json(db.listings.filter((l) => url.includes(`id=eq.${l.id}&`)));
+  if (url.includes('/rest/v1/order_push_subscriptions') && (init.method ?? 'GET') === 'GET') {
+    return json(db.orderDevices.filter((d) => url.includes(`order_id=eq.${d.order_id}`)));
+  }
+  if (url.includes('/rest/v1/order_push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.includes('/rest/v1/push_subscriptions') && (init.method ?? 'GET') === 'GET') return json(db.devices);
   if (url.includes('/rest/v1/push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.startsWith('https://push.example/')) return new Response('', { status: pushStatus[url] ?? 201 });
@@ -102,6 +106,7 @@ function reset() {
     ],
     appointments: [{ id: APPT_ID, appointment_number: 2001, status: 'confirmed', user_id: OWNER, scheduled_at: '2026-11-05T14:30:00Z' }],
     devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
+    orderDevices: [],
     vercelStatus: 200,
     deployments: [{ uid: 'dpl_fallido', readyState: 'ERROR', meta: { githubCommitMessage: 'Cambio que rompio el build\n\ncuerpo largo' } }],
     admins: [{ id: ADMIN_USER }],
@@ -173,7 +178,50 @@ check('un estado que no se avisa (esperando el pago) no manda nada', r.body.reas
 r = await ask({ kind: 'order', id: GUEST_ID });
 db.orders[1].status = 'shipped';
 r = await ask({ kind: 'order', id: GUEST_ID });
-check('un pedido de invitado no tiene a quien avisar', r.body.reason === 'guest' && pushes().length === 0);
+check('un pedido de invitado sin dispositivos suscritos no tiene a quien avisar', r.body.reason === 'no-devices' && pushes().length === 0);
+
+console.log('→ Los avisos de un pedido de invitado');
+const dispositivo = (id, order_id = GUEST_ID, endpoint = 'https://push.example/invitado') => ({ id, order_id, endpoint, p256dh, auth });
+reset();
+db.orderDevices = [dispositivo(1)];
+r = await ask({ kind: 'order', id: GUEST_ID });
+check('avisa a los dispositivos suscritos a ese pedido', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('los busco por pedido, no por cuenta', calls.some((c) => c.url.includes(`order_push_subscriptions?select=id,endpoint,p256dh,auth&order_id=eq.${GUEST_ID}`)) && !calls.some((c) => c.url.includes('/rest/v1/push_subscriptions')));
+check('un estado que no es final no borra los dispositivos', !calls.some((c) => c.init.method === 'DELETE'));
+
+reset();
+db.orders[1].status = 'delivered';
+db.orderDevices = [dispositivo(1)];
+r = await ask({ kind: 'order', id: GUEST_ID });
+check('al avisar un estado final (entregado) se borran los dispositivos del pedido', r.body.sent === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`order_push_subscriptions?order_id=eq.${GUEST_ID}`)));
+
+reset();
+db.orders[1].status = 'cancelled';
+db.orderDevices = [dispositivo(1)];
+await ask({ kind: 'order', id: GUEST_ID });
+check('tambien al cancelarse', calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`order_push_subscriptions?order_id=eq.${GUEST_ID}`)));
+
+reset();
+db.orderDevices = [dispositivo(7, GUEST_ID, 'https://push.example/caido')];
+pushStatus['https://push.example/caido'] = 410;
+r = await ask({ kind: 'order', id: GUEST_ID });
+check('un dispositivo caido (410) se borra de la tabla del pedido, no de la de cuentas', r.body.removed === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('order_push_subscriptions?id=in.(7)')) && !calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('push_subscriptions?id=in.(7)') && !c.url.includes('order_')));
+
+reset();
+db.orderDevices = [dispositivo(1, '99999999-9999-4999-8999-999999999999')];
+r = await ask({ kind: 'order', id: GUEST_ID });
+check('los dispositivos de otro pedido no reciben el aviso de este', r.body.reason === 'no-devices' && pushes().length === 0);
+
+reset();
+db.orderDevices = [dispositivo(1, ORDER_ID)];
+r = await ask({ kind: 'order', id: ORDER_ID });
+check('un pedido con dueño avisa a su cuenta y nunca a la tabla de invitados', r.body.sent === 1 && !calls.some((c) => c.url.includes('order_push_subscriptions')));
+
+reset();
+db.orders[1].status = 'awaiting_payment';
+db.orderDevices = [dispositivo(1)];
+r = await ask({ kind: 'order', id: GUEST_ID });
+check('un estado que no se avisa no manda nada a un invitado', r.body.reason === 'no-message' && pushes().length === 0);
 
 console.log('→ El aviso de una cita');
 reset();

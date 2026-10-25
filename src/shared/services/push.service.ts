@@ -19,6 +19,10 @@ import { isIosSafari, isStandalone } from '../utils/pwa-env';
  */
 export type PushState = 'unsupported' | 'needs-install' | 'blocked' | 'off' | 'on';
 
+/** Dónde se anotan, en este navegador, los pedidos de invitado con avisos activados (el navegador solo sabe del dispositivo, no del pedido). */
+const ORDER_PUSH_KEY = 'xah.orderPush';
+const ORDER_PUSH_MAX = 20;
+
 export interface PushResult {
   ok: boolean;
   /** Qué decirle a la persona si no salió. */
@@ -61,31 +65,112 @@ export class PushService {
 
   /** Mira el estado real del dispositivo. Se llama al abrir la sección de avisos. */
   async refresh(): Promise<void> {
+    this.state.set(await this.readDevice());
+  }
+
+  /** El estado del dispositivo, sin tocar la señal: lo comparten los avisos de la cuenta y los de un pedido. */
+  private async readDevice(): Promise<PushState> {
     const win = this.doc.defaultView;
 
-    if (this.supabase.shouldUseMockData() || !this.publicKey) {
-      this.state.set('unsupported');
-      return;
-    }
+    if (this.supabase.shouldUseMockData() || !this.publicKey) return 'unsupported';
     // En iPhone sin instalar no existe `PushManager`: se distingue para poder explicarlo.
-    if (isIosSafari(win) && !isStandalone(win)) {
-      this.state.set('needs-install');
-      return;
-    }
-    if (!this.canPush) {
-      this.state.set('unsupported');
-      return;
-    }
-    if (Notification.permission === 'denied') {
-      this.state.set('blocked');
-      return;
-    }
+    if (isIosSafari(win) && !isStandalone(win)) return 'needs-install';
+    if (!this.canPush) return 'unsupported';
+    if (Notification.permission === 'denied') return 'blocked';
 
     try {
       const subscription = await firstValueFrom(this.swPush!.subscription);
-      this.state.set(subscription ? 'on' : 'off');
+      return subscription ? 'on' : 'off';
     } catch {
-      this.state.set('off');
+      return 'off';
+    }
+  }
+
+  // --- Avisos de un pedido de invitado (migración 0034) ----------------------------------------------------------
+
+  /** Los pedidos de invitado de este navegador con avisos activados. Nunca falla: sin almacenamiento, vacío. */
+  private readOrderIds(): string[] {
+    try {
+      const raw = this.doc.defaultView?.localStorage.getItem(ORDER_PUSH_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private writeOrderIds(ids: string[]): void {
+    try {
+      this.doc.defaultView?.localStorage.setItem(ORDER_PUSH_KEY, JSON.stringify(ids.slice(-ORDER_PUSH_MAX)));
+    } catch {
+      // Sin almacenamiento el aviso sigue funcionando; solo no se recuerda que está activo.
+    }
+  }
+
+  /**
+   * El estado de los avisos de **este pedido** en este dispositivo. El navegador tiene una sola suscripción por
+   * dispositivo, que puede servir a varios pedidos (o a una cuenta); por eso "activo" exige también que este pedido esté
+   * anotado como activado aquí.
+   */
+  async orderState(orderId: string): Promise<PushState> {
+    const device = await this.readDevice();
+    return device === 'on' && !this.readOrderIds().includes(orderId) ? 'off' : device;
+  }
+
+  /** Pide permiso, se suscribe y registra el dispositivo en este pedido. */
+  async enableForOrder(orderId: string): Promise<PushResult> {
+    if (!this.canPush) return { ok: false, message: 'Este dispositivo no puede recibir avisos.' };
+
+    try {
+      const subscription = await this.swPush!.requestSubscription({ serverPublicKey: this.publicKey });
+      const { endpoint, keys } = subscription.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        throw new Error('El navegador no entregó la suscripción completa.');
+      }
+
+      const saved = await this.supabase.db.rpc('register_order_push', {
+        p_order_id: orderId,
+        p_endpoint: endpoint,
+        p_p256dh: keys.p256dh,
+        p_auth: keys.auth,
+        p_user_agent: this.doc.defaultView?.navigator.userAgent ?? '',
+      });
+      if (saved.error) unwrap({ data: null, error: saved.error });
+
+      this.writeOrderIds([...this.readOrderIds().filter((id) => id !== orderId), orderId]);
+      return { ok: true };
+    } catch (error) {
+      if ((await this.readDevice()) === 'blocked') {
+        return {
+          ok: false,
+          message: 'Los avisos están bloqueados en este navegador. Actívalos desde la configuración del sitio.',
+        };
+      }
+      console.warn('[push] no se pudieron activar los avisos del pedido', error);
+      // Los mensajes de la base (pedido de una cuenta, ya terminado, demasiados dispositivos) están en español y sirven tal cual.
+      const message = error instanceof Error && error.message ? error.message : '';
+      return { ok: false, message: message || 'No pudimos activar los avisos. Intenta de nuevo.' };
+    }
+  }
+
+  /**
+   * Quita este dispositivo de este pedido. La suscripción del navegador se deja: puede servir a otro pedido o a una
+   * cuenta, y sin filas en la base no recibe nada.
+   */
+  async disableForOrder(orderId: string): Promise<PushResult> {
+    if (!this.canPush) return { ok: false, message: 'Este dispositivo no puede recibir avisos.' };
+
+    try {
+      const subscription = await firstValueFrom(this.swPush!.subscription);
+      if (subscription) {
+        const removed = await this.supabase.db.rpc('unregister_order_push', { p_order_id: orderId, p_endpoint: subscription.endpoint });
+        if (removed.error) unwrap({ data: null, error: removed.error });
+      }
+      this.writeOrderIds(this.readOrderIds().filter((id) => id !== orderId));
+      return { ok: true };
+    } catch (error) {
+      console.warn('[push] no se pudieron desactivar los avisos del pedido', error);
+      return { ok: false, message: 'No pudimos desactivar los avisos. Intenta de nuevo.' };
     }
   }
 

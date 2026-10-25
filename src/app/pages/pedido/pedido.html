@@ -51,6 +51,9 @@
             }
           </ol>
 
+          <!-- Avisos al dispositivo, para quien compró sin cuenta. Un pedido que ya terminó no cambia más. -->
+          @if (!isFinal()) { <app-pedido-avisos [orderId]="o.id" /> }
+
           <div class="ped__grid">
             <div class="ped__col">
               <!-- Pago -->

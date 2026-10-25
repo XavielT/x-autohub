@@ -1127,6 +1127,17 @@ export type Database = {
        * Ciclo de vida de una publicación (migración 0030). Las dos las usa su dueño (o quien modera) y
        * escriben `sold_at` / `expires_at` con el reloj de la base.
        */
+      /**
+       * Avisos de un pedido de invitado (migración 0034). El uuid del pedido es la llave, como en `get_order()`.
+       */
+      register_order_push: {
+        Args: { p_order_id: string; p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
+        Returns: undefined;
+      };
+      unregister_order_push: {
+        Args: { p_order_id: string; p_endpoint: string };
+        Returns: undefined;
+      };
       mark_publication_sold: {
         Args: { p_id: number };
         Returns: { sold_at: string | null; expires_at: string }[];
