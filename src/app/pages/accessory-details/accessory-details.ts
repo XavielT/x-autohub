@@ -11,10 +11,11 @@ import { PublicationNotice } from '../../../shared/ui/publication-notice/publica
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
+import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 
 @Component({
   selector: 'app-accessory-details',
-  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink],
+  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink, ImageGallery],
   templateUrl: './accessory-details.html',
   styleUrl: './accessory-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

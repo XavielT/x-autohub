@@ -596,7 +596,9 @@ de arriba, que siguen con su copia (`hub-part-details` ya no existe).
 > Esto **no** unifica Auto Hub con Hub Market como producto. Comparten la galería,
 > no el inventario.
 
-### `accessory-details` está sin terminar
+### ~~`accessory-details` está sin terminar~~ ✅ **resuelto**
+
+Hecho: la ficha ya tiene el diseño de Hub Market (dos columnas, categoría, vendedor, precio, WhatsApp, "Ver más en Hub Market") y usa `app-image-gallery` (miniaturas y zoom) en vez de mostrar solo la primera foto. Lo que sigue es el texto original del punto, por historia.
 
 Es la única página de detalle que sigue siendo un borrador: `<h1>`, una imagen y
 cuatro `<p>` sin estilo (más el botón de WhatsApp y el estado "no encontrado"),

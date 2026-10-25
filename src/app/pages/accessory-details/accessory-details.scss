@@ -1,5 +1,114 @@
 .accessory-details {
-  padding: 20px;
+  padding: 20px 30px 40px;
+  box-sizing: border-box;
+
+  &__container {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 30px;
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow:
+      0 0 0 1px rgba(255, 179, 0, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      0 32px 80px rgba(0, 0, 0, 0.4);
+
+    // El aviso de vendida o vencida ocupa todo el ancho, encima de las dos columnas.
+    app-publication-notice {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__left,
+  &__right {
+    min-width: 0;
+  }
+
+  &__back-link {
+    color: var(--main-ultra-light);
+    text-decoration: none;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--Hub);
+    }
+  }
+
+  &__gallery {
+    margin-top: 12px;
+  }
+
+  &__category {
+    display: inline-block;
+    text-transform: uppercase;
+    font-family: var(--font-brand);
+    letter-spacing: 0.08em;
+    color: var(--Hub);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  &__name {
+    margin: 8px 0 0;
+    font-family: var(--font-brand);
+    color: #fff;
+    font-size: 34px;
+    line-height: 1.1;
+  }
+
+  &__meta {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 16px;
+  }
+
+  &__description {
+    color: #d0d0d0;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 16px 0;
+  }
+
+  &__price {
+    display: block;
+    color: #fff;
+    font-family: var(--font-price);
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__market-btn {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid #3a3a3a;
+    background: transparent;
+    color: #fff;
+
+    &:hover {
+      border-color: var(--Hub);
+      color: var(--Hub);
+    }
+  }
 
   &__not-found {
     display: flex;
@@ -23,5 +132,36 @@
   &__not-found-link {
     color: var(--Hub);
     text-decoration: underline;
+  }
+}
+
+@media (max-width: 1023px) {
+  .accessory-details {
+    padding: 20px;
+
+    &__container {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .accessory-details {
+    &__container {
+      padding: 16px;
+    }
+
+    &__name {
+      font-size: 28px;
+    }
+
+    &__price {
+      font-size: 36px;
+    }
+
+    &__actions {
+      flex-direction: column;
+    }
   }
 }

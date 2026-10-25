@@ -1,21 +1,37 @@
 @if (accessory(); as accessory) {
 <div class="accessory-details">
-  @if (!isLive(accessory)) {
-    <app-publication-notice [item]="accessory" />
-  }
-  @if (accessory.isTest) { <app-test-badge /> }
-  <h1>{{accessory.title}}</h1>
-  <img [src]="accessory.images[0]" [alt]="accessory.title" />
-  <p>{{accessory.description}}</p>
-  <p>Precio: RD$ {{accessory.price | number: '1.0-0'}}</p>
-  <p>Vendedor: {{accessory.sellerName}}</p>
-  <p>Ubicación: {{accessory.location}}</p>
-  @if (waLink(); as link) {
-    <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
-      <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
-      Contactar por WhatsApp
-    </a>
-  }
+  <div class="accessory-details__container">
+    @if (!isLive(accessory)) {
+      <app-publication-notice [item]="accessory" />
+    }
+    <div class="accessory-details__left">
+      <a class="accessory-details__back-link" routerLink="/hub-market">&larr; Volver al Hub Market</a>
+      <div class="accessory-details__gallery">
+        <app-image-gallery [images]="accessory.images" [alt]="accessory.title" />
+      </div>
+    </div>
+
+    <div class="accessory-details__right">
+      <span class="accessory-details__category">{{ accessory.category }}</span>
+      @if (accessory.isTest) { <app-test-badge /> }
+      <h1 class="accessory-details__name">{{ accessory.title }}</h1>
+      <div class="accessory-details__meta">
+        <span>Vendedor: {{ accessory.sellerName }}</span>
+        <span>{{ accessory.location }}</span>
+      </div>
+      <p class="accessory-details__description">{{ accessory.description }}</p>
+      <span class="accessory-details__price">RD$ {{ accessory.price | number: '1.0-0' }}</span>
+      <div class="accessory-details__actions">
+        @if (waLink(); as link) {
+          <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
+            <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+            Contactar por WhatsApp
+          </a>
+        }
+        <a class="accessory-details__market-btn" routerLink="/hub-market">Ver más en Hub Market</a>
+      </div>
+    </div>
+  </div>
 </div>
 } @else if (!isLoading()) {
   <!--
