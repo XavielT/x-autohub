@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { DecimalPipe, SlicePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
 import { JsonLdService } from '../../../shared/services/json-ld.service';
@@ -9,12 +9,13 @@ import { autoHubSeo } from '../../../shared/utils/community-seo';
 import { autoHubJsonLd } from '../../../shared/utils/structured-data';
 import { formatDrPhone } from '../../../shared/utils/phone';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { ExpandableText } from '../../../shared/ui/expandable-text/expandable-text';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-auto-hub-details',
-  imports: [DecimalPipe, SlicePipe, TestBadge, ImageGallery],
+  imports: [DecimalPipe, TestBadge, ImageGallery, ExpandableText],
   templateUrl: './auto-hub-details.html',
   styleUrl: './auto-hub-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,9 +36,6 @@ export class AutoHubDetails implements OnInit {
   readonly auto = signal<AutoHubModel | undefined>(undefined);
   readonly images = signal<string[]>([]);
   readonly isLoading = signal(true);
-
-  readonly isDescriptionExpanded = signal(false);
-  readonly maxDescriptionLength = 200;
 
   /**
    * El teléfono como se lee, no como se guarda: `8099539782` → `809-953-9782`.
@@ -94,7 +92,4 @@ export class AutoHubDetails implements OnInit {
 
 
 
-  toggleDescription(): void {
-    this.isDescriptionExpanded.update((expanded) => !expanded);
-  }
 }

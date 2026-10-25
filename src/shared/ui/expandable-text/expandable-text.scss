@@ -1,0 +1,25 @@
+.exp {
+  &__text {
+    color: var(--main-ultra-light);
+    line-height: 1.7;
+    margin: 0 0 12px 0;
+    font-family: var(--font-body);
+  }
+
+  &__toggle {
+    background: none;
+    border: 1px solid var(--Hub);
+    color: var(--Hub);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    &:hover {
+      background: var(--Hub);
+      color: #fff;
+    }
+  }
+}

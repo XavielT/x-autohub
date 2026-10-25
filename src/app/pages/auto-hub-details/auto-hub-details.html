@@ -65,13 +65,7 @@
   
           <div class="auto-hub-details__description">
             <h3>Descripción</h3>
-            <p>{{ isDescriptionExpanded() ? auto.description : (auto.description | slice:0:maxDescriptionLength) +
-                (auto.description.length > maxDescriptionLength ? '...' : '') }}</p>
-            @if (auto.description.length > maxDescriptionLength) {
-              <button class="auto-details__toggle-btn" (click)="toggleDescription()">
-                {{ isDescriptionExpanded() ? 'Ver menos' : 'Ver más' }}
-              </button>
-            }
+            <app-expandable-text [text]="auto.description" />
           </div>
         </div>
   

@@ -127,21 +127,6 @@
     }
   }
 
-  &__toggle-btn {
-    background: none;
-    border: 1px solid var(--Hub);
-    color: var(--Hub);
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
-
-    &:hover {
-      background: var(--Hub);
-      color: #fff;
-    }
-  }
 }
 
 .related-vehicles {

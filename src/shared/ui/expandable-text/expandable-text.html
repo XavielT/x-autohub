@@ -1,0 +1,6 @@
+<p class="exp__text">{{ shown() }}</p>
+@if (isLong()) {
+  <button type="button" class="exp__toggle" [attr.aria-expanded]="expanded()" (click)="toggle()">
+    {{ expanded() ? 'Ver menos' : 'Ver más' }}
+  </button>
+}

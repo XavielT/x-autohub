@@ -61,12 +61,7 @@
 
       <div class="car-details__description">
         <h3>Descripción</h3>
-        <p>{{ isDescriptionExpanded() ? car.description : (car.description | slice:0:maxDescriptionLength) + (car.description.length > maxDescriptionLength ? '...' : '') }}</p>
-        @if (car.description.length > maxDescriptionLength) {
-          <button class="car-details__toggle-btn" (click)="toggleDescription()">
-            {{ isDescriptionExpanded() ? 'Ver menos' : 'Ver más' }}
-          </button>
-        }
+        <app-expandable-text [text]="car.description" />
       </div>
     </div>
   </div>

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DecimalPipe, SlicePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
@@ -12,12 +12,13 @@ import { PublicationNotice } from '../../../shared/ui/publication-notice/publica
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { ExpandableText } from '../../../shared/ui/expandable-text/expandable-text';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-car-details',
-  imports: [PublicationNotice, CarCard, RouterLink, DecimalPipe, SlicePipe, TestBadge, ImageGallery],
+  imports: [PublicationNotice, CarCard, RouterLink, DecimalPipe, TestBadge, ImageGallery, ExpandableText],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,9 +42,6 @@ export class CarDetails implements OnInit {
   readonly relatedVehicles = signal<HubMarketItemModel[]>([]);
   readonly images = signal<string[]>([]);
   readonly isLoading = signal(true);
-
-  readonly isDescriptionExpanded = signal(false);
-  readonly maxDescriptionLength = 200;
 
   /**
    * Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono.
@@ -101,7 +99,4 @@ export class CarDetails implements OnInit {
 
 
 
-  toggleDescription(): void {
-    this.isDescriptionExpanded.update((expanded) => !expanded);
-  }
 }

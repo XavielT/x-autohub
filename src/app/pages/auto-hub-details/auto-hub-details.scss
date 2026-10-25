@@ -131,7 +131,6 @@
         }
     }
 
-    //&__toggle-btn {}
 
     &__not-found {
         text-align: center;
@@ -159,22 +158,6 @@
     }
 }
 
-.auto-details__toggle-btn {
-    background: none;
-    border: 1px solid var(--Hub);
-    color: var(--Hub);
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    font-family: var(--font-body);
-
-    &:hover {
-        background: var(--Hub);
-        color: #fff;
-    }
-}
 
 @media (max-width: 1024px) {
     .auto-hub-details {

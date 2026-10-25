@@ -579,7 +579,7 @@ mismo error que obligó a retirar Batman y ROLNER.
 
 ### ~~Unificar las páginas de detalle (galería duplicada)~~ ✅ **la galería, resuelta**
 
-Hecho: `car-details`, `auto-hub-details`, `hub-market-part-details` y `accessory-details` usan `app-image-gallery`; se borraron sus carruseles y ~250 líneas de SCSS. **Queda** el `toggleDescription()` de `car-details` y `auto-hub-details` (un `<app-expandable-text>` pendiente). Lo que sigue es el texto original, por historia.
+Hecho: `car-details`, `auto-hub-details`, `hub-market-part-details` y `accessory-details` usan `app-image-gallery`; se borraron sus carruseles y ~250 líneas de SCSS. También el texto expandible: `app-expandable-text` (`shared/ui/`) sustituye al `toggleDescription()` de `car-details` y `auto-hub-details`. Visto en escritorio; falta el teléfono. Lo que sigue es el texto original, por historia.
 
 `car-details`, `auto-hub-details`, `hub-part-details` y `hub-market-part-details`
 tienen **el mismo código de galería copiado cuatro veces** (`selectImage`,
