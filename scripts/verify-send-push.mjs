@@ -377,6 +377,58 @@ db.apptDevices = [dispCita(1)];
 r = await ask({ kind: 'appointment', id: GUEST_APPT });
 check('una cita a la que no se presento no avisa a nadie', r.body.reason === 'no-message' && pushes().length === 0);
 
+console.log('→ El recordatorio de una cita');
+const enHoras = (h) => new Date(Date.now() + h * 3600000).toISOString();
+const recordar = (id = APPT_ID) => ask({ kind: 'appointment_reminder', id });
+const conCita = (cambio, id = APPT_ID) => {
+  reset();
+  env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
+  Object.assign(db.appointments.find((a) => a.id === id) ?? db.appointments[db.appointments.push({ id, appointment_number: 3003, status: 'confirmed', user_id: null, scheduled_at: enHoras(10) }) - 1], { status: 'confirmed', scheduled_at: enHoras(10), ...cambio });
+};
+const sinSecreto = (body) => ask(body, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+
+conCita({});
+r = await sinSecreto({ kind: 'appointment_reminder', id: APPT_ID });
+check('una cita confirmada para dentro de 10 horas recuerda a su dueño', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('se busco a su dueño, no a un invitado', calls.some((c) => c.url.includes(`push_subscriptions?select=id,endpoint,p256dh,auth&user_id=eq.${OWNER}`)) && !calls.some((c) => c.url.includes('appointment_push_subscriptions')));
+check('un recordatorio no borra nada', !calls.some((c) => c.init.method === 'DELETE'));
+
+for (const estado of ['requested', 'in_progress', 'done', 'cancelled', 'no_show']) {
+  conCita({ status: estado });
+  r = await sinSecreto({ kind: 'appointment_reminder', id: APPT_ID });
+  check(`una cita ${estado} no se recuerda`, r.body.reason === 'no-message' && pushes().length === 0);
+}
+
+conCita({ scheduled_at: enHoras(30) });
+r = await sinSecreto({ kind: 'appointment_reminder', id: APPT_ID });
+check('una cita de dentro de 30 horas todavia no toca: no se le escribe a nadie por una cita lejana', r.body.reason === 'no-message' && pushes().length === 0);
+
+conCita({ scheduled_at: enHoras(-1) });
+r = await sinSecreto({ kind: 'appointment_reminder', id: APPT_ID });
+check('una cita que ya paso, tampoco', r.body.reason === 'no-message' && pushes().length === 0);
+
+conCita({ scheduled_at: enHoras(24.5) });
+r = await sinSecreto({ kind: 'appointment_reminder', id: APPT_ID });
+check('el margen de la hora del cron cubre una cita a 24.5 horas', r.body.sent === 1);
+
+conCita({ user_id: null }, GUEST_APPT);
+db.apptDevices = [dispCita(1)];
+r = await sinSecreto({ kind: 'appointment_reminder', id: GUEST_APPT });
+check('una cita de invitado recuerda a los dispositivos suscritos a esa cita', r.body.sent === 1 && calls.some((c) => c.url.includes(`appointment_push_subscriptions?select=id,endpoint,p256dh,auth&appointment_id=eq.${GUEST_APPT}`)), JSON.stringify(r));
+check('y no los borra (no es un estado final)', !calls.some((c) => c.init.method === 'DELETE'));
+
+conCita({ user_id: null }, GUEST_APPT);
+r = await sinSecreto({ kind: 'appointment_reminder', id: GUEST_APPT });
+check('una cita de invitado sin dispositivos no tiene a quien recordar', r.body.reason === 'no-devices' && pushes().length === 0);
+
+conCita({});
+r = await sinSecreto({ kind: 'appointment_reminder', id: '99999999-9999-4999-8999-999999999999' });
+check('una cita que no existe es 404', r.status === 404);
+r = await sinSecreto({ kind: 'appointment_reminder', id: 'no-es-uuid' });
+check('un id que no es uuid es una peticion mala', r.status === 400);
+r = await ask({ kind: 'appointment_reminder', id: APPT_ID }, null);
+check('sin el secreto de la base ni un admin, no entra', r.status === 403);
+
 console.log('→ Dispositivos');
 reset();
 db.devices = [];

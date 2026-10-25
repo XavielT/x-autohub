@@ -1,11 +1,11 @@
 // =============================================================================
-// send-push — avisar al cliente que su pedido o su cita cambió, al vendedor que su publicación vence, o a los admins que falló un despliegue
+// send-push — avisar al cliente que su pedido o su cita cambió (o se acerca), al vendedor que su publicación vence, o a los admins que falló un despliegue
 // =============================================================================
 //
 // Corre en el Edge Runtime de Supabase (Deno), no en la app. Se despliega aparte y
 // **no** se compila con el resto del proyecto (los dos `tsconfig` solo miran `src/`).
 //
-// Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }` o `{ kind: 'deploy' }`, comprueba quien llama,
+// Que hace: recibe `{ kind: 'order' | 'appointment' | 'appointment_reminder' | 'listing', id }` o `{ kind: 'deploy' }`, comprueba quien llama,
 // lee el pedido, la cita, la publicacion o el ultimo despliegue, arma el aviso segun su estado actual y lo
 // manda a todos los dispositivos del dueño (o, en un despliegue fallido, de los admins) (`push_subscriptions`). Un pedido
 // o una cita de invitado no tiene dueño: avisa a los dispositivos que se suscribieron a **ese pedido** (`order_push_subscriptions`)
@@ -14,7 +14,8 @@
 // La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
 // pg_net cuando cambia el estado de un pedido o de una cita, y `warn_expiring_publications()`
 // (migracion 0031, una vez al dia) cuando a una publicacion de Hub Market le quedan siete dias, y `check_deploy_failures()`
-// (migracion 0032, cada 10 minutos) para mirar el ultimo despliegue, todos con la cabecera `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
+// (migracion 0032, cada 10 minutos) para mirar el ultimo despliegue, y `send_appointment_reminders()` (migracion 0036, cada hora) para
+// recordar una cita de las proximas 24 horas, todos con la cabecera `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
 // ya no usa el panel). Responde `{ sent, removed }` o `{ sent: 0, reason }`: nunca falla de
 // forma que le importe a quien llama, porque el estado ya cambio y un aviso que no sale no
 // es motivo para decir que el cambio fallo.
@@ -38,7 +39,7 @@
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento), **0032** (el de despliegue fallido) **0034** (los avisos de un pedido de invitado) y **0035** (los de una cita de invitado). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento), **0032** (el de despliegue fallido) **0034** (los avisos de un pedido de invitado) y **0035** (los de una cita de invitado) y **0036** (el recordatorio de una cita). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -119,6 +120,9 @@ const FINAL_ORDER_STATUSES = ['delivered', 'cancelled'];
 /** Los de una cita que no cambian más (`no_show` no avisa, pero también es final). */
 const FINAL_APPOINTMENT_STATUSES = ['done', 'cancelled', 'no_show'];
 
+/** El recordatorio de una cita sale cuando faltan menos de 24 horas; el margen cubre que el cron corre cada hora (migracion 0036). */
+const REMINDER_WINDOW_MS = 25 * 60 * 60 * 1000;
+
 /** Cuantos dias antes de vencer se avisa. Es el mismo `RENEW_WARNING_DAYS` del frontend y la ventana de la migracion 0031. */
 const LISTING_WARNING_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -180,7 +184,12 @@ async function orderNotice(supabaseUrl: string, serviceKey: string, id: string):
   };
 }
 
-async function appointmentNotice(supabaseUrl: string, serviceKey: string, id: string): Promise<Notice | 'not-found' | 'no-message'> {
+async function appointmentNotice(
+  supabaseUrl: string,
+  serviceKey: string,
+  id: string,
+  reminder = false,
+): Promise<Notice | 'not-found' | 'no-message'> {
   const rows = await rest<{ appointment_number: number; status: string; user_id: string | null; scheduled_at: string }[]>(
     supabaseUrl,
     serviceKey,
@@ -188,6 +197,25 @@ async function appointmentNotice(supabaseUrl: string, serviceKey: string, id: st
   );
   const appointment = rows?.[0];
   if (!appointment) return 'not-found';
+
+  // Un recordatorio solo sale para una cita confirmada que ocurre dentro de la ventana: aunque alguien llamara con el secreto, no
+  // se le puede escribir a nadie por una cita que no esta por llegar.
+  if (reminder) {
+    const left = new Date(appointment.scheduled_at).getTime() - Date.now();
+    if (appointment.status !== 'confirmed' || left <= 0 || left > REMINDER_WINDOW_MS) return 'no-message';
+
+    const day = (date: Date) => date.toLocaleDateString('en-CA', { timeZone: TIME_ZONE });
+    const isToday = day(new Date(appointment.scheduled_at)) === day(new Date());
+    const hour = new Date(appointment.scheduled_at).toLocaleTimeString('es-DO', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit' });
+    return {
+      userId: appointment.user_id,
+      guest: appointment.user_id ? undefined : { table: 'appointment_push_subscriptions', column: 'appointment_id', id },
+      title: `Recordatorio: cita #${appointment.appointment_number}`,
+      body: `${isToday ? 'Hoy' : 'Mañana'} tienes tu cita en el taller a las ${hour}. Si no puedes venir, avísanos por WhatsApp.`,
+      path: '/perfil',
+      tag: `/perfil#recordatorio-${id}`,
+    };
+  }
 
   const message = APPOINTMENT_MESSAGES[appointment.status];
   if (!message) return 'no-message';
@@ -332,12 +360,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Pedidos y citas se identifican con un uuid; las publicaciones, con un entero; un despliegue no lleva id.
   const isListing = input.kind === 'listing';
   const isDeploy = input.kind === 'deploy';
+  const isReminder = input.kind === 'appointment_reminder';
   const idIsValid = isDeploy
     ? true
     : isListing
       ? typeof input.id === 'number' && Number.isSafeInteger(input.id) && input.id > 0
       : typeof input.id === 'string' && UUID.test(input.id);
-  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isListing && !isDeploy) || !idIsValid) {
+  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isReminder && !isListing && !isDeploy) || !idIsValid) {
     return refuse(400, 'bad-request');
   }
 
@@ -348,7 +377,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? await listingNotice(supabaseUrl, serviceKey, input.id as number)
         : input.kind === 'order'
           ? await orderNotice(supabaseUrl, serviceKey, input.id as string)
-          : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
+          : await appointmentNotice(supabaseUrl, serviceKey, input.id as string, isReminder);
     if (notice === 'not-found') return refuse(404, 'not-found');
     if (notice === 'no-message') return refuse(200, 'no-message');
     // Sin dueño, sin admins y sin invitado a quien buscar, no hay a quien avisar.

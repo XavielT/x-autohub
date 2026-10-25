@@ -1802,6 +1802,75 @@ delete from appointment_push_subscriptions;
 delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
 SQL
 
+echo "→ Recordatorio de una cita, el dia antes (migracion 0036)"
+RM_CLEAR="delete from appointment_reminders;"
+# Las dos citas de prueba: la de invitado (APPT1) y la de USER_A (OW_APPT), confirmadas y para dentro de 10 horas.
+rm_set() { echo "update service_appointments set status = '$2', scheduled_at = now() + interval '$3' where id = '$1';"; }
+
+check "la tabla de recordatorios tiene RLS" "true" \
+  "select relrowsecurity::text from pg_class where relname = 'appointment_reminders';"
+check "anon no la lee" 'ERROR:  permission denied for table appointment_reminders' "$(as_anon 'select * from appointment_reminders;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table appointment_reminders' "$(as_user "$USER_A" 'select * from appointment_reminders;')"
+check "los recordatorios se borran con la cita" "c" \
+  "select confdeltype::text from pg_constraint where conrelid = 'public.appointment_reminders'::regclass and contype = 'f';"
+
+check "sin los secretos del Vault no recuerda nada" "sin enlace de avisos: no se recordo nada" "select send_appointment_reminders();"
+check "y no deja nada marcado" "0" "select count(*) from appointment_reminders;"
+
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+$(rm_set "$APPT1" confirmed '10 hours')
+$(rm_set "$OW_APPT" confirmed '10 hours')
+insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'https://push.example/cita', '$KEY_A', '$KEY_B');
+insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/cuenta', '$KEY_A', '$KEY_B');
+delete from net.calls;
+SQL
+
+check "pide un recordatorio por la cita de invitado con dispositivos y otro por la de la cuenta con dispositivos" "2 recordatorios pedidos" "select send_appointment_reminders();"
+check "con el tipo appointment_reminder y solo el id (el texto lo arma send-push)" "2|appointment_reminder|true" \
+  "select count(*) || '|' || min(body->>'kind') || '|' || (bool_and((body - 'kind' - 'id') = '{}'::jsonb))::text from net.calls;"
+check "con el secreto y la clave anon, como los demas avisos desde la base" "s3cr3t|Bearer anon-key" \
+  "select min(headers->>'x-push-secret') || '|' || min(headers->>'Authorization') from net.calls;"
+check "quedaron anotados para que hora se recordo" "2" \
+  "select count(*) from appointment_reminders r join service_appointments a on a.id = r.appointment_id and r.remind_for = a.scheduled_at;"
+check "a la hora siguiente no repite" "0 recordatorios pedidos" "select send_appointment_reminders();"
+check "si se reprograma (cambia la hora), puede recordar otra vez" "1 recordatorios pedidos" \
+  "update service_appointments set scheduled_at = scheduled_at + interval '1 hour' where id = '$APPT1'; select send_appointment_reminders();"
+
+echo "   (a quien NO se le recuerda: se aparta la cita de la cuenta para que no sume)"
+RM_SOLO_INVITADO="update service_appointments set status = 'cancelled' where id = '$OW_APPT';"
+for estado in requested in_progress done cancelled no_show; do
+  check "una cita $estado no se recuerda" "0 recordatorios pedidos" \
+    "$RM_SOLO_INVITADO $RM_CLEAR $(rm_set "$APPT1" "$estado" '10 hours') select send_appointment_reminders();"
+done
+check "una cita para dentro de 1 hora ya no (ya la confirmaron, y viene en camino)" "0 recordatorios pedidos" \
+  "$RM_SOLO_INVITADO $RM_CLEAR $(rm_set "$APPT1" confirmed '1 hour') select send_appointment_reminders();"
+check "una de dentro de 30 horas todavia no toca" "0 recordatorios pedidos" \
+  "$RM_SOLO_INVITADO $RM_CLEAR $(rm_set "$APPT1" confirmed '30 hours') select send_appointment_reminders();"
+check "una que ya paso, tampoco" "0 recordatorios pedidos" \
+  "$RM_SOLO_INVITADO $RM_CLEAR $(rm_set "$APPT1" confirmed '-1 hour') select send_appointment_reminders();"
+check "una cita de invitado sin dispositivos no tiene a quien recordar" "0 recordatorios pedidos" \
+  "$RM_CLEAR $(rm_set "$APPT1" confirmed '10 hours') delete from appointment_push_subscriptions where appointment_id = '$APPT1'; update service_appointments set status = 'cancelled' where id = '$OW_APPT'; select send_appointment_reminders();"
+check "una cita de una cuenta sin ningun dispositivo, tampoco" "0 recordatorios pedidos" \
+  "$RM_CLEAR $(rm_set "$OW_APPT" confirmed '10 hours') delete from push_subscriptions where user_id = '$USER_A'; select send_appointment_reminders();"
+
+check "si pg_net falla no se cae, y esa cita queda sin marcar para reintentar" "0 recordatorios pedidos|0" \
+  "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/cuenta', '$KEY_A', '$KEY_B'); $RM_CLEAR alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; select send_appointment_reminders() || '|' || (select count(*) from appointment_reminders);"
+$PSQL -d postgres -c "drop function net.http_post(text, jsonb, jsonb, jsonb, integer); alter function net.http_post_ok(text, jsonb, jsonb, jsonb, integer) rename to http_post;" >/dev/null
+check "arreglado pg_net, a la hora siguiente si se manda" "1 recordatorios pedidos" "select send_appointment_reminders();"
+
+check "el cron corre cada hora, una sola vez" "1|5 * * * *" \
+  "select count(*) || '|' || min(schedule) from cron.job where jobname = 'appointment-reminders' and command like '%send_appointment_reminders%';"
+check "anon no invoca send_appointment_reminders" "$(denied send_appointment_reminders)" "$(as_anon 'select send_appointment_reminders();')"
+check "ni un usuario con sesion" "$(denied send_appointment_reminders)" "$(as_user "$USER_A" 'select send_appointment_reminders();')"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from appointment_reminders;
+delete from appointment_push_subscriptions;
+delete from push_subscriptions where endpoint like 'https://push.example/%';
+delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
+SQL
+
 echo "→ Auto Hub y Hub Market tambien republican el sitio (migracion 0029)"
 check "un cambio en un vehiculo de Auto Hub marca el sitio" "true" \
   "$RB_RESET update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); $RB_DIRTY"
@@ -2395,11 +2464,18 @@ CHECK_DB=upgrade check "la tabla queda vacia y el trigger de avisos sigue una so
   "select (select count(*) from order_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 
 echo "→ Camino de actualizacion de la 0035"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0035_guest_appointment_push.sql upgrade
+apply supabase/migrations/0035_guest_appointment_push.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la tabla de citas queda vacia y el trigger de avisos sigue una sola vez por tabla" "0|1|1" \
   "select (select count(*) from appointment_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
+
+echo "→ Camino de actualizacion de la 0036"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia, el cron una sola vez y sin secretos no recuerda" "0|1|sin enlace de avisos: no se recordo nada" \
+  "select (select count(*) from appointment_reminders) || '|' || (select count(*) from cron.job where jobname = 'appointment-reminders') || '|' || send_appointment_reminders();"
 
 # --- Resumen ------------------------------------------------------------------
 
