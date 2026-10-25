@@ -67,10 +67,23 @@ describe('AutoHubDetails', () => {
     );
   });
 
+  it('declara el vehiculo como Car en JSON-LD, y lo quita al salir', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+
+    const ld = JSON.parse(document.head.querySelector('script[data-ld="listing"]')!.textContent!);
+    expect(ld['@type']).toBe('Car');
+    expect(ld.url).toBe('https://xautohubrd.com/auto-hub-details/1');
+
+    fixture.destroy();
+    expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
+  });
+
   it('un vehiculo de prueba no se anuncia: la pagina queda como "no encontrado"', async () => {
     const { fixture } = montar({ ...VEHICULO, isTest: true });
     await fixture.whenStable();
 
+    expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
     expect(document.title).toBe('Vehículo no encontrado | X AutoHub');
     expect(document.title).not.toContain('Toyota');
   });

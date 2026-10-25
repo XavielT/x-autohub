@@ -1,4 +1,7 @@
+import { AutoHubModel } from '../models/auto-hub.model';
+import { HubMarketItemModel } from '../models/hub-market-item.model';
 import { ProductModel } from '../models/product.model';
+import { autoHubPath, hubMarketPath } from './community-seo';
 import { ReviewStats } from '../models/review.model';
 import { SERVICE_CATEGORY_LABELS, ServiceModel } from '../models/service.model';
 import { Availability } from './product-availability';
@@ -111,6 +114,100 @@ export function serviceJsonLd(service: ServiceModel, options: ServiceLdOptions):
         ? undefined
         : { '@type': 'Offer', url, priceCurrency: 'DOP', price: service.priceFrom.toFixed(2) },
     aggregateRating: aggregateRating(options.stats),
+  });
+}
+
+const DRIVE: Record<AutoHubModel['traction'], string> = {
+  fwd: `${SCHEMA}/FrontWheelDriveConfiguration`,
+  rwd: `${SCHEMA}/RearWheelDriveConfiguration`,
+  awd: `${SCHEMA}/AllWheelDriveConfiguration`,
+  '4x4': `${SCHEMA}/FourWheelDriveConfiguration`,
+};
+
+const FUEL: Record<AutoHubModel['fuel'], string> = {
+  gasoline: 'Gasolina',
+  diesel: 'Diésel',
+  glp: 'GLP',
+  electric: 'Eléctrico',
+};
+
+const BODY: Record<AutoHubModel['chasisType'], string> = {
+  sedan: 'Sedán',
+  suv: 'SUV',
+  hatchback: 'Hatchback',
+  pickup: 'Pickup',
+};
+
+const odometer = (km: number) => ({ '@type': 'QuantitativeValue', value: km, unitCode: 'KMT' });
+
+/**
+ * JSON-LD `Car` de un vehículo de Auto Hub, con su oferta. El vendedor es X AutoHub (el vehículo
+ * es suyo y está verificado); el teléfono del vehículo no se declara.
+ */
+export function autoHubJsonLd(auto: AutoHubModel): Record<string, unknown> {
+  const url = `${SITE_URL}${autoHubPath(auto.id)}`;
+  const description = auto.description?.trim();
+
+  return compact({
+    '@context': SCHEMA,
+    '@type': 'Car',
+    name: `${auto.brand} ${auto.model} ${auto.year}`,
+    brand: { '@type': 'Brand', name: auto.brand },
+    model: auto.model,
+    vehicleModelDate: String(auto.year),
+    bodyType: BODY[auto.chasisType],
+    color: auto.color || undefined,
+    numberOfDoors: auto.doors,
+    fuelType: FUEL[auto.fuel],
+    driveWheelConfiguration: DRIVE[auto.traction],
+    mileageFromOdometer: odometer(auto.mileage),
+    image: auto.images?.length ? auto.images.map(absoluteUrl) : undefined,
+    description: description || undefined,
+    url,
+    offers: {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'DOP',
+      price: auto.price.toFixed(2),
+      availability: `${SCHEMA}/InStock`,
+      itemCondition: `${SCHEMA}/UsedCondition`,
+      seller: { '@type': 'AutoDealer', name: 'X AutoHub', url: SITE_URL },
+    },
+  });
+}
+
+/**
+ * JSON-LD de una publicación de Hub Market: `Car` si es un vehículo, `Product` si es una pieza o un
+ * accesorio. Sin vendedor: es una persona y su nombre no se publica en los datos estructurados.
+ * Una publicación que su dueño ve pero nadie más (pendiente o rechazada) no declara nada: `null`.
+ */
+export function hubMarketJsonLd(item: HubMarketItemModel): Record<string, unknown> | null {
+  if (item.status && item.status !== 'aprobado') return null;
+  const url = `${SITE_URL}${hubMarketPath(item)}`;
+  const description = item.description?.trim();
+  const specs = item.vehicleSpecs;
+  const isCar = item.category === 'vehiculos';
+  const condition = item.condition === 'new' ? 'NewCondition' : 'UsedCondition';
+
+  return compact({
+    '@context': SCHEMA,
+    '@type': isCar ? 'Car' : 'Product',
+    name: item.title,
+    brand: isCar && specs?.brand ? { '@type': 'Brand', name: specs.brand } : undefined,
+    model: isCar ? specs?.model : undefined,
+    vehicleModelDate: isCar && specs?.year ? String(specs.year) : undefined,
+    mileageFromOdometer: isCar && specs ? odometer(specs.mileage) : undefined,
+    image: item.images?.length ? item.images.map(absoluteUrl) : undefined,
+    description: description || undefined,
+    url,
+    offers: {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'DOP',
+      price: item.price.toFixed(2),
+      availability: `${SCHEMA}/InStock`,
+      itemCondition: `${SCHEMA}/${condition}`,
+    },
   });
 }
 

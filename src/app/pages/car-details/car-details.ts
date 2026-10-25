@@ -4,8 +4,10 @@ import { DecimalPipe, SlicePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
+import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
@@ -21,9 +23,13 @@ export class CarDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly hubMarketService = inject(HubMarketService);
   private readonly seo = inject(SeoService);
+  private readonly jsonLd = inject(JsonLdService);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.seo.reset());
+    inject(DestroyRef).onDestroy(() => {
+      this.seo.reset();
+      this.jsonLd.set('listing', null);
+    });
   }
 
   readonly car = signal<HubMarketItemModel | undefined>(undefined);
@@ -76,9 +82,11 @@ export class CarDetails implements OnInit {
   private applySeo(item: HubMarketItemModel | undefined): void {
     if (item && !item.isTest) {
       this.seo.set(hubMarketSeo(item));
+      this.jsonLd.set('listing', hubMarketJsonLd(item));
       return;
     }
     this.seo.reset();
+    this.jsonLd.set('listing', null);
     this.seo.set({
       title: 'Publicación no encontrada | X AutoHub',
       description: 'Esa publicación ya no está en Hub Market.',

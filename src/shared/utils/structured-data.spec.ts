@@ -1,4 +1,7 @@
-import { SITE_URL, absoluteUrl, productJsonLd, serializeJsonLd, serviceJsonLd } from './structured-data';
+import { SITE_URL, absoluteUrl, autoHubJsonLd, hubMarketJsonLd, productJsonLd, serializeJsonLd, serviceJsonLd } from './structured-data';
+import { AUTO_HUB_MOCK } from '../data/auto-hub.mock';
+import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
+import { HubMarketItemModel } from '../models/hub-market-item.model';
 import { availabilityOf } from './product-availability';
 import { makeProduct } from '../testing/product.fixture';
 import { SERVICES_MOCK } from '../data/service.mock';
@@ -97,6 +100,91 @@ describe('structured-data', () => {
     it('aggregateRating solo con reseñas reales', () => {
       expect(serviceJsonLd(quote, { stats: null })).not.toHaveProperty('aggregateRating');
       expect(serviceJsonLd(quote, { stats: STATS })['aggregateRating']).toMatchObject({ ratingValue: 4.3, reviewCount: 3 });
+    });
+  });
+
+  describe('autoHubJsonLd', () => {
+    const auto = {
+      ...AUTO_HUB_MOCK[0],
+      id: 4,
+      brand: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      price: 1000000,
+      mileage: 40000,
+      fuel: 'gasoline' as const,
+      traction: 'fwd' as const,
+      chasisType: 'sedan' as const,
+      images: ['assets/imgs/c.jpg'],
+    };
+
+    it('es un Car con su ficha técnica y la oferta en DOP vendida por X AutoHub', () => {
+      expect(autoHubJsonLd(auto)).toMatchObject({
+        '@context': 'https://schema.org',
+        '@type': 'Car',
+        name: 'Toyota Corolla 2020',
+        brand: { '@type': 'Brand', name: 'Toyota' },
+        model: 'Corolla',
+        vehicleModelDate: '2020',
+        bodyType: 'Sedán',
+        fuelType: 'Gasolina',
+        driveWheelConfiguration: 'https://schema.org/FrontWheelDriveConfiguration',
+        mileageFromOdometer: { '@type': 'QuantitativeValue', value: 40000, unitCode: 'KMT' },
+        image: [`${SITE_URL}/assets/imgs/c.jpg`],
+        url: `${SITE_URL}/auto-hub-details/4`,
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: 'DOP',
+          price: '1000000.00',
+          availability: 'https://schema.org/InStock',
+          itemCondition: 'https://schema.org/UsedCondition',
+          seller: { '@type': 'AutoDealer', name: 'X AutoHub' },
+        },
+      });
+    });
+
+    it('no declara el teléfono del vehículo', () => {
+      expect(JSON.stringify(autoHubJsonLd(auto))).not.toContain(auto.contact);
+    });
+  });
+
+  describe('hubMarketJsonLd', () => {
+    const car = HUB_MARKET_ITEMS_MOCK.find((i) => i.category === 'vehiculos')!;
+    const part = HUB_MARKET_ITEMS_MOCK.find((i) => i.category === 'piezas')!;
+
+    it('un vehículo es un Car, con su kilometraje, y su URL sale de la categoría', () => {
+      const ld = hubMarketJsonLd(car)!;
+
+      expect(ld['@type']).toBe('Car');
+      expect(ld['url']).toBe(`${SITE_URL}/car-details/${car.id}`);
+      expect(ld['mileageFromOdometer']).toMatchObject({ unitCode: 'KMT', value: car.vehicleSpecs!.mileage });
+    });
+
+    it('una pieza es un Product y no trae datos de vehículo', () => {
+      const ld = hubMarketJsonLd(part)!;
+
+      expect(ld['@type']).toBe('Product');
+      expect(ld['url']).toBe(`${SITE_URL}/hub-market-part-details/${part.id}`);
+      expect(ld).not.toHaveProperty('mileageFromOdometer');
+      expect(ld['offers']).toMatchObject({ priceCurrency: 'DOP', price: part.price.toFixed(2) });
+    });
+
+    it('no publica el nombre del vendedor', () => {
+      expect(JSON.stringify(hubMarketJsonLd(part))).not.toContain(part.sellerName);
+    });
+
+    it('lo usado y lo nuevo declaran su condición', () => {
+      const used: HubMarketItemModel = { ...part, condition: 'used' };
+      const fresh: HubMarketItemModel = { ...part, condition: 'new' };
+
+      expect(hubMarketJsonLd(used)!['offers']).toMatchObject({ itemCondition: 'https://schema.org/UsedCondition' });
+      expect(hubMarketJsonLd(fresh)!['offers']).toMatchObject({ itemCondition: 'https://schema.org/NewCondition' });
+    });
+
+    it('una publicación pendiente o rechazada no declara nada', () => {
+      expect(hubMarketJsonLd({ ...part, status: 'pendiente' })).toBeNull();
+      expect(hubMarketJsonLd({ ...part, status: 'rechazado' })).toBeNull();
+      expect(hubMarketJsonLd({ ...part, status: 'aprobado' })).not.toBeNull();
     });
   });
 

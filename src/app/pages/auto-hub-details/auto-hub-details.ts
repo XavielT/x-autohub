@@ -3,8 +3,10 @@ import { ActivatedRoute } from '@angular/router';
 import { DecimalPipe, SlicePipe } from '@angular/common';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { autoHubSeo } from '../../../shared/utils/community-seo';
+import { autoHubJsonLd } from '../../../shared/utils/structured-data';
 import { formatDrPhone } from '../../../shared/utils/phone';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
@@ -20,9 +22,13 @@ export class AutoHubDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly autoHubService = inject(AutoHubService);
   private readonly seo = inject(SeoService);
+  private readonly jsonLd = inject(JsonLdService);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.seo.reset());
+    inject(DestroyRef).onDestroy(() => {
+      this.seo.reset();
+      this.jsonLd.set('listing', null);
+    });
   }
 
   readonly auto = signal<AutoHubModel | undefined>(undefined);
@@ -74,9 +80,11 @@ export class AutoHubDetails implements OnInit {
   private applySeo(auto: AutoHubModel | undefined): void {
     if (auto && !auto.isTest) {
       this.seo.set(autoHubSeo(auto));
+      this.jsonLd.set('listing', autoHubJsonLd(auto));
       return;
     }
     this.seo.reset();
+    this.jsonLd.set('listing', null);
     this.seo.set({
       title: 'Vehículo no encontrado | X AutoHub',
       description: 'Ese vehículo ya no está en Auto Hub.',

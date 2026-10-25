@@ -80,6 +80,25 @@ for (const route of expected) {
     if (!/<meta property="og:image" content="https:\/\//.test(html)) fail(`${route}: og:image no es una URL absoluta`);
   }
 
+  // Las fichas de la comunidad llevan su JSON-LD (Car o Product) con la misma URL que el canónico.
+  if (DETAIL.test(route)) {
+    const block = html.match(/<script[^>]*data-ld="listing"[^>]*>([\s\S]*?)<\/script>/);
+    if (!block) fail(`${route}: no trae el JSON-LD de la ficha`);
+    else {
+      let ld = null;
+      try {
+        ld = JSON.parse(block[1]);
+      } catch {
+        fail(`${route}: el JSON-LD no es un JSON válido`);
+      }
+      if (ld) {
+        if (!['Car', 'Product'].includes(ld['@type'])) fail(`${route}: el JSON-LD es de tipo ${ld['@type']}`);
+        if (ld.url !== SITE_URL + route) fail(`${route}: la URL del JSON-LD es ${ld.url}`);
+        if (!ld.offers?.price) fail(`${route}: el JSON-LD no trae el precio`);
+      }
+    }
+  }
+
   if (route.startsWith('/tienda/p/') && !html.includes('prod__name')) fail(`${route}: no trae el nombre del producto`);
   if (route === '/tienda' && !html.includes('app-catalogo-card')) fail('/tienda: no trae ninguna tarjeta de producto');
   if (route === '/auto-hub' && !html.includes('app-autohub-card')) fail('/auto-hub: no trae ningún vehículo');
