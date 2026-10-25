@@ -202,7 +202,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       const save = vi.spyOn(catalog, 'saveVariants').mockReturnValue(of({ deactivated: [] }));
       c.startCreate();
       llenar(c, { fitmentType: 'universal', variantLabel: 'Color' });
-      const lista = [{ id: null, name: 'Negro', sku: '', imageUrl: '', stock: 4, isActive: true }];
+      const lista = [{ id: null, name: 'Negro', sku: '', imageUrls: [], stock: 4, isActive: true }];
       c.variants.set(lista);
 
       c.submitPart();
@@ -217,9 +217,9 @@ describe('AdminInventario (piezas de la tienda)', () => {
       c.startCreate();
       llenar(c, { fitmentType: 'universal', stock: 99 });
       c.variants.set([
-        { id: null, name: 'Negro', sku: '', imageUrl: '', stock: 4, isActive: true },
-        { id: null, name: 'Gris', sku: '', imageUrl: '', stock: 3, isActive: true },
-        { id: null, name: 'Beige', sku: '', imageUrl: '', stock: 50, isActive: false },
+        { id: null, name: 'Negro', sku: '', imageUrls: [], stock: 4, isActive: true },
+        { id: null, name: 'Gris', sku: '', imageUrls: [], stock: 3, isActive: true },
+        { id: null, name: 'Beige', sku: '', imageUrls: [], stock: 50, isActive: false },
       ]);
 
       c.submitPart();
@@ -234,8 +234,8 @@ describe('AdminInventario (piezas de la tienda)', () => {
       c.startCreate();
       llenar(c, { fitmentType: 'universal' });
       c.variants.set([
-        { id: null, name: 'Negro', sku: '', imageUrl: '', stock: 1, isActive: true },
-        { id: null, name: 'negro', sku: '', imageUrl: '', stock: 1, isActive: true },
+        { id: null, name: 'Negro', sku: '', imageUrls: [], stock: 1, isActive: true },
+        { id: null, name: 'negro', sku: '', imageUrls: [], stock: 1, isActive: true },
       ]);
 
       c.submitPart();
@@ -290,7 +290,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       fixture.detectChanges();
       expect(el.querySelector('input[formcontrolname="stock"]')).not.toBeNull();
 
-      c.variants.set([{ id: null, name: 'Negro', sku: '', imageUrl: '', stock: 6, isActive: true }]);
+      c.variants.set([{ id: null, name: 'Negro', sku: '', imageUrls: [], stock: 6, isActive: true }]);
       fixture.detectChanges();
 
       expect(el.querySelector('input[formcontrolname="stock"]')).toBeNull();
@@ -299,7 +299,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
 
     it('editar una pieza con opciones las trae, y la lista marca la suma sin campo editable', () => {
       const { fixture, c, el, catalog } = montar();
-      vi.spyOn(catalog, 'getVariants').mockReturnValue(of([{ id: 1, name: 'Negro', sku: '', imageUrl: '', stock: 6, isActive: true }]));
+      vi.spyOn(catalog, 'getVariants').mockReturnValue(of([{ id: 1, name: 'Negro', sku: '', imageUrls: [], stock: 6, isActive: true }]));
 
       c.startEdit(1);
       fixture.detectChanges();

@@ -3,7 +3,7 @@
     <p class="var__empty">Sin opciones. El producto se compra tal cual, con el stock de arriba.</p>
   } @else {
     <ul class="var__list">
-      @for (v of variants(); track $index) {
+      @for (v of variants(); track $index; let vi = $index) {
         <li class="var__item" [class.var__item--off]="!v.isActive">
           <label class="var__field var__field--name">
             <span>Nombre</span>
@@ -20,20 +20,25 @@
             <input type="text" maxlength="40" [ngModel]="v.sku"
                    (ngModelChange)="patch($index, { sku: $event })" [ngModelOptions]="{ standalone: true }" />
           </label>
-          @if (images().length > 0 || v.imageUrl) {
-            <label class="var__field">
-              <span>Foto <small>(opcional)</small></span>
-              <select [ngModel]="v.imageUrl" (ngModelChange)="patch($index, { imageUrl: $event })"
-                      [ngModelOptions]="{ standalone: true }">
-                <option value="">Sin foto propia</option>
-                @for (url of images(); track url; let i = $index) {
-                  <option [value]="url">Foto {{ i + 1 }}</option>
-                }
-                @if (v.imageUrl && !images().includes(v.imageUrl)) {
-                  <option [value]="v.imageUrl">{{ photoLabel(v.imageUrl) }}</option>
-                }
-              </select>
-            </label>
+          @if (images().length > 0 || v.imageUrls.length > 0) {
+            <fieldset class="var__photos">
+              <legend>Fotos <small>(opcional: la primera es la portada)</small></legend>
+              @for (url of images(); track url; let i = $index) {
+                <label class="var__photo" [class.var__photo--on]="v.imageUrls.includes(url)">
+                  <input type="checkbox" [checked]="v.imageUrls.includes(url)"
+                         (change)="togglePhoto(vi, url, $any($event.target).checked)" />
+                  <img [src]="url" [alt]="'Foto ' + (i + 1)" loading="lazy" />
+                  <span>Foto {{ i + 1 }}</span>
+                </label>
+              }
+              @for (url of orphanPhotos(v); track url) {
+                <label class="var__photo var__photo--on">
+                  <input type="checkbox" checked
+                         (change)="togglePhoto(vi, url, false)" />
+                  <span>{{ photoLabel(url) }}</span>
+                </label>
+              }
+            </fieldset>
           }
           <label class="var__check">
             <input type="checkbox" [ngModel]="v.isActive"

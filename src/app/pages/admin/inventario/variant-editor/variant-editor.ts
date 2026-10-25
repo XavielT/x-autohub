@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { VariantDraft } from '../../../../../shared/models/admin-inventory.model';
-import { VARIANT_NAME_MAX, activeVariantStock } from '../../../../../shared/utils/variant-rules';
+import { PHOTOS_MAX, VARIANT_NAME_MAX, activeVariantStock } from '../../../../../shared/utils/variant-rules';
 
 /**
  * Las opciones de un producto (color, talla…), cada una con su propio stock.
@@ -35,10 +35,41 @@ export class VariantEditor {
   /** Lo que sumará el stock del producto: las opciones activas. */
   readonly total = computed(() => activeVariantStock(this.variants()));
 
-  /** El nombre corto de una foto para el selector: "Foto 2". */
+  /** El nombre corto de una foto: "Foto 2". */
   photoLabel(url: string): string {
     const index = this.images().indexOf(url);
     return index >= 0 ? `Foto ${index + 1}` : 'Foto que ya no está en el producto';
+  }
+
+  /**
+   * Las fotos de una opción que ya no están en el producto (alguien las quitó). Se siguen mostrando, marcadas,
+   * para poder quitarlas de la opción; la ficha las descarta por su cuenta.
+   */
+  orphanPhotos(draft: VariantDraft): string[] {
+    return draft.imageUrls.filter((url) => !this.images().includes(url));
+  }
+
+  /**
+   * Marca o desmarca una foto del producto para la opción `index`. El orden de la opción es el de las fotos del
+   * producto, no el del clic: así la portada (la primera) es siempre la primera foto del producto que se marcó, y el
+   * formulario no tiene un segundo orden que arreglar. Máximo `PHOTOS_MAX` por opción.
+   */
+  togglePhoto(index: number, url: string, checked: boolean): void {
+    const draft = this.variants()[index];
+    if (!draft) return;
+    const marked = new Set(draft.imageUrls);
+    if (checked) {
+      if (marked.size >= PHOTOS_MAX) {
+        this.error.set(`Una opción admite hasta ${PHOTOS_MAX} fotos.`);
+        return;
+      }
+      marked.add(url);
+    } else {
+      marked.delete(url);
+    }
+    this.error.set('');
+    const ordered = [...this.images().filter((u) => marked.has(u)), ...[...marked].filter((u) => !this.images().includes(u))];
+    this.patch(index, { imageUrls: ordered });
   }
 
   add(): void {
@@ -56,7 +87,7 @@ export class VariantEditor {
       return;
     }
 
-    this.variants.update((list) => [...list, { id: null, name, sku: '', imageUrl: '', stock: 0, isActive: true }]);
+    this.variants.update((list) => [...list, { id: null, name, sku: '', imageUrls: [], stock: 0, isActive: true }]);
     this.error.set('');
     this.newName.set('');
   }

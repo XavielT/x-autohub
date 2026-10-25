@@ -109,6 +109,50 @@ describe('Producto (/tienda/p/:slug)', () => {
       expect(el.querySelector('.prod__avail')?.textContent?.trim()).toBe('En stock: 3');
     });
 
+    describe('galería por opción', () => {
+      const fotos = ['assets/imgs/1.jpg', 'assets/imgs/2.jpg', 'assets/imgs/3.jpg', 'assets/imgs/4.jpg'];
+      const conFotos = () => makeProduct({ id: 8, name: 'Alfombras', slug: 'alfombras-8', hasVariants: true, variantLabel: 'Color', stock: 8, images: fotos });
+      const opciones = () => [
+        { ...opcion(1, 'Negro', 5), imageUrl: fotos[0], imageUrls: [fotos[0], fotos[1]] },
+        { ...opcion(2, 'Gris', 3), imageUrl: fotos[2], imageUrls: [fotos[2]] },
+        opcion(3, 'Beige', 4),
+      ];
+      const miniaturas = (el: HTMLElement) => el.querySelectorAll('.gal__thumb').length;
+      const grande = (el: HTMLElement) => el.querySelector<HTMLImageElement>('.gal__img')?.getAttribute('src');
+
+      it('una opción con varias fotos enseña solo las suyas', async () => {
+        const { fixture, el } = await montar(conFotos(), opciones());
+        expect(miniaturas(el)).toBe(4);
+
+        chips(el)[0].click();
+        fixture.detectChanges();
+
+        expect(miniaturas(el)).toBe(2);
+        expect(grande(el)).toBe(fotos[0]);
+      });
+
+      it('una opción con una sola foto deja todas y salta a esa', async () => {
+        const { fixture, el } = await montar(conFotos(), opciones());
+
+        chips(el)[1].click();
+        fixture.detectChanges();
+
+        expect(miniaturas(el)).toBe(4);
+        expect(grande(el)).toBe(fotos[2]);
+      });
+
+      it('una opción sin fotos propias deja la galería como estaba', async () => {
+        const { fixture, el } = await montar(conFotos(), opciones());
+
+        chips(el)[0].click();
+        fixture.detectChanges();
+        chips(el)[2].click();
+        fixture.detectChanges();
+
+        expect(miniaturas(el)).toBe(4);
+      });
+    });
+
     it('con la opción elegida se agrega al carrito con esa opción', async () => {
       const { fixture, el } = await montar(alfombra(), todas());
       const cart = TestBed.inject(CartService);

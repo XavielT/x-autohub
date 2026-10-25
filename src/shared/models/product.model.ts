@@ -77,10 +77,15 @@ export interface ProductVariantModel {
   sortOrder: number;
   isActive: boolean;
   /**
-   * Una de las fotos del producto que la ficha enseña al elegir esta opción. Nula = sin foto
-   * propia. Puede faltar en un carrito guardado antes de que existiera, así que se lee con `||`.
+   * La portada de la opción: la primera de `imageUrls`. Es la que salen en el carrito y en el checkout. Nula =
+   * sin foto propia. Puede faltar en un carrito guardado antes de que existiera, así que se lee con `||`.
    */
   imageUrl?: string | null;
+  /**
+   * Las fotos de esta opción, en el orden en que la ficha las enseña (migración 0033): de las del producto.
+   * Vacía o ausente (un carrito guardado antes de la 0033) = sin fotos propias. Ver `shared/utils/variant-gallery.ts`.
+   */
+  imageUrls?: string[];
 }
 
 /** Una categoría del árbol. Dos niveles como máximo. */

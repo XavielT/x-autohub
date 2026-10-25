@@ -59,6 +59,58 @@
     }
   }
 
+  // Las fotos del producto como casillas con miniatura: una opción marca las suyas. Ocupa toda la fila.
+  &__photos {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+
+    legend {
+      padding: 0;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--text-soft);
+    }
+  }
+
+  &__photo {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 72px;
+    padding: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+
+    img {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    input {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      margin: 0;
+    }
+
+    &--on {
+      border-color: var(--Hub, #ffb300);
+      background-color: rgba(255, 179, 0, 0.12);
+    }
+  }
+
   &__check {
     display: flex;
     align-items: center;

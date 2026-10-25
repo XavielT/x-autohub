@@ -3,7 +3,7 @@ import { VariantEditor } from './variant-editor';
 import { VariantDraft } from '../../../../../shared/models/admin-inventory.model';
 
 const v = (name: string, stock = 1, over: Partial<VariantDraft> = {}): VariantDraft => ({
-  id: null, name, sku: '', imageUrl: '', stock, isActive: true, ...over,
+  id: null, name, sku: '', imageUrls: [], stock, isActive: true, ...over,
 });
 
 describe('VariantEditor', () => {
@@ -28,7 +28,7 @@ describe('VariantEditor', () => {
 
     c.add();
 
-    expect(c.variants()).toEqual([{ id: null, name: 'Negro', sku: '', imageUrl: '', stock: 0, isActive: true }]);
+    expect(c.variants()).toEqual([{ id: null, name: 'Negro', sku: '', imageUrls: [], stock: 0, isActive: true }]);
     expect(c.newName()).toBe('');
     expect(c.error()).toBe('');
   });
@@ -103,44 +103,89 @@ describe('VariantEditor', () => {
     expect(el.querySelector('.var__total strong')?.textContent).toBe('5');
   });
 
-  describe('foto de la opción', () => {
+  describe('fotos de la opción', () => {
     const fotos = ['assets/imgs/a.jpg', 'assets/imgs/b.jpg'];
+    const fotos3 = ['assets/imgs/a.jpg', 'assets/imgs/b.jpg', 'assets/imgs/c.jpg'];
 
-    it('sin fotos en el producto no ofrece el selector', () => {
+    it('sin fotos en el producto no ofrece las casillas', () => {
       const { el } = montar([v('Negro')]);
 
-      expect(el.querySelector('.var__item select')).toBeNull();
+      expect(el.querySelector('.var__item .var__photos')).toBeNull();
     });
 
-    it('con fotos, cada opción elige una (o ninguna)', () => {
+    it('con fotos, cada opción tiene una casilla por foto del producto', () => {
+      const { fixture, el } = montar([v('Negro'), v('Gris')]);
+      fixture.componentRef.setInput('images', fotos);
+      fixture.detectChanges();
+
+      const grupos = el.querySelectorAll('.var__item .var__photos');
+      expect(grupos.length).toBe(2);
+      expect(grupos[0].querySelectorAll('input[type="checkbox"]').length).toBe(fotos.length);
+    });
+
+    it('una opción puede tener varias fotos, en el orden del producto y no en el del clic', () => {
+      const { fixture, c } = montar([v('Negro')]);
+      fixture.componentRef.setInput('images', fotos3);
+      fixture.detectChanges();
+
+      c.togglePhoto(0, fotos3[2], true);
+      c.togglePhoto(0, fotos3[0], true);
+
+      expect(c.variants()[0].imageUrls).toEqual([fotos3[0], fotos3[2]]);
+    });
+
+    it('desmarcar una foto la quita de la opción', () => {
+      const { fixture, c } = montar([v('Negro', 1, { imageUrls: [fotos3[0], fotos3[1]] })]);
+      fixture.componentRef.setInput('images', fotos3);
+      fixture.detectChanges();
+
+      c.togglePhoto(0, fotos3[0], false);
+
+      expect(c.variants()[0].imageUrls).toEqual([fotos3[1]]);
+    });
+
+    it('marcar una casilla en pantalla cambia la opción correcta', () => {
       const { fixture, c, el } = montar([v('Negro'), v('Gris')]);
+      fixture.componentRef.setInput('images', fotos3);
+      fixture.detectChanges();
+
+      const casillas = el.querySelectorAll<HTMLInputElement>('.var__item:nth-child(2) .var__photos input[type="checkbox"]');
+      casillas[1].click();
+      fixture.detectChanges();
+
+      expect(c.variants().map((x) => x.imageUrls)).toEqual([[], [fotos3[1]]]);
+    });
+
+    it('no admite más de 8 fotos por opción, y lo dice', () => {
+      const muchas = Array.from({ length: 9 }, (_, i) => `assets/imgs/${i}.jpg`);
+      const { fixture, c } = montar([v('Negro', 1, { imageUrls: muchas.slice(0, 8) })]);
+      fixture.componentRef.setInput('images', muchas);
+      fixture.detectChanges();
+
+      c.togglePhoto(0, muchas[8], true);
+
+      expect(c.variants()[0].imageUrls.length).toBe(8);
+      expect(c.error()).toContain('hasta 8 fotos');
+    });
+
+    it('una foto que el producto ya no tiene se sigue viendo, marcada, para poder quitarla', () => {
+      const { fixture, c, el } = montar([v('Negro', 1, { imageUrls: ['assets/imgs/vieja.jpg'] })]);
       fixture.componentRef.setInput('images', fotos);
       fixture.detectChanges();
 
-      const selects = el.querySelectorAll<HTMLSelectElement>('.var__item select');
-      expect(selects.length).toBe(2);
-      expect([...selects[0].options].map((o) => o.textContent?.trim())).toEqual(['Sin foto propia', 'Foto 1', 'Foto 2']);
+      expect(el.textContent).toContain('Foto que ya no está en el producto');
 
-      c.patch(1, { imageUrl: fotos[1] });
-      expect(c.variants().map((x) => x.imageUrl)).toEqual(['', fotos[1]]);
+      c.togglePhoto(0, 'assets/imgs/vieja.jpg', false);
+      expect(c.variants()[0].imageUrls).toEqual([]);
     });
 
-    it('una foto que el producto ya no tiene se sigue viendo, para poder cambiarla', () => {
-      const { fixture, el } = montar([v('Negro', 1, { imageUrl: 'assets/imgs/vieja.jpg' })]);
-      fixture.componentRef.setInput('images', fotos);
-      fixture.detectChanges();
-
-      const labels = [...el.querySelectorAll<HTMLSelectElement>('.var__item select')[0].options].map((o) => o.textContent?.trim());
-      expect(labels).toContain('Foto que ya no está en el producto');
-    });
-
-    it('una opción nueva nace sin foto', () => {
+    it('una opción nueva nace sin fotos', () => {
       const { c } = montar();
       c.newName.set('Rojo');
 
       c.add();
 
-      expect(c.variants()[0].imageUrl).toBe('');
+      expect(c.variants()[0].imageUrls).toEqual([]);
     });
   });
 

@@ -252,8 +252,10 @@ export type ProductVariantRow = {
   sort_order: number;
   is_active: boolean;
   created_at: string;
-  /** Una de las fotos del producto que se enseña al elegir la opción. Migración 0025. */
+  /** Espejo de la primera de `image_urls`. Migración 0025; lo mantiene un trigger desde la 0033. */
   image_url: string | null;
+  /** Las fotos de la opción, de las del producto; la primera es la portada. Migración 0033. */
+  image_urls: string[];
 }
 
 /**

@@ -271,8 +271,9 @@ describe('mappers', () => {
           is_active: true,
           created_at: '2026-10-01T00:00:00Z',
           image_url: null,
+          image_urls: [],
         }),
-      ).toEqual({ id: 3, productId: 8, name: 'Negro', sku: 'ALF-NEG', stock: 8, sortOrder: 1, isActive: true, imageUrl: null });
+      ).toEqual({ id: 3, productId: 8, name: 'Negro', sku: 'ALF-NEG', stock: 8, sortOrder: 1, isActive: true, imageUrl: null, imageUrls: [] });
     });
 
     it('la foto de la opción llega tal cual', () => {
@@ -286,8 +287,46 @@ describe('mappers', () => {
         is_active: true,
         created_at: '2026-10-01T00:00:00Z',
         image_url: 'assets/imgs/hub-parts/alfombras-rojas.jpg',
+        image_urls: ['assets/imgs/hub-parts/alfombras-rojas.jpg'],
       });
       expect(v.imageUrl).toBe('assets/imgs/hub-parts/alfombras-rojas.jpg');
+      expect(v.imageUrls).toEqual(['assets/imgs/hub-parts/alfombras-rojas.jpg']);
+    });
+
+    it('las fotos de la opción llegan en orden, y la portada es la primera', () => {
+      const v = toProductVariant({
+        id: 6,
+        product_id: 8,
+        name: 'Azul',
+        sku: null,
+        stock: 1,
+        sort_order: 4,
+        is_active: true,
+        created_at: '2026-10-01T00:00:00Z',
+        image_url: 'a.jpg',
+        image_urls: ['a.jpg', 'b.jpg', 'c.jpg'],
+      });
+      expect(v.imageUrls).toEqual(['a.jpg', 'b.jpg', 'c.jpg']);
+      expect(v.imageUrl).toBe('a.jpg');
+    });
+
+    it('una fila sin la lista (la base anterior a la 0033) sigue leyendo la foto sola', () => {
+      const row = {
+        id: 7,
+        product_id: 8,
+        name: 'Verde',
+        sku: null,
+        stock: 1,
+        sort_order: 5,
+        is_active: true,
+        created_at: '2026-10-01T00:00:00Z',
+        image_url: 'v.jpg',
+      } as unknown as Parameters<typeof toProductVariant>[0];
+
+      const v = toProductVariant(row);
+
+      expect(v.imageUrl).toBe('v.jpg');
+      expect(v.imageUrls).toEqual([]);
     });
 
     it('un sku nulo se queda nulo', () => {
@@ -300,7 +339,8 @@ describe('mappers', () => {
         sort_order: 2,
         is_active: false,
         created_at: '2026-10-01T00:00:00Z',
-          image_url: null,
+        image_url: null,
+        image_urls: [],
       });
       expect(v.sku).toBeNull();
       expect(v.isActive).toBe(false);

@@ -19,6 +19,7 @@ import { PRODUCT_FITMENTS_MOCK } from '../data/product-fitment.mock';
 import { PRODUCT_VARIANTS_MOCK } from '../data/product-variant.mock';
 import { VEHICLE_MAKES_MOCK, VEHICLE_MODELS_MOCK } from '../data/vehicle.mock';
 import { slugify } from '../utils/slugify';
+import { variantPhotos } from '../utils/variant-gallery';
 import { validateVariantDrafts } from '../utils/variant-rules';
 
 /** Lo que devuelve `saveVariants()`: las opciones que se quisieron borrar pero se apagaron. */
@@ -325,14 +326,14 @@ export class AdminCatalogService {
       return of(
         PRODUCT_VARIANTS_MOCK.filter((v) => v.productId === productId)
           .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
-          .map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? '', imageUrl: v.imageUrl ?? '', stock: v.stock, isActive: v.isActive })),
+          .map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? '', imageUrls: variantPhotos(v), stock: v.stock, isActive: v.isActive })),
       );
     }
 
     return from(
       this.supabase.db
         .from('product_variants')
-        .select('id, name, sku, stock, is_active, image_url')
+        .select('id, name, sku, stock, is_active, image_url, image_urls')
         .eq('product_id', productId)
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true }),
@@ -342,7 +343,7 @@ export class AdminCatalogService {
           id: v.id,
           name: v.name,
           sku: v.sku ?? '',
-          imageUrl: v.image_url ?? '',
+          imageUrls: v.image_urls?.length ? v.image_urls : v.image_url ? [v.image_url] : [],
           stock: v.stock,
           isActive: v.is_active,
         })),
@@ -391,7 +392,7 @@ export class AdminCatalogService {
           id: v.id ?? ++this.mockVariantSeq,
           name: v.name,
           sku: v.sku,
-          imageUrl: v.imageUrl,
+          imageUrls: v.imageUrls,
           stock: v.stock,
           isActive: v.isActive,
         })),
@@ -406,7 +407,7 @@ export class AdminCatalogService {
         !before ||
         before.name !== v.name ||
         before.sku !== v.sku ||
-        before.imageUrl !== v.imageUrl ||
+        before.imageUrls.join('\n') !== v.imageUrls.join('\n') ||
         before.stock !== v.stock ||
         before.isActive !== v.isActive ||
         baselineOrder.get(v.id) !== v.sortOrder
@@ -443,7 +444,8 @@ export class AdminCatalogService {
             .update({
               name: v.name,
               sku: v.sku || null,
-              image_url: v.imageUrl || null,
+              // `image_url` no se manda: el trigger de la 0033 lo deja como la primera de `image_urls`.
+              image_urls: v.imageUrls,
               stock: v.stock,
               is_active: v.isActive,
               sort_order: v.sortOrder,
@@ -460,7 +462,7 @@ export class AdminCatalogService {
                   product_id: productId,
                   name: v.name,
                   sku: v.sku || null,
-                  image_url: v.imageUrl || null,
+                  image_urls: v.imageUrls,
                   stock: v.stock,
                   is_active: v.isActive,
                   sort_order: v.sortOrder,

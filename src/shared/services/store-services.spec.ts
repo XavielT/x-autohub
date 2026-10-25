@@ -461,7 +461,7 @@ describe('servicios de la tienda (mock)', () => {
       const base = await firstValueFrom(catalog().getVariants(8));
       const lista = [
         { ...base[2], stock: 9 },
-        { id: null, name: 'Rojo', sku: '', imageUrl: '', stock: 1, isActive: true },
+        { id: null, name: 'Rojo', sku: '', imageUrls: [], stock: 1, isActive: true },
       ];
 
       const r = await firstValueFrom(catalog().saveVariants(8, lista, base));
@@ -472,26 +472,35 @@ describe('servicios de la tienda (mock)', () => {
       expect(despues[1].id).not.toBeNull();
     });
 
-    it('la foto de una opción se guarda y se vuelve a leer, y quitarla la deja vacía', async () => {
+    it('las fotos de una opción se guardan en orden y se vuelven a leer, y quitarlas la deja vacía', async () => {
       const base = await firstValueFrom(catalog().getVariants(8));
-      expect(base.every((x) => x.imageUrl === '')).toBe(true);
+      expect(base.every((x) => x.imageUrls.length === 0)).toBe(true);
 
       await firstValueFrom(
-        catalog().saveVariants(8, base.map((x, i) => (i === 0 ? { ...x, imageUrl: 'assets/imgs/negro.jpg' } : x)), base),
+        catalog().saveVariants(8, base.map((x, i) => (i === 0 ? { ...x, imageUrls: ['assets/imgs/negro.jpg', 'assets/imgs/negro-2.jpg'] } : x)), base),
       );
       const con = await firstValueFrom(catalog().getVariants(8));
-      expect(con.map((x) => x.imageUrl)).toEqual(['assets/imgs/negro.jpg', '', '']);
+      expect(con.map((x) => x.imageUrls)).toEqual([['assets/imgs/negro.jpg', 'assets/imgs/negro-2.jpg'], [], []]);
 
-      await firstValueFrom(catalog().saveVariants(8, con.map((x) => ({ ...x, imageUrl: '' })), con));
-      expect((await firstValueFrom(catalog().getVariants(8))).every((x) => x.imageUrl === '')).toBe(true);
+      await firstValueFrom(catalog().saveVariants(8, con.map((x) => ({ ...x, imageUrls: [] })), con));
+      expect((await firstValueFrom(catalog().getVariants(8))).every((x) => x.imageUrls.length === 0)).toBe(true);
+    });
+
+    it('no se guarda una opción con una foto repetida ni con más de 8', async () => {
+      const una = { id: null, name: 'A', sku: '', stock: 1, isActive: true };
+
+      expect(await errorOf(catalog().saveVariants(8, [{ ...una, imageUrls: ['x.jpg', 'x.jpg'] }], []))).toBe('La opción "A" tiene una foto repetida.');
+      expect(
+        await errorOf(catalog().saveVariants(8, [{ ...una, imageUrls: Array.from({ length: 9 }, (_, i) => `${i}.jpg`) }], [])),
+      ).toBe('La opción "A" tiene demasiadas fotos (máximo 8).');
     });
 
     it('una lista con problemas no se guarda y dice cuál es', async () => {
       expect(
         await errorOf(
           catalog().saveVariants(8, [
-            { id: null, name: 'A', sku: '', imageUrl: '', stock: 1, isActive: true },
-            { id: null, name: 'a', sku: '', imageUrl: '', stock: 1, isActive: true },
+            { id: null, name: 'A', sku: '', imageUrls: [], stock: 1, isActive: true },
+            { id: null, name: 'a', sku: '', imageUrls: [], stock: 1, isActive: true },
           ], []),
         ),
       ).toBe('Hay dos opciones llamadas "a".');

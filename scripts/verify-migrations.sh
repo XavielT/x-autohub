@@ -1859,6 +1859,55 @@ delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_a
 delete from net.calls;
 SQL
 
+echo "→ Varias fotos por opcion (migracion 0033)"
+PV_PRODUCT="$(SCALAR_DB=postgres scalar 'select min(id) from hub_parts;')"
+
+check "la columna existe, es una lista de texto y nunca nula" "ARRAY|NO" \
+  "select data_type || '|' || is_nullable from information_schema.columns where table_name = 'product_variants' and column_name = 'image_urls';"
+check "en toda opcion, image_url es la primera de la lista (las dos columnas de acuerdo)" "0" \
+  "select count(*) from product_variants where image_url is distinct from image_urls[1];"
+
+check "insertar solo con image_url (frontend anterior): la lista pasa a ser esa foto" "{a.jpg}|a.jpg" \
+  "insert into product_variants (product_id, name, stock, image_url) values ($PV_PRODUCT, 'Prueba A', 1, 'a.jpg'); select image_urls::text || '|' || image_url from product_variants where name = 'Prueba A';"
+check "insertar con la lista: image_url es la primera" "{b.jpg,c.jpg}|b.jpg" \
+  "insert into product_variants (product_id, name, stock, image_urls) values ($PV_PRODUCT, 'Prueba B', 1, array['b.jpg','c.jpg']); select image_urls::text || '|' || image_url from product_variants where name = 'Prueba B';"
+check "sin fotos, las dos quedan vacias" "{}|" \
+  "insert into product_variants (product_id, name, stock) values ($PV_PRODUCT, 'Prueba C', 1); select image_urls::text || '|' || coalesce(image_url, '') from product_variants where name = 'Prueba C';"
+
+check "actualizar la lista (frontend nuevo): image_url sigue a la primera" "{d.jpg,e.jpg}|d.jpg" \
+  "update product_variants set image_urls = array['d.jpg','e.jpg'] where name = 'Prueba A'; select image_urls::text || '|' || image_url from product_variants where name = 'Prueba A';"
+check "actualizar solo image_url (frontend anterior): la lista pasa a ser esa foto" "{f.jpg}|f.jpg" \
+  "update product_variants set image_url = 'f.jpg' where name = 'Prueba A'; select image_urls::text || '|' || image_url from product_variants where name = 'Prueba A';"
+check "y quitarla (image_url nulo) vacia la lista" "{}|" \
+  "update product_variants set image_url = null where name = 'Prueba A'; select image_urls::text || '|' || coalesce(image_url, '') from product_variants where name = 'Prueba A';"
+check "cambiar otra cosa (el stock) no toca las fotos" "{b.jpg,c.jpg}|b.jpg|7" \
+  "update product_variants set stock = 7 where name = 'Prueba B'; select image_urls::text || '|' || image_url || '|' || stock from product_variants where name = 'Prueba B';"
+check "cambiar las dos a la vez: manda la lista" "{g.jpg,h.jpg}|g.jpg" \
+  "update product_variants set image_url = 'z.jpg', image_urls = array['g.jpg','h.jpg'] where name = 'Prueba B'; select image_urls::text || '|' || image_url from product_variants where name = 'Prueba B';"
+
+check "ocho fotos caben" "8" \
+  "update product_variants set image_urls = array['1','2','3','4','5','6','7','8'] where name = 'Prueba B'; select cardinality(image_urls) from product_variants where name = 'Prueba B';"
+check "nueve no" 'ERROR:  new row for relation "product_variants" violates check constraint "product_variants_image_urls_check"' \
+  "update product_variants set image_urls = array['1','2','3','4','5','6','7','8','9'] where name = 'Prueba B';"
+check "tampoco una lista nula" 'ERROR:  null value in column "image_urls" of relation "product_variants" violates not-null constraint' \
+  "update product_variants set image_urls = null where name = 'Prueba B';"
+
+check "un admin guarda las fotos de una opcion (RLS: solo admin gestiona)" "{i.jpg}" \
+  "$(as_user "$ADMIN" "update product_variants set image_urls = array['i.jpg'] where name = 'Prueba C'; select image_urls::text from product_variants where name = 'Prueba C';")"
+check "un usuario normal no" "0" \
+  "$(as_user "$USER_A" "with u as (update product_variants set image_urls = array['mala.jpg'] where name = 'Prueba C' returning 1) select count(*) from u;")"
+check "anon lee las fotos de las opciones de un producto visible" "true" \
+  "$(as_anon "select (count(*) > 0)::text from product_variants where name = 'Prueba C';")"
+
+check "cambiar las fotos de una opcion marca el sitio (el HTML las enseña)" "true" \
+  "$RB_RESET update product_variants set image_urls = array['j.jpg','k.jpg'] where name = 'Prueba C'; $RB_DIRTY"
+check "el trigger no toca el stock del producto (esta columna no entra en la cuenta)" "true" \
+  "select (count(*) = 0)::text from hub_parts p where p.has_variants and p.stock <> (select coalesce(sum(v.stock), 0) from product_variants v where v.product_id = p.id and v.is_active);"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from product_variants where name in ('Prueba A', 'Prueba B', 'Prueba C');
+SQL
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -2179,11 +2228,25 @@ CHECK_DB=upgrade check "la tabla de avisos queda vacia y el cron una sola vez" "
 CHECK_DB=upgrade check "sin secretos del Vault no avisa, y la publicacion de antes sigue ahi" "sin enlace de avisos: no se aviso a nadie|1"   "select warn_expiring_publications() || '|' || (select count(*) from hub_market_items where title = 'Publicacion de antes');"
 
 echo "→ Camino de actualizacion de la 0032"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0032_deploy_failure_notice.sql upgrade
+apply supabase/migrations/0032_deploy_failure_notice.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la tabla queda vacia y el cron una sola vez" "0|1"   "select (select count(*) from deploy_alerts) || '|' || (select count(*) from cron.job where jobname = 'check-deploy-failures');"
 CHECK_DB=upgrade check "sin secretos del Vault no pregunta" "sin enlace de avisos: no se pregunto por el despliegue"   "select check_deploy_failures();"
+
+echo "→ Camino de actualizacion de la 0033: la base real ya tiene opciones con una foto"
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into product_variants (product_id, name, stock, image_url)
+values ((select min(id) from hub_parts), 'Opcion de antes', 2, 'assets/imgs/antes.jpg'),
+       ((select min(id) from hub_parts), 'Opcion sin foto', 1, null);
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con opciones dentro)"
+CHECK_DB=upgrade check "la foto de antes pasa a ser la primera de la lista, y la portada sigue igual" "{assets/imgs/antes.jpg}|assets/imgs/antes.jpg"   "select image_urls::text || '|' || image_url from product_variants where name = 'Opcion de antes';"
+CHECK_DB=upgrade check "la opcion sin foto queda con la lista vacia" "{}"   "select image_urls::text from product_variants where name = 'Opcion sin foto';"
+CHECK_DB=upgrade check "volver a aplicar no pisa lo que el panel guardo despues" "{x.jpg,y.jpg}"   "update product_variants set image_urls = array['x.jpg','y.jpg'] where name = 'Opcion de antes'; select image_urls::text from product_variants where name = 'Opcion de antes';"
+CHECK_DB=upgrade check "y un solo trigger de fotos" "1"   "select count(*) from pg_trigger where tgname = 'product_variants_photos_sync';"
 
 # --- Resumen ------------------------------------------------------------------
 

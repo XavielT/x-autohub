@@ -9,8 +9,8 @@
     </nav>
 
     <div class="prod__top">
-      <app-image-gallery class="prod__gallery" [images]="images()" [alt]="p.name"
-                         [focus]="selectedVariant()?.imageUrl || null" />
+      <app-image-gallery class="prod__gallery" [images]="gallery().images" [alt]="p.name"
+                         [focus]="gallery().focus" />
 
       <div class="prod__info">
         <div class="prod__id">

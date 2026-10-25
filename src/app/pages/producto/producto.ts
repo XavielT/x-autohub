@@ -28,6 +28,7 @@ import { availabilityOf } from '../../../shared/utils/product-availability';
 import { compatibilityOf } from '../../../shared/utils/product-compat';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { productJsonLd } from '../../../shared/utils/structured-data';
+import { variantGallery } from '../../../shared/utils/variant-gallery';
 
 /** Una fila de compatibilidad con nombres: "Toyota Corolla · 2010–2020". */
 export interface FitmentLine {
@@ -100,6 +101,9 @@ export class Producto {
   readonly selectedVariant = computed(
     () => this.variants().find((v) => v.id === this.selectedVariantId()) ?? null,
   );
+
+  /** Qué enseña la galería: con una opción de dos o más fotos propias, solo las de esa opción (ver `variantGallery`). */
+  readonly gallery = computed(() => variantGallery(this.images(), this.selectedVariant()));
 
   /** Cómo se llama lo que hay que elegir: "Color", "Talla"… */
   readonly variantLabel = computed(() => this.product()?.variantLabel || 'Opción');

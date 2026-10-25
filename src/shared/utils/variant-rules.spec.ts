@@ -2,7 +2,7 @@ import { VariantDraft } from '../models/admin-inventory.model';
 import { activeVariantStock, validateVariantDrafts } from './variant-rules';
 
 const v = (name: string, stock = 1, over: Partial<VariantDraft> = {}): VariantDraft => ({
-  id: null, name, sku: '', imageUrl: '', stock, isActive: true, ...over,
+  id: null, name, sku: '', imageUrls: [], stock, isActive: true, ...over,
 });
 
 describe('variant-rules', () => {
@@ -35,6 +35,13 @@ describe('variant-rules', () => {
     it('un sku repetido se rechaza; uno vacío puede repetirse', () => {
       expect(validateVariantDrafts([v('A', 1, { sku: 'X1' }), v('B', 1, { sku: 'x1' })])).toContain('SKU');
       expect(validateVariantDrafts([v('A'), v('B')])).toBeNull();
+    });
+
+    it('hasta 8 fotos por opcion, sin repetir', () => {
+      const fotos = (n: number) => Array.from({ length: n }, (_, i) => 'f' + i + '.jpg');
+      expect(validateVariantDrafts([v('A', 1, { imageUrls: fotos(8) })])).toBeNull();
+      expect(validateVariantDrafts([v('A', 1, { imageUrls: fotos(9) })])).toContain('demasiadas fotos');
+      expect(validateVariantDrafts([v('A', 1, { imageUrls: ['x.jpg', 'x.jpg'] })])).toContain('repetida');
     });
   });
 

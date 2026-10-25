@@ -4,6 +4,8 @@ import { VariantDraft } from '../models/admin-inventory.model';
 export const VARIANT_NAME_MAX = 40;
 /** El largo máximo de la etiqueta ("Color", "Talla"): el check de `hub_parts.variant_label`. */
 export const VARIANT_LABEL_MAX = 30;
+/** Cuántas fotos admite una opción: el check de `product_variants.image_urls` (migración 0033). */
+export const PHOTOS_MAX = 8;
 
 /**
  * Las reglas de una lista de opciones, las mismas que exige la base (migración 0023), para
@@ -13,6 +15,7 @@ export const VARIANT_LABEL_MAX = 30;
  *   · No se repite en el producto (sin importar mayúsculas): confundiría a quien elige.
  *   · El stock es un entero de 0 o más.
  *   · El SKU, si se escribe, no se repite dentro de la lista.
+ *   · Hasta 8 fotos por opción, sin repetir una.
  */
 export function validateVariantDrafts(drafts: readonly VariantDraft[]): string | null {
   const names = new Set<string>();
@@ -28,6 +31,9 @@ export function validateVariantDrafts(drafts: readonly VariantDraft[]): string |
     names.add(name.toLowerCase());
 
     if (!Number.isInteger(v.stock) || v.stock < 0) return `${where} tiene unas existencias que no son válidas.`;
+
+    if (v.imageUrls.length > PHOTOS_MAX) return `${where} tiene demasiadas fotos (máximo ${PHOTOS_MAX}).`;
+    if (new Set(v.imageUrls).size !== v.imageUrls.length) return `${where} tiene una foto repetida.`;
 
     const sku = v.sku.trim().toLowerCase();
     if (sku) {
