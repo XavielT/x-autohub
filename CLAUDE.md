@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 737 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 765 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -316,6 +316,11 @@ Cosas que ya causaron un bug. No las repitas:
   (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, lo anota **antes** de
   mandar y avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Si hay un despliegue posterior que salió bien, no avisa. Sin esos
   secretos no pregunta ni avisa, sin error. `deploy_alerts` no la lee nadie del navegador; `send-push` entra con `service_role` (que se salta RLS).
+- **El recordatorio de una cita lo pide la base cada hora, y `send-push` va ANTES que la migración.** `send_appointment_reminders()` (0036, cron al minuto 5) manda
+  `{ kind: 'appointment_reminder', id }` por cada cita **confirmada** a entre 2 y 24 horas, de una cuenta con algún dispositivo o de un invitado con dispositivos de la cita
+  (0035), y anota en `appointment_reminders` **para qué hora** ya recordó (reprogramar la habilita otra vez). `send-push` vuelve a comprobar estado y ventana (margen de 25 h por
+  el cron horario): no se le escribe a nadie por una cita lejana, pasada o sin confirmar. Con la migración y la función vieja, `send-push` respondería 400 y cada cita quedaría
+  marcada sin avisar. Sin secretos del Vault no recuerda ni marca.
 - **Los avisos de un invitado son del pedido o de la cita, no de una cuenta, y la llave es el uuid.** `order_push_subscriptions` (0034) y
   `appointment_push_subscriptions` (0035) atan un dispositivo a **un pedido** o a **una cita**; `register_order_push()` y `register_appointment_push()` solo aceptan los
   **sin dueño** y **en marcha** (un pedido no entregado ni cancelado; una cita que no esté hecha, cancelada ni en `no_show`), hasta 3 dispositivos, y el uuid es toda la

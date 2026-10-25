@@ -227,6 +227,19 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Recordatorio de una cita (2.23.0) ✅
+
+Hecho: una cita confirmada recibe un aviso push cuando faltan menos de 24 horas ("Mañana tienes tu cita en el taller a las 9:00 a. m."), tanto si es de una cuenta como de un
+invitado que activó los avisos. Es un cron cada hora (migración 0036) y un solo recordatorio por hora de cita: si se reprograma, avisa de nuevo.
+
+**Lo que queda fuera:**
+
+- **Quien no activó los avisos no recibe nada.** El recordatorio es solo push; no hay correo ni SMS, y el WhatsApp del taller sigue siendo manual.
+- **Un segundo recordatorio** (dos horas antes). Es uno solo, entre 24 y 2 horas antes.
+- **Dejar de recibirlo sin quitar los demás avisos.** Se apagan todos juntos desde el perfil o la tarjeta del dispositivo.
+
+---
+
 ## Avisos de una cita de invitado (2.22.0) ✅
 
 Hecho: quien agenda una cita del taller sin cuenta puede activar, en la pantalla de confirmación, avisos push de esa cita (confirmada, en trabajo, lista). Es el mismo
@@ -236,7 +249,7 @@ mecanismo que los pedidos de invitado, con su propia tabla (migración 0035) y u
 
 - **Volver a la cita después.** No hay una página de la cita para un invitado (solo existe la confirmación al agendar), así que el aviso se ofrece ahí y no se puede
   activar más tarde ni desde otro dispositivo.
-- **Recordatorio de la cita** (el día antes). Hoy solo avisa cambios de estado.
+- **Recordatorio de la cita** (el día antes): hecho en la 2.23.0 (ver abajo).
 
 ---
 

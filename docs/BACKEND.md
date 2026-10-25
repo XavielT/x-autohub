@@ -58,7 +58,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 33    | `supabase/migrations/0033_variant_photos.sql`  | Varias fotos por opción: `product_variants.image_urls` y su trigger de espejo |
 | 34    | `supabase/migrations/0034_guest_order_push.sql` | `order_push_subscriptions`, `register_order_push()` y `unregister_order_push()`: avisos push de un pedido de invitado |
 | 35    | `supabase/migrations/0035_guest_appointment_push.sql` | `appointment_push_subscriptions`, `register_appointment_push()` y `unregister_appointment_push()`: avisos push de una cita de invitado |
-| 36    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 36    | `supabase/migrations/0036_appointment_reminders.sql` | `appointment_reminders` y el cron `appointment-reminders`: recordatorio push de una cita, el día antes |
+| 37    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -502,6 +503,12 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 **Decisiones que conviene conocer**
 
+- **Recordatorio de una cita (migración 0036).** `send_appointment_reminders()` (pg_cron `appointment-reminders`, al minuto 5 de cada hora) busca las citas **confirmadas** que
+  ocurren en la ventana (2 h, 24 h] y que tienen a quién avisar (una cuenta con algún dispositivo, o dispositivos suscritos a esa cita de invitado, 0035), y por cada una hace un
+  `net.http_post` a `send-push` con `{ kind: 'appointment_reminder', id }`. `appointment_reminders` (sin permisos para el navegador) guarda para qué `scheduled_at` ya
+  recordó: reprogramar la cita cambia la hora y habilita otro recordatorio. `send-push` arma "Hoy/Mañana tienes tu cita en el taller a las H" (hora de Santo Domingo) tras
+  comprobar de nuevo estado y ventana, y no borra dispositivos (no es un estado final). Sin los secretos del Vault no recuerda ni marca; si `pg_net` falla para una cita, esa queda
+  sin marcar y reintenta a la hora siguiente. **`send-push` primero, luego la migración.**
 - **Avisos de una cita de invitado (migración 0035).** Lo mismo que la 0034, para las citas del taller: `appointment_push_subscriptions` (`appointment_id`, única por cita y
   dispositivo, `on delete cascade`), `register_appointment_push()` / `unregister_appointment_push()` (`anon` y `authenticated`; el uuid de la cita, que recibe quien acaba de
   agendar, es la llave). Rechaza (con `22023`) una cita que no existe, una **con dueño**, una hecha, cancelada o a la que no se presentó, y un cuarto dispositivo.
