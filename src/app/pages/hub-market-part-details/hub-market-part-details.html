@@ -9,33 +9,7 @@
             &larr; Volver al Hub Market
           </a>
 
-          <div class="hub-market-part-details__carousel">
-            @if (images().length > 1) {
-              <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--prev"
-                      (click)="prevImage()">&#8249;</button>
-            }
-
-            <img class="hub-market-part-details__img"
-                 [src]="images()[currentImageIndex()]"
-                 [alt]="part.title" />
-
-            @if (images().length > 1) {
-              <button class="hub-market-part-details__carousel-btn hub-market-part-details__carousel-btn--next"
-                      (click)="nextImage()">&#8250;</button>
-            }
-
-            <!-- Dots -->
-            @if (images().length > 1) {
-              <div class="hub-market-part-details__dots">
-                @for (img of images(); track $index) {
-                  <span class="hub-market-part-details__dot"
-                        [class.active]="$index === currentImageIndex()"
-                        (click)="selectImage($index)">
-                  </span>
-                }
-              </div>
-            }
-          </div>
+          <app-image-gallery [images]="images()" [alt]="part.title" />
         </div>
 
         <div class="hub-market-part-details__container-right">

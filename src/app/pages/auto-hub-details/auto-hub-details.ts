@@ -9,11 +9,12 @@ import { autoHubSeo } from '../../../shared/utils/community-seo';
 import { autoHubJsonLd } from '../../../shared/utils/structured-data';
 import { formatDrPhone } from '../../../shared/utils/phone';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-auto-hub-details',
-  imports: [DecimalPipe, SlicePipe, TestBadge],
+  imports: [DecimalPipe, SlicePipe, TestBadge, ImageGallery],
   templateUrl: './auto-hub-details.html',
   styleUrl: './auto-hub-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,7 +34,6 @@ export class AutoHubDetails implements OnInit {
 
   readonly auto = signal<AutoHubModel | undefined>(undefined);
   readonly images = signal<string[]>([]);
-  readonly currentImageIndex = signal(0);
   readonly isLoading = signal(true);
 
   readonly isDescriptionExpanded = signal(false);
@@ -62,7 +62,6 @@ export class AutoHubDetails implements OnInit {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
       this.isLoading.set(true);
-      this.currentImageIndex.set(0);
 
       this.autoHubService.getById(id).subscribe({
         next: (auto) => {
@@ -92,21 +91,8 @@ export class AutoHubDetails implements OnInit {
     });
   }
 
-  selectImage(index: number): void {
-    this.currentImageIndex.set(index);
-  }
 
-  prevImage(): void {
-    const total = this.images().length;
-    if (total <= 1) return;
-    this.currentImageIndex.update((i) => (i - 1 + total) % total);
-  }
 
-  nextImage(): void {
-    const total = this.images().length;
-    if (total <= 1) return;
-    this.currentImageIndex.update((i) => (i + 1) % total);
-  }
 
   toggleDescription(): void {
     this.isDescriptionExpanded.update((expanded) => !expanded);

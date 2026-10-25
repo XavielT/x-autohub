@@ -3,27 +3,7 @@
       <div class="auto-hub-details__body">
   
         <div class="auto-hub-details__media">
-          <div class="auto-hub-details__carousel">
-            <img [src]="images()[currentImageIndex()]" [alt]="auto.model"
-                 class="auto-hub-details__main-image" />
-            @if (images().length > 1) {
-              <button class="auto-hub-details__carousel-btn auto-hub-details__carousel-btn--prev"
-                      (click)="prevImage()">&#8249;</button>
-              <button class="auto-hub-details__carousel-btn auto-hub-details__carousel-btn--next"
-                      (click)="nextImage()">&#8250;</button>
-            }
-          </div>
-          @if (images().length > 1) {
-            <div class="auto-hub-details__thumbs">
-              @for (img of images(); track $index) {
-                <button class="auto-hub-details__thumb"
-                        [class.active]="$index === currentImageIndex()"
-                        (click)="selectImage($index)">
-                  <img [src]="img" [alt]="auto.model" />
-                </button>
-              }
-            </div>
-          }
+          <app-image-gallery [images]="images()" [alt]="auto.model" />
         </div>
   
         <div class="auto-hub-details__info">

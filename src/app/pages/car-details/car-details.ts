@@ -12,11 +12,12 @@ import { PublicationNotice } from '../../../shared/ui/publication-notice/publica
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
+import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-car-details',
-  imports: [PublicationNotice, CarCard, RouterLink, DecimalPipe, SlicePipe, TestBadge],
+  imports: [PublicationNotice, CarCard, RouterLink, DecimalPipe, SlicePipe, TestBadge, ImageGallery],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,7 +40,6 @@ export class CarDetails implements OnInit {
   readonly car = signal<HubMarketItemModel | undefined>(undefined);
   readonly relatedVehicles = signal<HubMarketItemModel[]>([]);
   readonly images = signal<string[]>([]);
-  readonly currentImageIndex = signal(0);
   readonly isLoading = signal(true);
 
   readonly isDescriptionExpanded = signal(false);
@@ -64,7 +64,6 @@ export class CarDetails implements OnInit {
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
       this.isLoading.set(true);
-      this.currentImageIndex.set(0);
 
       forkJoin({
         car: this.hubMarketService.getById(id),
@@ -99,21 +98,8 @@ export class CarDetails implements OnInit {
     });
   }
 
-  selectImage(index: number): void {
-    this.currentImageIndex.set(index);
-  }
 
-  prevImage(): void {
-    const total = this.images().length;
-    if (total <= 1) return;
-    this.currentImageIndex.update((i) => (i - 1 + total) % total);
-  }
 
-  nextImage(): void {
-    const total = this.images().length;
-    if (total <= 1) return;
-    this.currentImageIndex.update((i) => (i + 1) % total);
-  }
 
   toggleDescription(): void {
     this.isDescriptionExpanded.update((expanded) => !expanded);
