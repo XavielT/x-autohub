@@ -45,6 +45,43 @@ describe('sitemap', () => {
       expect(routePaths).toContain('tienda/c/:slug');
       expect(routePaths).toContain('tienda/p/:slug');
       expect(routePaths).toContain('servicios/:slug');
+      expect(routePaths).toContain('auto-hub-details/:id');
+      expect(routePaths).toContain('car-details/:id');
+      expect(routePaths).toContain('hub-market-part-details/:id');
+      expect(routePaths).toContain('accessory-details/:id');
+    });
+
+    it('arma una URL por cada vehiculo de Auto Hub y por cada publicacion, en la ruta de su categoria', () => {
+      const entries = dynamic({
+        autos: [{ id: 0, created_at: '2026-09-01T10:00:00+00:00' }, { id: 4 }],
+        marketItems: [
+          { id: 101, category: 'vehiculos' },
+          { id: 201, category: 'piezas' },
+          { id: 301, category: 'accesorios', created_at: '2026-10-02T10:00:00Z' },
+        ],
+      });
+
+      expect(entries.map((e) => e.path)).toEqual([
+        '/auto-hub-details/0',
+        '/auto-hub-details/4',
+        '/car-details/101',
+        '/hub-market-part-details/201',
+        '/accessory-details/301',
+      ]);
+      expect(entries[0].lastmod).toBe('2026-09-01');
+      expect(entries[4].lastmod).toBe('2026-10-02');
+    });
+
+    it('una publicacion de una categoria que no se conoce no inventa una ruta', () => {
+      expect(dynamic({ marketItems: [{ id: 1, category: 'motos' }] })).toEqual([]);
+    });
+
+    it('las fichas de la comunidad pesan menos que las de la tienda', () => {
+      const [auto, item] = dynamic({ autos: [{ id: 1 }], marketItems: [{ id: 2, category: 'vehiculos' }] });
+      const [product] = dynamic({ products: [{ slug: 'x' }] });
+
+      expect(Number(auto.priority)).toBeLessThan(Number(product.priority));
+      expect(Number(item.priority)).toBeLessThan(Number(auto.priority));
     });
 
     it('arma una URL por categoría, producto y servicio', () => {

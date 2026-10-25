@@ -25,6 +25,12 @@ const VEHICULO: AutoHubModel = {
   contact: '8099539782',
 };
 
+
+/** El contenido de una etiqueta <meta> del documento, o null si no está. */
+function meta(selector: string): string | null {
+  return document.head.querySelector(selector)?.getAttribute('content') ?? null;
+}
+
 describe('AutoHubDetails', () => {
   function montar(auto: AutoHubModel | undefined = VEHICULO) {
     TestBed.configureTestingModule({
@@ -46,6 +52,44 @@ describe('AutoHubDetails', () => {
 
     expect(componente.contactDisplay()).toBe('809-953-9782');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('809-953-9782');
+  });
+
+  it('pone el titulo, la descripcion y la vista previa del vehiculo', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+
+    expect(document.title).toBe('Toyota Corolla 2020 | Auto Hub — X AutoHub');
+    expect(meta('meta[property="og:url"]')).toBe('https://xautohubrd.com/auto-hub-details/1');
+    expect(meta('meta[property="og:image"]')).toBe('https://xautohubrd.com/assets/imgs/auto-hub/corolla.jpg');
+    expect(meta('meta[name="description"]')).toContain('45,000 KM');
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://xautohubrd.com/auto-hub-details/1',
+    );
+  });
+
+  it('un vehiculo de prueba no se anuncia: la pagina queda como "no encontrado"', async () => {
+    const { fixture } = montar({ ...VEHICULO, isTest: true });
+    await fixture.whenStable();
+
+    expect(document.title).toBe('Vehículo no encontrado | X AutoHub');
+    expect(document.title).not.toContain('Toyota');
+  });
+
+  it('un vehiculo que no existe dice que no se encontro, y apunta al listado', async () => {
+    const { fixture } = montar(null as unknown as AutoHubModel);
+    await fixture.whenStable();
+
+    expect(document.title).toBe('Vehículo no encontrado | X AutoHub');
+    expect(meta('meta[property="og:url"]')).toBe('https://xautohubrd.com/auto-hub');
+  });
+
+  it('al salir de la ficha vuelve a las etiquetas del sitio', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+
+    fixture.destroy();
+
+    expect(document.title).toBe('X AutoHub — Todo lo que tu carro necesita');
   });
 
   it('el boton de WhatsApp nombra la marca y el modelo', async () => {

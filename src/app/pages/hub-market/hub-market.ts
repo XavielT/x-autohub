@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { OnlineService } from '../../../shared/services/online.service';
+import { SeoService } from '../../../shared/services/seo.service';
 
 interface HubMarketCategoryOption {
   value: 'all' | HubMarketCategory;
@@ -20,6 +21,11 @@ interface HubMarketCategoryOption {
 })
 export class HubMarket implements OnInit {
   private readonly hubMarketService = inject(HubMarketService);
+  private readonly seo = inject(SeoService);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.seo.reset());
+  }
 
   private readonly allItems = signal<HubMarketItemModel[]>([]);
 
@@ -56,6 +62,13 @@ export class HubMarket implements OnInit {
   });
 
   ngOnInit(): void {
+    // El mismo título que la ruta; lo que aporta es la descripción y la vista previa al compartir el enlace.
+    this.seo.set({
+      title: 'Hub Market — Compra y vende | X AutoHub',
+      description:
+        'Hub Market: compra y vende vehículos, piezas y accesorios entre la comunidad automotriz de República Dominicana.',
+      path: '/hub-market',
+    });
     this.load();
   }
 

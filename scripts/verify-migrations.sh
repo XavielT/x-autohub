@@ -1662,6 +1662,20 @@ check "hay un trigger en pedidos y otro en citas, solo por el estado" "1|1" \
   "select (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 $PSQL -d postgres -c "delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');" >/dev/null
 
+echo "→ Auto Hub y Hub Market tambien republican el sitio (migracion 0029)"
+check "un cambio en un vehiculo de Auto Hub marca el sitio" "true" \
+  "$RB_RESET update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); $RB_DIRTY"
+check "un update que no cambia nada no marca" "false" \
+  "$RB_RESET update auto_hub_vehicles set price = price where id = (select min(id) from auto_hub_vehicles); $RB_DIRTY"
+check "un cambio en una publicacion de Hub Market marca el sitio (moderar es lo que la publica o la quita)" "true" \
+  "$RB_RESET update hub_market_items set title = title || ' ' where id = (select min(id) from hub_market_items); $RB_DIRTY"
+check "borrar una publicacion tambien" "true" \
+  "$RB_RESET delete from hub_market_items where id = (select max(id) from hub_market_items); $RB_DIRTY"
+check "hay un trigger en cada tabla" "1|1" \
+  "select (select count(*) from pg_trigger where tgname = 'auto_hub_vehicles_mark_site_dirty') || '|' || (select count(*) from pg_trigger where tgname = 'hub_market_items_mark_site_dirty');"
+check "un admin sigue editando un vehiculo (el trigger escribe como definer, no como el)" "1" \
+  "$(as_user "$ADMIN" "with u as (update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles) returning 1) select count(*) from u;")"
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1940,13 +1954,27 @@ CHECK_DB=upgrade check "queda un solo trigger de resenas y una sola de cada func
   "select (select count(*) from pg_trigger where tgname = 'reviews_mark_site_dirty') || '|' || (select count(*) from pg_proc where proname = 'site_rebuild_status') || '|' || (select count(*) from pg_proc where proname = 'request_site_rebuild');"
 
 echo "→ Camino de actualizacion de la 0028: la base real ya tiene pedidos y citas al migrar"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0028_push_from_database.sql upgrade
+apply supabase/migrations/0028_push_from_database.sql upgrade
 echo "   (aplicada dos veces, con pedidos dentro)"
 CHECK_DB=upgrade check "un trigger en pedidos, uno en citas y una sola funcion" "1|1|1" \
   "select (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status') || '|' || (select count(*) from pg_proc where proname = 'notify_status_change');"
 CHECK_DB=upgrade check "los pedidos de antes siguen ahi y migrar no los toco" "true" \
   "select (count(*) > 0)::text from orders;"
+
+echo "→ Camino de actualizacion de la 0029: la base real ya tiene vehiculos y publicaciones al migrar"
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into auto_hub_vehicles (brand, model, year, price, color, mileage, chasis_type, doors, traction, fuel, cylinders, location, contact)
+values ('Toyota', 'Corolla', 2020, 1000000, 'Gris', 40000, 'sedan', 4, 'fwd', 'gasoline', 4, 'Santo Domingo', '8095550134');
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con vehiculos y publicaciones dentro)"
+CHECK_DB=upgrade check "un trigger en cada tabla, sin duplicar" "1|1" \
+  "select (select count(*) from pg_trigger where tgname = 'auto_hub_vehicles_mark_site_dirty') || '|' || (select count(*) from pg_trigger where tgname = 'hub_market_items_mark_site_dirty');"
+CHECK_DB=upgrade check "el vehiculo de antes sigue ahi, y migrar no lo toco" "1" "select count(*) from auto_hub_vehicles;"
+CHECK_DB=upgrade check "un cambio en un vehiculo despues de migrar marca el sitio" "true" \
+  "update site_rebuild set dirty_since = null; update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); select (dirty_since is not null)::text from site_rebuild;"
 
 # --- Resumen ------------------------------------------------------------------
 

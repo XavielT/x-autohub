@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Genera `public/sitemap.xml`: las páginas fijas del sitio, las categorías de la tienda,
- * y cada ficha de producto y de servicio.
+ * y cada ficha de producto, de servicio, de vehículo de Auto Hub y de publicación de Hub Market.
  *
  *   node scripts/generate-sitemap.mjs
  *
@@ -54,14 +54,18 @@ async function rest(creds, path) {
 }
 
 async function fromSupabase(creds) {
-  const [categories, products, services] = await Promise.all([
+  const [categories, products, services, autos, marketItems] = await Promise.all([
     rest(creds, 'product_categories?select=slug&order=sort_order.asc'),
     // `is_test=eq.false`: aunque la política de lectura ya lo esconde del visitante, el
     // sitemap lo dice por su cuenta: un producto de prueba no se anuncia.
     rest(creds, 'hub_parts?select=slug,updated_at&is_active=eq.true&is_test=eq.false&order=id.asc'),
     rest(creds, 'services?select=slug&is_active=eq.true&order=sort_order.asc'),
+    // Auto Hub: solo lo disponible y que no sea de prueba.
+    rest(creds, 'auto_hub_vehicles?select=id,created_at&is_available=eq.true&is_test=eq.false&order=id.asc'),
+    // Hub Market: solo lo aprobado y activo. Una publicación pendiente o rechazada nunca se anuncia.
+    rest(creds, 'hub_market_items?select=id,category,created_at&is_active=eq.true&status=eq.aprobado&is_test=eq.false&order=id.asc'),
   ]);
-  return { categories, products, services };
+  return { categories, products, services, autos, marketItems };
 }
 
 // --- Mocks (sin credenciales) -------------------------------------------------------
@@ -82,16 +86,21 @@ async function fromMocks() {
     return mod[exportName];
   };
 
-  const [categories, products, services] = await Promise.all([
+  const [categories, products, services, autos, marketItems] = await Promise.all([
     load('src/shared/data/product-category.mock.ts', 'PRODUCT_CATEGORIES_MOCK'),
     load('src/shared/data/hub-part.mock.ts', 'HUB_PART_MOCK'),
     load('src/shared/data/service.mock.ts', 'SERVICES_MOCK'),
+    load('src/shared/data/auto-hub.mock.ts', 'AUTO_HUB_MOCK'),
+    load('src/shared/data/hub-market-item.mock.ts', 'HUB_MARKET_ITEMS_MOCK'),
   ]);
 
   return {
     categories,
     products: products.filter((p) => p.isActive !== false && !p.isTest),
     services: services.filter((s) => s.isActive),
+    autos: autos.filter((a) => !a.isTest),
+    // Sin `status` (el contenido sembrado) se lee como aprobado, igual que en HubMarketService.
+    marketItems: marketItems.filter((i) => (i.status ?? 'aprobado') === 'aprobado' && !i.isTest),
   };
 }
 
@@ -99,7 +108,7 @@ async function fromMocks() {
 
 async function main() {
   const creds = readCredentials();
-  let rows = { categories: [], products: [], services: [] };
+  let rows = { categories: [], products: [], services: [], autos: [], marketItems: [] };
   let origin;
 
   try {
@@ -121,7 +130,8 @@ async function main() {
   writeFileSync(OUT, buildSitemap(entries));
   console.log(
     `[sitemap] public/sitemap.xml: ${entries.length} URL (${rows.products.length} productos, ` +
-      `${rows.services.length} servicios, ${rows.categories.length} categorías) desde ${origin}.`,
+      `${rows.services.length} servicios, ${rows.categories.length} categorías, ${rows.autos.length} vehículos, ` +
+      `${rows.marketItems.length} publicaciones) desde ${origin}.`,
   );
 }
 

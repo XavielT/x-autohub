@@ -12,7 +12,8 @@
 //   · que no traiga ningún "Cargando" (un estado de carga que se quedó);
 //   · que su <title> no sea el genérico (el producto, el servicio y la categoría ya cargaron);
 //   · que su etiqueta canónica y og:url apunten a su propia dirección;
-// y que haya una página por cada producto, servicio y categoría del sitemap.
+// y que haya una página por cada producto, servicio, categoría y vehículo de Auto Hub del sitemap.
+// (Hub Market puede no tener ninguna publicación aprobada: ahí no se exige un mínimo.)
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,8 +32,22 @@ if (!fs.existsSync(path.join(OUT, 'index.html'))) {
 const sitemap = fs.readFileSync('public/sitemap.xml', 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(SITE_URL, '') || '/');
 
+// Las fichas de Auto Hub y de Hub Market (una por vehículo o publicación).
+const DETAIL = /^\/(auto-hub-details|car-details|hub-market-part-details|accessory-details)\/[^/]+$/;
+
 // Lo que se prerenderiza (app.routes.server.ts). El resto va al navegador.
-const PRERENDERED = [/^\/$/, /^\/tienda$/, /^\/tienda\/c\/[^/]+$/, /^\/tienda\/p\/[^/]+$/, /^\/servicios$/, /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/, /^\/terminos-condiciones$/];
+const PRERENDERED = [
+  /^\/$/,
+  /^\/tienda$/,
+  /^\/tienda\/c\/[^/]+$/,
+  /^\/tienda\/p\/[^/]+$/,
+  /^\/servicios$/,
+  /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/,
+  /^\/terminos-condiciones$/,
+  /^\/auto-hub$/,
+  /^\/hub-market$/,
+  DETAIL,
+];
 const expected = urls.filter((u) => PRERENDERED.some((re) => re.test(u)));
 
 const htmlOf = (route) => path.join(OUT, route === '/' ? '' : route, 'index.html');
@@ -53,8 +68,11 @@ for (const route of expected) {
   const title = attr(html, /<title>([^<]*)<\/title>/);
   if (route.startsWith('/tienda/p/') && (!title || /^Producto \|/.test(title))) fail(`${route}: el título es el genérico (${title})`);
   if (route.startsWith('/servicios/') && (!title || /^Servicio/.test(title) || /^X AutoHub/.test(title))) fail(`${route}: el título es el genérico (${title})`);
+  // El título de la ruta ("Detalle del vehiculo | …") es el que queda si la ficha no puso el suyo; "no encontrado", si no halló nada.
+  if (DETAIL.test(route) && (!title || /^Detalle de/.test(title) || /no encontrad/i.test(title))) fail(`${route}: el título es el genérico (${title})`);
+  if (DETAIL.test(route) && /no encontrad|inexistente/i.test(html)) fail(`${route}: la ficha dice que no encontró el vehículo o la publicación`);
 
-  if (route.startsWith('/tienda/p/') || (route.startsWith('/servicios/') && route !== '/servicios')) {
+  if (route.startsWith('/tienda/p/') || (route.startsWith('/servicios/') && route !== '/servicios') || DETAIL.test(route)) {
     const canonical = attr(html, /<link rel="canonical" href="([^"]+)"/);
     const ogUrl = attr(html, /<meta property="og:url" content="([^"]+)"/);
     if (canonical !== SITE_URL + route) fail(`${route}: la etiqueta canónica es ${canonical}`);
@@ -64,10 +82,12 @@ for (const route of expected) {
 
   if (route.startsWith('/tienda/p/') && !html.includes('prod__name')) fail(`${route}: no trae el nombre del producto`);
   if (route === '/tienda' && !html.includes('app-catalogo-card')) fail('/tienda: no trae ninguna tarjeta de producto');
+  if (route === '/auto-hub' && !html.includes('app-autohub-card')) fail('/auto-hub: no trae ningún vehículo');
+  if (route === '/hub-market' && !/app-(hub-market|car)-card/.test(html)) fail('/hub-market: no trae ninguna publicación');
 }
 
-// Una página por cada producto, servicio y categoría del sitemap.
-for (const [label, re] of [['productos', /^\/tienda\/p\//], ['categorías', /^\/tienda\/c\//], ['servicios', /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/]]) {
+// Una página por cada producto, servicio, categoría y vehículo de Auto Hub del sitemap.
+for (const [label, re] of [['productos', /^\/tienda\/p\//], ['categorías', /^\/tienda\/c\//], ['servicios', /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/], ['vehículos de Auto Hub', /^\/auto-hub-details\//]]) {
   const inSitemap = urls.filter((u) => re.test(u)).length;
   if (inSitemap === 0) fail(`el sitemap no trae ${label}: sin ellos no hay nada que prerenderizar (¿falló la lectura de la base?)`);
 }

@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DecimalPipe, SlicePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import { SeoService } from '../../../shared/services/seo.service';
+import { hubMarketSeo } from '../../../shared/utils/community-seo';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
@@ -18,6 +20,11 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 export class CarDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly hubMarketService = inject(HubMarketService);
+  private readonly seo = inject(SeoService);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.seo.reset());
+  }
 
   readonly car = signal<HubMarketItemModel | undefined>(undefined);
   readonly relatedVehicles = signal<HubMarketItemModel[]>([]);
@@ -56,11 +63,26 @@ export class CarDetails implements OnInit {
         next: ({ car, related }) => {
           this.car.set(car);
           this.images.set(car?.images ?? []);
+          this.applySeo(car);
           this.relatedVehicles.set(related.filter((v) => v.id !== id).slice(0, 4));
           this.isLoading.set(false);
         },
         error: () => this.isLoading.set(false),
       });
+    });
+  }
+
+  /** Título, descripción y vista previa de la ficha. Una publicación de prueba no se anuncia. */
+  private applySeo(item: HubMarketItemModel | undefined): void {
+    if (item && !item.isTest) {
+      this.seo.set(hubMarketSeo(item));
+      return;
+    }
+    this.seo.reset();
+    this.seo.set({
+      title: 'Publicación no encontrada | X AutoHub',
+      description: 'Esa publicación ya no está en Hub Market.',
+      path: '/hub-market',
     });
   }
 

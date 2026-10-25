@@ -45,8 +45,11 @@ export function buildSitemap(entries) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
 
+/** La ruta de la ficha de una publicación de Hub Market según su categoría (la misma de `hubMarketPath()`). */
+const MARKET_ROUTE = { vehiculos: 'car-details', piezas: 'hub-market-part-details', accesorios: 'accessory-details' };
+
 /** Las rutas de las fichas a partir de las filas ya leídas (de la base o de los mocks). */
-export function dynamicEntries({ categories = [], products = [], services = [] }) {
+export function dynamicEntries({ categories = [], products = [], services = [], autos = [], marketItems = [] }) {
   return [
     ...categories.map((c) => ({ path: `/tienda/c/${c.slug}`, priority: '0.7', changefreq: 'weekly' })),
     ...products.map((p) => ({
@@ -56,5 +59,20 @@ export function dynamicEntries({ categories = [], products = [], services = [] }
       changefreq: 'weekly',
     })),
     ...services.map((s) => ({ path: `/servicios/${s.slug}`, priority: '0.7', changefreq: 'monthly' })),
+    ...autos.map((a) => ({
+      path: `/auto-hub-details/${a.id}`,
+      lastmod: toDate(a.created_at ?? a.createdAt),
+      priority: '0.6',
+      changefreq: 'weekly',
+    })),
+    // Una categoría que no se conoce no tiene ficha: se salta en vez de inventar una ruta.
+    ...marketItems
+      .filter((i) => MARKET_ROUTE[i.category])
+      .map((i) => ({
+        path: `/${MARKET_ROUTE[i.category]}/${i.id}`,
+        lastmod: toDate(i.created_at ?? i.createdAt),
+        priority: '0.4',
+        changefreq: 'weekly',
+      })),
   ];
 }

@@ -18,6 +18,12 @@ const VEHICULO: HubMarketItemModel = {
   vehicleSpecs: { year: 1994, mileage: 180000 },
 };
 
+
+/** El contenido de una etiqueta <meta> del documento, o null si no está. */
+function meta(selector: string): string | null {
+  return document.head.querySelector(selector)?.getAttribute('content') ?? null;
+}
+
 describe('CarDetails', () => {
   function montar(car: HubMarketItemModel | undefined = VEHICULO) {
     TestBed.configureTestingModule({
@@ -44,6 +50,23 @@ describe('CarDetails', () => {
   it('should create', () => {
     const { componente } = montar();
     expect(componente).toBeTruthy();
+  });
+
+  it('pone el titulo, la descripcion y la vista previa de la publicacion', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+
+    expect(document.title).toBe('Toyota Supra MK4 | Hub Market — X AutoHub');
+    expect(meta('meta[property="og:url"]')).toBe('https://xautohubrd.com/car-details/101');
+    expect(meta('meta[property="og:image"]')).toBe('https://xautohubrd.com/assets/imgs/supra-white.webp');
+    expect(meta('meta[name="description"]')).toContain('RD$ 130,000');
+  });
+
+  it('una publicacion de prueba no se anuncia', async () => {
+    const { fixture } = montar({ ...VEHICULO, isTest: true });
+    await fixture.whenStable();
+
+    expect(document.title).toBe('Publicación no encontrada | X AutoHub');
   });
 
   it('muestra el boton de WhatsApp cuando la publicacion trae telefono', async () => {

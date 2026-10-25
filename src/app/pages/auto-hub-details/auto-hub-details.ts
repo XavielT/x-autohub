@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { DecimalPipe, SlicePipe } from '@angular/common';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
+import { SeoService } from '../../../shared/services/seo.service';
+import { autoHubSeo } from '../../../shared/utils/community-seo';
 import { formatDrPhone } from '../../../shared/utils/phone';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
@@ -17,6 +19,11 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 export class AutoHubDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly autoHubService = inject(AutoHubService);
+  private readonly seo = inject(SeoService);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.seo.reset());
+  }
 
   readonly auto = signal<AutoHubModel | undefined>(undefined);
   readonly images = signal<string[]>([]);
@@ -55,10 +62,25 @@ export class AutoHubDetails implements OnInit {
         next: (auto) => {
           this.auto.set(auto);
           this.images.set(auto?.images ?? []);
+          this.applySeo(auto);
           this.isLoading.set(false);
         },
         error: () => this.isLoading.set(false),
       });
+    });
+  }
+
+  /** Título, descripción y vista previa de la ficha. Un vehículo de prueba no se anuncia: se queda con lo genérico. */
+  private applySeo(auto: AutoHubModel | undefined): void {
+    if (auto && !auto.isTest) {
+      this.seo.set(autoHubSeo(auto));
+      return;
+    }
+    this.seo.reset();
+    this.seo.set({
+      title: 'Vehículo no encontrado | X AutoHub',
+      description: 'Ese vehículo ya no está en Auto Hub.',
+      path: '/auto-hub',
     });
   }
 
