@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 592 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 619 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 132 archivos, 1400 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 134 archivos, 1424 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -298,6 +298,13 @@ Cosas que ya causaron un bug. No las repitas:
   `isTest` y la página queda como "no encontrado". Cada ficha lleva su JSON-LD (`autoHubJsonLd()`/`hubMarketJsonLd()`, `structured-data.ts`), sin teléfono ni nombre de vendedor. `verify-prerender.mjs` falla el build si una ficha quedó con el título de la ruta
   ("Detalle de…"), con "no encontrado" o con otra URL canónica. **Si agregas una ruta de ficha nueva**, súmala a
   `app.routes.server.ts`, a `sitemap-lib.mjs` y a `verify-prerender.mjs`, o no se prerenderiza.
+- **Una publicación de Hub Market vendida o vencida sale de los listados, del sitemap y del HTML, pero su ficha sigue abierta.**
+  `sold_at` y `expires_at` (0030) las escriben solo `mark_publication_sold()` y `renew_publication()`, con el reloj de la base: un
+  trigger las congela en cualquier update normal y en el insert (si no, el dueño podría darse plazo hasta 2099). El filtro vive en las
+  consultas (`.is('sold_at', null).gt('expires_at', ahora)` en `HubMarketService`, y en `generate-sitemap.mjs`), **no en RLS**: la ficha
+  tiene que seguir respondiendo para quien guardó el enlace (`app-publication-notice`). Vencer no escribe nada: lo único que lo avisa
+  al HTML es el cron `expire-publications` (`mark_expired_publications()`, una vez al día). **El build prerenderizado pide esas
+  columnas: la 0030 se aplica ANTES de desplegar**, o `npm run build` falla en las tres fichas de Hub Market.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

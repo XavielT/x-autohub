@@ -52,7 +52,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 27    | `supabase/migrations/0027_site_rebuild_panel.sql` | "Publicar ahora": `site_rebuild_status()`, `request_site_rebuild()` y el trigger de reseñas |
 | 28    | `supabase/migrations/0028_push_from_database.sql` | Los avisos push salen de la base: trigger `notify_status_change()` |
 | 29    | `supabase/migrations/0029_site_rebuild_community.sql` | `mark_site_dirty()` también en `auto_hub_vehicles` y `hub_market_items` |
-| 30    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 30    | `supabase/migrations/0030_publication_lifecycle.sql` | `sold_at` y `expires_at` en `hub_market_items`, `mark_publication_sold()`, `renew_publication()` y el cron `expire-publications` |
+| 31    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -639,6 +640,13 @@ cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstru
   publicación todavía pendiente (que nadie ve): moderar es lo que publica o quita una ficha, y repetir las reglas de RLS dentro del
   trigger no valía el costo de un despliegue de más (máximo uno cada 10 minutos). Ninguna de las dos tablas lleva contadores de
   visitas; si se agrega uno, hay que sumarlo a la lista que ignora `mark_site_dirty()`.
+- **Vendida y vencida (migración 0030).** `hub_market_items.sold_at` (nula = a la venta) y `expires_at` (nace a los 60 días). Las dos las
+  escriben solo `mark_publication_sold(id)` y `renew_publication(id)` (su dueño o quien modera; usan el reloj de la base y abren la puerta
+  con `app.allow_moderation`, como `moderate_publication()`). `freeze_publication_moderation()` las congela en cualquier otro update y
+  `force_publication_status()` las reinicia en el insert. **La política de select no cambia**: el filtro de "a la venta y dentro de plazo"
+  vive en las consultas, para que la ficha de una vendida siga respondiendo con su aviso. Vencer no escribe la fila:
+  `mark_expired_publications()` (pg_cron `expire-publications`, 00:15 de República Dominicana) pide un despliegue si venció algo visible en
+  las últimas 24 horas. Renovar también "des-vende".
 - **El panel lo muestra y lo puede pedir (migración 0027).** La barra de `/admin` (solo admins) dice si hay cambios sin publicar
   y trae "Publicar ahora". Lo hacen dos funciones `security definer` que piden `is_admin()` por dentro:
   `site_rebuild_status()` (cuándo empezaron los cambios, el último despliegue, y si el enlace del hook **existe**, nunca el enlace)

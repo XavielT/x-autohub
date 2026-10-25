@@ -238,7 +238,22 @@ nueva o usada y **sin vendedor**: es una persona y su nombre no se publica. Una 
 **Lo que queda fuera:**
 
 - **`aggregateRating` de vehículos**: no hay reseñas de vehículos.
-- **Disponibilidad real**: siempre `InStock`; sin estado "vendido" no hay otra cosa que declarar.
+- **Disponibilidad real**: sigue siendo `InStock` a propósito; lo vendido y lo vencido ya no se prerenderiza (2.17.0), así que lo que
+  queda en el HTML está a la venta.
+
+---
+
+## Vendido y caducidad de Hub Market (2.17.0) ✅
+
+Hecho: una publicación tiene `sold_at` y `expires_at` (60 días). Su dueño la marca vendida o la renueva desde /perfil (con un aviso a
+una semana de vencer); lo vendido y lo vencido sale de los listados, la búsqueda, el sitemap y el HTML prerenderizado, pero la ficha
+sigue abierta con un aviso y sin WhatsApp. Un cron diario avisa al HTML de lo que venció (migración 0030).
+
+**Lo que queda fuera:**
+
+- **Avisarle al dueño que su publicación está por vencer** (push o correo): hoy solo lo ve si entra a /perfil.
+- **Que Auto Hub tenga lo mismo.** Sus vehículos son de X AutoHub y los maneja el panel con `is_available`; no lleva plazo.
+- **Estado "vendido" visible en el listado** (una etiqueta en la tarjeta): hoy simplemente deja de salir.
 
 ---
 
@@ -251,8 +266,7 @@ cambios de `auto_hub_vehicles` y `hub_market_items` republican el sitio (migraci
 
 **Lo que queda fuera:**
 
-- **Avisar que una publicación se vendió.** Una publicación aprobada se queda en el HTML hasta que alguien la quita (o hasta que
-  deja de estar activa): no hay "vendido" ni caducidad. Es el mismo hueco que ya tiene el listado.
+- **Avisar que una publicación se vendió.** Hecho en la 2.17.0 (ver arriba): vendido y caducidad.
 
 ---
 
