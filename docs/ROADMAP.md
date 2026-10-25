@@ -227,6 +227,19 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Avisos de una cita de invitado (2.22.0) ✅
+
+Hecho: quien agenda una cita del taller sin cuenta puede activar, en la pantalla de confirmación, avisos push de esa cita (confirmada, en trabajo, lista). Es el mismo
+mecanismo que los pedidos de invitado, con su propia tabla (migración 0035) y un componente compartido (`app-guest-avisos`).
+
+**Lo que queda fuera:**
+
+- **Volver a la cita después.** No hay una página de la cita para un invitado (solo existe la confirmación al agendar), así que el aviso se ofrece ahí y no se puede
+  activar más tarde ni desde otro dispositivo.
+- **Recordatorio de la cita** (el día antes). Hoy solo avisa cambios de estado.
+
+---
+
 ## Avisos a invitados (2.21.0) ✅
 
 Hecho: quien compró sin cuenta puede activar, desde la página de su pedido, avisos push de ese pedido (pago confirmado, en camino, listo para retirar…). La
@@ -235,7 +248,7 @@ el pedido está en marcha, y se borran al entregarse o cancelarse (migración 00
 
 **Lo que queda fuera:**
 
-- **Citas de invitado.** El mismo mecanismo serviría para las citas del taller; hoy solo son pedidos.
+- **Citas de invitado.** Hecho en la 2.22.0 (ver abajo).
 - **Ofrecerlo en el checkout.** Pedir el permiso de notificaciones antes de comprar estorba; se ofrece ya con el pedido hecho.
 - **Quien guardó el enlace en otro navegador.** Los avisos son del dispositivo donde se activaron.
 

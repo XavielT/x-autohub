@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 708 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 737 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 136 archivos, 1460 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 136 archivos, 1466 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -316,12 +316,14 @@ Cosas que ya causaron un bug. No las repitas:
   (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, lo anota **antes** de
   mandar y avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Si hay un despliegue posterior que salió bien, no avisa. Sin esos
   secretos no pregunta ni avisa, sin error. `deploy_alerts` no la lee nadie del navegador; `send-push` entra con `service_role` (que se salta RLS).
-- **Los avisos de un invitado son del pedido, no de una cuenta, y la llave es el uuid.** `order_push_subscriptions` (0034) ata un dispositivo a **un pedido**;
-  `register_order_push()` solo acepta pedidos **sin dueño** y **en marcha** (no entregados ni cancelados), hasta 3 dispositivos, y el uuid del pedido es toda la
-  autorización (es lo mismo que ya basta para ver `/pedido/:id` con `get_order()`). El navegador tiene **una** suscripción por dispositivo que puede servir a varios
-  pedidos y a una cuenta: por eso `PushService.orderState()` exige además que el pedido esté anotado en `localStorage` (`xah.orderPush`) y `disableForOrder()`
-  **no** desuscribe el navegador. `notify_status_change()` avisa de un pedido sin dueño solo si tiene dispositivos; las **citas** de invitado siguen sin avisar.
-  `send-push` borra los dispositivos de un pedido al avisar un estado final. Los tres rechazos de la base usan el código `22023`: es el único que `translateDbError`
+- **Los avisos de un invitado son del pedido o de la cita, no de una cuenta, y la llave es el uuid.** `order_push_subscriptions` (0034) y
+  `appointment_push_subscriptions` (0035) atan un dispositivo a **un pedido** o a **una cita**; `register_order_push()` y `register_appointment_push()` solo aceptan los
+  **sin dueño** y **en marcha** (un pedido no entregado ni cancelado; una cita que no esté hecha, cancelada ni en `no_show`), hasta 3 dispositivos, y el uuid es toda la
+  autorización (lo mismo que ya basta para ver `/pedido/:id`; el de la cita es el que recibe quien acaba de agendar). El navegador tiene **una** suscripción por dispositivo
+  que puede servir a varios pedidos, citas y a una cuenta: por eso `PushService.guestState()` exige además que ese pedido o cita esté anotado en `localStorage`
+  (`xah.orderPush` / `xah.appointmentPush`) y `disableForGuest()` **no** desuscribe el navegador. `notify_status_change()` avisa de un pedido o una cita sin dueño solo si
+  tiene dispositivos. La tarjeta es `app-guest-avisos` (`kind`: `order` o `appointment`), en `/pedido/:id` y en la confirmación de `/agendar`.
+  `send-push` borra los dispositivos de un pedido o cita al avisar un estado final. Los tres rechazos de la base usan el código `22023`: es el único que `translateDbError`
   deja pasar con su mensaje. `send-push` va **antes** que la migración.
 - **Las fotos de una opción son una lista (`image_urls`), y `image_url` es su espejo.** `product_variants.image_urls` (0033) es la verdad; `image_url` queda como la primera
   para el frontend anterior y para el carrito (`variant.imageUrl` es la portada), y lo mantiene el trigger `product_variants_photos_sync`: **no escribas `image_url`
