@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 583 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 592 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 131 archivos, 1374 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 132 archivos, 1392 pruebas, todo verde (cifra al 23/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -291,6 +291,13 @@ Cosas que ya causaron un bug. No las repitas:
   `VERCEL_PROJECT_ID` y `VERCEL_TEAM_ID`, secretos de la función. Sin ellos responde `configured: false` y la barra simplemente
   no dice nada del despliegue: no es un error. `getBuild()` nunca falla. Mientras un despliegue se construye, la barra vuelve a
   preguntar cada 10 s (hasta 6 min tras "Publicar ahora", 10 si ya venía en marcha) y para al cerrar el panel.
+- **Las fichas de Auto Hub y de Hub Market se prerenderizan, y salen de la base en cada build.** Una por vehículo disponible
+  (`/auto-hub-details/:id`) y una por publicación **aprobada** (`/car-details/:id`, `/hub-market-part-details/:id`,
+  `/accessory-details/:id`, según su categoría). Un cambio en `auto_hub_vehicles` o `hub_market_items` pide un despliegue como
+  los de la tienda (0029). Una ficha de prueba no se anuncia: `autoHubSeo()`/`hubMarketSeo()` (`community-seo.ts`) no se llaman con
+  `isTest` y la página queda como "no encontrado". `verify-prerender.mjs` falla el build si una ficha quedó con el título de la ruta
+  ("Detalle de…"), con "no encontrado" o con otra URL canónica. **Si agregas una ruta de ficha nueva**, súmala a
+  `app.routes.server.ts`, a `sitemap-lib.mjs` y a `verify-prerender.mjs`, o no se prerenderiza.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

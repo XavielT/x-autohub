@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0028 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0029 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -260,8 +260,9 @@ revisar cuando las fotos reales estén en Storage.
 
 ## Prerenderizado (SEO y vista previa de enlaces)
 
-Al construir (`npm run build`) se prerenderizan 61 páginas a HTML estático: el home, la tienda, cada categoría, **cada
-ficha de producto**, el taller, cada servicio y los términos. Un buscador o la vista previa de WhatsApp lee ahí el nombre,
+Al construir (`npm run build`) se prerenderizan 77 páginas a HTML estático: el home, la tienda, cada categoría, **cada
+ficha de producto**, el taller, cada servicio, los términos, **Auto Hub** (el listado y cada vehículo) y **Hub Market** (el listado y
+cada publicación aprobada, en la ruta de su categoría). Un buscador o la vista previa de WhatsApp lee ahí el nombre,
 el precio, el JSON-LD y las etiquetas `og:*` sin ejecutar JavaScript. Lo demás (carrito, pedidos, cuenta, panel,
 formularios) sigue en el navegador.
 
@@ -443,7 +444,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 131 archivos, 1374 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
+- 132 archivos, 1392 pruebas, todas pasando (2026-10-23). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

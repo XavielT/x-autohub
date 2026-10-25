@@ -51,7 +51,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 26    | `supabase/migrations/0026_site_rebuild.sql`    | Republicar el sitio cuando cambia el catálogo: estado, triggers, `fire_site_rebuild()` y el cron |
 | 27    | `supabase/migrations/0027_site_rebuild_panel.sql` | "Publicar ahora": `site_rebuild_status()`, `request_site_rebuild()` y el trigger de reseñas |
 | 28    | `supabase/migrations/0028_push_from_database.sql` | Los avisos push salen de la base: trigger `notify_status_change()` |
-| 29    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 29    | `supabase/migrations/0029_site_rebuild_community.sql` | `mark_site_dirty()` también en `auto_hub_vehicles` y `hub_market_items` |
+| 30    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -633,6 +634,11 @@ cambios le pide a Vercel que construya de nuevo (un *deploy hook*, que reconstru
 - **El hook reconstruye `main`**, no tu carpeta de trabajo. Un cambio de catálogo publica los datos nuevos con el código que
   esté en `main`, que por la regla de las versiones es siempre el último release. Si el build falla (`verify-prerender.mjs`),
   Vercel conserva el despliegue anterior y el estado queda limpio igual: el siguiente cambio vuelve a intentarlo.
+- **Auto Hub y Hub Market también (migración 0029).** `mark_site_dirty()` está en `auto_hub_vehicles` y `hub_market_items`: un
+  vehículo nuevo o vendido, o una publicación aprobada, rechazada o borrada, pide un despliegue. Marca también un cambio en una
+  publicación todavía pendiente (que nadie ve): moderar es lo que publica o quita una ficha, y repetir las reglas de RLS dentro del
+  trigger no valía el costo de un despliegue de más (máximo uno cada 10 minutos). Ninguna de las dos tablas lleva contadores de
+  visitas; si se agrega uno, hay que sumarlo a la lista que ignora `mark_site_dirty()`.
 - **El panel lo muestra y lo puede pedir (migración 0027).** La barra de `/admin` (solo admins) dice si hay cambios sin publicar
   y trae "Publicar ahora". Lo hacen dos funciones `security definer` que piden `is_admin()` por dentro:
   `site_rebuild_status()` (cuándo empezaron los cambios, el último despliegue, y si el enlace del hook **existe**, nunca el enlace)

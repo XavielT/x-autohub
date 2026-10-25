@@ -228,6 +228,20 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Prerenderizado de Auto Hub y Hub Market (2.15.0) ✅
+
+Hecho: el listado de Auto Hub y la ficha de cada vehículo disponible, el listado de Hub Market y la ficha de cada publicación
+aprobada (las tres rutas por categoría) salen como HTML estático, con título (`Toyota Corolla 2020 | Auto Hub — X AutoHub`),
+descripción (kilometraje, combustible, lugar y precio), `og:image` y canónico; entran al sitemap y a `verify-prerender.mjs`. Los
+cambios de `auto_hub_vehicles` y `hub_market_items` republican el sitio (migración 0029). 77 páginas en total.
+
+**Lo que queda fuera:**
+
+- **Avisar que una publicación se vendió.** Una publicación aprobada se queda en el HTML hasta que alguien la quita (o hasta que
+  deja de estar activa): no hay "vendido" ni caducidad. Es el mismo hueco que ya tiene el listado.
+
+---
+
 ## Prerenderizado (2.10.0) ✅
 
 Hecho: 61 páginas (home, tienda, categorías, fichas de producto, taller y servicios, términos) salen como HTML estático en
@@ -240,8 +254,10 @@ en WhatsApp. Ver "Prerenderizado" en `docs/ARCHITECTURE.md`.
   cuadro lo mismo que el servidor (con los datos ya en la mano, por `TransferState`); con datos que llegan por `fetch` hay que
   tocar los servicios uno a uno. Mientras tanto, una capa mantiene el HTML visible hasta que la app está lista.
 - **Que un cambio en el panel republique el sitio** — hecho en la 2.11.0 (ver abajo).
-- **Auto Hub, Hub Market y Social Hub.** Son contenido de la comunidad y de poca prioridad de búsqueda; se prerenderizan
-  agregando su ruta a `app.routes.server.ts` (y al `verify-prerender.mjs`).
+- **Social Hub.** Es contenido de la comunidad y de poca prioridad de búsqueda; se prerenderiza agregando su ruta a
+  `app.routes.server.ts` (y al `verify-prerender.mjs`). **Auto Hub y Hub Market ya están** (2.15.0, ver abajo).
+- **JSON-LD de los vehículos** (`Car` / `Vehicle` con su oferta). Las fichas de Auto Hub y de Hub Market salen con título,
+  descripción, `og:*` y canónico, pero sin datos estructurados.
 - **Prerenderizar `/buscar` y las páginas con filtros** (`/tienda?marca=…`): dependen de la consulta, no de una ruta.
 
 ---
