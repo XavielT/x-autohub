@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 765 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 781 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 136 archivos, 1466 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 136 archivos, 1469 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -313,9 +313,23 @@ Cosas que ya causaron un bug. No las repitas:
   publicación esté por vencer: el secreto no sirve para escribirle a un vendedor por otra cosa.
 - **El aviso de "falló el despliegue" lo pide la base cada 10 minutos, y quien mira Vercel es `send-push`.** `check_deploy_failures()` (0032) solo hace de
   reloj: manda `{ kind: 'deploy' }` y nada más. `send-push` lee el último despliegue de producción con `VERCEL_TOKEN`/`VERCEL_PROJECT_ID`/`VERCEL_TEAM_ID`
-  (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, lo anota **antes** de
-  mandar y avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Si hay un despliegue posterior que salió bien, no avisa. Sin esos
+  (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Lo anota en `deploy_alerts`
+  **cuando ya sabe que hay a quién avisar** (justo antes de mandar, para no duplicar) y **lo deshace si el aviso no llegó a ningún dispositivo**, para que el siguiente sondeo
+  lo reintente; esa tabla **no se limpia por edad** (0037), porque es lo que evita repetir el aviso de un fallo que sigue siendo el último. Si hay un despliegue posterior que salió bien, no avisa. Sin esos
   secretos no pregunta ni avisa, sin error. `deploy_alerts` no la lee nadie del navegador; `send-push` entra con `service_role` (que se salta RLS).
+- **Un `endpoint` de push tiene que ser de un servicio conocido, y se valida DOS veces.** `is_push_endpoint()` (0037) lo exigen `register_push_subscription()`,
+  `register_order_push()` y `register_appointment_push()`, y `send-push` lo vuelve a exigir antes de llamar (`PUSH_ENDPOINT`). Sin eso, quien tuviera el uuid de un pedido o
+  una cita de invitado (o cualquier cuenta) podía registrar `https://servidor-ajeno/…` y hacer que la función le mandara un POST con un JWT VAPID firmado. La lista es corta a
+  propósito (FCM, Mozilla, Apple, Windows): **si un navegador nuevo usa otro dominio, hay que sumarlo en los dos sitios y en `verify-send-push.mjs`**. No es un `check` de la
+  tabla, para no romper las filas que ya hay. Los tests de los scripts usan `https://fcm.googleapis.com/fcm/send/…`, no `push.example`.
+- **Lo que pide la base por `pg_net` es "a lo sumo una vez", y se sabe.** `net.http_post()` es asíncrono: devuelve un id al instante y la llamada real corre después. Los
+  avisos que anotan "ya avisé" (`publication_expiry_notices`, `appointment_reminders`, `deploy_alerts` salvo el reintento de arriba) lo hacen al encolar, no al confirmar: si
+  `send-push` responde 5xx o está desplegándose justo entonces, ese aviso se pierde y no se reintenta. Es un aviso y no un cobro; si algún día importara, hay que leer
+  `net._http_response` en la corrida siguiente. Lo mismo `guestState()`: lo recuerda `localStorage` y no la base, así que si se borran los datos del sitio la tarjeta dice "apagado"
+  aunque el dispositivo siga registrado (volver a activar lo re-registra sin duplicar).
+- **Vender y renovar una publicación solo sirve si está aprobada** (0037): una pendiente o rechazada no se puede mover de fecha ni por su dueño ni por moderación; el estado manda.
+  Una ficha de Hub Market vendida o vencida sigue abierta pero lleva `noindex` (`SeoPage.noindex`), y la ficha de un vehículo de Auto Hub que ya no está disponible dice "no encontrado".
+  **`verify-prerender.mjs` no exige tarjetas** en `/auto-hub` ni en `/hub-market` si el sitemap no trae nada: todo vendido o vencido es un estado válido, no un fallo de build.
 - **El recordatorio de una cita lo pide la base cada hora, y `send-push` va ANTES que la migración.** `send_appointment_reminders()` (0036, cron al minuto 5) manda
   `{ kind: 'appointment_reminder', id }` por cada cita **confirmada** a entre 2 y 24 horas, de una cuenta con algún dispositivo o de un invitado con dispositivos de la cita
   (0035), y anota en `appointment_reminders` **para qué hora** ya recordó (reprogramar la habilita otra vez). `send-push` vuelve a comprobar estado y ventana (margen de 25 h por

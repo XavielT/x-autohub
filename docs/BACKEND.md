@@ -59,7 +59,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 34    | `supabase/migrations/0034_guest_order_push.sql` | `order_push_subscriptions`, `register_order_push()` y `unregister_order_push()`: avisos push de un pedido de invitado |
 | 35    | `supabase/migrations/0035_guest_appointment_push.sql` | `appointment_push_subscriptions`, `register_appointment_push()` y `unregister_appointment_push()`: avisos push de una cita de invitado |
 | 36    | `supabase/migrations/0036_appointment_reminders.sql` | `appointment_reminders` y el cron `appointment-reminders`: recordatorio push de una cita, el día antes |
-| 37    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 37    | `supabase/migrations/0037_push_hardening.sql`  | `is_push_endpoint()` (lista de servicios de push), vender/renovar solo lo aprobado, y `deploy_alerts` sin limpieza por edad |
+| 38    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -503,6 +504,11 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 **Decisiones que conviene conocer**
 
+- **Endurecer los avisos (migración 0037).** Salió de una revisión del código de las versiones 2.15 a 2.23. `is_push_endpoint(text)` (inmutable) acepta solo `fcm.googleapis.com`,
+  `android.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com` y `*.notify.windows.com`, con `https` y el host seguido de `/` o `:443` (el truco `https://fcm…@otro/` no pasa);
+  lo exigen las tres funciones de registro (`register_push_subscription`, `register_order_push`, `register_appointment_push`) con `22023`, y `send-push` lo repite antes de
+  llamar, así que una fila vieja o escrita a mano tampoco puede apuntar a otro servidor. `mark_publication_sold()` y `renew_publication()` exigen `status = 'aprobado'`.
+  `check_deploy_failures()` ya no borra `deploy_alerts`. **`send-push` primero, luego la migración.**
 - **Recordatorio de una cita (migración 0036).** `send_appointment_reminders()` (pg_cron `appointment-reminders`, al minuto 5 de cada hora) busca las citas **confirmadas** que
   ocurren en la ventana (2 h, 24 h] y que tienen a quién avisar (una cuenta con algún dispositivo, o dispositivos suscritos a esa cita de invitado, 0035), y por cada una hace un
   `net.http_post` a `send-push` con `{ kind: 'appointment_reminder', id }`. `appointment_reminders` (sin permisos para el navegador) guarda para qué `scheduled_at` ya

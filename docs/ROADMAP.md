@@ -227,6 +227,20 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Revisión de código y endurecimiento (2.23.1) ✅
+
+Hecho: una revisión de todo lo publicado desde la 2.14.0 encontró nueve problemas; se corrigieron seis y los otros tres quedaron documentados como limitaciones. Lo más grave: cualquiera con
+el uuid de un pedido o una cita de invitado podía registrar un `endpoint` de push ajeno y hacer que `send-push` le mandara un POST con un JWT VAPID firmado (un SSRF a ciegas); ahora el
+endpoint tiene que ser de un servicio de push conocido, en la base y en la función (migración 0037). También: el prerender ya no falla si no hay publicaciones ni vehículos, una ficha
+vendida o vencida no se indexa, un vehículo no disponible no se anuncia, el aviso de despliegue se reintenta si no llegó a nadie, y vender o renovar solo sirve para lo aprobado.
+
+**Lo que se dejó, a propósito:**
+
+- **Las llamadas de `pg_net` son "a lo sumo una vez".** Un 5xx de `send-push` justo en ese momento pierde el aviso. Arreglarlo exige leer `net._http_response`; para un aviso no vale la complejidad.
+- **`localStorage` decide si la tarjeta de un invitado dice "activado".** Si se borran los datos del sitio dice "apagado" aunque siga registrado; activar de nuevo no duplica.
+
+---
+
 ## Recordatorio de una cita (2.23.0) ✅
 
 Hecho: una cita confirmada recibe un aviso push cuando faltan menos de 24 horas ("Mañana tienes tu cita en el taller a las 9:00 a. m."), tanto si es de una cuenta como de un
