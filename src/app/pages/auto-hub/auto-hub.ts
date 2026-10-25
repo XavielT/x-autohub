@@ -6,6 +6,10 @@ import { AutohubCard } from '../../../shared/components/autohub-card/autohub-car
 import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { OnlineService } from '../../../shared/services/online.service';
 import { SeoService } from '../../../shared/services/seo.service';
+import {
+  AutoHubFilters, AutoHubSort, CHASIS_LABELS, EMPTY_AUTO_HUB_FILTERS, FUEL_LABELS, SORT_LABELS, TRACTION_LABELS,
+  activeAutoHubFilters, filterAutoHub,
+} from '../../../shared/utils/auto-hub-filters';
 
 @Component({
   selector: 'app-auto-hub',
@@ -28,19 +32,38 @@ export class AutoHub implements OnInit {
 
   readonly isLoading = signal(true);
   readonly hasError = signal(false);
-  readonly searchQuery = signal('');
+  readonly filters = signal<AutoHubFilters>(EMPTY_AUTO_HUB_FILTERS);
+  /** Los filtros avanzados empiezan cerrados; el botón dice cuántos hay puestos. */
+  readonly filtersOpen = signal(false);
 
-  /** Se recalcula solo cuando cambia el inventario o la búsqueda. */
-  readonly filteredAutos = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
+  protected readonly chasisOptions = Object.entries(CHASIS_LABELS);
+  protected readonly fuelOptions = Object.entries(FUEL_LABELS);
+  protected readonly tractionOptions = Object.entries(TRACTION_LABELS);
+  protected readonly sortOptions = Object.entries(SORT_LABELS);
 
-    return this.allAutos().filter(
-      (auto) =>
-        query.length === 0 ||
-        auto.brand.toLowerCase().includes(query) ||
-        auto.model.toLowerCase().includes(query),
-    );
-  });
+  /** Se recalcula solo cuando cambia el inventario o los filtros. */
+  readonly filteredAutos = computed(() => filterAutoHub(this.allAutos(), this.filters()));
+  readonly activeCount = computed(() => activeAutoHubFilters(this.filters()));
+  readonly isFiltered = computed(() => this.activeCount() > 0 || this.filters().query.trim() !== '');
+
+  /** Cambia un solo filtro. */
+  set<K extends keyof AutoHubFilters>(key: K, value: AutoHubFilters[K]): void {
+    this.filters.update((f) => ({ ...f, [key]: value }));
+  }
+
+  /** El número que escribió el visitante, o null si el campo quedó vacío. */
+  setNumber(key: 'maxPrice' | 'minYear' | 'maxMileage', value: number | string | null): void {
+    const n = value === null || value === '' ? null : Number(value);
+    this.set(key, n !== null && Number.isFinite(n) ? n : null);
+  }
+
+  setSort(value: string): void {
+    this.set('sort', value as AutoHubSort);
+  }
+
+  clearFilters(): void {
+    this.filters.set(EMPTY_AUTO_HUB_FILTERS);
+  }
 
   ngOnInit(): void {
     // El mismo título que la ruta; lo que aporta es la descripción y la vista previa al compartir el enlace.

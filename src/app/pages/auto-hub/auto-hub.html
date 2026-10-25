@@ -6,10 +6,64 @@
         </div>
         <div class="autohub__search">
             <search>
-                <input class="autohub__input" placeholder="Que estas buscando?" [ngModel]="searchQuery()"
-                    (ngModelChange)="searchQuery.set($event)" />
+                <input class="autohub__input" placeholder="Que estas buscando?" [ngModel]="filters().query"
+                    (ngModelChange)="set('query', $event)" />
             </search>
         </div>
+    </div>
+    <div class="autohub__filters">
+        <div class="autohub__filters-bar">
+            <button type="button" class="autohub__filters-toggle" [attr.aria-expanded]="filtersOpen()"
+                (click)="filtersOpen.set(!filtersOpen())">
+                Filtros@if (activeCount() > 0) { ({{ activeCount() }}) }
+            </button>
+            <label class="autohub__field autohub__field--sort">
+                <span>Ordenar</span>
+                <select [ngModel]="filters().sort" (ngModelChange)="setSort($event)">
+                    @for (o of sortOptions; track o[0]) { <option [value]="o[0]">{{ o[1] }}</option> }
+                </select>
+            </label>
+            @if (isFiltered()) {
+                <button type="button" class="autohub__filters-clear" (click)="clearFilters()">Limpiar</button>
+            }
+            @if (!isLoading()) {
+                <span class="autohub__count">{{ filteredAutos().length }} vehículo{{ filteredAutos().length === 1 ? '' : 's' }}</span>
+            }
+        </div>
+        @if (filtersOpen()) {
+            <div class="autohub__filters-panel">
+                <label class="autohub__field"><span>Tipo</span>
+                    <select [ngModel]="filters().chasisType" (ngModelChange)="set('chasisType', $event)">
+                        <option value="">Todos</option>
+                        @for (o of chasisOptions; track o[0]) { <option [value]="o[0]">{{ o[1] }}</option> }
+                    </select>
+                </label>
+                <label class="autohub__field"><span>Combustible</span>
+                    <select [ngModel]="filters().fuel" (ngModelChange)="set('fuel', $event)">
+                        <option value="">Todos</option>
+                        @for (o of fuelOptions; track o[0]) { <option [value]="o[0]">{{ o[1] }}</option> }
+                    </select>
+                </label>
+                <label class="autohub__field"><span>Tracción</span>
+                    <select [ngModel]="filters().traction" (ngModelChange)="set('traction', $event)">
+                        <option value="">Todas</option>
+                        @for (o of tractionOptions; track o[0]) { <option [value]="o[0]">{{ o[1] }}</option> }
+                    </select>
+                </label>
+                <label class="autohub__field"><span>Precio máximo (RD$)</span>
+                    <input type="number" inputmode="numeric" min="0" step="50000" placeholder="Sin límite"
+                        [ngModel]="filters().maxPrice" (ngModelChange)="setNumber('maxPrice', $event)" />
+                </label>
+                <label class="autohub__field"><span>Año desde</span>
+                    <input type="number" inputmode="numeric" min="1950" step="1" placeholder="Cualquiera"
+                        [ngModel]="filters().minYear" (ngModelChange)="setNumber('minYear', $event)" />
+                </label>
+                <label class="autohub__field"><span>Kilometraje máximo</span>
+                    <input type="number" inputmode="numeric" min="0" step="10000" placeholder="Sin límite"
+                        [ngModel]="filters().maxMileage" (ngModelChange)="setNumber('maxMileage', $event)" />
+                </label>
+            </div>
+        }
     </div>
     <div class="autohub__content">
         @for (auto of filteredAutos(); track auto.id; let first = $first){
@@ -22,7 +76,12 @@
                 } @else if (hasError() && !online.isOnline()) {
                     <app-offline-state (retry)="load()" />
                 } @else {
-                    <h4>Upss, No hay articulos para mostrar</h4>
+                    @if (isFiltered()) {
+                        <h4>Ningún vehículo coincide con tus filtros</h4>
+                        <button type="button" class="autohub__filters-clear" (click)="clearFilters()">Limpiar filtros</button>
+                    } @else {
+                        <h4>Upss, No hay articulos para mostrar</h4>
+                    }
                     <img src="assets/icons/not-found-hub-icon.svg"/>
                 }
             </div>

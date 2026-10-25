@@ -444,7 +444,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 136 archivos, 1469 pruebas, todas pasando (2026-10-25). Corren siempre en modo mock (los
+- 138 archivos, 1485 pruebas, todas pasando (2026-10-25). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

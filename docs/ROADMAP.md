@@ -689,11 +689,9 @@ la página y da una razón concreta para crear cuenta.
 El feed es de solo lectura. Falta el formulario para que un miembro publique su
 build. **Congelado por el pivote**: Comunidad no recibe trabajo nuevo por ahora.
 
-### Filtros de verdad en Auto Hub
+### ~~Filtros de verdad en Auto Hub~~ ✅ (2.24.0)
 
-`/auto-hub` solo filtra por marca y modelo, con el filtro de categoría comentado en
-el código. Para vehículos hacen falta rangos: precio, año, kilometraje, tipo de
-chasis, combustible, tracción. Todos esos campos ya existen en `AutoHubModel`.
+Hecho: `/auto-hub` filtra por tipo de chasis, combustible, tracción, precio máximo, año mínimo y kilometraje máximo, ordena (recientes, precio, año, kilometraje) y cuenta los resultados. La regla vive en `shared/utils/auto-hub-filters.ts` (pura, con sus pruebas); la página solo guarda los filtros en una señal. Los filtros son del navegador: no hay consulta nueva a la base. **Pendiente:** guardarlos en la URL para poder compartir una búsqueda; el catálogo crece poco y no hacía falta aún.
 
 ### Video del hero: poster y peso
 
