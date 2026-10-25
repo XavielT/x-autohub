@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 657 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 679 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 134 archivos, 1424 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 135 archivos, 1442 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -316,6 +316,11 @@ Cosas que ya causaron un bug. No las repitas:
   (los secretos de `build-status`, compartidos por todo el proyecto) y, solo si terminó en `ERROR` y no está en `deploy_alerts`, lo anota **antes** de
   mandar y avisa a los dispositivos de los admins (`profiles.role = 'admin'`). Si hay un despliegue posterior que salió bien, no avisa. Sin esos
   secretos no pregunta ni avisa, sin error. `deploy_alerts` no la lee nadie del navegador; `send-push` entra con `service_role` (que se salta RLS).
+- **Las fotos de una opción son una lista (`image_urls`), y `image_url` es su espejo.** `product_variants.image_urls` (0033) es la verdad; `image_url` queda como la primera
+  para el frontend anterior y para el carrito (`variant.imageUrl` es la portada), y lo mantiene el trigger `product_variants_photos_sync`: **no escribas `image_url`
+  desde el panel**, manda la lista. La ficha decide qué enseñar con `variantGallery()`: con **2 o más** fotos propias la galería es solo de la opción; con **una** se
+  queda con todas y salta a esa (el comportamiento de la 0025); sin fotos, todas. Siguen siendo fotos **del producto** (`hub_parts.images`): una foto que el producto
+  ya no tiene se descarta al mostrar. Máximo 8 por opción (un check, y `PHOTOS_MAX`). **La migración va antes que el frontend.**
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

@@ -55,7 +55,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 30    | `supabase/migrations/0030_publication_lifecycle.sql` | `sold_at` y `expires_at` en `hub_market_items`, `mark_publication_sold()`, `renew_publication()` y el cron `expire-publications` |
 | 31    | `supabase/migrations/0031_publication_expiry_notice.sql` | `publication_expiry_notices` y el cron `warn-expiring-publications`: aviso push a siete días de vencer |
 | 32    | `supabase/migrations/0032_deploy_failure_notice.sql` | `deploy_alerts` y el cron `check-deploy-failures`: aviso push a los admins si falla un despliegue |
-| 33    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 33    | `supabase/migrations/0033_variant_photos.sql`  | Varias fotos por opción: `product_variants.image_urls` y su trigger de espejo |
+| 34    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -499,6 +500,11 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 **Decisiones que conviene conocer**
 
+- **Varias fotos por opción (migración 0033).** `product_variants.image_urls` (`text[]`, nunca nula, máximo 8) guarda las fotos de la opción, de las del
+  producto, en el orden en que la ficha las enseña; la primera es la portada. `image_url` (0025) **se queda como espejo** de la primera, mantenida por el trigger
+  `product_variants_photos_sync`: al insertar, si solo viene `image_url` (frontend anterior) la lista pasa a ser esa foto, y si no `image_url` sigue a la lista; al
+  actualizar, si solo cambió `image_url` manda ese, y en cualquier otro caso manda la lista. La migración copia la foto única a la lista. Quitar `image_url` es una
+  migración aparte, cuando ya no haya frontend que la escriba. **Primero la migración, después el frontend.** Ver también la 0025, debajo.
 - **Foto por opción (migración 0025).** `product_variants.image_url` apunta a **una de las fotos del producto**
   (`hub_parts.images`); el panel ofrece esas, no sube otras, así no hay un segundo sitio donde borrar fotos de
   Storage. Al elegir la opción, la ficha salta a esa foto, y el carrito y el checkout la usan en su línea. La base

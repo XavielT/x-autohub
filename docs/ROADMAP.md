@@ -227,6 +227,20 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## Varias fotos por opción (2.20.0) ✅
+
+Hecho: cada opción de un producto (color, medida) puede tener hasta 8 fotos, elegidas entre las del producto con casillas en el panel. Al elegir una
+opción con 2 o más fotos propias, la ficha enseña solo esas; con una sola, salta a ella como antes; sin fotos, deja todas. La portada (la primera) es la
+del carrito y el checkout (migración 0033).
+
+**Lo que queda fuera:**
+
+- **Subir una foto directamente a una opción.** Siguen siendo fotos del producto; una que solo exista para una opción hay que cargarla primero en el producto.
+- **Ordenar las fotos de una opción distinto del producto.** El orden de la opción es el del producto, a propósito: no hay un segundo orden que arreglar.
+- **Quitar `image_url`.** Se queda como espejo mientras pueda haber un frontend que la escriba.
+
+---
+
 ## Aviso si falla un despliegue (2.19.0) ✅
 
 Hecho: si el último despliegue de producción termina en error, los admins reciben un aviso push ("Falló el despliegue del sitio") con el
@@ -353,7 +367,7 @@ stock del producto es la suma de las opciones activas. Ver "Variantes de product
 - **Reseñas por opción.** Las reseñas son del producto.
 - **Subir una foto directamente a una opción.** Hoy cada opción elige una de las fotos del producto (2.9.0); una
   foto que solo exista para una opción habría que cargarla primero en el producto.
-- **Varias fotos por opción.** Hoy es una; la galería salta a ella y deja las demás del producto.
+- **Varias fotos por opción.** Hecho en la 2.20.0 (ver abajo).
 
 ---
 
