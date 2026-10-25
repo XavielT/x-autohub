@@ -1,6 +1,9 @@
 <div class="hub-market-part-details">
     @if (part(); as part) {
       <div class="hub-market-part-details__container">
+        @if (!isLive(part)) {
+          <app-publication-notice [item]="part" />
+        }
         <div class="hub-market-part-details__container-left">
           <a class="hub-market-part-details__back-link" [routerLink]="['/hub-market']">
             &larr; Volver al Hub Market

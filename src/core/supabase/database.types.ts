@@ -376,6 +376,12 @@ export type HubMarketItemRow = {
   spec_model: string | null;
   created_at: string;
   /**
+   * Ciclo de vida (migración 0030). Las pone la base: un trigger las congela en los updates normales y
+   * solo `mark_publication_sold()` y `renew_publication()` las mueven.
+   */
+  sold_at: string | null;
+  expires_at: string;
+  /**
    * Presente solo cuando el select pide el perfil del vendedor.
    *
    * El embed **tiene** que nombrar la clave foránea
@@ -1114,6 +1120,18 @@ export type Database = {
           reviewed_by: string | null;
           reviewed_at: string | null;
         }[];
+      };
+      /**
+       * Ciclo de vida de una publicación (migración 0030). Las dos las usa su dueño (o quien modera) y
+       * escriben `sold_at` / `expires_at` con el reloj de la base.
+       */
+      mark_publication_sold: {
+        Args: { p_id: number };
+        Returns: { sold_at: string | null; expires_at: string }[];
+      };
+      renew_publication: {
+        Args: { p_id: number };
+        Returns: { sold_at: string | null; expires_at: string }[];
       };
       /**
        * Los tres contadores del home en una sola llamada (migración 0014).

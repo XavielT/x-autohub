@@ -62,8 +62,12 @@ async function fromSupabase(creds) {
     rest(creds, 'services?select=slug&is_active=eq.true&order=sort_order.asc'),
     // Auto Hub: solo lo disponible y que no sea de prueba.
     rest(creds, 'auto_hub_vehicles?select=id,created_at&is_available=eq.true&is_test=eq.false&order=id.asc'),
-    // Hub Market: solo lo aprobado y activo. Una publicación pendiente o rechazada nunca se anuncia.
-    rest(creds, 'hub_market_items?select=id,category,created_at&is_active=eq.true&status=eq.aprobado&is_test=eq.false&order=id.asc'),
+    // Hub Market: solo lo aprobado y activo, a la venta y dentro de plazo (0030). Una publicación pendiente,
+    // rechazada, vendida o vencida nunca se anuncia.
+    rest(
+      creds,
+      `hub_market_items?select=id,category,created_at&is_active=eq.true&status=eq.aprobado&is_test=eq.false&sold_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=id.asc`,
+    ),
   ]);
   return { categories, products, services, autos, marketItems };
 }

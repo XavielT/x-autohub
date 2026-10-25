@@ -58,7 +58,14 @@ describe('mappers', () => {
       spec_brand: 'Toyota',
       spec_model: 'Supra',
       created_at: '2026-04-12T00:00:00Z',
+      sold_at: null,
+      expires_at: '2026-06-11T00:00:00Z',
     };
+
+    it('lee el ciclo de vida: la fecha de vencimiento, y vendida solo si la hay', () => {
+      expect(toHubMarketItem(base)).toMatchObject({ soldAt: undefined, expiresAt: '2026-06-11T00:00:00Z' });
+      expect(toHubMarketItem({ ...base, sold_at: '2026-05-01T00:00:00Z' }).soldAt).toBe('2026-05-01T00:00:00Z');
+    });
 
     it('rearma vehicleSpecs desde las columnas planas', () => {
       const item = toHubMarketItem(base);

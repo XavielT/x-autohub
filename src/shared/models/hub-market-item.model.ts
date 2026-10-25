@@ -53,6 +53,16 @@ export interface HubMarketItemModel {
   isFeatured?: boolean;
   detailRoute?: string;
   createdAt?: string;
+  /**
+   * Cuándo su dueño la marcó como vendida (migración 0030). Ausente = a la venta. Sale de los
+   * listados y del sitemap, pero su ficha sigue abierta con un aviso.
+   */
+  soldAt?: string;
+  /**
+   * Hasta cuándo se muestra (0030). Ausente en el contenido sembrado, que no vence. Ver
+   * `shared/utils/publication-lifecycle.ts`.
+   */
+  expiresAt?: string;
   condition?: 'new' | 'used';
   vehicleSpecs?: {
     year: number;

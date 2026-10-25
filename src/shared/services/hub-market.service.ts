@@ -11,6 +11,7 @@ import {
 import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
 import { AuthService } from './auth.service';
 import { visibleTo } from '../utils/test-visibility';
+import { Lifecycle, isLive, newExpiry } from '../utils/publication-lifecycle';
 
 /**
  * Hub Market: los clasificados que publica la comunidad.
@@ -73,7 +74,7 @@ export class HubMarketService {
    * las aprobadas, y no sabría que está viendo algo que nadie más ve.
    */
   private approvedOnly(items: HubMarketItemModel[]): HubMarketItemModel[] {
-    return this.visible(items).filter((item) => statusOf(item) === 'aprobado');
+    return this.visible(items).filter((item) => statusOf(item) === 'aprobado' && isLive(item));
   }
 
   /**
@@ -100,6 +101,8 @@ export class HubMarketService {
         .select(SELECT_WITH_SELLER)
         .eq('is_active', true)
         .eq('status', 'aprobado')
+        .is('sold_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false }),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
@@ -134,6 +137,8 @@ export class HubMarketService {
         .eq('category', category)
         .eq('is_active', true)
         .eq('status', 'aprobado')
+        .is('sold_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false }),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
   }
@@ -156,6 +161,8 @@ export class HubMarketService {
         .eq('category', 'vehiculos')
         .eq('is_active', true)
         .eq('status', 'aprobado')
+        .is('sold_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(limit),
@@ -183,6 +190,8 @@ export class HubMarketService {
         .eq('category', 'vehiculos')
         .eq('is_active', true)
         .eq('status', 'aprobado')
+        .is('sold_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(limit),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
@@ -219,6 +228,8 @@ export class HubMarketService {
         .ilike('title', `%${escaped}%`)
         .eq('is_active', true)
         .eq('status', 'aprobado')
+        .is('sold_at', null)
+        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(limit),
     ).pipe(map((res) => unwrap(res).map(toHubMarketItem)));
@@ -296,6 +307,8 @@ export class HubMarketService {
         status: canModerate ? 'aprobado' : 'pendiente',
         rejectionReason: undefined,
         createdAt: new Date().toISOString(),
+        soldAt: undefined,
+        expiresAt: newExpiry(),
       };
       this.mockItems = [created, ...this.mockItems];
       return of(created);
@@ -308,6 +321,54 @@ export class HubMarketService {
         .select(SELECT_WITH_SELLER)
         .single(),
     ).pipe(map((res) => toHubMarketItem(unwrap(res))));
+  }
+
+  // --- Ciclo de vida: vendida y renovar ------------------------------------
+
+  /**
+   * Marca una publicación como vendida: sale de los listados, del sitemap y del próximo despliegue, y
+   * su ficha queda con un aviso. Va por `mark_publication_sold()` (0030) y no por un `update`: las
+   * fechas las pone el reloj de la base y un trigger las congela en cualquier otro update.
+   */
+  markSold(id: number): Observable<Lifecycle | undefined> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(this.patchMock(id, (item) => ({ ...item, soldAt: item.soldAt ?? new Date().toISOString() })));
+    }
+
+    return from(this.supabase.db.rpc('mark_publication_sold', { p_id: id })).pipe(
+      map((res) => this.applyLifecycle(unwrap(res)[0])),
+    );
+  }
+
+  /** Renueva una publicación 60 días más, y si estaba vendida la vuelve a poner a la venta. */
+  renew(id: number): Observable<Lifecycle | undefined> {
+    if (this.supabase.shouldUseMockData()) {
+      return of(this.patchMock(id, (item) => ({ ...item, soldAt: undefined, expiresAt: newExpiry() })));
+    }
+
+    return from(this.supabase.db.rpc('renew_publication', { p_id: id })).pipe(
+      map((res) => this.applyLifecycle(unwrap(res)[0])),
+    );
+  }
+
+  /** Cambia una publicación del mock y la devuelve (o `undefined` si no existe). */
+  private patchMock(
+    id: number,
+    change: (item: HubMarketItemModel) => HubMarketItemModel,
+  ): HubMarketItemModel | undefined {
+    this.mockItems = this.mockItems.map((item) => (item.id === id ? change(item) : item));
+    return this.mockItems.find((item) => item.id === id);
+  }
+
+  /**
+   * Las dos funciones devuelven solo las fechas nuevas; el resto de la publicación no cambió, así que se
+   * deja a quien llama mezclarlas con lo que ya tiene en pantalla.
+   */
+  private applyLifecycle(
+    row: { sold_at: string | null; expires_at: string } | undefined,
+  ): Lifecycle | undefined {
+    if (!row) return undefined;
+    return { soldAt: row.sold_at ?? undefined, expiresAt: row.expires_at };
   }
 
   // --- Moderación ----------------------------------------------------------

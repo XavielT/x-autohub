@@ -277,6 +277,8 @@ export function toHubMarketItem(row: HubMarketItemRow): HubMarketItemModel {
     isFeatured: row.is_featured,
     detailRoute: detailRouteFor(row),
     createdAt: row.created_at,
+    soldAt: row.sold_at ?? undefined,
+    expiresAt: row.expires_at ?? undefined,
     condition: row.condition ?? undefined,
     // spec_year es obligatorio para 'vehiculos' (constraint en el esquema),
     // así que su presencia es lo que decide si hay ficha técnica.

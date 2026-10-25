@@ -1,6 +1,9 @@
 @if (car(); as car) {
 <div class="car-details">
   <div class="car-details__body">
+    @if (!isLive(car)) {
+      <app-publication-notice [item]="car" />
+    }
     <div class="car-details__media">
       <div class="car-details__carousel">
         <img [src]="images()[currentImageIndex()]" [alt]="car.title" class="car-details__main-image" />

@@ -7,6 +7,8 @@ import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
+import { isLive } from '../../../shared/utils/publication-lifecycle';
+import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
@@ -14,7 +16,7 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-market-part-details',
-  imports: [DecimalPipe, RouterLink, HubMarketCard, TestBadge],
+  imports: [PublicationNotice, DecimalPipe, RouterLink, HubMarketCard, TestBadge],
   templateUrl: './hub-market-part-details.html',
   styleUrl: './hub-market-part-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +25,8 @@ export class HubMarketPartDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly hubMarketService = inject(HubMarketService);
   private readonly seo = inject(SeoService);
+  /** Para la plantilla: la ficha avisa cuando la publicación ya no está a la venta. */
+  protected readonly isLive = isLive;
   private readonly jsonLd = inject(JsonLdService);
 
   constructor() {
@@ -41,7 +45,7 @@ export class HubMarketPartDetails implements OnInit {
   /** Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono. */
   readonly waLink = computed(() => {
     const part = this.part();
-    if (!part?.contactPhone) return '';
+    if (!part?.contactPhone || !isLive(part)) return '';
     return buildWaLink(
       part.contactPhone,
       `Hola! Vi tu publicacion "${part.title}" en X AutoHub y me interesa.`,
@@ -81,7 +85,7 @@ export class HubMarketPartDetails implements OnInit {
   private applySeo(item: HubMarketItemModel | undefined): void {
     if (item && !item.isTest) {
       this.seo.set(hubMarketSeo(item));
-      this.jsonLd.set('listing', hubMarketJsonLd(item));
+      this.jsonLd.set('listing', isLive(item) ? hubMarketJsonLd(item) : null);
       return;
     }
     this.seo.reset();

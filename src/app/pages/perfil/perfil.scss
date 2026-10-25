@@ -299,6 +299,52 @@
     }
   }
 
+  /// El plazo de una publicación aprobada y lo que su dueño puede hacer con él. Cada estado se dice con
+  /// texto además de color.
+  &__life {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__life-label {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--main-ultra-light);
+
+    &--warn {
+      color: var(--Hub);
+    }
+
+    &--off {
+      color: #ff8d8f;
+    }
+  }
+
+  &__life-btn {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--main-ultra-light);
+    background: transparent;
+    color: var(--main-ultra-light);
+    cursor: pointer;
+
+    &--primary {
+      border-color: var(--Hub);
+      color: var(--Hub);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
   /// El motivo del rechazo. Es lo único que le dice al vendedor qué corregir,
   /// así que se lee entero: no se recorta ni se esconde tras un "ver más".
   &__status-reason {

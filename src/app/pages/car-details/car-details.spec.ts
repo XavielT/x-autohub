@@ -93,6 +93,31 @@ describe('CarDetails', () => {
     expect(boton(fixture)!.getAttribute('href')).toBe(componente.waLink());
   });
 
+  it('una publicacion vendida avisa que se vendio, sin WhatsApp ni JSON-LD, y la ficha sigue abierta', async () => {
+    const { fixture } = montar({ ...VEHICULO, soldAt: '2026-10-01T00:00:00Z' });
+    await fixture.whenStable();
+
+    const pantalla = fixture.nativeElement as HTMLElement;
+    expect(pantalla.querySelector('app-publication-notice')?.textContent).toContain('ya se vendió');
+    expect(pantalla.textContent).toContain('Toyota Supra MK4');
+    expect(boton(fixture)).toBeNull();
+    expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
+  });
+
+  it('una publicacion vencida avisa que venció', async () => {
+    const { fixture } = montar({ ...VEHICULO, expiresAt: '2020-01-01T00:00:00Z' });
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-publication-notice')?.textContent).toContain('venció');
+  });
+
+  it('una publicacion a la venta no lleva aviso', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-publication-notice')).toBeNull();
+  });
+
   it('sin telefono no hay boton, y el vendedor se sigue viendo', async () => {
     const { fixture, componente } = montar({ ...VEHICULO, contactPhone: undefined });
     await fixture.whenStable();

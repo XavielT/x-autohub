@@ -127,6 +127,33 @@
                     <p class="perfil__status-reason">{{ item.rejectionReason }}</p>
                   }
                 }
+
+                @if (lifecycleOf(item); as life) {
+                  <div class="perfil__life">
+                    <span class="perfil__life-label" [class]="'perfil__life-label--' + life.tone">{{ life.label }}</span>
+
+                    @if (life.canSell) {
+                      <button
+                        type="button"
+                        class="perfil__life-btn"
+                        [disabled]="busyPublications().has(item.id)"
+                        (click)="markSold(item)"
+                      >
+                        Marcar como vendida
+                      </button>
+                    }
+                    @if (life.canRenew) {
+                      <button
+                        type="button"
+                        class="perfil__life-btn perfil__life-btn--primary"
+                        [disabled]="busyPublications().has(item.id)"
+                        (click)="renew(item)"
+                      >
+                        {{ life.renewText }}
+                      </button>
+                    }
+                  </div>
+                }
               </div>
             }
           </div>

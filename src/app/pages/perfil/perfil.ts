@@ -10,6 +10,7 @@ import {
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Observable, finalize } from 'rxjs';
 import { AuthService } from '../../../shared/services/auth.service';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { OrderService } from '../../../shared/services/order.service';
@@ -25,11 +26,21 @@ import {
 } from '../../../shared/models/hub-market-item.model';
 import { ORDER_STATUS_LABELS, UserOrderModel, needsProof } from '../../../shared/models/user-order.model';
 import { OrderStatus } from '../../../core/supabase/database.types';
+import { Lifecycle, RENEW_WARNING_DAYS, daysLeft, isExpired, isSold } from '../../../shared/utils/publication-lifecycle';
 import {
   RequiredField,
   focusFirstInvalid,
   missingFieldsMessage,
 } from '../../../shared/forms/required-fields';
+
+/** Cómo se dibuja el ciclo de vida de una publicación en /perfil, y qué botones lleva. */
+interface LifecycleView {
+  label: string;
+  tone: 'ok' | 'warn' | 'off';
+  canSell: boolean;
+  canRenew: boolean;
+  renewText: string;
+}
 
 /**
  * Perfil del propio usuario: sus datos, sus publicaciones y su actividad.
@@ -190,6 +201,64 @@ export class Perfil implements OnInit {
       case 'rechazado':
         return 'Rechazado';
     }
+  }
+
+  /** Ids de publicaciones con una acción en curso, para no dispararla dos veces. */
+  readonly busyPublications = signal<ReadonlySet<number>>(new Set());
+
+  /**
+   * Cómo está una publicación aprobada en su ciclo de vida, y qué puede hacer su dueño: marcarla vendida
+   * mientras está a la venta, renovarla cuando vence pronto, venció o se vendió. Sin plazo (lo sembrado) o
+   * sin aprobar no hay nada que decir.
+   */
+  lifecycleOf(item: HubMarketItemModel): LifecycleView | null {
+    if (this.statusOf(item) !== 'aprobado') return null;
+    if (isSold(item)) return { label: 'Vendida', tone: 'off', canSell: false, canRenew: true, renewText: 'Volver a publicar' };
+    if (isExpired(item)) return { label: 'Vencida', tone: 'off', canSell: false, canRenew: true, renewText: 'Renovar' };
+
+    const days = daysLeft(item);
+    if (days === null) return null;
+
+    const soon = days <= RENEW_WARNING_DAYS;
+    return {
+      label: days === 0 ? 'Vence hoy' : `Vence en ${days} ${days === 1 ? 'día' : 'días'}`,
+      tone: soon ? 'warn' : 'ok',
+      canSell: true,
+      canRenew: soon,
+      renewText: 'Renovar',
+    };
+  }
+
+  markSold(item: HubMarketItemModel): void {
+    this.runLifecycle(item, this.hubMarket.markSold(item.id), 'Publicación marcada como vendida. Ya no sale en Hub Market.');
+  }
+
+  renew(item: HubMarketItemModel): void {
+    this.runLifecycle(item, this.hubMarket.renew(item.id), 'Publicación renovada por 60 días.');
+  }
+
+  private runLifecycle(item: HubMarketItemModel, call: Observable<Lifecycle | undefined>, done: string): void {
+    if (this.busyPublications().has(item.id)) return;
+    this.busyPublications.update((ids) => new Set(ids).add(item.id));
+
+    const release = () =>
+      this.busyPublications.update((ids) => {
+        const next = new Set(ids);
+        next.delete(item.id);
+        return next;
+      });
+
+    call.pipe(finalize(release)).subscribe({
+      next: (dates) => {
+        if (dates) {
+          this.publications.update((list) =>
+            list.map((p) => (p.id === item.id ? { ...p, soldAt: dates.soldAt, expiresAt: dates.expiresAt } : p)),
+          );
+        }
+        this.toast.show(done);
+      },
+      error: (error: Error) => this.toast.show(error.message, 'error'),
+    });
   }
 
   // --- Actividad -----------------------------------------------------------

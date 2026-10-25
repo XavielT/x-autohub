@@ -6,13 +6,15 @@ import { HubMarketItemModel } from '../../../shared/models/hub-market-item.model
 import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
+import { isLive } from '../../../shared/utils/publication-lifecycle';
+import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-accessory-details',
-  imports: [DecimalPipe, TestBadge, RouterLink],
+  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink],
   templateUrl: './accessory-details.html',
   styleUrl: './accessory-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +23,8 @@ export class AccessoryDetails implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly hubMarketService = inject(HubMarketService);
   private readonly seo = inject(SeoService);
+  /** Para la plantilla: la ficha avisa cuando la publicación ya no está a la venta. */
+  protected readonly isLive = isLive;
   private readonly jsonLd = inject(JsonLdService);
 
   constructor() {
@@ -36,7 +40,7 @@ export class AccessoryDetails implements OnInit {
   /** Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono. */
   readonly waLink = computed(() => {
     const accessory = this.accessory();
-    if (!accessory?.contactPhone) return '';
+    if (!accessory?.contactPhone || !isLive(accessory)) return '';
     return buildWaLink(
       accessory.contactPhone,
       `Hola! Vi tu publicacion "${accessory.title}" en X AutoHub y me interesa.`,
@@ -47,7 +51,7 @@ export class AccessoryDetails implements OnInit {
   private applySeo(item: HubMarketItemModel | undefined): void {
     if (item && !item.isTest) {
       this.seo.set(hubMarketSeo(item));
-      this.jsonLd.set('listing', hubMarketJsonLd(item));
+      this.jsonLd.set('listing', isLive(item) ? hubMarketJsonLd(item) : null);
       return;
     }
     this.seo.reset();

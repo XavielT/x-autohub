@@ -1676,6 +1676,78 @@ check "hay un trigger en cada tabla" "1|1" \
 check "un admin sigue editando un vehiculo (el trigger escribe como definer, no como el)" "1" \
   "$(as_user "$ADMIN" "with u as (update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles) returning 1) select count(*) from u;")"
 
+echo "→ Vendida y caducidad de las publicaciones (migracion 0030)"
+SVC="set request.jwt.claim.role='service_role';"
+# Dos publicaciones aprobadas de USER_A para jugar con ellas (el insert sin sesion respeta lo que traiga la fila).
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into hub_market_items (id, seller_id, seller_name, title, price, location, category, status)
+values (9001, '$USER_A', 'Dueno', 'Publicacion 9001', 1000, 'Santiago', 'piezas', 'aprobado'),
+       (9002, '$USER_A', 'Dueno', 'Publicacion 9002', 2000, 'Santiago', 'piezas', 'aprobado');
+SQL
+
+check "toda publicacion nace sin vender y con unos 60 dias de plazo" "0" \
+  "select count(*) from hub_market_items where sold_at is not null or expires_at < now() + interval '59 days' or expires_at > now() + interval '61 days';"
+check "las dos columnas existen y el plazo es obligatorio" "timestamp with time zone|NO" \
+  "select data_type || '|' || is_nullable from information_schema.columns where table_name = 'hub_market_items' and column_name = 'expires_at';"
+
+check "el dueno marca su publicacion como vendida" "true" \
+  "$(as_user "$USER_A" "select (sold_at is not null)::text from mark_publication_sold(9001);")"
+check "otro usuario no puede marcarla" 'ERROR:  Solo su dueno puede marcar una publicacion como vendida.' \
+  "$(as_user "$USER_B" "select * from mark_publication_sold(9002);")"
+check "quien modera si puede" "true" \
+  "$(as_user "$ADMIN" "select (sold_at is not null)::text from mark_publication_sold(9002);")"
+check "anon no invoca mark_publication_sold" "$(denied mark_publication_sold)" \
+  "$(as_anon "select * from mark_publication_sold(9001);")"
+check "anon no invoca renew_publication" "$(denied renew_publication)" \
+  "$(as_anon "select * from renew_publication(9001);")"
+check "una publicacion que no existe se dice" 'ERROR:  Esa publicacion no existe.' \
+  "$(as_user "$USER_A" "select * from mark_publication_sold(987654);")"
+check "marcarla vendida otra vez no mueve la fecha" "1" \
+  "$(as_user "$ADMIN" "select count(distinct sold_at) from (select sold_at from mark_publication_sold(9002) union all select sold_at from mark_publication_sold(9002)) t;")"
+
+echo "   (las fechas no se escriben a mano)"
+check "el dueno no puede des-vender con un update normal" "true" \
+  "$(as_user "$USER_A" "update hub_market_items set sold_at = null where id = 9001;") select (sold_at is not null)::text from hub_market_items where id = 9001;"
+check "ni darse mas plazo" "true" \
+  "$(as_user "$USER_A" "update hub_market_items set expires_at = now() + interval '5 years' where id = 9001;") select (expires_at < now() + interval '61 days')::text from hub_market_items where id = 9001;"
+check "ni al publicar: nace a la venta y con 60 dias aunque mande otra cosa" "false|true" \
+  "$(as_user "$USER_A" "with n as (insert into hub_market_items (seller_id, seller_name, title, price, location, category, sold_at, expires_at) values (auth.uid(), 'Dueno', 'Trampa', 10, 'Santiago', 'piezas', now(), '2099-01-01') returning sold_at, expires_at) select (sold_at is not null)::text || '|' || (expires_at < now() + interval '61 days')::text from n;")"
+
+check "renovar la deja a la venta y con 60 dias" "true|true" \
+  "$(as_user "$USER_A" "select (sold_at is null)::text || '|' || (expires_at > now() + interval '59 days')::text from renew_publication(9001);")"
+check "otro usuario no puede renovar la ajena" 'ERROR:  Solo su dueno puede renovar una publicacion.' \
+  "$(as_user "$USER_B" "select * from renew_publication(9001);")"
+
+echo "   (el HTML se entera)"
+check "marcar vendida marca el sitio como cambiado" "true" \
+  "$RB_RESET $(as_user "$USER_A" "select 1 from mark_publication_sold(9001);") reset role; $RB_DIRTY"
+check "renovar tambien" "true" \
+  "$RB_RESET $(as_user "$USER_A" "select 1 from renew_publication(9001);") reset role; $RB_DIRTY"
+
+check "vencio hace 2 horas: mark_expired_publications() la cuenta" "1" \
+  "$SVC update hub_market_items set expires_at = now() - interval '2 hours' where id = 9001; select mark_expired_publications();"
+check "y pide un despliegue" "true" \
+  "$SVC update hub_market_items set expires_at = now() - interval '2 hours' where id = 9001; $RB_RESET select mark_expired_publications() >= 0; $RB_DIRTY"
+check "vencio hace 2 dias: ya no la cuenta (el HTML ya se corrigio)" "0|false" \
+  "$SVC update hub_market_items set expires_at = now() - interval '2 days' where id = 9001; $RB_RESET select mark_expired_publications()::text || '|' || (select (dirty_since is not null)::text from site_rebuild);"
+check "una vendida que vence no cuenta (ya salio del HTML al venderse)" "0" \
+  "$SVC update hub_market_items set expires_at = now() - interval '2 hours', sold_at = now() where id = 9001; select mark_expired_publications();"
+check "una pendiente que vence tampoco" "0" \
+  "$SVC update hub_market_items set expires_at = now() - interval '2 hours', sold_at = null, status = 'pendiente' where id = 9001; select mark_expired_publications();"
+
+check "el cron diario esta programado, una sola vez" "1|15 4 * * *" \
+  "select count(*) || '|' || min(schedule) from cron.job where jobname = 'expire-publications' and command like '%mark_expired_publications%';"
+check "anon no invoca mark_expired_publications" "$(denied mark_expired_publications)" \
+  "$(as_anon 'select mark_expired_publications();')"
+check "ni un usuario con sesion" "$(denied mark_expired_publications)" \
+  "$(as_user "$USER_A" 'select mark_expired_publications();')"
+
+# Se limpia lo que se creo: las publicaciones de prueba no deben contaminar los conteos de abajo.
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+set request.jwt.claim.role='service_role';
+delete from hub_market_items where id in (9001, 9002) or title = 'Trampa';
+SQL
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -1967,14 +2039,26 @@ $PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 insert into auto_hub_vehicles (brand, model, year, price, color, mileage, chasis_type, doors, traction, fuel, cylinders, location, contact)
 values ('Toyota', 'Corolla', 2020, 1000000, 'Gris', 40000, 'sedan', 4, 'fwd', 'gasoline', 4, 'Santo Domingo', '8095550134');
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0029_site_rebuild_community.sql upgrade
+apply supabase/migrations/0029_site_rebuild_community.sql upgrade
 echo "   (aplicada dos veces, con vehiculos y publicaciones dentro)"
 CHECK_DB=upgrade check "un trigger en cada tabla, sin duplicar" "1|1" \
   "select (select count(*) from pg_trigger where tgname = 'auto_hub_vehicles_mark_site_dirty') || '|' || (select count(*) from pg_trigger where tgname = 'hub_market_items_mark_site_dirty');"
 CHECK_DB=upgrade check "el vehiculo de antes sigue ahi, y migrar no lo toco" "1" "select count(*) from auto_hub_vehicles;"
 CHECK_DB=upgrade check "un cambio en un vehiculo despues de migrar marca el sitio" "true" \
   "update site_rebuild set dirty_since = null; update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); select (dirty_since is not null)::text from site_rebuild;"
+
+echo "→ Camino de actualizacion de la 0030: la base real ya tiene publicaciones al migrar"
+$PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
+insert into hub_market_items (seller_name, title, price, location, category, status)
+values ('Dueno', 'Publicacion de antes', 1500, 'Santiago', 'piezas', 'aprobado');
+SQL
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con publicaciones dentro)"
+CHECK_DB=upgrade check "la publicacion de antes recibe 60 dias desde la migracion y sigue a la venta" "true|true"   "select (expires_at > now() + interval '59 days')::text || '|' || (sold_at is null)::text from hub_market_items where title = 'Publicacion de antes';"
+CHECK_DB=upgrade check "el cron de caducidad queda una sola vez" "1"   "select count(*) from cron.job where jobname = 'expire-publications';"
+CHECK_DB=upgrade check "marcar vendida funciona sobre lo que ya habia" "true"   "set request.jwt.claim.role='service_role'; update hub_market_items set sold_at = now() where title = 'Publicacion de antes'; select (sold_at is not null)::text from hub_market_items where title = 'Publicacion de antes';"
 
 # --- Resumen ------------------------------------------------------------------
 

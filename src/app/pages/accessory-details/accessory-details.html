@@ -1,5 +1,8 @@
 @if (accessory(); as accessory) {
 <div class="accessory-details">
+  @if (!isLive(accessory)) {
+    <app-publication-notice [item]="accessory" />
+  }
   @if (accessory.isTest) { <app-test-badge /> }
   <h1>{{accessory.title}}</h1>
   <img [src]="accessory.images[0]" [alt]="accessory.title" />

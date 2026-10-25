@@ -63,12 +63,15 @@ describe('Perfil', () => {
       return of(next);
     });
 
+    const markSold = vi.fn(() => of({ soldAt: '2026-10-25T12:00:00Z', expiresAt: '2026-12-01T00:00:00Z' }));
+    const renew = vi.fn(() => of({ soldAt: undefined, expiresAt: '2027-01-01T00:00:00Z' }));
+
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: { user, updateProfile } },
         {
           provide: HubMarketService,
-          useValue: { getBySellerId: vi.fn(() => of(options.publicaciones ?? [PUBLICACION])) },
+          useValue: { getBySellerId: vi.fn(() => of(options.publicaciones ?? [PUBLICACION])), markSold, renew },
         },
         {
           provide: OrderService,
@@ -78,8 +81,89 @@ describe('Perfil', () => {
     });
 
     const fixture = TestBed.createComponent(Perfil);
-    return { fixture, componente: fixture.componentInstance, user, updateProfile };
+    return { fixture, componente: fixture.componentInstance, user, updateProfile, markSold, renew };
   }
+
+  // --- Vendida y vencida (0030) -----------------------------------------------
+
+  describe('ciclo de vida de una publicacion', () => {
+    const enDias = (dias: number) => new Date(Date.now() + dias * 24 * 60 * 60 * 1000 + 60_000).toISOString();
+    const botones = (fixture: { nativeElement: unknown }) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.perfil__life-btn')).map((b) => b.textContent?.trim());
+
+    it('a la venta y con plazo de sobra: dice cuando vence y solo ofrece marcarla vendida', async () => {
+      const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'aprobado', expiresAt: enDias(40) }] });
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vence en 40 días');
+      expect(botones(fixture)).toEqual(['Marcar como vendida']);
+    });
+
+    it('a una semana de vencer ofrece tambien renovar', async () => {
+      const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'aprobado', expiresAt: enDias(3) }] });
+      await fixture.whenStable();
+
+      expect(botones(fixture)).toEqual(['Marcar como vendida', 'Renovar']);
+    });
+
+    it('vencida: no se puede vender, se renueva', async () => {
+      const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'aprobado', expiresAt: enDias(-2) }] });
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vencida');
+      expect(botones(fixture)).toEqual(['Renovar']);
+    });
+
+    it('vendida: dice Vendida y deja volver a publicarla', async () => {
+      const { fixture } = montar({
+        publicaciones: [{ ...PUBLICACION, status: 'aprobado', soldAt: '2026-10-01T00:00:00Z', expiresAt: enDias(40) }],
+      });
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vendida');
+      expect(botones(fixture)).toEqual(['Volver a publicar']);
+    });
+
+    it('una publicacion pendiente no muestra nada de esto', async () => {
+      const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'pendiente', expiresAt: enDias(40) }] });
+      await fixture.whenStable();
+
+      expect(botones(fixture)).toEqual([]);
+    });
+
+    it('lo sembrado, sin plazo, tampoco', async () => {
+      const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: undefined }] });
+      await fixture.whenStable();
+
+      expect(botones(fixture)).toEqual([]);
+    });
+
+    it('marcarla vendida llama al servicio y actualiza la tarjeta sin recargar', async () => {
+      const { fixture, markSold } = montar({ publicaciones: [{ ...PUBLICACION, status: 'aprobado', expiresAt: enDias(40) }] });
+      await fixture.whenStable();
+
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.perfil__life-btn')!.click();
+      await fixture.whenStable();
+
+      expect(markSold).toHaveBeenCalledWith(PUBLICACION.id);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vendida');
+      expect(botones(fixture)).toEqual(['Volver a publicar']);
+    });
+
+    it('renovar llama al servicio y la deja a la venta', async () => {
+      const { fixture, renew } = montar({
+        publicaciones: [{ ...PUBLICACION, status: 'aprobado', soldAt: '2026-10-01T00:00:00Z', expiresAt: enDias(40) }],
+      });
+      await fixture.whenStable();
+
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.perfil__life-btn')!.click();
+      await fixture.whenStable();
+
+      expect(renew).toHaveBeenCalledWith(PUBLICACION.id);
+      expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Vendida');
+      expect(botones(fixture)).toEqual(['Marcar como vendida']);
+    });
+  });
 
   it('muestra los datos del usuario en sesion', async () => {
     const { fixture } = montar();
