@@ -205,34 +205,34 @@ describe('PushService', () => {
     });
   });
 
-  describe('avisos de un pedido de invitado', () => {
+  describe('avisos de un pedido o una cita de invitado', () => {
     const ORDER = '11111111-1111-4111-8111-111111111111';
     const OTHER = '22222222-2222-4222-8222-222222222222';
 
     beforeEach(() => localStorage.removeItem('xah.orderPush'));
     afterEach(() => localStorage.removeItem('xah.orderPush'));
 
-    it('orderState: sin suscripción en el navegador se puede activar', async () => {
+    it('guestState (pedido): sin suscripción en el navegador se puede activar', async () => {
       const service = montar();
-      expect(await service.orderState(ORDER)).toBe('off');
+      expect(await service.guestState({ kind: 'order', id: ORDER })).toBe('off');
     });
 
-    it('orderState: con suscripción pero sin este pedido anotado sigue apagado (la suscripción es del dispositivo)', async () => {
+    it('guestState (pedido): con suscripción pero sin este pedido anotado sigue apagado (la suscripción es del dispositivo)', async () => {
       const service = montar();
       sw.subscription.next(subscription());
-      expect(await service.orderState(ORDER)).toBe('off');
+      expect(await service.guestState({ kind: 'order', id: ORDER })).toBe('off');
     });
 
-    it('orderState: simulado, sin clave o con el permiso denegado, igual que los avisos de la cuenta', async () => {
-      expect(await montar({ mock: true }).orderState(ORDER)).toBe('unsupported');
+    it('guestState (pedido): simulado, sin clave o con el permiso denegado, igual que los avisos de la cuenta', async () => {
+      expect(await montar({ mock: true }).guestState({ kind: 'order', id: ORDER })).toBe('unsupported');
       TestBed.resetTestingModule();
-      expect(await montar({ permission: 'denied' }).orderState(ORDER)).toBe('blocked');
+      expect(await montar({ permission: 'denied' }).guestState({ kind: 'order', id: ORDER })).toBe('blocked');
     });
 
-    it('enableForOrder: se suscribe, registra el dispositivo en ese pedido y lo anota como activo', async () => {
+    it('enableForGuest (pedido): se suscribe, registra el dispositivo en ese pedido y lo anota como activo', async () => {
       const service = montar();
 
-      const result = await service.enableForOrder(ORDER);
+      const result = await service.enableForGuest({ kind: 'order', id: ORDER });
 
       expect(result.ok).toBe(true);
       expect(sw.requestSubscription).toHaveBeenCalledWith({ serverPublicKey: 'PUBLICA' });
@@ -243,54 +243,104 @@ describe('PushService', () => {
         p_auth: KEYS.auth,
         p_user_agent: expect.any(String),
       });
-      expect(await service.orderState(ORDER)).toBe('on');
+      expect(await service.guestState({ kind: 'order', id: ORDER })).toBe('on');
       // Otro pedido en el mismo dispositivo no queda activo por arrastre.
-      expect(await service.orderState(OTHER)).toBe('off');
+      expect(await service.guestState({ kind: 'order', id: OTHER })).toBe('off');
     });
 
-    it('enableForOrder: si la base lo rechaza, no queda activo y se dice por qué', async () => {
+    it('enableForGuest (pedido): si la base lo rechaza, no queda activo y se dice por qué', async () => {
       rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'Este pedido es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' } });
       const service = montar();
 
-      const result = await service.enableForOrder(ORDER);
+      const result = await service.enableForGuest({ kind: 'order', id: ORDER });
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('Este pedido es de una cuenta');
-      expect(await service.orderState(ORDER)).toBe('off');
+      expect(await service.guestState({ kind: 'order', id: ORDER })).toBe('off');
     });
 
-    it('enableForOrder: si la persona dice "No permitir", se explica', async () => {
+    it('enableForGuest (pedido): si la persona dice "No permitir", se explica', async () => {
       const service = montar();
       sw.requestSubscription.mockImplementation(async () => {
         Object.defineProperty(globalThis, 'Notification', { value: { permission: 'denied' }, configurable: true, writable: true });
         throw new Error('NotAllowedError');
       });
 
-      const result = await service.enableForOrder(ORDER);
+      const result = await service.enableForGuest({ kind: 'order', id: ORDER });
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('bloqueados');
     });
 
-    it('enableForOrder: donde no se puede, no intenta nada', async () => {
+    it('enableForGuest (pedido): donde no se puede, no intenta nada', async () => {
       const service = montar({ mock: true });
-      const result = await service.enableForOrder(ORDER);
+      const result = await service.enableForGuest({ kind: 'order', id: ORDER });
       expect(result.ok).toBe(false);
       expect(sw.requestSubscription).not.toHaveBeenCalled();
     });
 
-    it('disableForOrder: quita el dispositivo de ese pedido, lo deja de anotar y NO desuscribe el navegador', async () => {
+    it('disableForGuest (pedido): quita el dispositivo de ese pedido, lo deja de anotar y NO desuscribe el navegador', async () => {
       const service = montar();
-      await service.enableForOrder(ORDER);
-      await service.enableForOrder(OTHER);
+      await service.enableForGuest({ kind: 'order', id: ORDER });
+      await service.enableForGuest({ kind: 'order', id: OTHER });
 
-      const result = await service.disableForOrder(ORDER);
+      const result = await service.disableForGuest({ kind: 'order', id: ORDER });
 
       expect(result.ok).toBe(true);
       expect(rpc).toHaveBeenCalledWith('unregister_order_push', { p_order_id: ORDER, p_endpoint: 'https://push.example/abc' });
       expect(sw.unsubscribe).not.toHaveBeenCalled();
-      expect(await service.orderState(ORDER)).toBe('off');
-      expect(await service.orderState(OTHER)).toBe('on');
+      expect(await service.guestState({ kind: 'order', id: ORDER })).toBe('off');
+      expect(await service.guestState({ kind: 'order', id: OTHER })).toBe('on');
+    });
+
+    describe('de una cita', () => {
+      const CITA = '33333333-3333-4333-8333-333333333333';
+      const target = { kind: 'appointment' as const, id: CITA };
+
+      beforeEach(() => localStorage.removeItem('xah.appointmentPush'));
+      afterEach(() => localStorage.removeItem('xah.appointmentPush'));
+
+      it('registra el dispositivo en esa cita, por su propia funcion, y lo anota aparte de los pedidos', async () => {
+        const service = montar();
+
+        const result = await service.enableForGuest(target);
+
+        expect(result.ok).toBe(true);
+        expect(rpc).toHaveBeenCalledWith('register_appointment_push', {
+          p_appointment_id: CITA,
+          p_endpoint: 'https://push.example/abc',
+          p_p256dh: KEYS.p256dh,
+          p_auth: KEYS.auth,
+          p_user_agent: expect.any(String),
+        });
+        expect(rpc).not.toHaveBeenCalledWith('register_order_push', expect.anything());
+        expect(await service.guestState(target)).toBe('on');
+        // El mismo uuid como pedido no queda activo: son listas distintas.
+        expect(await service.guestState({ kind: 'order', id: CITA })).toBe('off');
+      });
+
+      it('si la base la rechaza (cita de una cuenta, terminada) dice por que y no queda activa', async () => {
+        rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'Esta cita ya termino: no va a cambiar de estado.' } });
+        const service = montar();
+
+        const result = await service.enableForGuest(target);
+
+        expect(result.ok).toBe(false);
+        expect(result.message).toBe('Esta cita ya termino: no va a cambiar de estado.');
+        expect(await service.guestState(target)).toBe('off');
+      });
+
+      it('desactivar quita el dispositivo de esa cita y no desuscribe el navegador', async () => {
+        const service = montar();
+        await service.enableForGuest(target);
+
+        const result = await service.disableForGuest(target);
+
+        expect(result.ok).toBe(true);
+        expect(rpc).toHaveBeenCalledWith('unregister_appointment_push', { p_appointment_id: CITA, p_endpoint: 'https://push.example/abc' });
+        expect(sw.unsubscribe).not.toHaveBeenCalled();
+        expect(await service.guestState(target)).toBe('off');
+      });
     });
 
     it('sin almacenamiento disponible no se rompe', async () => {
@@ -299,7 +349,7 @@ describe('PushService', () => {
       });
       const service = montar();
 
-      const result = await service.enableForOrder(ORDER);
+      const result = await service.enableForGuest({ kind: 'order', id: ORDER });
 
       expect(result.ok).toBe(true);
       spy.mockRestore();

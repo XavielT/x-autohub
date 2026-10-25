@@ -1,0 +1,28 @@
+@if (visible()) {
+  <section class="gavisos" aria-labelledby="gavisos-title">
+    <div class="gavisos__text">
+      <h2 id="gavisos-title" class="gavisos__title">{{ copy().heading }}</h2>
+      @switch (state()) {
+        @case ('on') {
+          <p class="gavisos__desc">{{ copy().on }}</p>
+        }
+        @case ('off') {
+          <p class="gavisos__desc">{{ copy().off }}</p>
+        }
+        @case ('blocked') {
+          <p class="gavisos__desc">Bloqueaste las notificaciones en este navegador. Para recibirlas, permítelas en la configuración de este sitio.</p>
+        }
+        @case ('needs-install') {
+          <p class="gavisos__desc">En iPhone los avisos llegan a la app instalada: toca Compartir, "Agregar a pantalla de inicio" y abre este enlace desde ahí.</p>
+        }
+      }
+    </div>
+
+    @if (state() === 'on' || state() === 'off') {
+      <button type="button" class="gavisos__btn" [class.gavisos__btn--off]="state() === 'on'"
+              [disabled]="isWorking()" [attr.aria-pressed]="state() === 'on'" (click)="toggle()">
+        {{ isWorking() ? 'Un momento…' : state() === 'on' ? 'Desactivar' : 'Activar avisos' }}
+      </button>
+    }
+  </section>
+}

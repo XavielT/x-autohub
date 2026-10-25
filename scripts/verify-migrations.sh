@@ -1735,6 +1735,73 @@ delete from order_push_subscriptions;
 delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
 SQL
 
+echo "→ Avisos push para quien agendo una cita sin cuenta (migracion 0035)"
+areg() { echo "select register_appointment_push('$1', '$2', '$KEY_A', '$KEY_B', 'prueba');"; }
+aunreg() { echo "select unregister_appointment_push('$1', '$2');"; }
+adevices() { echo "select count(*) from appointment_push_subscriptions where appointment_id = '$1';"; }
+
+check "la tabla de dispositivos de cita tiene RLS" "true" \
+  "select relrowsecurity::text from pg_class where relname = 'appointment_push_subscriptions';"
+check "anon no la lee" 'ERROR:  permission denied for table appointment_push_subscriptions' \
+  "$(as_anon 'select * from appointment_push_subscriptions;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table appointment_push_subscriptions' \
+  "$(as_user "$USER_A" 'select * from appointment_push_subscriptions;')"
+check "ni escribe en ella" 'ERROR:  permission denied for table appointment_push_subscriptions' \
+  "$(as_anon "insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'https://x.example/1', '$KEY_A', '$KEY_B');")"
+check "las dos funciones las pueden llamar anon y authenticated" "true|true|true|true" \
+  "select has_function_privilege('anon', 'public.register_appointment_push(uuid,text,text,text,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.register_appointment_push(uuid,text,text,text,text)', 'execute')::text || '|' || has_function_privilege('anon', 'public.unregister_appointment_push(uuid,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.unregister_appointment_push(uuid,text)', 'execute')::text;"
+check "los dispositivos se borran con la cita" "c" \
+  "select confdeltype::text from pg_constraint where conrelid = 'public.appointment_push_subscriptions'::regclass and contype = 'f';"
+
+check "quien agendo sin cuenta activa los avisos de su cita" "" "$(as_anon "$(areg "$APPT1" https://push.example/uno)")"
+check "y queda un dispositivo" "1" "$(adevices "$APPT1")"
+check "el mismo dispositivo otra vez no se duplica" "" "$(as_anon "$(areg "$APPT1" https://push.example/uno)")"
+check "sigue siendo uno" "1" "$(adevices "$APPT1")"
+check "la tabla no se lee despues desde el navegador" 'ERROR:  permission denied for table appointment_push_subscriptions' \
+  "$(as_anon "$(areg "$APPT1" https://push.example/uno) select count(*) from appointment_push_subscriptions;")"
+check "una cita con dueno rechaza el aviso de invitado" 'ERROR:  Esta cita es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
+  "$(as_anon "$(areg "$OW_APPT" https://push.example/uno)")"
+check "una cita que no existe, tambien" 'ERROR:  Esa cita no existe.' \
+  "$(as_anon "$(areg 99999999-9999-4999-8999-999999999999 https://push.example/uno)")"
+
+check "dos dispositivos mas caben" "" "$(as_anon "$(areg "$APPT1" https://push.example/dos) $(areg "$APPT1" https://push.example/tres)")"
+check "son 3, el tope" "3" "$(adevices "$APPT1")"
+check "el cuarto no" 'ERROR:  Esta cita ya avisa a 3 dispositivos.' "$(as_anon "$(areg "$APPT1" https://push.example/cuatro)")"
+check "pero uno que ya estaba puede volver a registrarse" "" "$(as_anon "$(areg "$APPT1" https://push.example/tres)")"
+check "un endpoint que no es https se rechaza" 'ERROR:  new row for relation "appointment_push_subscriptions" violates check constraint "appointment_push_subscriptions_endpoint_check"' \
+  "insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'http://x.example/1', '$KEY_A', '$KEY_B');"
+
+check "quitar un dispositivo" "" "$(as_anon "$(aunreg "$APPT1" https://push.example/uno)")"
+check "borra solo ese" "2" "$(adevices "$APPT1")"
+check "con el endpoint de otra cita no se borra nada" "" "$(as_anon "$(aunreg "$OW_APPT" https://push.example/dos)")"
+check "los dos que quedan siguen" "2" "$(adevices "$APPT1")"
+
+# Una cita ya terminada no admite avisos. Se termina la de prueba un momento y se devuelve a como estaba.
+$PSQL -d postgres -c "update service_appointments set status = 'done' where id = '$APPT1';" >/dev/null
+check "una cita ya hecha no admite avisos: no va a cambiar" 'ERROR:  Esta cita ya termino: no va a cambiar de estado.' \
+  "$(as_anon "$(areg "$APPT1" https://push.example/cinco)")"
+$PSQL -d postgres -c "update service_appointments set status = 'in_progress' where id = '$APPT1';" >/dev/null
+
+echo "   (el trigger: ahora tambien las citas sin dueno con dispositivos)"
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "una cita de invitado CON dispositivos pide un aviso al cambiar de estado" "1" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'confirmed' where id = '$APPT1'; reset request.jwt.claim.sub; $PN_DELTA"
+check "con el id de la cita y de tipo appointment" "appointment|true" \
+  "select (body->>'kind') || '|' || (body->>'id' = '$APPT1')::text from net.calls order by id desc limit 1;"
+$PSQL -d postgres -c "delete from appointment_push_subscriptions where appointment_id = '$APPT1';" >/dev/null
+check "sin dispositivos no llama a nadie" "0" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'in_progress' where id = '$APPT1'; reset request.jwt.claim.sub; $PN_DELTA"
+check "una cita con dueno sigue avisando a su cuenta" "true" \
+  "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'confirmed' where id = '$OW_APPT'; update service_appointments set status = 'in_progress' where id = '$OW_APPT'; reset request.jwt.claim.sub; select (((select count(*) from net.calls) - (select c from pn0)) >= 1)::text;"
+check "y un pedido de invitado con dispositivos sigue avisando (lo de la 0034 no se rompio)" "1" \
+  "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'https://push.example/pedido', '$KEY_A', '$KEY_B'); $PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'paid' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from order_push_subscriptions;
+delete from appointment_push_subscriptions;
+delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
+SQL
+
 echo "→ Auto Hub y Hub Market tambien republican el sitio (migracion 0029)"
 check "un cambio en un vehiculo de Auto Hub marca el sitio" "true" \
   "$RB_RESET update auto_hub_vehicles set price = price + 1 where id = (select min(id) from auto_hub_vehicles); $RB_DIRTY"
@@ -2321,11 +2388,18 @@ CHECK_DB=upgrade check "volver a aplicar no pisa lo que el panel guardo despues"
 CHECK_DB=upgrade check "y un solo trigger de fotos" "1"   "select count(*) from pg_trigger where tgname = 'product_variants_photos_sync';"
 
 echo "→ Camino de actualizacion de la 0034"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0034_guest_order_push.sql upgrade
+apply supabase/migrations/0034_guest_order_push.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la tabla queda vacia y el trigger de avisos sigue una sola vez por tabla" "0|1|1" \
   "select (select count(*) from order_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
+
+echo "→ Camino de actualizacion de la 0035"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla de citas queda vacia y el trigger de avisos sigue una sola vez por tabla" "0|1|1" \
+  "select (select count(*) from appointment_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 
 # --- Resumen ------------------------------------------------------------------
 

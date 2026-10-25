@@ -14,6 +14,9 @@
         {{ contactPhone() }}.
       </p>
 
+      <!-- Avisos al dispositivo, para quien agendó sin cuenta (quien tiene cuenta los activa en su perfil). -->
+      <app-guest-avisos kind="appointment" [targetId]="b.id" />
+
       <div class="agd__actions agd__actions--stack">
         <button type="button" class="agd__btn" (click)="addToCalendar()">Agregar a mi calendario</button>
         <a class="agd__btn agd__btn--wa" [href]="whatsappLink()" target="_blank" rel="noopener noreferrer">Avisar por WhatsApp</a>

@@ -34,6 +34,7 @@ import { formatDuration } from '../../../shared/utils/format-duration';
 import { buildIcs } from '../../../shared/utils/ics';
 import { isValidDrPhone, normalizeDrPhone } from '../../../shared/utils/phone';
 import { formatDay, formatTime, formatWhen, localDate, weekdayOf } from '../../../shared/utils/service-time';
+import { GuestAvisos } from '../../../shared/components/guest-avisos/guest-avisos';
 
 export type AgendarStep = 1 | 2 | 3;
 
@@ -63,7 +64,7 @@ export function appointmentWhatsAppMessage(
  */
 @Component({
   selector: 'app-agendar',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, GuestAvisos],
   templateUrl: './agendar.html',
   styleUrl: './agendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

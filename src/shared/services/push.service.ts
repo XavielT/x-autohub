@@ -19,9 +19,21 @@ import { isIosSafari, isStandalone } from '../utils/pwa-env';
  */
 export type PushState = 'unsupported' | 'needs-install' | 'blocked' | 'off' | 'on';
 
-/** Dónde se anotan, en este navegador, los pedidos de invitado con avisos activados (el navegador solo sabe del dispositivo, no del pedido). */
-const ORDER_PUSH_KEY = 'xah.orderPush';
-const ORDER_PUSH_MAX = 20;
+/** A qué se suscribe quien no tiene cuenta: a un pedido o a una cita (migraciones 0034 y 0035). */
+export type GuestPushKind = 'order' | 'appointment';
+
+export interface GuestPushTarget {
+  kind: GuestPushKind;
+  /** El uuid del pedido o de la cita: es la llave. */
+  id: string;
+}
+
+/** Dónde se anotan, en este navegador, los pedidos y citas con avisos activados (el navegador solo sabe del dispositivo, no de ellos). */
+const GUEST_PUSH_KEYS: Record<GuestPushKind, string> = {
+  order: 'xah.orderPush',
+  appointment: 'xah.appointmentPush',
+};
+const GUEST_PUSH_MAX = 20;
 
 export interface PushResult {
   ok: boolean;
@@ -86,12 +98,12 @@ export class PushService {
     }
   }
 
-  // --- Avisos de un pedido de invitado (migración 0034) ----------------------------------------------------------
+  // --- Avisos de un pedido o una cita de invitado (migraciones 0034 y 0035) ----------------------------------------
 
-  /** Los pedidos de invitado de este navegador con avisos activados. Nunca falla: sin almacenamiento, vacío. */
-  private readOrderIds(): string[] {
+  /** Los pedidos o citas de invitado de este navegador con avisos activados. Nunca falla: sin almacenamiento, vacío. */
+  private readGuestIds(kind: GuestPushKind): string[] {
     try {
-      const raw = this.doc.defaultView?.localStorage.getItem(ORDER_PUSH_KEY);
+      const raw = this.doc.defaultView?.localStorage.getItem(GUEST_PUSH_KEYS[kind]);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
     } catch {
@@ -99,26 +111,26 @@ export class PushService {
     }
   }
 
-  private writeOrderIds(ids: string[]): void {
+  private writeGuestIds(kind: GuestPushKind, ids: string[]): void {
     try {
-      this.doc.defaultView?.localStorage.setItem(ORDER_PUSH_KEY, JSON.stringify(ids.slice(-ORDER_PUSH_MAX)));
+      this.doc.defaultView?.localStorage.setItem(GUEST_PUSH_KEYS[kind], JSON.stringify(ids.slice(-GUEST_PUSH_MAX)));
     } catch {
       // Sin almacenamiento el aviso sigue funcionando; solo no se recuerda que está activo.
     }
   }
 
   /**
-   * El estado de los avisos de **este pedido** en este dispositivo. El navegador tiene una sola suscripción por
-   * dispositivo, que puede servir a varios pedidos (o a una cuenta); por eso "activo" exige también que este pedido esté
+   * El estado de los avisos de **este pedido o esta cita** en este dispositivo. El navegador tiene una sola suscripción por
+   * dispositivo, que puede servir a varios pedidos y citas (o a una cuenta); por eso "activo" exige también que este esté
    * anotado como activado aquí.
    */
-  async orderState(orderId: string): Promise<PushState> {
+  async guestState(target: GuestPushTarget): Promise<PushState> {
     const device = await this.readDevice();
-    return device === 'on' && !this.readOrderIds().includes(orderId) ? 'off' : device;
+    return device === 'on' && !this.readGuestIds(target.kind).includes(target.id) ? 'off' : device;
   }
 
-  /** Pide permiso, se suscribe y registra el dispositivo en este pedido. */
-  async enableForOrder(orderId: string): Promise<PushResult> {
+  /** Pide permiso, se suscribe y registra el dispositivo en ese pedido o cita. */
+  async enableForGuest(target: GuestPushTarget): Promise<PushResult> {
     if (!this.canPush) return { ok: false, message: 'Este dispositivo no puede recibir avisos.' };
 
     try {
@@ -128,16 +140,20 @@ export class PushService {
         throw new Error('El navegador no entregó la suscripción completa.');
       }
 
-      const saved = await this.supabase.db.rpc('register_order_push', {
-        p_order_id: orderId,
+      const device = {
         p_endpoint: endpoint,
         p_p256dh: keys.p256dh,
         p_auth: keys.auth,
         p_user_agent: this.doc.defaultView?.navigator.userAgent ?? '',
-      });
+      };
+      // Dos llamadas y no una con el nombre en una variable: `rpc` tipa cada función por su nombre.
+      const saved =
+        target.kind === 'order'
+          ? await this.supabase.db.rpc('register_order_push', { p_order_id: target.id, ...device })
+          : await this.supabase.db.rpc('register_appointment_push', { p_appointment_id: target.id, ...device });
       if (saved.error) unwrap({ data: null, error: saved.error });
 
-      this.writeOrderIds([...this.readOrderIds().filter((id) => id !== orderId), orderId]);
+      this.writeGuestIds(target.kind, [...this.readGuestIds(target.kind).filter((id) => id !== target.id), target.id]);
       return { ok: true };
     } catch (error) {
       if ((await this.readDevice()) === 'blocked') {
@@ -146,30 +162,33 @@ export class PushService {
           message: 'Los avisos están bloqueados en este navegador. Actívalos desde la configuración del sitio.',
         };
       }
-      console.warn('[push] no se pudieron activar los avisos del pedido', error);
-      // Los mensajes de la base (pedido de una cuenta, ya terminado, demasiados dispositivos) están en español y sirven tal cual.
+      console.warn('[push] no se pudieron activar los avisos', error);
+      // Los mensajes de la base (de una cuenta, ya terminado, demasiados dispositivos) están en español y sirven tal cual.
       const message = error instanceof Error && error.message ? error.message : '';
       return { ok: false, message: message || 'No pudimos activar los avisos. Intenta de nuevo.' };
     }
   }
 
   /**
-   * Quita este dispositivo de este pedido. La suscripción del navegador se deja: puede servir a otro pedido o a una
-   * cuenta, y sin filas en la base no recibe nada.
+   * Quita este dispositivo de ese pedido o cita. La suscripción del navegador se deja: puede servir a otro pedido, a otra
+   * cita o a una cuenta, y sin filas en la base no recibe nada.
    */
-  async disableForOrder(orderId: string): Promise<PushResult> {
+  async disableForGuest(target: GuestPushTarget): Promise<PushResult> {
     if (!this.canPush) return { ok: false, message: 'Este dispositivo no puede recibir avisos.' };
 
     try {
       const subscription = await firstValueFrom(this.swPush!.subscription);
       if (subscription) {
-        const removed = await this.supabase.db.rpc('unregister_order_push', { p_order_id: orderId, p_endpoint: subscription.endpoint });
+        const removed =
+          target.kind === 'order'
+            ? await this.supabase.db.rpc('unregister_order_push', { p_order_id: target.id, p_endpoint: subscription.endpoint })
+            : await this.supabase.db.rpc('unregister_appointment_push', { p_appointment_id: target.id, p_endpoint: subscription.endpoint });
         if (removed.error) unwrap({ data: null, error: removed.error });
       }
-      this.writeOrderIds(this.readOrderIds().filter((id) => id !== orderId));
+      this.writeGuestIds(target.kind, this.readGuestIds(target.kind).filter((id) => id !== target.id));
       return { ok: true };
     } catch (error) {
-      console.warn('[push] no se pudieron desactivar los avisos del pedido', error);
+      console.warn('[push] no se pudieron desactivar los avisos', error);
       return { ok: false, message: 'No pudimos desactivar los avisos. Intenta de nuevo.' };
     }
   }

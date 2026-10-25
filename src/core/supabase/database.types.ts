@@ -1138,6 +1138,15 @@ export type Database = {
         Args: { p_order_id: string; p_endpoint: string };
         Returns: undefined;
       };
+      /** Lo mismo para una cita de invitado (migración 0035). */
+      register_appointment_push: {
+        Args: { p_appointment_id: string; p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
+        Returns: undefined;
+      };
+      unregister_appointment_push: {
+        Args: { p_appointment_id: string; p_endpoint: string };
+        Returns: undefined;
+      };
       mark_publication_sold: {
         Args: { p_id: number };
         Returns: { sold_at: string | null; expires_at: string }[];

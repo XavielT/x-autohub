@@ -86,6 +86,10 @@ globalThis.fetch = async (url, init = {}) => {
     return json(db.orderDevices.filter((d) => url.includes(`order_id=eq.${d.order_id}`)));
   }
   if (url.includes('/rest/v1/order_push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
+  if (url.includes('/rest/v1/appointment_push_subscriptions') && (init.method ?? 'GET') === 'GET') {
+    return json(db.apptDevices.filter((d) => url.includes(`appointment_id=eq.${d.appointment_id}`)));
+  }
+  if (url.includes('/rest/v1/appointment_push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.includes('/rest/v1/push_subscriptions') && (init.method ?? 'GET') === 'GET') return json(db.devices);
   if (url.includes('/rest/v1/push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.startsWith('https://push.example/')) return new Response('', { status: pushStatus[url] ?? 201 });
@@ -107,6 +111,7 @@ function reset() {
     appointments: [{ id: APPT_ID, appointment_number: 2001, status: 'confirmed', user_id: OWNER, scheduled_at: '2026-11-05T14:30:00Z' }],
     devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
     orderDevices: [],
+    apptDevices: [],
     vercelStatus: 200,
     deployments: [{ uid: 'dpl_fallido', readyState: 'ERROR', meta: { githubCommitMessage: 'Cambio que rompio el build\n\ncuerpo largo' } }],
     admins: [{ id: ADMIN_USER }],
@@ -317,6 +322,60 @@ db.deployments[0].meta = { githubCommitMessage: 'x'.repeat(300) };
 await deploy();
 const enviado = calls.find((c) => c.url.startsWith('https://push.example/'));
 check('un mensaje de commit larguisimo no impide el aviso', enviado !== undefined);
+
+console.log('→ Los avisos de una cita de invitado');
+const GUEST_APPT = '66666666-6666-4666-8666-666666666666';
+const citaInvitada = (status = 'confirmed') => ({ id: GUEST_APPT, appointment_number: 2002, status, user_id: null, scheduled_at: '2026-11-05T14:30:00Z' });
+const dispCita = (id, appointment_id = GUEST_APPT, endpoint = 'https://push.example/cita') => ({ id, appointment_id, endpoint, p256dh, auth });
+
+reset();
+db.appointments.push(citaInvitada());
+db.apptDevices = [dispCita(1)];
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('avisa a los dispositivos suscritos a esa cita', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('los busco por cita, no por cuenta ni por pedido', calls.some((c) => c.url.includes(`appointment_push_subscriptions?select=id,endpoint,p256dh,auth&appointment_id=eq.${GUEST_APPT}`)) && !calls.some((c) => c.url.includes('/rest/v1/push_subscriptions') || c.url.includes('order_push_subscriptions')));
+check('un estado que no es final (confirmada) no borra los dispositivos', !calls.some((c) => c.init.method === 'DELETE'));
+
+reset();
+db.appointments.push(citaInvitada('done'));
+db.apptDevices = [dispCita(1)];
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('al avisar que quedo lista (estado final) se borran los dispositivos de esa cita', r.body.sent === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`appointment_push_subscriptions?appointment_id=eq.${GUEST_APPT}`)));
+
+reset();
+db.appointments.push(citaInvitada('cancelled'));
+db.apptDevices = [dispCita(1)];
+await ask({ kind: 'appointment', id: GUEST_APPT });
+check('tambien al cancelarse', calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`appointment_push_subscriptions?appointment_id=eq.${GUEST_APPT}`)));
+
+reset();
+db.appointments.push(citaInvitada());
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('una cita de invitado sin dispositivos no tiene a quien avisar', r.body.reason === 'no-devices' && pushes().length === 0);
+
+reset();
+db.appointments.push(citaInvitada());
+db.apptDevices = [dispCita(1, '99999999-9999-4999-8999-999999999999')];
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('los dispositivos de otra cita no reciben el aviso de esta', r.body.reason === 'no-devices' && pushes().length === 0);
+
+reset();
+db.appointments.push(citaInvitada());
+db.apptDevices = [dispCita(9, GUEST_APPT, 'https://push.example/caido')];
+pushStatus['https://push.example/caido'] = 410;
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('un dispositivo caido (410) se borra de la tabla de la cita', r.body.removed === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('appointment_push_subscriptions?id=in.(9)')));
+
+reset();
+db.apptDevices = [dispCita(1, APPT_ID)];
+r = await ask({ kind: 'appointment', id: APPT_ID });
+check('una cita con dueño avisa a su cuenta y nunca a la tabla de invitados', r.body.sent === 1 && !calls.some((c) => c.url.includes('appointment_push_subscriptions')));
+
+reset();
+db.appointments.push(citaInvitada('no_show'));
+db.apptDevices = [dispCita(1)];
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('una cita a la que no se presento no avisa a nadie', r.body.reason === 'no-message' && pushes().length === 0);
 
 console.log('→ Dispositivos');
 reset();

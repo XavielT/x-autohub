@@ -8,7 +8,8 @@
 // Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }` o `{ kind: 'deploy' }`, comprueba quien llama,
 // lee el pedido, la cita, la publicacion o el ultimo despliegue, arma el aviso segun su estado actual y lo
 // manda a todos los dispositivos del dueño (o, en un despliegue fallido, de los admins) (`push_subscriptions`). Un pedido
-// de invitado no tiene dueño: avisa a los dispositivos que se suscribieron a **ese pedido** (`order_push_subscriptions`).
+// o una cita de invitado no tiene dueño: avisa a los dispositivos que se suscribieron a **ese pedido** (`order_push_subscriptions`)
+// o a **esa cita** (`appointment_push_subscriptions`).
 //
 // La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
 // pg_net cuando cambia el estado de un pedido o de una cita, y `warn_expiring_publications()`
@@ -37,7 +38,7 @@
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento), **0032** (el de despliegue fallido) y **0034** (los avisos de un pedido de invitado). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento), **0032** (el de despliegue fallido) **0034** (los avisos de un pedido de invitado) y **0035** (los de una cita de invitado). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -100,14 +101,23 @@ interface Notice {
   path: string;
   /** Agrupa avisos: uno nuevo con la misma etiqueta reemplaza al anterior. Por defecto, la ruta. */
   tag?: string;
-  /** Un pedido de invitado: los dispositivos salen de `order_push_subscriptions` y no de una cuenta. */
-  guestOrderId?: string;
-  /** El estado ya no va a cambiar (entregado, cancelado): tras avisar se borran los dispositivos del pedido. */
+  /** Un pedido o una cita de invitado: los dispositivos salen de su propia tabla y no de una cuenta. */
+  guest?: GuestTarget;
+  /** El estado ya no va a cambiar (entregado, cancelado, hecha): tras avisar se borran los dispositivos de ese pedido o cita. */
   final?: boolean;
+}
+
+/** Dónde están los dispositivos de un pedido o una cita sin dueño (migraciones 0034 y 0035). */
+interface GuestTarget {
+  table: 'order_push_subscriptions' | 'appointment_push_subscriptions';
+  column: 'order_id' | 'appointment_id';
+  id: string;
 }
 
 /** Los estados de un pedido que no cambian más. */
 const FINAL_ORDER_STATUSES = ['delivered', 'cancelled'];
+/** Los de una cita que no cambian más (`no_show` no avisa, pero también es final). */
+const FINAL_APPOINTMENT_STATUSES = ['done', 'cancelled', 'no_show'];
 
 /** Cuantos dias antes de vencer se avisa. Es el mismo `RENEW_WARNING_DAYS` del frontend y la ventana de la migracion 0031. */
 const LISTING_WARNING_DAYS = 7;
@@ -162,7 +172,7 @@ async function orderNotice(supabaseUrl: string, serviceKey: string, id: string):
   return {
     userId: order.user_id,
     // Sin dueño, el aviso va a quien activó los avisos de este pedido desde /pedido/:id.
-    guestOrderId: order.user_id ? undefined : id,
+    guest: order.user_id ? undefined : { table: 'order_push_subscriptions', column: 'order_id', id },
     final: FINAL_ORDER_STATUSES.includes(order.status),
     title: `Pedido #${order.order_number}`,
     body,
@@ -191,7 +201,15 @@ async function appointmentNotice(supabaseUrl: string, serviceKey: string, id: st
     hour: 'numeric',
     minute: '2-digit',
   });
-  return { userId: appointment.user_id, title: `Cita #${appointment.appointment_number}`, body: message(when), path: '/perfil' };
+  return {
+    userId: appointment.user_id,
+    // Sin dueño, el aviso va a quien activó los avisos de esta cita al agendarla.
+    guest: appointment.user_id ? undefined : { table: 'appointment_push_subscriptions', column: 'appointment_id', id },
+    final: FINAL_APPOINTMENT_STATUSES.includes(appointment.status),
+    title: `Cita #${appointment.appointment_number}`,
+    body: message(when),
+    path: '/perfil',
+  };
 }
 
 /**
@@ -333,13 +351,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
           : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
     if (notice === 'not-found') return refuse(404, 'not-found');
     if (notice === 'no-message') return refuse(200, 'no-message');
-    // Una cita de invitado, o un pedido sin dueño y sin dispositivos, no tiene a quien avisar.
-    if (!notice.admins && !notice.userId && !notice.guestOrderId) return refuse(200, 'guest');
+    // Sin dueño, sin admins y sin invitado a quien buscar, no hay a quien avisar.
+    if (!notice.admins && !notice.userId && !notice.guest) return refuse(200, 'guest');
 
-    // El dueño, todos los admins, o los dispositivos de un pedido de invitado.
+    // El dueño, todos los admins, o los dispositivos de un pedido o una cita de invitado.
     let source = '';
-    if (notice.guestOrderId) {
-      source = `order_push_subscriptions?select=id,endpoint,p256dh,auth&order_id=eq.${notice.guestOrderId}`;
+    if (notice.guest) {
+      source = `${notice.guest.table}?select=id,endpoint,p256dh,auth&${notice.guest.column}=eq.${notice.guest.id}`;
     } else {
       let owners = notice.userId ? `eq.${notice.userId}` : '';
       if (notice.admins) {
@@ -384,13 +402,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
 
     // Un dispositivo que ya no existe no se vuelve a intentar.
-    const table = notice.guestOrderId ? 'order_push_subscriptions' : 'push_subscriptions';
+    const table = notice.guest ? notice.guest.table : 'push_subscriptions';
     if (gone.length > 0) {
       await rest(supabaseUrl, serviceKey, `${table}?id=in.(${gone.join(',')})`, { method: 'DELETE' });
     }
-    // Un pedido de invitado que terminó no va a cambiar más: sus dispositivos ya no sirven.
-    if (notice.guestOrderId && notice.final) {
-      await rest(supabaseUrl, serviceKey, `order_push_subscriptions?order_id=eq.${notice.guestOrderId}`, { method: 'DELETE' });
+    // Un pedido o una cita de invitado que terminó no va a cambiar más: sus dispositivos ya no sirven.
+    if (notice.guest && notice.final) {
+      await rest(supabaseUrl, serviceKey, `${notice.guest.table}?${notice.guest.column}=eq.${notice.guest.id}`, { method: 'DELETE' });
     }
 
     return answer(200, { sent, removed: gone.length });
