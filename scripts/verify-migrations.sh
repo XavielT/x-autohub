@@ -1748,6 +1748,72 @@ set request.jwt.claim.role='service_role';
 delete from hub_market_items where id in (9001, 9002) or title = 'Trampa';
 SQL
 
+echo "→ Aviso de vencimiento de las publicaciones (migracion 0031)"
+# Ocho publicaciones: solo la 9101 esta por vencer, aprobada, a la venta y con vendedor. Las demas
+# fallan cada una por una razon distinta.
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from net.calls;
+insert into hub_market_items (id, seller_id, seller_name, title, price, location, category, status, expires_at, sold_at, is_test, is_active)
+values
+  (9101, '$USER_A', 'Dueno', 'Por vencer',         1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '3 days',  null,  false, true),
+  (9102, '$USER_A', 'Dueno', 'Con plazo de sobra', 1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '20 days', null,  false, true),
+  (9103, '$USER_A', 'Dueno', 'Vendida',            1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '3 days',  now(), false, true),
+  (9104, '$USER_A', 'Dueno', 'Pendiente',          1000, 'Santiago', 'piezas', 'pendiente', now() + interval '3 days',  null,  false, true),
+  (9105, '$USER_A', 'Dueno', 'De prueba',          1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '3 days',  null,  true,  true),
+  (9106, null,      'Dueno', 'Sin vendedor',       1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '3 days',  null,  false, true),
+  (9107, '$USER_A', 'Dueno', 'Ya vencida',         1000, 'Santiago', 'piezas', 'aprobado',  now() - interval '1 hour',  null,  false, true),
+  (9108, '$USER_A', 'Dueno', 'Desactivada',        1000, 'Santiago', 'piezas', 'aprobado',  now() + interval '3 days',  null,  false, false);
+SQL
+
+check "la tabla de avisos hechos tiene RLS" "true" \
+  "select relrowsecurity::text from pg_class where relname = 'publication_expiry_notices';"
+check "anon no la lee" 'ERROR:  permission denied for table publication_expiry_notices' \
+  "$(as_anon 'select * from publication_expiry_notices;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table publication_expiry_notices' \
+  "$(as_user "$USER_A" 'select * from publication_expiry_notices;')"
+
+check "sin los secretos del Vault no avisa a nadie" "sin enlace de avisos: no se aviso a nadie" \
+  "select warn_expiring_publications();"
+check "y no deja nada marcado como avisado" "0" "select count(*) from publication_expiry_notices;"
+
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+
+check "avisa solo de la que esta por vencer y es visible (las otras siete fallan cada una por lo suyo)" "1 avisos pedidos" \
+  "$RB_RESET select warn_expiring_publications();"
+check "le pide a send-push un aviso de tipo listing, con el id" '{"id": 9101, "kind": "listing"}' \
+  "select body::text from net.calls order by id desc limit 1;"
+check "con el secreto y la clave anon en las cabeceras, como el trigger de la 0028" "s3cr3t|Bearer anon-key" \
+  "select (headers->>'x-push-secret') || '|' || (headers->>'Authorization') from net.calls order by id desc limit 1;"
+check "quedo anotado para que fecha de vencimiento se aviso" "true" \
+  "select (warned_for = (select expires_at from hub_market_items where id = 9101))::text from publication_expiry_notices where item_id = 9101;"
+check "avisar no marca el sitio como cambiado (no dispara un despliegue)" "false" \
+  "$RB_RESET select warn_expiring_publications(); $RB_DIRTY"
+check "al dia siguiente no repite el aviso" "0 avisos pedidos" "select warn_expiring_publications();"
+check "y no mando otra llamada" "1" "select count(*) from net.calls;"
+
+check "si el dueno renueva (cambia la fecha), puede volver a avisar" "1 avisos pedidos" \
+  "set request.jwt.claim.role='service_role'; update hub_market_items set expires_at = now() + interval '2 days' where id = 9101; select warn_expiring_publications();"
+
+check "si pg_net falla, no hace fallar la funcion, y esa publicacion no queda marcada" "0 avisos pedidos|1" \
+  "set request.jwt.claim.role='service_role'; update hub_market_items set expires_at = now() + interval '1 day' where id = 9101; alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; select warn_expiring_publications() || '|' || (select count(*) from publication_expiry_notices where warned_for <> (select expires_at from hub_market_items where id = 9101)) ;"
+$PSQL -d postgres -c "drop function net.http_post(text, jsonb, jsonb, jsonb, integer); alter function net.http_post_ok(text, jsonb, jsonb, jsonb, integer) rename to http_post;" >/dev/null
+check "arreglado pg_net, el siguiente dia si avisa" "1 avisos pedidos" "select warn_expiring_publications();"
+
+check "borrar la publicacion borra su aviso" "0" \
+  "set request.jwt.claim.role='service_role'; delete from hub_market_items where id = 9101; select count(*) from publication_expiry_notices where item_id = 9101;"
+
+check "el cron diario esta programado, una sola vez, a las 9 de la manana de RD" "1|0 13 * * *" \
+  "select count(*) || '|' || min(schedule) from cron.job where jobname = 'warn-expiring-publications' and command like '%warn_expiring_publications%';"
+check "anon no invoca warn_expiring_publications" "$(denied warn_expiring_publications)" "$(as_anon 'select warn_expiring_publications();')"
+check "ni un usuario con sesion" "$(denied warn_expiring_publications)" "$(as_user "$USER_A" 'select warn_expiring_publications();')"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+set request.jwt.claim.role='service_role';
+delete from hub_market_items where id between 9101 and 9108;
+delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
+delete from net.calls;
+SQL
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -2053,12 +2119,19 @@ $PSQL -d upgrade -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 insert into hub_market_items (seller_name, title, price, location, category, status)
 values ('Dueno', 'Publicacion de antes', 1500, 'Santiago', 'piezas', 'aprobado');
 SQL
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0030_publication_lifecycle.sql upgrade
+apply supabase/migrations/0030_publication_lifecycle.sql upgrade
 echo "   (aplicada dos veces, con publicaciones dentro)"
 CHECK_DB=upgrade check "la publicacion de antes recibe 60 dias desde la migracion y sigue a la venta" "true|true"   "select (expires_at > now() + interval '59 days')::text || '|' || (sold_at is null)::text from hub_market_items where title = 'Publicacion de antes';"
 CHECK_DB=upgrade check "el cron de caducidad queda una sola vez" "1"   "select count(*) from cron.job where jobname = 'expire-publications';"
 CHECK_DB=upgrade check "marcar vendida funciona sobre lo que ya habia" "true"   "set request.jwt.claim.role='service_role'; update hub_market_items set sold_at = now() where title = 'Publicacion de antes'; select (sold_at is not null)::text from hub_market_items where title = 'Publicacion de antes';"
+
+echo "→ Camino de actualizacion de la 0031: la base real ya tiene publicaciones con plazo al migrar"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces, con publicaciones dentro)"
+CHECK_DB=upgrade check "la tabla de avisos queda vacia y el cron una sola vez" "0|1"   "select (select count(*) from publication_expiry_notices) || '|' || (select count(*) from cron.job where jobname = 'warn-expiring-publications');"
+CHECK_DB=upgrade check "sin secretos del Vault no avisa, y la publicacion de antes sigue ahi" "sin enlace de avisos: no se aviso a nadie|1"   "select warn_expiring_publications() || '|' || (select count(*) from hub_market_items where title = 'Publicacion de antes');"
 
 # --- Resumen ------------------------------------------------------------------
 

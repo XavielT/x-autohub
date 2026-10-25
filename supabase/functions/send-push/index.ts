@@ -1,16 +1,17 @@
 // =============================================================================
-// send-push — avisar al cliente que su pedido o su cita cambió de estado
+// send-push — avisar al cliente que su pedido o su cita cambió de estado, o al vendedor que su publicación vence
 // =============================================================================
 //
 // Corre en el Edge Runtime de Supabase (Deno), no en la app. Se despliega aparte y
 // **no** se compila con el resto del proyecto (los dos `tsconfig` solo miran `src/`).
 //
-// Que hace: recibe `{ kind: 'order' | 'appointment', id }`, comprueba quien llama, lee el
-// pedido o la cita de la base, arma el aviso segun su estado actual y lo manda a todos los
-// dispositivos del dueño (`push_subscriptions`).
+// Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }`, comprueba quien llama, lee el
+// pedido, la cita o la publicacion de la base, arma el aviso segun su estado actual y lo manda a todos
+// los dispositivos del dueño (`push_subscriptions`).
 //
 // La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
-// pg_net cuando cambia el estado de un pedido o de una cita, con la cabecera
+// pg_net cuando cambia el estado de un pedido o de una cita, y `warn_expiring_publications()`
+// (migracion 0031, una vez al dia) cuando a una publicacion de Hub Market le quedan siete dias, los dos con la cabecera
 // `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
 // ya no usa el panel). Responde `{ sent, removed }` o `{ sent: 0, reason }`: nunca falla de
 // forma que le importe a quien llama, porque el estado ya cambio y un aviso que no sale no
@@ -33,7 +34,7 @@
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de las migraciones **0024** (`push_subscriptions`) y **0028** (el trigger que la llama). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) y **0031** (el aviso de vencimiento). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -92,7 +93,13 @@ interface Notice {
   body: string;
   /** Ruta dentro del sitio a la que lleva tocar el aviso. */
   path: string;
+  /** Agrupa avisos: uno nuevo con la misma etiqueta reemplaza al anterior. Por defecto, la ruta. */
+  tag?: string;
 }
+
+/** Cuantos dias antes de vencer se avisa. Es el mismo `RENEW_WARNING_DAYS` del frontend y la ventana de la migracion 0031. */
+const LISTING_WARNING_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 async function rest<T>(supabaseUrl: string, key: string, path: string, init?: RequestInit): Promise<T | null> {
   const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
@@ -164,6 +171,38 @@ async function appointmentNotice(supabaseUrl: string, serviceKey: string, id: st
   return { userId: appointment.user_id, title: `Cita #${appointment.appointment_number}`, body: message(when), path: '/perfil' };
 }
 
+/**
+ * El aviso de una publicacion de Hub Market que esta por vencer. Solo avisa si de verdad esta a la
+ * venta, aprobada, con vendedor y dentro de la ventana: aunque alguien llamara con el secreto, no
+ * se le puede escribir a un vendedor por una publicacion que no esta por vencer.
+ */
+async function listingNotice(supabaseUrl: string, serviceKey: string, id: number): Promise<Notice | 'not-found' | 'no-message'> {
+  const rows = await rest<
+    { title: string; seller_id: string | null; expires_at: string; status: string; is_active: boolean; is_test: boolean; sold_at: string | null }[]
+  >(
+    supabaseUrl,
+    serviceKey,
+    `hub_market_items?select=title,seller_id,expires_at,status,is_active,is_test,sold_at&id=eq.${id}&limit=1`,
+  );
+  const item = rows?.[0];
+  if (!item) return 'not-found';
+
+  const left = new Date(item.expires_at).getTime() - Date.now();
+  if (!item.is_active || item.is_test || item.status !== 'aprobado' || item.sold_at || left <= 0 || left > LISTING_WARNING_DAYS * DAY_MS) {
+    return 'no-message';
+  }
+
+  const days = Math.floor(left / DAY_MS);
+  const when = days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
+  return {
+    userId: item.seller_id,
+    title: 'Tu publicación está por vencer',
+    body: `"${item.title}" ${when}. Renuévala desde tu perfil para que siga en Hub Market.`,
+    path: '/perfil',
+    tag: `/perfil#publicacion-${id}`,
+  };
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return refuse(405, 'method-not-allowed');
@@ -198,15 +237,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return refuse(400, 'bad-request');
   }
-  if ((input.kind !== 'order' && input.kind !== 'appointment') || typeof input.id !== 'string' || !UUID.test(input.id)) {
+  // Pedidos y citas se identifican con un uuid; las publicaciones, con un entero.
+  const isListing = input.kind === 'listing';
+  const idIsValid = isListing
+    ? typeof input.id === 'number' && Number.isSafeInteger(input.id) && input.id > 0
+    : typeof input.id === 'string' && UUID.test(input.id);
+  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isListing) || !idIsValid) {
     return refuse(400, 'bad-request');
   }
 
   try {
-    const notice =
-      input.kind === 'order'
-        ? await orderNotice(supabaseUrl, serviceKey, input.id)
-        : await appointmentNotice(supabaseUrl, serviceKey, input.id);
+    const notice = isListing
+      ? await listingNotice(supabaseUrl, serviceKey, input.id as number)
+      : input.kind === 'order'
+        ? await orderNotice(supabaseUrl, serviceKey, input.id as string)
+        : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
     if (notice === 'not-found') return refuse(404, 'not-found');
     if (notice === 'no-message') return refuse(200, 'no-message');
     // Un pedido o una cita de invitado no tiene dueño: no hay a quien avisar.
@@ -228,7 +273,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         body: notice.body,
         icon: `${siteUrl}/icon-192.png`,
         badge: `${siteUrl}/icon-32.png`,
-        tag: notice.path,
+        tag: notice.tag ?? notice.path,
         data: { url, onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url } } },
       },
     });

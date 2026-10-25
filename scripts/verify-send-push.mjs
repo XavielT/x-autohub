@@ -63,6 +63,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (url.endsWith('/rest/v1/rpc/is_admin')) return json(init.headers.Authorization === 'Bearer token-admin');
   if (url.includes('/rest/v1/orders?')) return json(db.orders.filter((o) => url.includes(`id=eq.${o.id}`)));
   if (url.includes('/rest/v1/service_appointments?')) return json(db.appointments.filter((a) => url.includes(`id=eq.${a.id}`)));
+  if (url.includes('/rest/v1/hub_market_items?')) return json(db.listings.filter((l) => url.includes(`id=eq.${l.id}&`)));
   if (url.includes('/rest/v1/push_subscriptions') && (init.method ?? 'GET') === 'GET') return json(db.devices);
   if (url.includes('/rest/v1/push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.startsWith('https://push.example/')) return new Response('', { status: pushStatus[url] ?? 201 });
@@ -83,6 +84,9 @@ function reset() {
     ],
     appointments: [{ id: APPT_ID, appointment_number: 2001, status: 'confirmed', user_id: OWNER, scheduled_at: '2026-11-05T14:30:00Z' }],
     devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
+    listings: [
+      { id: 501, title: 'Faros LED', seller_id: OWNER, expires_at: new Date(Date.now() + 3.5 * 86400000).toISOString(), status: 'aprobado', is_active: true, is_test: false, sold_at: null },
+    ],
   };
 }
 const ask = async (body, token = 'token-admin', method = 'POST', extra = {}) => {
@@ -156,6 +160,39 @@ check('una cita confirmada avisa', r.body.sent === 1);
 db.appointments[0].status = 'no_show';
 r = await ask({ kind: 'appointment', id: APPT_ID });
 check('una cita que no se presento no se avisa', r.body.reason === 'no-message');
+
+console.log('→ El aviso de una publicacion por vencer');
+reset();
+check('sin el secreto de la base ni un admin, no entra', (await ask({ kind: 'listing', id: 501 }, null)).status === 403);
+env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
+r = await ask({ kind: 'listing', id: 501 }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('a 3 dias de vencer avisa a su vendedor', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('se busco al vendedor de la publicacion, no a otro', calls.some((c) => c.url.includes(`push_subscriptions?select=id,endpoint,p256dh,auth&user_id=eq.${OWNER}`)));
+r = await ask({ kind: 'listing', id: '501' }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('el id de una publicacion es un entero, no un texto', r.status === 400);
+r = await ask({ kind: 'listing', id: 'x' }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('ni basura', r.status === 400);
+r = await ask({ kind: 'listing', id: 999 }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('una publicacion que no existe es 404', r.status === 404);
+const fuera = async (cambio) => {
+  reset();
+  env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
+  Object.assign(db.listings[0], cambio);
+  calls = [];
+  const res = await ask({ kind: 'listing', id: 501 }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+  return res.body.reason === 'no-message' && pushes().length === 0;
+};
+check('con plazo de sobra (20 dias) no avisa: no se le escribe a nadie por lo que no esta por vencer', await fuera({ expires_at: new Date(Date.now() + 20 * 86400000).toISOString() }));
+check('ya vencida, tampoco', await fuera({ expires_at: new Date(Date.now() - 3600000).toISOString() }));
+check('vendida, tampoco', await fuera({ sold_at: new Date().toISOString() }));
+check('de prueba, tampoco', await fuera({ is_test: true }));
+check('pendiente, tampoco', await fuera({ status: 'pendiente' }));
+check('desactivada, tampoco', await fuera({ is_active: false }));
+reset();
+env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
+db.listings[0].seller_id = null;
+r = await ask({ kind: 'listing', id: 501 }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+check('una publicacion sembrada, sin vendedor, no tiene a quien avisar', r.body.reason === 'guest');
 
 console.log('→ Dispositivos');
 reset();

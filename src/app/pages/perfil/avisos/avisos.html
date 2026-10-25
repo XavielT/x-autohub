@@ -4,10 +4,10 @@
       <h2 id="avisos-title" class="avisos__title">Avisos en este dispositivo</h2>
       @switch (state()) {
         @case ('on') {
-          <p class="avisos__desc">Activados. Te avisamos cuando tu pedido salga o tu cita se confirme.</p>
+          <p class="avisos__desc">Activados. Te avisamos cuando tu pedido salga, tu cita se confirme o una de tus publicaciones esté por vencer.</p>
         }
         @case ('off') {
-          <p class="avisos__desc">Recibe un aviso cuando tu pedido salga o tu cita se confirme, sin tener que abrir la página.</p>
+          <p class="avisos__desc">Recibe un aviso cuando tu pedido salga, tu cita se confirme o una de tus publicaciones esté por vencer, sin tener que abrir la página.</p>
         }
         @case ('blocked') {
           <p class="avisos__desc">Los bloqueaste en este navegador. Para recibirlos, permite las notificaciones de este sitio en su configuración.</p>
