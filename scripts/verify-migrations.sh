@@ -1454,13 +1454,13 @@ PUSH_AUTH="$(printf 'a%.0s' $(seq 1 22))"
 reg() { echo "select register_push_subscription('$1', '$PUSH_P256DH', '$PUSH_AUTH', '${2:-test}');"; }
 
 echo "   (quien guarda y quien ve)"
-check "anon no puede guardar un dispositivo" "$(denied register_push_subscription)" "$(as_anon "$(reg https://push.example/a)")"
+check "anon no puede guardar un dispositivo" "$(denied register_push_subscription)" "$(as_anon "$(reg https://fcm.googleapis.com/fcm/send/a)")"
 check "anon ni siquiera lee la tabla" "ERROR:  permission denied for table push_subscriptions" \
   "$(as_anon 'select count(*) from push_subscriptions;')"
 check "un usuario guarda su dispositivo" "1" \
-  "$(as_user "$USER_A" "$(reg https://push.example/a)") select count(*) from push_subscriptions;"
+  "$(as_user "$USER_A" "$(reg https://fcm.googleapis.com/fcm/send/a)") select count(*) from push_subscriptions;"
 check "no inserta directo en la tabla (no hay permiso)" "ERROR:  permission denied for table push_subscriptions" \
-  "$(as_user "$USER_A" "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/x', '$PUSH_P256DH', '$PUSH_AUTH');")"
+  "$(as_user "$USER_A" "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://fcm.googleapis.com/fcm/send/x', '$PUSH_P256DH', '$PUSH_AUTH');")"
 check "ni actualiza (no hay permiso)" "ERROR:  permission denied for table push_subscriptions" \
   "$(as_user "$USER_A" "update push_subscriptions set user_agent = 'x';")"
 check "otro usuario no ve los dispositivos ajenos" "0" "$(as_user "$USER_B" 'select count(*) from push_subscriptions;')"
@@ -1469,25 +1469,25 @@ check "ni un admin los lee con la clave del navegador (los lee la funcion con se
 
 echo "   (un dispositivo, una cuenta)"
 check "si otra cuenta registra el mismo dispositivo, se lo queda" "0|1" \
-  "$(as_user "$USER_B" "$(reg https://push.example/a)") select (select count(*) from push_subscriptions where user_id = '$USER_A') || '|' || (select count(*) from push_subscriptions where user_id = '$USER_B');"
+  "$(as_user "$USER_B" "$(reg https://fcm.googleapis.com/fcm/send/a)") select (select count(*) from push_subscriptions where user_id = '$USER_A') || '|' || (select count(*) from push_subscriptions where user_id = '$USER_B');"
 check "registrar dos veces el mismo no duplica" "1" \
-  "$(as_user "$USER_B" "$(reg https://push.example/a)") select count(*) from push_subscriptions where endpoint = 'https://push.example/a';"
+  "$(as_user "$USER_B" "$(reg https://fcm.googleapis.com/fcm/send/a)") select count(*) from push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/a';"
 check "el tope es de 10 dispositivos por cuenta, y se quedan los mas recientes" "10|true" \
-  "$(as_user "$USER_A" "$(for n in $(seq 1 12); do reg https://push.example/m$n; done)") select count(*) || '|' || bool_and(endpoint <> 'https://push.example/m1' and endpoint <> 'https://push.example/m2') from push_subscriptions where user_id = '$USER_A';"
+  "$(as_user "$USER_A" "$(for n in $(seq 1 12); do reg https://fcm.googleapis.com/fcm/send/m$n; done)") select count(*) || '|' || bool_and(endpoint <> 'https://fcm.googleapis.com/fcm/send/m1' and endpoint <> 'https://fcm.googleapis.com/fcm/send/m2') from push_subscriptions where user_id = '$USER_A';"
 
 echo "   (desactivar los avisos)"
 check "cada quien borra los suyos" "9" \
-  "$(as_user "$USER_A" "delete from push_subscriptions where endpoint = 'https://push.example/m3'; select count(*) from push_subscriptions;")"
+  "$(as_user "$USER_A" "delete from push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/m3'; select count(*) from push_subscriptions;")"
 check "y no los ajenos (0 filas)" "0" \
-  "$(as_user "$USER_A" "with d as (delete from push_subscriptions where endpoint = 'https://push.example/a' returning 1) select count(*) from d;")"
+  "$(as_user "$USER_A" "with d as (delete from push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/a' returning 1) select count(*) from d;")"
 
 echo "   (la forma de una suscripcion la exige la base)"
-check "el endpoint tiene que ser https" 'ERROR:  new row for relation "push_subscriptions" violates check constraint "push_subscriptions_endpoint_check"' \
+check "el endpoint tiene que ser https (desde la 0037 lo rechaza primero is_push_endpoint; el check de la tabla queda como segunda barrera)" 'ERROR:  Este navegador no usa un servicio de avisos compatible.' \
   "$(as_user "$USER_A" "$(reg http://push.example/inseguro)")"
 check "las claves no pueden venir vacias o cortas" 'ERROR:  new row for relation "push_subscriptions" violates check constraint "push_subscriptions_p256dh_check"' \
-  "$(as_user "$USER_A" "select register_push_subscription('https://push.example/corta', 'abc', '$PUSH_AUTH');")"
+  "$(as_user "$USER_A" "select register_push_subscription('https://fcm.googleapis.com/fcm/send/corta', 'abc', '$PUSH_AUTH');")"
 check "borrar la cuenta borra sus dispositivos" "0" \
-  "insert into auth.users (id, email) values ('99999999-9999-9999-9999-999999999999', 'tmp@x.com'); $(as_user 99999999-9999-9999-9999-999999999999 "$(reg https://push.example/tmp)") reset role; delete from profiles where id = '99999999-9999-9999-9999-999999999999'; select count(*) from push_subscriptions where endpoint = 'https://push.example/tmp';"
+  "insert into auth.users (id, email) values ('99999999-9999-9999-9999-999999999999', 'tmp@x.com'); $(as_user 99999999-9999-9999-9999-999999999999 "$(reg https://fcm.googleapis.com/fcm/send/tmp)") reset role; delete from profiles where id = '99999999-9999-9999-9999-999999999999'; select count(*) from push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/tmp';"
 check "la funcion no la invoca anon, y si un usuario con sesion" "false|true" \
   "select has_function_privilege('anon', 'public.register_push_subscription(text,text,text,text)', 'execute')::text || '|' || has_function_privilege('authenticated', 'public.register_push_subscription(text,text,text,text)', 'execute')::text;"
 
@@ -1683,28 +1683,28 @@ check "las dos funciones las pueden llamar anon y authenticated" "true|true|true
 check "los dispositivos se borran con el pedido" "c" \
   "select confdeltype::text from pg_constraint where conrelid = 'public.order_push_subscriptions'::regclass and contype = 'f';"
 
-check "un invitado activa los avisos de su pedido" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno)")"
+check "un invitado activa los avisos de su pedido" "" "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 check "y queda un dispositivo" "1" "$(devices "$GUEST_ORDER")"
-check "registrar el mismo dispositivo otra vez no lo duplica" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno)")"
+check "registrar el mismo dispositivo otra vez no lo duplica" "" "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 check "sigue siendo uno" "1" "$(devices "$GUEST_ORDER")"
 check "la tabla no se puede leer despues desde el navegador (la lee send-push)" 'ERROR:  permission denied for table order_push_subscriptions' \
-  "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/uno) select count(*) from order_push_subscriptions;")"
+  "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/uno) select count(*) from order_push_subscriptions;")"
 check "un pedido con dueño rechaza el aviso de invitado" 'ERROR:  Este pedido es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
-  "$(as_anon "$(reg "$OW_ORDER" https://push.example/uno)")"
+  "$(as_anon "$(reg "$OW_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 check "un pedido que no existe, tambien" 'ERROR:  Ese pedido no existe.' \
-  "$(as_anon "$(reg 99999999-9999-4999-8999-999999999999 https://push.example/uno)")"
+  "$(as_anon "$(reg 99999999-9999-4999-8999-999999999999 https://fcm.googleapis.com/fcm/send/uno)")"
 
-check "dos dispositivos mas caben" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/dos) $(reg "$GUEST_ORDER" https://push.example/tres)")"
+check "dos dispositivos mas caben" "" "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/dos) $(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/tres)")"
 check "son 3, el tope" "3" "$(devices "$GUEST_ORDER")"
 check "el cuarto no" 'ERROR:  Este pedido ya avisa a 3 dispositivos.' \
-  "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/cuatro)")"
-check "pero un dispositivo que ya estaba puede volver a registrarse" "" "$(as_anon "$(reg "$GUEST_ORDER" https://push.example/tres)")"
+  "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/cuatro)")"
+check "pero un dispositivo que ya estaba puede volver a registrarse" "" "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/tres)")"
 check "un endpoint que no es https se rechaza" 'ERROR:  new row for relation "order_push_subscriptions" violates check constraint "order_push_subscriptions_endpoint_check"' \
   "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'http://x.example/1', '$KEY_A', '$KEY_B');"
 
-check "quitar un dispositivo" "" "$(as_anon "$(unreg "$GUEST_ORDER" https://push.example/uno)")"
+check "quitar un dispositivo" "" "$(as_anon "$(unreg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 check "borra solo ese" "2" "$(devices "$GUEST_ORDER")"
-check "con el endpoint de otro pedido no se borra nada" "" "$(as_anon "$(unreg "$OW_ORDER" https://push.example/dos)")"
+check "con el endpoint de otro pedido no se borra nada" "" "$(as_anon "$(unreg "$OW_ORDER" https://fcm.googleapis.com/fcm/send/dos)")"
 check "los dos que quedan siguen" "2" "$(devices "$GUEST_ORDER")"
 
 # Un pedido de invitado ya terminado.
@@ -1714,7 +1714,7 @@ SQL
 DONE_ORDER="$(scalar "select id from orders where contact_email = 'final@correo.com' limit 1;")"
 $PSQL -d postgres -c "set request.jwt.claim.role='service_role'; update orders set status = 'delivered' where id = '$DONE_ORDER';" >/dev/null
 check "un pedido ya entregado no admite avisos: no va a cambiar" 'ERROR:  Este pedido ya termino: no va a cambiar de estado.' \
-  "$(as_anon "$(reg "$DONE_ORDER" https://push.example/uno)")"
+  "$(as_anon "$(reg "$DONE_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 
 echo "   (el trigger: ya no ignora los pedidos sin dueño)"
 $PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
@@ -1753,33 +1753,33 @@ check "las dos funciones las pueden llamar anon y authenticated" "true|true|true
 check "los dispositivos se borran con la cita" "c" \
   "select confdeltype::text from pg_constraint where conrelid = 'public.appointment_push_subscriptions'::regclass and contype = 'f';"
 
-check "quien agendo sin cuenta activa los avisos de su cita" "" "$(as_anon "$(areg "$APPT1" https://push.example/uno)")"
+check "quien agendo sin cuenta activa los avisos de su cita" "" "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/uno)")"
 check "y queda un dispositivo" "1" "$(adevices "$APPT1")"
-check "el mismo dispositivo otra vez no se duplica" "" "$(as_anon "$(areg "$APPT1" https://push.example/uno)")"
+check "el mismo dispositivo otra vez no se duplica" "" "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/uno)")"
 check "sigue siendo uno" "1" "$(adevices "$APPT1")"
 check "la tabla no se lee despues desde el navegador" 'ERROR:  permission denied for table appointment_push_subscriptions' \
-  "$(as_anon "$(areg "$APPT1" https://push.example/uno) select count(*) from appointment_push_subscriptions;")"
+  "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/uno) select count(*) from appointment_push_subscriptions;")"
 check "una cita con dueno rechaza el aviso de invitado" 'ERROR:  Esta cita es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
-  "$(as_anon "$(areg "$OW_APPT" https://push.example/uno)")"
+  "$(as_anon "$(areg "$OW_APPT" https://fcm.googleapis.com/fcm/send/uno)")"
 check "una cita que no existe, tambien" 'ERROR:  Esa cita no existe.' \
-  "$(as_anon "$(areg 99999999-9999-4999-8999-999999999999 https://push.example/uno)")"
+  "$(as_anon "$(areg 99999999-9999-4999-8999-999999999999 https://fcm.googleapis.com/fcm/send/uno)")"
 
-check "dos dispositivos mas caben" "" "$(as_anon "$(areg "$APPT1" https://push.example/dos) $(areg "$APPT1" https://push.example/tres)")"
+check "dos dispositivos mas caben" "" "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/dos) $(areg "$APPT1" https://fcm.googleapis.com/fcm/send/tres)")"
 check "son 3, el tope" "3" "$(adevices "$APPT1")"
-check "el cuarto no" 'ERROR:  Esta cita ya avisa a 3 dispositivos.' "$(as_anon "$(areg "$APPT1" https://push.example/cuatro)")"
-check "pero uno que ya estaba puede volver a registrarse" "" "$(as_anon "$(areg "$APPT1" https://push.example/tres)")"
+check "el cuarto no" 'ERROR:  Esta cita ya avisa a 3 dispositivos.' "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/cuatro)")"
+check "pero uno que ya estaba puede volver a registrarse" "" "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/tres)")"
 check "un endpoint que no es https se rechaza" 'ERROR:  new row for relation "appointment_push_subscriptions" violates check constraint "appointment_push_subscriptions_endpoint_check"' \
   "insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'http://x.example/1', '$KEY_A', '$KEY_B');"
 
-check "quitar un dispositivo" "" "$(as_anon "$(aunreg "$APPT1" https://push.example/uno)")"
+check "quitar un dispositivo" "" "$(as_anon "$(aunreg "$APPT1" https://fcm.googleapis.com/fcm/send/uno)")"
 check "borra solo ese" "2" "$(adevices "$APPT1")"
-check "con el endpoint de otra cita no se borra nada" "" "$(as_anon "$(aunreg "$OW_APPT" https://push.example/dos)")"
+check "con el endpoint de otra cita no se borra nada" "" "$(as_anon "$(aunreg "$OW_APPT" https://fcm.googleapis.com/fcm/send/dos)")"
 check "los dos que quedan siguen" "2" "$(adevices "$APPT1")"
 
 # Una cita ya terminada no admite avisos. Se termina la de prueba un momento y se devuelve a como estaba.
 $PSQL -d postgres -c "update service_appointments set status = 'done' where id = '$APPT1';" >/dev/null
 check "una cita ya hecha no admite avisos: no va a cambiar" 'ERROR:  Esta cita ya termino: no va a cambiar de estado.' \
-  "$(as_anon "$(areg "$APPT1" https://push.example/cinco)")"
+  "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/cinco)")"
 $PSQL -d postgres -c "update service_appointments set status = 'in_progress' where id = '$APPT1';" >/dev/null
 
 echo "   (el trigger: ahora tambien las citas sin dueno con dispositivos)"
@@ -1794,7 +1794,7 @@ check "sin dispositivos no llama a nadie" "0" \
 check "una cita con dueno sigue avisando a su cuenta" "true" \
   "$PN_COUNT0 $(as_claims "$ADMIN") update service_appointments set status = 'confirmed' where id = '$OW_APPT'; update service_appointments set status = 'in_progress' where id = '$OW_APPT'; reset request.jwt.claim.sub; select (((select count(*) from net.calls) - (select c from pn0)) >= 1)::text;"
 check "y un pedido de invitado con dispositivos sigue avisando (lo de la 0034 no se rompio)" "1" \
-  "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'https://push.example/pedido', '$KEY_A', '$KEY_B'); $PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'paid' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
+  "insert into order_push_subscriptions (order_id, endpoint, p256dh, auth) values ('$GUEST_ORDER', 'https://fcm.googleapis.com/fcm/send/pedido', '$KEY_A', '$KEY_B'); $PN_COUNT0 $(as_claims "$ADMIN") update orders set status = 'paid' where id = '$GUEST_ORDER'; reset request.jwt.claim.sub; $PN_DELTA"
 
 $PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
 delete from order_push_subscriptions;
@@ -1821,8 +1821,8 @@ $PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secre
 $PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
 $(rm_set "$APPT1" confirmed '10 hours')
 $(rm_set "$OW_APPT" confirmed '10 hours')
-insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'https://push.example/cita', '$KEY_A', '$KEY_B');
-insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/cuenta', '$KEY_A', '$KEY_B');
+insert into appointment_push_subscriptions (appointment_id, endpoint, p256dh, auth) values ('$APPT1', 'https://fcm.googleapis.com/fcm/send/cita', '$KEY_A', '$KEY_B');
+insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://fcm.googleapis.com/fcm/send/cuenta', '$KEY_A', '$KEY_B');
 delete from net.calls;
 SQL
 
@@ -1855,7 +1855,7 @@ check "una cita de una cuenta sin ningun dispositivo, tampoco" "0 recordatorios 
   "$RM_CLEAR $(rm_set "$OW_APPT" confirmed '10 hours') delete from push_subscriptions where user_id = '$USER_A'; select send_appointment_reminders();"
 
 check "si pg_net falla no se cae, y esa cita queda sin marcar para reintentar" "0 recordatorios pedidos|0" \
-  "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://push.example/cuenta', '$KEY_A', '$KEY_B'); $RM_CLEAR alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; select send_appointment_reminders() || '|' || (select count(*) from appointment_reminders);"
+  "insert into push_subscriptions (user_id, endpoint, p256dh, auth) values ('$USER_A', 'https://fcm.googleapis.com/fcm/send/cuenta', '$KEY_A', '$KEY_B'); $RM_CLEAR alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; select send_appointment_reminders() || '|' || (select count(*) from appointment_reminders);"
 $PSQL -d postgres -c "drop function net.http_post(text, jsonb, jsonb, jsonb, integer); alter function net.http_post_ok(text, jsonb, jsonb, jsonb, integer) rename to http_post;" >/dev/null
 check "arreglado pg_net, a la hora siguiente si se manda" "1 recordatorios pedidos" "select send_appointment_reminders();"
 
@@ -1867,9 +1867,54 @@ check "ni un usuario con sesion" "$(denied send_appointment_reminders)" "$(as_us
 $PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
 delete from appointment_reminders;
 delete from appointment_push_subscriptions;
-delete from push_subscriptions where endpoint like 'https://push.example/%';
+delete from push_subscriptions where endpoint like 'https://fcm.googleapis.com/fcm/send/%';
 delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
 SQL
+
+echo "→ Endurecer los avisos push (migracion 0037)"
+check "is_push_endpoint acepta los servicios de push conocidos" "true|true|true|true|true" \
+  "select is_push_endpoint('https://fcm.googleapis.com/fcm/send/abc')::text || '|' || is_push_endpoint('https://updates.push.services.mozilla.com/wpush/v2/abc')::text || '|' || is_push_endpoint('https://web.push.apple.com/abc')::text || '|' || is_push_endpoint('https://wns2-par02p.notify.windows.com/w/?token=abc')::text || '|' || is_push_endpoint('https://android.googleapis.com/gcm/send/abc')::text;"
+check "y rechaza lo demas: http, el truco de la arroba, otros hosts de Google, direcciones internas, vacio y nulo" "false|false|false|false|false|false|false|false|false" \
+  "select is_push_endpoint('http://fcm.googleapis.com/fcm/send/abc')::text || '|' || is_push_endpoint('https://fcm.googleapis.com@servidor-ajeno.example/x')::text || '|' || is_push_endpoint('https://storage.googleapis.com/x')::text || '|' || is_push_endpoint('https://fcm.googleapis.com.servidor-ajeno.example/x')::text || '|' || is_push_endpoint('https://push.services.mozilla.com.evil.example/x')::text || '|' || is_push_endpoint('https://169.254.169.254/latest/meta-data/')::text || '|' || is_push_endpoint('https://localhost/x')::text || '|' || is_push_endpoint('')::text || '|' || is_push_endpoint(null)::text;"
+
+BAD_ENDPOINT='https://servidor-ajeno.example/x'
+check "un invitado no puede registrar un endpoint ajeno en su pedido (SSRF)" 'ERROR:  Este navegador no usa un servicio de avisos compatible.' \
+  "$(as_anon "$(reg "$GUEST_ORDER" "$BAD_ENDPOINT")")"
+$PSQL -d postgres -c "update service_appointments set status = 'confirmed' where id = '$APPT1';" >/dev/null
+check "ni en su cita" 'ERROR:  Este navegador no usa un servicio de avisos compatible.' \
+  "$(as_anon "$(areg "$APPT1" "$BAD_ENDPOINT")")"
+check "ni quien tiene cuenta, en su perfil" 'ERROR:  Este navegador no usa un servicio de avisos compatible.' \
+  "$(as_user "$USER_A" "select register_push_subscription('$BAD_ENDPOINT', '$KEY_A', '$KEY_B', 'x');")"
+check "no queda ninguna fila con ese endpoint" "0" \
+  "select (select count(*) from push_subscriptions where endpoint = '$BAD_ENDPOINT') + (select count(*) from order_push_subscriptions where endpoint = '$BAD_ENDPOINT') + (select count(*) from appointment_push_subscriptions where endpoint = '$BAD_ENDPOINT');"
+check "uno conocido sigue entrando (pedido, cita y cuenta)" "" \
+  "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/valido) $(areg "$APPT1" https://fcm.googleapis.com/fcm/send/valido)")"
+$PSQL -d postgres -c "delete from order_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/valido'; delete from appointment_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/valido';" >/dev/null
+
+echo "   (vender y renovar: solo una publicacion aprobada)"
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into hub_market_items (id, seller_id, seller_name, title, price, location, category, status)
+values (9301, '$USER_A', 'Dueno', 'Pendiente', 1000, 'Santiago', 'piezas', 'pendiente'),
+       (9302, '$USER_A', 'Dueno', 'Rechazada', 1000, 'Santiago', 'piezas', 'rechazado'),
+       (9303, '$USER_A', 'Dueno', 'Aprobada',  1000, 'Santiago', 'piezas', 'aprobado');
+SQL
+check "una pendiente no se marca como vendida" 'ERROR:  Solo una publicacion aprobada se puede marcar como vendida.' \
+  "$(as_user "$USER_A" "select * from mark_publication_sold(9301);")"
+check "una rechazada tampoco" 'ERROR:  Solo una publicacion aprobada se puede marcar como vendida.' \
+  "$(as_user "$USER_A" "select * from mark_publication_sold(9302);")"
+check "ni se renueva una pendiente" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+  "$(as_user "$USER_A" "select * from renew_publication(9301);")"
+check "ni una rechazada" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+  "$(as_user "$USER_A" "select * from renew_publication(9302);")"
+check "quien modera tampoco puede (el estado manda)" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+  "$(as_user "$ADMIN" "select * from renew_publication(9302);")"
+check "y no cambio nada de ellas" "0" \
+  "select count(*) from hub_market_items where id in (9301, 9302) and sold_at is not null;"
+check "una aprobada sigue funcionando: se vende" "true" \
+  "$(as_user "$USER_A" "select (sold_at is not null)::text from mark_publication_sold(9303);")"
+check "y se renueva" "true" \
+  "$(as_user "$USER_A" "select (sold_at is null)::text from renew_publication(9303);")"
+$PSQL -d postgres -c "set request.jwt.claim.role='service_role'; delete from hub_market_items where id between 9301 and 9303;" >/dev/null
 
 echo "→ Auto Hub y Hub Market tambien republican el sitio (migracion 0029)"
 check "un cambio en un vehiculo de Auto Hub marca el sitio" "true" \
@@ -2049,7 +2094,7 @@ check "con un POST de tipo deploy, sin ningun dato mas (el texto no sale de la b
 check "a la URL de send-push, con el secreto y la clave anon como el trigger de la 0028" "https://f.example/functions/v1/send-push|s3cr3t|Bearer anon-key" \
   "select url || '|' || (headers->>'x-push-secret') || '|' || (headers->>'Authorization') from net.calls order by id desc limit 1;"
 
-check "borra los avisos de mas de 90 dias y deja los recientes" "1" \
+check "ya no borra los avisos viejos: un fallo que sigue siendo el ultimo no vuelve a avisar (0037)" "2" \
   "set role service_role; insert into deploy_alerts (deployment_id, created_at) values ('dpl_viejo', now() - interval '91 days'); reset role; select check_deploy_failures(); select count(*) from deploy_alerts;"
 
 check "si pg_net falla no se cae, y lo dice" "no se pudo preguntar por el despliegue" \
@@ -2471,11 +2516,18 @@ CHECK_DB=upgrade check "la tabla de citas queda vacia y el trigger de avisos sig
   "select (select count(*) from appointment_push_subscriptions) || '|' || (select count(*) from pg_trigger where tgname = 'orders_notify_status') || '|' || (select count(*) from pg_trigger where tgname = 'service_appointments_notify_status');"
 
 echo "→ Camino de actualizacion de la 0036"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0036_appointment_reminders.sql upgrade
+apply supabase/migrations/0036_appointment_reminders.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la tabla queda vacia, el cron una sola vez y sin secretos no recuerda" "0|1|sin enlace de avisos: no se recordo nada" \
   "select (select count(*) from appointment_reminders) || '|' || (select count(*) from cron.job where jobname = 'appointment-reminders') || '|' || send_appointment_reminders();"
+
+echo "→ Camino de actualizacion de la 0037"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "is_push_endpoint existe y distingue" "true|false" \
+  "select is_push_endpoint('https://fcm.googleapis.com/fcm/send/abc')::text || '|' || is_push_endpoint('https://servidor-ajeno.example/x')::text;"
 
 # --- Resumen ------------------------------------------------------------------
 

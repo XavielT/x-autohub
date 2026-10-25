@@ -104,6 +104,19 @@ describe('CarDetails', () => {
     expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
   });
 
+  it('una publicacion vendida o vencida no se indexa; una a la venta si', async () => {
+    const vendida = montar({ ...VEHICULO, soldAt: '2026-10-01T00:00:00Z' });
+    await vendida.fixture.whenStable();
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
+    vendida.fixture.destroy();
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+
+    TestBed.resetTestingModule();
+    const viva = montar();
+    await viva.fixture.whenStable();
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+  });
+
   it('una publicacion vencida avisa que venció', async () => {
     const { fixture } = montar({ ...VEHICULO, expiresAt: '2020-01-01T00:00:00Z' });
     await fixture.whenStable();

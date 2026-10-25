@@ -12,6 +12,8 @@ export interface SeoPage {
   /** Una imagen, relativa (`assets/…`) o absoluta. Vacía = la del sitio. */
   image?: string;
   type?: 'website' | 'product';
+  /** No indexar esta página (una publicación vendida o vencida: su ficha sigue abierta, pero ya no se anuncia). */
+  noindex?: boolean;
 }
 
 const DEFAULT_TITLE = 'X AutoHub — Todo lo que tu carro necesita';
@@ -55,6 +57,7 @@ export class SeoService {
     this.meta.updateTag({ name: 'twitter:image', content: image });
 
     this.setCanonical(url);
+    this.setRobots(page.noindex === true);
   }
 
   /** Vuelve a lo que trae `index.html`. Se llama al salir de una página que puso las suyas. */
@@ -72,6 +75,13 @@ export class SeoService {
     this.meta.removeTag("name='twitter:image'");
 
     this.setCanonical(null);
+    this.setRobots(false);
+  }
+
+  /** `noindex` mientras la página lo pida; al salir, se quita. */
+  private setRobots(noindex: boolean): void {
+    if (noindex) this.meta.updateTag({ name: 'robots', content: 'noindex' });
+    else this.meta.removeTag("name='robots'");
   }
 
   private setCanonical(url: string | null): void {

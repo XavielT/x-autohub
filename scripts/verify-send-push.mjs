@@ -75,6 +75,11 @@ globalThis.fetch = async (url, init = {}) => {
   if (url.includes('/rest/v1/deploy_alerts') && (init.method ?? 'GET') === 'GET') {
     return json(db.alerts.filter((a) => url.includes(`deployment_id=eq.${a.deployment_id}&`)));
   }
+  if (url.includes('/rest/v1/deploy_alerts') && init.method === 'DELETE') {
+    const id = decodeURIComponent(url.split('deployment_id=eq.')[1] ?? '');
+    db.alerts = db.alerts.filter((a) => a.deployment_id !== id);
+    return new Response(null, { status: 204 });
+  }
   if (url.includes('/rest/v1/deploy_alerts') && init.method === 'POST') {
     const row = JSON.parse(init.body);
     if (db.alerts.some((a) => a.deployment_id === row.deployment_id)) return new Response('conflict', { status: 409 });
@@ -92,7 +97,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (url.includes('/rest/v1/appointment_push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
   if (url.includes('/rest/v1/push_subscriptions') && (init.method ?? 'GET') === 'GET') return json(db.devices);
   if (url.includes('/rest/v1/push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
-  if (url.startsWith('https://push.example/')) return new Response('', { status: pushStatus[url] ?? 201 });
+  if (url.startsWith('https://fcm.googleapis.com/fcm/send/')) return new Response('', { status: pushStatus[url] ?? 201 });
   throw new Error(`fetch inesperado: ${url}`);
 };
 
@@ -109,7 +114,7 @@ function reset() {
       { id: GUEST_ID, order_number: 1002, status: 'shipped', user_id: null },
     ],
     appointments: [{ id: APPT_ID, appointment_number: 2001, status: 'confirmed', user_id: OWNER, scheduled_at: '2026-11-05T14:30:00Z' }],
-    devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
+    devices: [{ id: 1, endpoint: 'https://fcm.googleapis.com/fcm/send/uno', p256dh, auth }],
     orderDevices: [],
     apptDevices: [],
     vercelStatus: 200,
@@ -129,7 +134,7 @@ const ask = async (body, token = 'token-admin', method = 'POST', extra = {}) => 
   }));
   return { status: res.status, body: res.status === 204 ? null : await res.json() };
 };
-const pushes = () => calls.filter((c) => c.url.startsWith('https://push.example/'));
+const pushes = () => calls.filter((c) => c.url.startsWith('https://fcm.googleapis.com/fcm/send/'));
 
 console.log('→ Quien puede llamarla');
 reset();
@@ -186,7 +191,7 @@ r = await ask({ kind: 'order', id: GUEST_ID });
 check('un pedido de invitado sin dispositivos suscritos no tiene a quien avisar', r.body.reason === 'no-devices' && pushes().length === 0);
 
 console.log('→ Los avisos de un pedido de invitado');
-const dispositivo = (id, order_id = GUEST_ID, endpoint = 'https://push.example/invitado') => ({ id, order_id, endpoint, p256dh, auth });
+const dispositivo = (id, order_id = GUEST_ID, endpoint = 'https://fcm.googleapis.com/fcm/send/invitado') => ({ id, order_id, endpoint, p256dh, auth });
 reset();
 db.orderDevices = [dispositivo(1)];
 r = await ask({ kind: 'order', id: GUEST_ID });
@@ -207,8 +212,8 @@ await ask({ kind: 'order', id: GUEST_ID });
 check('tambien al cancelarse', calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`order_push_subscriptions?order_id=eq.${GUEST_ID}`)));
 
 reset();
-db.orderDevices = [dispositivo(7, GUEST_ID, 'https://push.example/caido')];
-pushStatus['https://push.example/caido'] = 410;
+db.orderDevices = [dispositivo(7, GUEST_ID, 'https://fcm.googleapis.com/fcm/send/caido')];
+pushStatus['https://fcm.googleapis.com/fcm/send/caido'] = 410;
 r = await ask({ kind: 'order', id: GUEST_ID });
 check('un dispositivo caido (410) se borra de la tabla del pedido, no de la de cuentas', r.body.removed === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('order_push_subscriptions?id=in.(7)')) && !calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('push_subscriptions?id=in.(7)') && !c.url.includes('order_')));
 
@@ -310,7 +315,14 @@ check('sin admins no hay a quien avisar', r.body.reason === 'no-devices' && push
 conSecreto();
 db.devices = [];
 r = await deploy();
-check('si ningun admin activo los avisos, igual se anota (no se reintenta cada 10 minutos)', r.body.reason === 'no-devices' && db.alerts.length === 1);
+check('si ningun admin activo los avisos, NO se anota: el que los active despues se entera del fallo que sigue vigente', r.body.reason === 'no-devices' && db.alerts.length === 0);
+conSecreto();
+pushStatus['https://fcm.googleapis.com/fcm/send/uno'] = 500;
+r = await deploy();
+check('si el aviso no llega a ningun dispositivo (500), se deshace la anotacion: el siguiente sondeo lo reintenta', r.body.sent === 0 && db.alerts.length === 0 && calls.some((c) => c.init.method === 'DELETE' && c.url.includes('deploy_alerts?deployment_id=eq.dpl_fallido')));
+conSecreto();
+r = await deploy();
+check('y si llega, queda anotado', r.body.sent === 1 && db.alerts.length === 1 && db.alerts[0].deployment_id === 'dpl_fallido');
 conSecreto();
 db.alerts.push({ deployment_id: 'dpl_fallido' });
 r = await deploy();
@@ -320,13 +332,13 @@ check('sin el secreto de la base ni un admin, no entra', r.status === 403);
 conSecreto();
 db.deployments[0].meta = { githubCommitMessage: 'x'.repeat(300) };
 await deploy();
-const enviado = calls.find((c) => c.url.startsWith('https://push.example/'));
+const enviado = calls.find((c) => c.url.startsWith('https://fcm.googleapis.com/fcm/send/'));
 check('un mensaje de commit larguisimo no impide el aviso', enviado !== undefined);
 
 console.log('→ Los avisos de una cita de invitado');
 const GUEST_APPT = '66666666-6666-4666-8666-666666666666';
 const citaInvitada = (status = 'confirmed') => ({ id: GUEST_APPT, appointment_number: 2002, status, user_id: null, scheduled_at: '2026-11-05T14:30:00Z' });
-const dispCita = (id, appointment_id = GUEST_APPT, endpoint = 'https://push.example/cita') => ({ id, appointment_id, endpoint, p256dh, auth });
+const dispCita = (id, appointment_id = GUEST_APPT, endpoint = 'https://fcm.googleapis.com/fcm/send/cita') => ({ id, appointment_id, endpoint, p256dh, auth });
 
 reset();
 db.appointments.push(citaInvitada());
@@ -361,8 +373,8 @@ check('los dispositivos de otra cita no reciben el aviso de esta', r.body.reason
 
 reset();
 db.appointments.push(citaInvitada());
-db.apptDevices = [dispCita(9, GUEST_APPT, 'https://push.example/caido')];
-pushStatus['https://push.example/caido'] = 410;
+db.apptDevices = [dispCita(9, GUEST_APPT, 'https://fcm.googleapis.com/fcm/send/caido')];
+pushStatus['https://fcm.googleapis.com/fcm/send/caido'] = 410;
 r = await ask({ kind: 'appointment', id: GUEST_APPT });
 check('un dispositivo caido (410) se borra de la tabla de la cita', r.body.removed === 1 && calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('appointment_push_subscriptions?id=in.(9)')));
 
@@ -376,6 +388,33 @@ db.appointments.push(citaInvitada('no_show'));
 db.apptDevices = [dispCita(1)];
 r = await ask({ kind: 'appointment', id: GUEST_APPT });
 check('una cita a la que no se presento no avisa a nadie', r.body.reason === 'no-message' && pushes().length === 0);
+check('pero si es de invitado se limpian sus dispositivos: es un estado final y nadie mas los borraria', calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith(`appointment_push_subscriptions?appointment_id=eq.${GUEST_APPT}`)));
+
+reset();
+db.appointments.push(citaInvitada('no_show'));
+db.appointments.find((a) => a.id === GUEST_APPT).user_id = OWNER;
+r = await ask({ kind: 'appointment', id: GUEST_APPT });
+check('una cita con dueño a la que no se presento no toca la tabla de invitados', !calls.some((c) => c.url.includes('appointment_push_subscriptions')));
+
+console.log('→ Endpoints que no son de un servicio de push');
+reset();
+db.devices = [{ id: 1, endpoint: 'https://servidor-ajeno.example/x', p256dh, auth }];
+r = await ask({ kind: 'order', id: ORDER_ID });
+check('un dispositivo con un endpoint ajeno no recibe una llamada (ni el JWT VAPID)', r.status === 200 && r.body.sent === 0 && !calls.some((c) => c.url.includes('servidor-ajeno')));
+for (const malo of ['http://fcm.googleapis.com/fcm/send/x', 'https://fcm.googleapis.com@servidor-ajeno.example/x', 'https://storage.googleapis.com/x', 'https://fcm.googleapis.com.servidor-ajeno.example/x', 'https://push.services.mozilla.com.evil.example/x']) {
+  reset();
+  db.devices = [{ id: 1, endpoint: malo, p256dh, auth }];
+  await ask({ kind: 'order', id: ORDER_ID });
+  check(`no se llama a ${malo}`, !calls.some((c) => c.url === malo || c.url.includes('evil.example') || c.url.includes('servidor-ajeno') || c.url.includes('storage.googleapis')));
+}
+for (const bueno of ['https://fcm.googleapis.com/fcm/send/abc', 'https://updates.push.services.mozilla.com/wpush/v2/abc', 'https://web.push.apple.com/abc', 'https://wns2-par02p.notify.windows.com/w/?token=abc', 'https://android.googleapis.com/gcm/send/abc']) {
+  reset();
+  db.devices = [{ id: 1, endpoint: bueno, p256dh, auth }];
+  pushStatus[bueno] = 201;
+  const antes = calls.length;
+  await ask({ kind: 'order', id: ORDER_ID });
+  check(`si se llama a ${bueno}`, calls.slice(antes).some((c) => c.url === bueno));
+}
 
 console.log('→ El recordatorio de una cita');
 const enHoras = (h) => new Date(Date.now() + h * 3600000).toISOString();
@@ -436,15 +475,15 @@ r = await ask({ kind: 'order', id: ORDER_ID });
 check('sin dispositivos no hay nada que mandar', r.body.reason === 'no-devices');
 reset();
 db.devices = [
-  { id: 1, endpoint: 'https://push.example/vivo', p256dh, auth },
-  { id: 2, endpoint: 'https://push.example/caido', p256dh, auth },
+  { id: 1, endpoint: 'https://fcm.googleapis.com/fcm/send/vivo', p256dh, auth },
+  { id: 2, endpoint: 'https://fcm.googleapis.com/fcm/send/caido', p256dh, auth },
 ];
-pushStatus['https://push.example/caido'] = 410;
+pushStatus['https://fcm.googleapis.com/fcm/send/caido'] = 410;
 r = await ask({ kind: 'order', id: ORDER_ID });
 check('manda a todos y cuenta los que llegaron', r.body.sent === 1 && r.body.removed === 1, JSON.stringify(r));
 check('el dispositivo caido (410) se borra de la base', calls.some((c) => c.init.method === 'DELETE' && c.url.endsWith('push_subscriptions?id=in.(2)')));
 reset();
-pushStatus['https://push.example/uno'] = 500;
+pushStatus['https://fcm.googleapis.com/fcm/send/uno'] = 500;
 r = await ask({ kind: 'order', id: ORDER_ID });
 check('un 500 no borra el dispositivo ni hace fallar al panel', r.status === 200 && r.body.sent === 0 && r.body.removed === 0 && !calls.some((c) => c.init.method === 'DELETE'));
 

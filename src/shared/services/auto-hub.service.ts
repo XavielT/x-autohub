@@ -47,7 +47,9 @@ export class AutoHubService {
     }
 
     return from(
-      this.supabase.db.from('auto_hub_vehicles').select('*').eq('id', id).maybeSingle(),
+      // Solo lo disponible, como el listado: un enlace a un vehículo ya vendido dice "no encontrado" y no lo anuncia con título,
+      // canónico y JSON-LD `InStock`.
+      this.supabase.db.from('auto_hub_vehicles').select('*').eq('id', id).eq('is_available', true).maybeSingle(),
     ).pipe(map((res) => (res.data ? toAutoHubVehicle(res.data) : undefined)));
   }
 }

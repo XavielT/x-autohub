@@ -47,6 +47,15 @@ import { sendPush } from './webpush.mjs';
 const DEFAULT_SITE_URL = 'https://xautohubrd.com';
 const TIME_ZONE = 'America/Santo_Domingo';
 
+/**
+ * Los servicios de push a los que se le manda un aviso. Es la misma lista de `is_push_endpoint()` (migracion 0037): una fila de
+ * `push_subscriptions` anterior a esa migracion, o escrita sin pasar por las funciones de registro, no puede hacer que esta funcion
+ * llame a un servidor ajeno con un JWT VAPID firmado.
+ */
+const PUSH_ENDPOINT =
+  /^https:\/\/(fcm\.googleapis\.com|android\.googleapis\.com|([a-z0-9-]+\.)*push\.services\.mozilla\.com|([a-z0-9-]+\.)*push\.apple\.com|([a-z0-9-]+\.)*notify\.windows\.com)(:443)?\//i;
+const isPushEndpoint = (endpoint: string): boolean => PUSH_ENDPOINT.test(endpoint);
+
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-secret',
@@ -106,6 +115,12 @@ interface Notice {
   guest?: GuestTarget;
   /** El estado ya no va a cambiar (entregado, cancelado, hecha): tras avisar se borran los dispositivos de ese pedido o cita. */
   final?: boolean;
+  /**
+   * El `uid` de un despliegue fallido del que este aviso es el primero. Se anota en `deploy_alerts` **cuando ya se sabe que hay a
+   * quien avisar** (y justo antes de mandar, para que dos llamadas seguidas no dupliquen), y se deshace si no llego a nadie, para
+   * que el siguiente sondeo lo vuelva a intentar.
+   */
+  claimDeployment?: string;
 }
 
 /** Dónde están los dispositivos de un pedido o una cita sin dueño (migraciones 0034 y 0035). */
@@ -218,7 +233,14 @@ async function appointmentNotice(
   }
 
   const message = APPOINTMENT_MESSAGES[appointment.status];
-  if (!message) return 'no-message';
+  if (!message) {
+    // `no_show` no avisa, pero es un estado final: los dispositivos de una cita de invitado ya no sirven y de otro modo no habria
+    // quien los borrara (`register_appointment_push` rechaza registrar mas).
+    if (!appointment.user_id && FINAL_APPOINTMENT_STATUSES.includes(appointment.status)) {
+      await rest(supabaseUrl, serviceKey, `appointment_push_subscriptions?appointment_id=eq.${id}`, { method: 'DELETE' });
+    }
+    return 'no-message';
+  }
 
   // La hora en hora de Santo Domingo: es la del taller, no la del servidor.
   const when = new Date(appointment.scheduled_at).toLocaleString('es-DO', {
@@ -303,15 +325,6 @@ async function deployNotice(supabaseUrl: string, serviceKey: string): Promise<No
   // Si no se pudo leer la tabla no se avisa: mejor un aviso de menos que uno cada 10 minutos.
   if (!already || already.length > 0) return 'no-message';
 
-  // `return=representation` y no `minimal`: `rest()` lee el cuerpo, y un 201 vacio lo haria fallar. Si otra llamada
-  // anoto el mismo despliegue un instante antes (409), no se avisa dos veces.
-  const saved = await rest<{ deployment_id: string }[]>(supabaseUrl, serviceKey, 'deploy_alerts', {
-    method: 'POST',
-    body: JSON.stringify({ deployment_id: latest.uid }),
-    headers: { Prefer: 'return=representation' },
-  });
-  if (!saved || saved.length === 0) return 'no-message';
-
   const message = (latest.meta?.githubCommitMessage ?? '').split('\n')[0].slice(0, 100);
   return {
     userId: null,
@@ -320,6 +333,7 @@ async function deployNotice(supabaseUrl: string, serviceKey: string): Promise<No
     body: `El sitio sigue con la versión anterior.${message ? ` Cambio: ${message}` : ''} Abre el panel para ver el detalle.`,
     path: '/admin',
     tag: 'deploy-failed',
+    claimDeployment: latest.uid,
   };
 }
 
@@ -399,6 +413,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const devices = await rest<{ id: number; endpoint: string; p256dh: string; auth: string }[]>(supabaseUrl, serviceKey, source);
     if (!devices || devices.length === 0) return refuse(200, 'no-devices');
 
+    // Un despliegue fallido se anota ahora, que ya hay a quien avisar. `return=representation` y no `minimal`: `rest()` lee el
+    // cuerpo, y un 201 vacio lo haria fallar. Si otra llamada lo anoto un instante antes (409), no se avisa dos veces.
+    if (notice.claimDeployment) {
+      const saved = await rest<{ deployment_id: string }[]>(supabaseUrl, serviceKey, 'deploy_alerts', {
+        method: 'POST',
+        body: JSON.stringify({ deployment_id: notice.claimDeployment }),
+        headers: { Prefer: 'return=representation' },
+      });
+      if (!saved || saved.length === 0) return refuse(200, 'no-message');
+    }
+
     // El formato que entiende el service worker de Angular: lo muestra y, al tocarlo,
     // abre (o enfoca) la ruta de `data.onActionClick.default`.
     const url = `${siteUrl}${notice.path}`;
@@ -420,6 +445,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     await Promise.all(
       devices.map(async (device) => {
         try {
+          if (!isPushEndpoint(device.endpoint)) {
+            console.error('[send-push] un dispositivo con un endpoint que no es de un servicio de push conocido: no se llama', device.id);
+            return;
+          }
           const result = await sendPush(device, payload, vapid);
           if (result.ok) sent++;
           else if (result.gone) gone.push(device.id);
@@ -434,6 +463,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const table = notice.guest ? notice.guest.table : 'push_subscriptions';
     if (gone.length > 0) {
       await rest(supabaseUrl, serviceKey, `${table}?id=in.(${gone.join(',')})`, { method: 'DELETE' });
+    }
+    // Si el aviso de un despliegue no llego a ningun dispositivo, se deshace la anotacion: el siguiente sondeo (10 minutos) lo reintenta.
+    if (notice.claimDeployment && sent === 0) {
+      await rest(supabaseUrl, serviceKey, `deploy_alerts?deployment_id=eq.${encodeURIComponent(notice.claimDeployment)}`, { method: 'DELETE' });
     }
     // Un pedido o una cita de invitado que terminó no va a cambiar más: sus dispositivos ya no sirven.
     if (notice.guest && notice.final) {

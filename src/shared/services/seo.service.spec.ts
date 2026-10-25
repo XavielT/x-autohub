@@ -66,6 +66,23 @@ describe('SeoService', () => {
     expect(canonical()).toBe('https://xautohubrd.com/tienda/p/dos');
   });
 
+  it('noindex pone la etiqueta robots, y la siguiente pagina (o reset) la quita', () => {
+    seo.set({ title: 'Vendida', description: 'x', path: '/car-details/1', noindex: true });
+    expect(content('meta[name="robots"]')).toBe('noindex');
+
+    seo.set({ title: 'Otra', description: 'x', path: '/car-details/2' });
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+
+    seo.set({ title: 'Vendida', description: 'x', path: '/car-details/1', noindex: true });
+    seo.reset();
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+  });
+
+  it('sin noindex no hay etiqueta robots', () => {
+    seo.set({ title: 'Viva', description: 'x', path: '/car-details/1' });
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+  });
+
   it('reset() vuelve a lo del sitio: título, descripción y sin canónico ni etiquetas de Twitter propias', () => {
     seo.set({ title: 'Uno', description: 'a', path: '/tienda/p/uno', image: 'assets/x.jpg', type: 'product' });
 

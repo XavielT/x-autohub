@@ -50,7 +50,8 @@ export class AccessoryDetails implements OnInit {
   /** Título, descripción y vista previa de la ficha. Una publicación de prueba no se anuncia. */
   private applySeo(item: HubMarketItemModel | undefined): void {
     if (item && !item.isTest) {
-      this.seo.set(hubMarketSeo(item));
+      // Una vendida o vencida sigue abierta pero no se indexa: ya no está a la venta.
+      this.seo.set({ ...hubMarketSeo(item), noindex: !isLive(item) });
       this.jsonLd.set('listing', isLive(item) ? hubMarketJsonLd(item) : null);
       return;
     }

@@ -101,12 +101,17 @@ for (const route of expected) {
 
   if (route.startsWith('/tienda/p/') && !html.includes('prod__name')) fail(`${route}: no trae el nombre del producto`);
   if (route === '/tienda' && !html.includes('app-catalogo-card')) fail('/tienda: no trae ninguna tarjeta de producto');
-  if (route === '/auto-hub' && !html.includes('app-autohub-card')) fail('/auto-hub: no trae ningún vehículo');
-  if (route === '/hub-market' && !/app-(hub-market|car)-card/.test(html)) fail('/hub-market: no trae ninguna publicación');
+  // Solo se exige una tarjeta si el sitemap dice que hay algo que enseñar: sin vehículos disponibles o con todas las
+  // publicaciones vendidas o vencidas (0030), el listado vacío es lo correcto y no debe tumbar el despliegue.
+  const hayVehiculos = urls.some((u) => /^\/auto-hub-details\//.test(u));
+  const hayPublicaciones = urls.some((u) => /^\/(car-details|hub-market-part-details|accessory-details)\//.test(u));
+  if (route === '/auto-hub' && hayVehiculos && !html.includes('app-autohub-card')) fail('/auto-hub: el sitemap trae vehículos y la página no');
+  if (route === '/hub-market' && hayPublicaciones && !/app-(hub-market|car)-card/.test(html)) fail('/hub-market: el sitemap trae publicaciones y la página no');
 }
 
-// Una página por cada producto, servicio, categoría y vehículo de Auto Hub del sitemap.
-for (const [label, re] of [['productos', /^\/tienda\/p\//], ['categorías', /^\/tienda\/c\//], ['servicios', /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/], ['vehículos de Auto Hub', /^\/auto-hub-details\//]]) {
+// Una página por cada producto, categoría y servicio del sitemap. Los vehículos de Auto Hub y las publicaciones de Hub Market no se
+// exigen: pueden no haber (todos vendidos, todas vencidas), y el sitio sigue siendo válido.
+for (const [label, re] of [['productos', /^\/tienda\/p\//], ['categorías', /^\/tienda\/c\//], ['servicios', /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/]]) {
   const inSitemap = urls.filter((u) => re.test(u)).length;
   if (inSitemap === 0) fail(`el sitemap no trae ${label}: sin ellos no hay nada que prerenderizar (¿falló la lectura de la base?)`);
 }
