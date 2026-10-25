@@ -693,13 +693,9 @@ build. **Congelado por el pivote**: Comunidad no recibe trabajo nuevo por ahora.
 
 Hecho: `/auto-hub` filtra por tipo de chasis, combustible, tracción, precio máximo, año mínimo y kilometraje máximo, ordena (recientes, precio, año, kilometraje) y cuenta los resultados. La regla vive en `shared/utils/auto-hub-filters.ts` (pura, con sus pruebas); la página solo guarda los filtros en una señal. Los filtros son del navegador: no hay consulta nueva a la base. **Pendiente:** guardarlos en la URL para poder compartir una búsqueda; el catálogo crece poco y no hacía falta aún.
 
-### Video del hero: poster y peso
+### ~~Video del hero: poster y peso~~ ✅ (2.24.1)
 
-`citroen-c3-flying.mp4` sigue en `src/assets/videos/` (792 KB en disco; la
-versión anterior de este punto decía 2.5 MB) y lo usa `home-welcome` con
-`autoplay`. La fase 2 lo mudó a `/social-hub` (la Comunidad), donde ya no es lo
-primero que carga el sitio. Sigue faltando un `poster` (un frame exportado a
-JPEG) para que se vea algo de inmediato.
+Hecho: el video lleva `poster="assets/imgs/hero-poster.jpg"` (un cuadro del propio video, 1280x720, 65 KB) y `preload="metadata"`, así que la comunidad muestra una imagen al instante en vez de un hueco mientras el MP4 (792 KB) llega. El video sigue donde estaba.
 
 ### Layout de Auto Hub
 
