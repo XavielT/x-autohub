@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 619 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 640 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -305,6 +305,12 @@ Cosas que ya causaron un bug. No las repitas:
   tiene que seguir respondiendo para quien guardó el enlace (`app-publication-notice`). Vencer no escribe nada: lo único que lo avisa
   al HTML es el cron `expire-publications` (`mark_expired_publications()`, una vez al día). **El build prerenderizado pide esas
   columnas: la 0030 se aplica ANTES de desplegar**, o `npm run build` falla en las tres fichas de Hub Market.
+- **El aviso de "tu publicación vence" lo pide la base, y `send-push` va ANTES que la migración.** `warn_expiring_publications()` (0031, cron
+  diario 13:00 UTC) le pide a `send-push` `{ kind: 'listing', id }` (el id es un **entero**, no un uuid) por cada publicación a siete días de
+  vencer, y deja anotado en `publication_expiry_notices` para qué `expires_at` ya avisó (una tabla aparte: una columna en
+  `hub_market_items` dispararía `mark_site_dirty()` y un despliegue por aviso). Con la migración puesta y la función vieja, `send-push`
+  respondería 400 y cada publicación quedaría marcada como avisada sin que nadie recibiera nada. `send-push` vuelve a comprobar que la
+  publicación esté por vencer: el secreto no sirve para escribirle a un vendedor por otra cosa.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
   `public/sitemap.xml`, ignorado por git) y lee Supabase en cada build. `vercel.json` fija
   `buildCommand: npm run build` para que también corra en Vercel; si alguien lo quita y

@@ -243,6 +243,19 @@ nueva o usada y **sin vendedor**: es una persona y su nombre no se publica. Una 
 
 ---
 
+## Aviso de vencimiento por push (2.18.0) ✅
+
+Hecho: a siete días de vencer, el vendedor recibe un aviso push ("Tu publicación está por vencer") que lo lleva a /perfil, donde renueva
+con un toque. Lo pide la base una vez al día y lo manda `send-push` (migración 0031). Un solo aviso por cada plazo: renovar habilita el
+siguiente.
+
+**Lo que queda fuera:**
+
+- **Correo.** Solo llega a quien activó los avisos en un dispositivo; no hay canal de correo en el proyecto.
+- **Un segundo aviso el último día.** Es un solo aviso a los siete días.
+
+---
+
 ## Vendido y caducidad de Hub Market (2.17.0) ✅
 
 Hecho: una publicación tiene `sold_at` y `expires_at` (60 días). Su dueño la marca vendida o la renueva desde /perfil (con un aviso a
@@ -251,7 +264,7 @@ sigue abierta con un aviso y sin WhatsApp. Un cron diario avisa al HTML de lo qu
 
 **Lo que queda fuera:**
 
-- **Avisarle al dueño que su publicación está por vencer** (push o correo): hoy solo lo ve si entra a /perfil.
+- **Avisarle al dueño que su publicación está por vencer**: hecho en la 2.18.0 (push; por correo sigue sin haber).
 - **Que Auto Hub tenga lo mismo.** Sus vehículos son de X AutoHub y los maneja el panel con `is_available`; no lleva plazo.
 - **Estado "vendido" visible en el listado** (una etiqueta en la tarjeta): hoy simplemente deja de salir.
 
