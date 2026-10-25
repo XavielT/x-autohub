@@ -42,12 +42,16 @@ const ENV = {
   VAPID_PUBLIC_KEY: vapidPublic,
   VAPID_PRIVATE_KEY: vapidPrivate,
   VAPID_SUBJECT: 'mailto:equipo@xautohubrd.com',
+  VERCEL_TOKEN: 'vercel-token',
+  VERCEL_PROJECT_ID: 'prj_123',
+  VERCEL_TEAM_ID: 'team_123',
 };
 
 const ORDER_ID = '11111111-1111-4111-8111-111111111111';
 const GUEST_ID = '22222222-2222-4222-8222-222222222222';
 const APPT_ID = '33333333-3333-4333-8333-333333333333';
 const OWNER = '44444444-4444-4444-8444-444444444444';
+const ADMIN_USER = '55555555-5555-4555-8555-555555555555';
 
 let env = { ...ENV };
 let db;
@@ -63,6 +67,20 @@ globalThis.fetch = async (url, init = {}) => {
   if (url.endsWith('/rest/v1/rpc/is_admin')) return json(init.headers.Authorization === 'Bearer token-admin');
   if (url.includes('/rest/v1/orders?')) return json(db.orders.filter((o) => url.includes(`id=eq.${o.id}`)));
   if (url.includes('/rest/v1/service_appointments?')) return json(db.appointments.filter((a) => url.includes(`id=eq.${a.id}`)));
+  if (url.startsWith('https://api.vercel.com/v6/deployments')) {
+    if (db.vercelStatus !== 200) return new Response('', { status: db.vercelStatus });
+    return json({ deployments: db.deployments });
+  }
+  if (url.includes('/rest/v1/profiles?')) return json(db.admins);
+  if (url.includes('/rest/v1/deploy_alerts') && (init.method ?? 'GET') === 'GET') {
+    return json(db.alerts.filter((a) => url.includes(`deployment_id=eq.${a.deployment_id}&`)));
+  }
+  if (url.includes('/rest/v1/deploy_alerts') && init.method === 'POST') {
+    const row = JSON.parse(init.body);
+    if (db.alerts.some((a) => a.deployment_id === row.deployment_id)) return new Response('conflict', { status: 409 });
+    db.alerts.push(row);
+    return json([row], 201);
+  }
   if (url.includes('/rest/v1/hub_market_items?')) return json(db.listings.filter((l) => url.includes(`id=eq.${l.id}&`)));
   if (url.includes('/rest/v1/push_subscriptions') && (init.method ?? 'GET') === 'GET') return json(db.devices);
   if (url.includes('/rest/v1/push_subscriptions') && init.method === 'DELETE') return new Response(null, { status: 204 });
@@ -84,6 +102,10 @@ function reset() {
     ],
     appointments: [{ id: APPT_ID, appointment_number: 2001, status: 'confirmed', user_id: OWNER, scheduled_at: '2026-11-05T14:30:00Z' }],
     devices: [{ id: 1, endpoint: 'https://push.example/uno', p256dh, auth }],
+    vercelStatus: 200,
+    deployments: [{ uid: 'dpl_fallido', readyState: 'ERROR', meta: { githubCommitMessage: 'Cambio que rompio el build\n\ncuerpo largo' } }],
+    admins: [{ id: ADMIN_USER }],
+    alerts: [],
     listings: [
       { id: 501, title: 'Faros LED', seller_id: OWNER, expires_at: new Date(Date.now() + 3.5 * 86400000).toISOString(), status: 'aprobado', is_active: true, is_test: false, sold_at: null },
     ],
@@ -193,6 +215,60 @@ env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base';
 db.listings[0].seller_id = null;
 r = await ask({ kind: 'listing', id: 501 }, 'anon', 'POST', { 'x-push-secret': 'secreto-de-la-base' });
 check('una publicacion sembrada, sin vendedor, no tiene a quien avisar', r.body.reason === 'guest');
+
+console.log('→ El aviso de un despliegue fallido');
+const deploy = (token = 'anon') => ask({ kind: 'deploy' }, token, 'POST', { 'x-push-secret': 'secreto-de-la-base' });
+const conSecreto = () => { reset(); env.PUSH_WEBHOOK_SECRET = 'secreto-de-la-base'; };
+conSecreto();
+r = await deploy();
+check('un despliegue fallido avisa a los admins', r.status === 200 && r.body.sent === 1, JSON.stringify(r));
+check('se busco a los admins (por su rol), no a un usuario cualquiera', calls.some((c) => c.url.includes('profiles?select=id&role=eq.admin')));
+check('y a los dispositivos de esos admins', calls.some((c) => c.url.includes(`push_subscriptions?select=id,endpoint,p256dh,auth&user_id=in.(${ADMIN_USER})`)));
+check('se pregunto a Vercel por el ultimo despliegue de produccion, con el token del servidor', calls.some((c) => c.url.includes('projectId=prj_123') && c.url.includes('target=production') && c.url.includes('teamId=team_123') && c.init.headers.Authorization === 'Bearer vercel-token'));
+check('queda anotado de cual se aviso', db.alerts.length === 1 && db.alerts[0].deployment_id === 'dpl_fallido');
+r = await deploy();
+check('la siguiente vez (10 minutos despues) no repite el aviso', r.body.reason === 'no-message' && pushes().length === 1, JSON.stringify(r));
+conSecreto();
+db.deployments[0].readyState = 'READY';
+r = await deploy();
+check('si el ultimo salio bien, no avisa', r.body.reason === 'no-message' && pushes().length === 0 && db.alerts.length === 0);
+for (const estado of ['BUILDING', 'QUEUED', 'CANCELED']) {
+  conSecreto();
+  db.deployments[0].readyState = estado;
+  r = await deploy();
+  check(`un despliegue ${estado} no es un fallo`, r.body.reason === 'no-message' && pushes().length === 0);
+}
+conSecreto();
+db.deployments = [];
+r = await deploy();
+check('sin despliegues no hay nada que avisar', r.body.reason === 'no-message');
+conSecreto();
+db.vercelStatus = 500;
+r = await deploy();
+check('si Vercel no responde, no avisa ni falla', r.status === 200 && r.body.reason === 'no-message' && pushes().length === 0);
+conSecreto();
+delete env.VERCEL_TOKEN;
+r = await deploy();
+check('sin el token de Vercel no se pregunta ni se avisa', r.body.reason === 'no-message' && !calls.some((c) => c.url.startsWith('https://api.vercel.com')));
+conSecreto();
+db.admins = [];
+r = await deploy();
+check('sin admins no hay a quien avisar', r.body.reason === 'no-devices' && pushes().length === 0);
+conSecreto();
+db.devices = [];
+r = await deploy();
+check('si ningun admin activo los avisos, igual se anota (no se reintenta cada 10 minutos)', r.body.reason === 'no-devices' && db.alerts.length === 1);
+conSecreto();
+db.alerts.push({ deployment_id: 'dpl_fallido' });
+r = await deploy();
+check('uno ya avisado no vuelve a salir', r.body.reason === 'no-message' && pushes().length === 0);
+r = await ask({ kind: 'deploy' }, null);
+check('sin el secreto de la base ni un admin, no entra', r.status === 403);
+conSecreto();
+db.deployments[0].meta = { githubCommitMessage: 'x'.repeat(300) };
+await deploy();
+const enviado = calls.find((c) => c.url.startsWith('https://push.example/'));
+check('un mensaje de commit larguisimo no impide el aviso', enviado !== undefined);
 
 console.log('→ Dispositivos');
 reset();

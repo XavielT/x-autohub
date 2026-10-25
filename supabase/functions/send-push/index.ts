@@ -1,18 +1,18 @@
 // =============================================================================
-// send-push — avisar al cliente que su pedido o su cita cambió de estado, o al vendedor que su publicación vence
+// send-push — avisar al cliente que su pedido o su cita cambió, al vendedor que su publicación vence, o a los admins que falló un despliegue
 // =============================================================================
 //
 // Corre en el Edge Runtime de Supabase (Deno), no en la app. Se despliega aparte y
 // **no** se compila con el resto del proyecto (los dos `tsconfig` solo miran `src/`).
 //
-// Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }`, comprueba quien llama, lee el
-// pedido, la cita o la publicacion de la base, arma el aviso segun su estado actual y lo manda a todos
-// los dispositivos del dueño (`push_subscriptions`).
+// Que hace: recibe `{ kind: 'order' | 'appointment' | 'listing', id }` o `{ kind: 'deploy' }`, comprueba quien llama,
+// lee el pedido, la cita, la publicacion o el ultimo despliegue, arma el aviso segun su estado actual y lo
+// manda a todos los dispositivos del dueño (o, en un despliegue fallido, de los admins) (`push_subscriptions`).
 //
 // La llama la base: el trigger `notify_status_change()` (migracion 0028) hace el POST con
 // pg_net cuando cambia el estado de un pedido o de una cita, y `warn_expiring_publications()`
-// (migracion 0031, una vez al dia) cuando a una publicacion de Hub Market le quedan siete dias, los dos con la cabecera
-// `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
+// (migracion 0031, una vez al dia) cuando a una publicacion de Hub Market le quedan siete dias, y `check_deploy_failures()`
+// (migracion 0032, cada 10 minutos) para mirar el ultimo despliegue, todos con la cabecera `x-push-secret`. Tambien la acepta un admin con su sesion (el camino de antes, que
 // ya no usa el panel). Responde `{ sent, removed }` o `{ sent: 0, reason }`: nunca falla de
 // forma que le importe a quien llama, porque el estado ya cambio y un aviso que no sale no
 // es motivo para decir que el cambio fallo.
@@ -31,10 +31,12 @@
 //   PUSH_WEBHOOK_SECRET el secreto que manda el trigger de la base en `x-push-secret` (el mismo
 //                       valor que `send_push_secret` en el Vault). Sin el, solo entra un admin.
 //   SITE_URL            opcional. Base de los enlaces y de los iconos.
+//   VERCEL_TOKEN, VERCEL_PROJECT_ID, VERCEL_TEAM_ID
+//                       los mismos de `build-status`. Solo hacen falta para `deploy`; sin ellos ese aviso no sale.
 //
 // `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta el runtime.
 //
-// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) y **0031** (el aviso de vencimiento). La criptografia de Web Push esta
+// Depende de las migraciones **0024** (`push_subscriptions`), **0028** (el trigger que la llama) **0031** (el aviso de vencimiento) y **0032** (el de despliegue fallido). La criptografia de Web Push esta
 // en `webpush.mjs`, que se prueba aparte con `node scripts/verify-webpush.mjs`.
 
 import { sendPush } from './webpush.mjs';
@@ -89,6 +91,8 @@ const APPOINTMENT_MESSAGES: Record<string, (when: string) => string> = {
 
 interface Notice {
   userId: string | null;
+  /** Si es true, el aviso va a todos los admins y `userId` no se usa. */
+  admins?: boolean;
   title: string;
   body: string;
   /** Ruta dentro del sitio a la que lleva tocar el aviso. */
@@ -100,6 +104,9 @@ interface Notice {
 /** Cuantos dias antes de vencer se avisa. Es el mismo `RENEW_WARNING_DAYS` del frontend y la ventana de la migracion 0031. */
 const LISTING_WARNING_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** El estado de un despliegue de Vercel que termino mal. */
+const FAILED_DEPLOYMENT = 'ERROR';
 
 async function rest<T>(supabaseUrl: string, key: string, path: string, init?: RequestInit): Promise<T | null> {
   const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
@@ -203,6 +210,57 @@ async function listingNotice(supabaseUrl: string, serviceKey: string, id: number
   };
 }
 
+/**
+ * El aviso de un despliegue de produccion que fallo. Mira el **ultimo** despliegue en Vercel: si termino en
+ * error y todavia no se avisó de el, deja anotado su id (antes de mandar, para que dos llamadas seguidas no
+ * dupliquen) y avisa a los admins. Si hay uno posterior que salio bien, no hay nada que avisar.
+ */
+async function deployNotice(supabaseUrl: string, serviceKey: string): Promise<Notice | 'no-message'> {
+  const token = Deno.env.get('VERCEL_TOKEN');
+  const projectId = Deno.env.get('VERCEL_PROJECT_ID');
+  if (!token || !projectId) return 'no-message';
+
+  const params = new URLSearchParams({ projectId, target: 'production', limit: '1' });
+  const teamId = Deno.env.get('VERCEL_TEAM_ID');
+  if (teamId) params.set('teamId', teamId);
+
+  const res = await fetch(`https://api.vercel.com/v6/deployments?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    console.error('[send-push] Vercel respondio', res.status);
+    return 'no-message';
+  }
+  const data = (await res.json()) as { deployments?: { uid?: string; state?: string; readyState?: string; meta?: { githubCommitMessage?: string } }[] };
+  const latest = data.deployments?.[0];
+  if (!latest?.uid || (latest.readyState ?? latest.state ?? '').toUpperCase() !== FAILED_DEPLOYMENT) return 'no-message';
+
+  const already = await rest<{ deployment_id: string }[]>(
+    supabaseUrl,
+    serviceKey,
+    `deploy_alerts?select=deployment_id&deployment_id=eq.${encodeURIComponent(latest.uid)}&limit=1`,
+  );
+  // Si no se pudo leer la tabla no se avisa: mejor un aviso de menos que uno cada 10 minutos.
+  if (!already || already.length > 0) return 'no-message';
+
+  // `return=representation` y no `minimal`: `rest()` lee el cuerpo, y un 201 vacio lo haria fallar. Si otra llamada
+  // anoto el mismo despliegue un instante antes (409), no se avisa dos veces.
+  const saved = await rest<{ deployment_id: string }[]>(supabaseUrl, serviceKey, 'deploy_alerts', {
+    method: 'POST',
+    body: JSON.stringify({ deployment_id: latest.uid }),
+    headers: { Prefer: 'return=representation' },
+  });
+  if (!saved || saved.length === 0) return 'no-message';
+
+  const message = (latest.meta?.githubCommitMessage ?? '').split('\n')[0].slice(0, 100);
+  return {
+    userId: null,
+    admins: true,
+    title: 'Falló el despliegue del sitio',
+    body: `El sitio sigue con la versión anterior.${message ? ` Cambio: ${message}` : ''} Abre el panel para ver el detalle.`,
+    path: '/admin',
+    tag: 'deploy-failed',
+  };
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== 'POST') return refuse(405, 'method-not-allowed');
@@ -237,30 +295,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return refuse(400, 'bad-request');
   }
-  // Pedidos y citas se identifican con un uuid; las publicaciones, con un entero.
+  // Pedidos y citas se identifican con un uuid; las publicaciones, con un entero; un despliegue no lleva id.
   const isListing = input.kind === 'listing';
-  const idIsValid = isListing
-    ? typeof input.id === 'number' && Number.isSafeInteger(input.id) && input.id > 0
-    : typeof input.id === 'string' && UUID.test(input.id);
-  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isListing) || !idIsValid) {
+  const isDeploy = input.kind === 'deploy';
+  const idIsValid = isDeploy
+    ? true
+    : isListing
+      ? typeof input.id === 'number' && Number.isSafeInteger(input.id) && input.id > 0
+      : typeof input.id === 'string' && UUID.test(input.id);
+  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isListing && !isDeploy) || !idIsValid) {
     return refuse(400, 'bad-request');
   }
 
   try {
-    const notice = isListing
-      ? await listingNotice(supabaseUrl, serviceKey, input.id as number)
-      : input.kind === 'order'
-        ? await orderNotice(supabaseUrl, serviceKey, input.id as string)
-        : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
+    const notice = isDeploy
+      ? await deployNotice(supabaseUrl, serviceKey)
+      : isListing
+        ? await listingNotice(supabaseUrl, serviceKey, input.id as number)
+        : input.kind === 'order'
+          ? await orderNotice(supabaseUrl, serviceKey, input.id as string)
+          : await appointmentNotice(supabaseUrl, serviceKey, input.id as string);
     if (notice === 'not-found') return refuse(404, 'not-found');
     if (notice === 'no-message') return refuse(200, 'no-message');
     // Un pedido o una cita de invitado no tiene dueño: no hay a quien avisar.
-    if (!notice.userId) return refuse(200, 'guest');
+    if (!notice.admins && !notice.userId) return refuse(200, 'guest');
 
+    // El dueño, o todos los admins si el aviso es para ellos.
+    let owners = notice.userId ? `eq.${notice.userId}` : '';
+    if (notice.admins) {
+      const admins = await rest<{ id: string }[]>(supabaseUrl, serviceKey, 'profiles?select=id&role=eq.admin');
+      if (!admins || admins.length === 0) return refuse(200, 'no-devices');
+      owners = `in.(${admins.map((a) => a.id).join(',')})`;
+    }
     const devices = await rest<{ id: number; endpoint: string; p256dh: string; auth: string }[]>(
       supabaseUrl,
       serviceKey,
-      `push_subscriptions?select=id,endpoint,p256dh,auth&user_id=eq.${notice.userId}`,
+      `push_subscriptions?select=id,endpoint,p256dh,auth&user_id=${owners}`,
     );
     if (!devices || devices.length === 0) return refuse(200, 'no-devices');
 

@@ -85,7 +85,8 @@ done
 $PSQL -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 create role anon nologin;
 create role authenticated nologin;
-create role service_role nologin;
+-- Como en Supabase, `service_role` se salta RLS: asi lo usan las Edge Functions con la clave de servicio.
+create role service_role nologin bypassrls;
 grant usage on schema public to anon, authenticated, service_role;
 
 -- Los default privileges de Supabase. Sin esto `anon` no recibiria EXECUTE en
@@ -1814,6 +1815,50 @@ delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_a
 delete from net.calls;
 SQL
 
+echo "→ Aviso de despliegue fallido (migracion 0032)"
+$PSQL -d postgres -c "delete from net.calls;" >/dev/null
+
+check "la tabla de despliegues avisados tiene RLS" "true" \
+  "select relrowsecurity::text from pg_class where relname = 'deploy_alerts';"
+check "anon no la lee" 'ERROR:  permission denied for table deploy_alerts' \
+  "$(as_anon 'select * from deploy_alerts;')"
+check "ni un usuario con sesion" 'ERROR:  permission denied for table deploy_alerts' \
+  "$(as_user "$ADMIN" 'select * from deploy_alerts;')"
+check "ni escribe en ella" 'ERROR:  permission denied for table deploy_alerts' \
+  "$(as_user "$ADMIN" "insert into deploy_alerts (deployment_id) values ('dpl_x');")"
+check "send-push (service_role) si la lee y la escribe" "1" \
+  "set role service_role; insert into deploy_alerts (deployment_id) values ('dpl_prueba'); select count(*) from deploy_alerts where deployment_id = 'dpl_prueba';"
+
+check "sin los secretos del Vault no pregunta nada" "sin enlace de avisos: no se pregunto por el despliegue" \
+  "select check_deploy_failures();"
+check "y no manda ninguna llamada" "0" "select count(*) from net.calls;"
+
+$PSQL -d postgres -c "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+
+check "con los secretos le pide a send-push que mire el despliegue" "preguntado" "select check_deploy_failures();"
+check "con un POST de tipo deploy, sin ningun dato mas (el texto no sale de la base)" '{"kind": "deploy"}' \
+  "select body::text from net.calls order by id desc limit 1;"
+check "a la URL de send-push, con el secreto y la clave anon como el trigger de la 0028" "https://f.example/functions/v1/send-push|s3cr3t|Bearer anon-key" \
+  "select url || '|' || (headers->>'x-push-secret') || '|' || (headers->>'Authorization') from net.calls order by id desc limit 1;"
+
+check "borra los avisos de mas de 90 dias y deja los recientes" "1" \
+  "set role service_role; insert into deploy_alerts (deployment_id, created_at) values ('dpl_viejo', now() - interval '91 days'); reset role; select check_deploy_failures(); select count(*) from deploy_alerts;"
+
+check "si pg_net falla no se cae, y lo dice" "no se pudo preguntar por el despliegue" \
+  "alter function net.http_post(text, jsonb, jsonb, jsonb, integer) rename to http_post_ok; create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds integer default 5000) returns bigint language plpgsql as \$\$ begin raise exception 'pg_net caido'; end; \$\$; select check_deploy_failures();"
+$PSQL -d postgres -c "drop function net.http_post(text, jsonb, jsonb, jsonb, integer); alter function net.http_post_ok(text, jsonb, jsonb, jsonb, integer) rename to http_post;" >/dev/null
+
+check "el cron corre cada 10 minutos, una sola vez" "1|*/10 * * * *" \
+  "select count(*) || '|' || min(schedule) from cron.job where jobname = 'check-deploy-failures' and command like '%check_deploy_failures%';"
+check "anon no invoca check_deploy_failures" "$(denied check_deploy_failures)" "$(as_anon 'select check_deploy_failures();')"
+check "ni un usuario con sesion" "$(denied check_deploy_failures)" "$(as_user "$ADMIN" 'select check_deploy_failures();')"
+
+$PSQL -d postgres -v ON_ERROR_STOP=1 >/dev/null <<SQL
+delete from deploy_alerts;
+delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret');
+delete from net.calls;
+SQL
+
 echo "→ Camino de actualizacion de la 0017: la base real ya tiene piezas al migrar"
 # El recorrido de arriba aplica la 0017 con `hub_parts` vacia. En produccion no:
 # hay piezas con su categoria de texto, y es ahi donde el backfill (slug, sku,
@@ -2127,11 +2172,18 @@ CHECK_DB=upgrade check "el cron de caducidad queda una sola vez" "1"   "select c
 CHECK_DB=upgrade check "marcar vendida funciona sobre lo que ya habia" "true"   "set request.jwt.claim.role='service_role'; update hub_market_items set sold_at = now() where title = 'Publicacion de antes'; select (sold_at is not null)::text from hub_market_items where title = 'Publicacion de antes';"
 
 echo "→ Camino de actualizacion de la 0031: la base real ya tiene publicaciones con plazo al migrar"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0031_publication_expiry_notice.sql upgrade
+apply supabase/migrations/0031_publication_expiry_notice.sql upgrade
 echo "   (aplicada dos veces, con publicaciones dentro)"
 CHECK_DB=upgrade check "la tabla de avisos queda vacia y el cron una sola vez" "0|1"   "select (select count(*) from publication_expiry_notices) || '|' || (select count(*) from cron.job where jobname = 'warn-expiring-publications');"
 CHECK_DB=upgrade check "sin secretos del Vault no avisa, y la publicacion de antes sigue ahi" "sin enlace de avisos: no se aviso a nadie|1"   "select warn_expiring_publications() || '|' || (select count(*) from hub_market_items where title = 'Publicacion de antes');"
+
+echo "→ Camino de actualizacion de la 0032"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y el cron una sola vez" "0|1"   "select (select count(*) from deploy_alerts) || '|' || (select count(*) from cron.job where jobname = 'check-deploy-failures');"
+CHECK_DB=upgrade check "sin secretos del Vault no pregunta" "sin enlace de avisos: no se pregunto por el despliegue"   "select check_deploy_failures();"
 
 # --- Resumen ------------------------------------------------------------------
 
