@@ -228,6 +228,20 @@ la API de Vercel por la Edge Function `build-status`.
 
 ---
 
+## JSON-LD de Auto Hub y Hub Market (2.16.0) ✅
+
+Hecho: las fichas de Auto Hub declaran un `Car` (marca, modelo, año, kilometraje, combustible, tracción, carrocería) con su oferta en DOP,
+vendida por X AutoHub como `AutoDealer`. Las de Hub Market son un `Car` (vehículos) o un `Product` (piezas y accesorios), con la condición
+nueva o usada y **sin vendedor**: es una persona y su nombre no se publica. Una publicación pendiente o rechazada no declara nada.
+`verify-prerender.mjs` exige el bloque, que parsee, que su `url` sea la canónica y que traiga precio.
+
+**Lo que queda fuera:**
+
+- **`aggregateRating` de vehículos**: no hay reseñas de vehículos.
+- **Disponibilidad real**: siempre `InStock`; sin estado "vendido" no hay otra cosa que declarar.
+
+---
+
 ## Prerenderizado de Auto Hub y Hub Market (2.15.0) ✅
 
 Hecho: el listado de Auto Hub y la ficha de cada vehículo disponible, el listado de Hub Market y la ficha de cada publicación
@@ -256,8 +270,7 @@ en WhatsApp. Ver "Prerenderizado" en `docs/ARCHITECTURE.md`.
 - **Que un cambio en el panel republique el sitio** — hecho en la 2.11.0 (ver abajo).
 - **Social Hub.** Es contenido de la comunidad y de poca prioridad de búsqueda; se prerenderiza agregando su ruta a
   `app.routes.server.ts` (y al `verify-prerender.mjs`). **Auto Hub y Hub Market ya están** (2.15.0, ver abajo).
-- **JSON-LD de los vehículos** (`Car` / `Vehicle` con su oferta). Las fichas de Auto Hub y de Hub Market salen con título,
-  descripción, `og:*` y canónico, pero sin datos estructurados.
+- **JSON-LD de los vehículos** — hecho en la 2.16.0 (ver abajo).
 - **Prerenderizar `/buscar` y las páginas con filtros** (`/tienda?marca=…`): dependen de la consulta, no de una ruta.
 
 ---

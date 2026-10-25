@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 132 archivos, 1392 pruebas, todo verde (cifra al 23/10/2026)
+npm test        # 132 archivos, 1400 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -295,7 +295,7 @@ Cosas que ya causaron un bug. No las repitas:
   (`/auto-hub-details/:id`) y una por publicación **aprobada** (`/car-details/:id`, `/hub-market-part-details/:id`,
   `/accessory-details/:id`, según su categoría). Un cambio en `auto_hub_vehicles` o `hub_market_items` pide un despliegue como
   los de la tienda (0029). Una ficha de prueba no se anuncia: `autoHubSeo()`/`hubMarketSeo()` (`community-seo.ts`) no se llaman con
-  `isTest` y la página queda como "no encontrado". `verify-prerender.mjs` falla el build si una ficha quedó con el título de la ruta
+  `isTest` y la página queda como "no encontrado". Cada ficha lleva su JSON-LD (`autoHubJsonLd()`/`hubMarketJsonLd()`, `structured-data.ts`), sin teléfono ni nombre de vendedor. `verify-prerender.mjs` falla el build si una ficha quedó con el título de la ruta
   ("Detalle de…"), con "no encontrado" o con otra URL canónica. **Si agregas una ruta de ficha nueva**, súmala a
   `app.routes.server.ts`, a `sitemap-lib.mjs` y a `verify-prerender.mjs`, o no se prerenderiza.
 - **El sitemap se genera en el `prebuild`** (`scripts/generate-sitemap.mjs` →
