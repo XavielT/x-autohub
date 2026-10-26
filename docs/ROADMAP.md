@@ -653,7 +653,10 @@ afirmaba que todos lo tenían; tampoco era cierto.)
 
 Hecho sin tocar las 157 consultas: `SupabaseService.db` devuelve un proxy (`lazy-client.ts`) que graba la cadena y la repite sobre el cliente real cuando se espera; `client()` da el cliente como promesa para lo
 sincrónico (`onAuthStateChange`). El JS inicial bajó de ~167 KB a ~129 KB transferidos (`ng build`: 448 KB sin comprimir). Mediciones en `docs/ROADMAP.md` más arriba y con `scripts/mobile-perf.mjs`;
-el resultado en producción está en las notas de la versión. Ver la trampa en `CLAUDE.md`.
+**Resultado medido en producción (Slow 4G, CPU x4, dos corridas):** LCP del home 3,1–3,3 s → 2,7–2,9 s (mejora real, modesta); `/auto-hub` 3,0 s → 2,8–3,1 s (sin cambio claro); `/tienda` 1,3 s (igual).
+Por qué `/auto-hub` no mejora: su foto cuenta como LCP cuando la lista vuelve a pintarse con los datos, y ahora esos datos esperan primero a que llegue el módulo de `supabase-js` (lo pide AuthService al arrancar, pero
+solo después de que el JS principal corre). Lo que seguiría: que el HTML precargue ese módulo (su nombre lleva hash, hay que sacarlo del build) o que Angular hidrate en vez de repintar (descartado a propósito, ver `CLAUDE.md`).
+Sesión verificada en producción con la cuenta de admin: se restaura, el panel carga y favoritos inserta y borra. Ver la trampa en `CLAUDE.md`.
 
 ### Nombres inconsistentes
 
