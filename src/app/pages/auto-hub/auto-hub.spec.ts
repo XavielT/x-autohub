@@ -74,11 +74,22 @@ describe('AutoHub', () => {
     expect(f.componentInstance.filters().maxPrice).toBe(900000);
     // Con filtros en el enlace el panel arranca abierto, para que se vean aplicados.
     expect((f.nativeElement as HTMLElement).querySelector('.autohub__filters-panel')).not.toBeNull();
-    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { combustible: 'diesel', precio: '900000' }, replaceUrl: true }));
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({ combustible: 'diesel', precio: '900000', tipo: null }),
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      }),
+    );
 
     f.componentInstance.clearFilters();
     f.detectChanges();
     await f.whenStable();
-    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: {} }));
+    // Al limpiar, los filtros se quitan de la URL con nulos (y el merge deja en paz lo demas, como utm_*).
+    expect(navigate).toHaveBeenLastCalledWith(
+      [],
+      expect.objectContaining({ queryParams: expect.objectContaining({ combustible: null, precio: null }) }),
+    );
   });
 });

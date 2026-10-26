@@ -10,7 +10,7 @@ import { OnlineService } from '../../../shared/services/online.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import {
   AutoHubFilters, AutoHubSort, CHASIS_LABELS, EMPTY_AUTO_HUB_FILTERS, FUEL_LABELS, SORT_LABELS, TRACTION_LABELS,
-  activeAutoHubFilters, autoHubFiltersFromParams, autoHubFiltersToParams, filterAutoHub,
+  AUTO_HUB_PARAM_KEYS, activeAutoHubFilters, autoHubFiltersFromParams, autoHubFiltersToParams, filterAutoHub,
 } from '../../../shared/utils/auto-hub-filters';
 
 @Component({
@@ -35,7 +35,10 @@ export class AutoHub implements OnInit {
     effect(() => {
       const params = autoHubFiltersToParams(this.filters());
       if (!this.isBrowser) return;
-      void this.router.navigate([], { relativeTo: this.route, queryParams: params, replaceUrl: true });
+      // `merge` con nulos: se quitan los filtros que ya no están, pero no se pisan otros parámetros del enlace (utm_…).
+      const queryParams: Record<string, string | null> = Object.fromEntries(AUTO_HUB_PARAM_KEYS.map((k) => [k, null]));
+      Object.assign(queryParams, params);
+      void this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });
     });
   }
 

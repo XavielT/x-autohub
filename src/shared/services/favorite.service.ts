@@ -27,6 +27,10 @@ export class FavoriteService {
   /** Los ids guardados, del más nuevo al más viejo. */
   readonly ids = this._ids.asReadonly();
   readonly count = computed(() => this._ids().length);
+
+  private readonly _loaded = signal(false);
+  /** Ya se leyeron los favoritos de esta sesión (o no hay nada que leer). Antes, una lista vacía no quiere decir "sin favoritos". */
+  readonly loaded = this._loaded.asReadonly();
   private readonly idSet = computed(() => new Set(this._ids()));
 
   /** Productos con un cambio en vuelo, para que dos toques seguidos no se pisen. */
@@ -62,17 +66,23 @@ export class FavoriteService {
       : this.supabase.db.from('favorites').delete().eq('user_id', userId).eq('part_id', partId);
 
     return new Observable<boolean>((subscriber) => {
-      query.then((res) => {
+      const undo = (message: string) => {
         this.pending.delete(partId);
-        if (res.error) {
-          this.setLocal(partId, !adding);
-          this.toast.show(translateDbError(res.error), 'error');
-          subscriber.next(!adding);
-        } else {
-          subscriber.next(adding);
-        }
+        this.setLocal(partId, !adding);
+        this.toast.show(message, 'error');
+        subscriber.next(!adding);
         subscriber.complete();
-      });
+      };
+      // Un rechazo de red no puede dejar el corazón a medias ni el producto "en vuelo" para siempre.
+      Promise.resolve(query).then(
+        (res) => {
+          if (res.error) return undo(translateDbError(res.error));
+          this.pending.delete(partId);
+          subscriber.next(adding);
+          subscriber.complete();
+        },
+        () => undo('No pudimos actualizar tus favoritos. Revisa tu conexion.'),
+      );
     });
   }
 
@@ -90,7 +100,11 @@ export class FavoriteService {
 
   private load(userId: string | null): void {
     this._ids.set([]);
-    if (!userId || this.supabase.shouldUseMockData()) return;
+    this._loaded.set(false);
+    if (!userId || this.supabase.shouldUseMockData()) {
+      this._loaded.set(true);
+      return;
+    }
 
     this.supabase.db
       .from('favorites')
@@ -98,8 +112,9 @@ export class FavoriteService {
       .order('created_at', { ascending: false })
       .then((res) => {
         // La sesión pudo cambiar mientras la consulta volvía.
-        if (this.auth.user()?.id !== userId || res.error) return;
-        this._ids.set((res.data ?? []).map((row) => row.part_id));
+        if (this.auth.user()?.id !== userId) return;
+        if (!res.error) this._ids.set((res.data ?? []).map((row) => row.part_id));
+        this._loaded.set(true);
       });
   }
 }

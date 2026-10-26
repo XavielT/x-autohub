@@ -57,6 +57,12 @@ describe('FavoriteService (mock)', () => {
     expect(favs.isFavorite(1)).toBe(false);
   });
 
+  it('loaded: sin sesion ya esta listo, y con sesion en modo simulado tambien', () => {
+    const favs = servicio();
+    TestBed.tick();
+    expect(favs.loaded()).toBe(true);
+  });
+
   it('al cerrar sesion los favoritos se vacian', async () => {
     user.set(USER);
     const favs = servicio();

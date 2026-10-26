@@ -96,6 +96,9 @@ const FUEL_KEYS = Object.keys(FUEL_LABELS);
 const TRACTION_KEYS = Object.keys(TRACTION_LABELS);
 const SORT_KEYS = Object.keys(SORT_LABELS);
 
+/** Todos los parámetros de URL que escriben los filtros. */
+export const AUTO_HUB_PARAM_KEYS = ['q', 'tipo', 'combustible', 'traccion', 'precio', 'anio', 'km', 'orden'];
+
 /**
  * Los filtros como parámetros de la URL, para compartir una búsqueda. Solo salen los que se
  * apartan del valor por defecto: sin filtros la URL queda limpia (`/auto-hub`).

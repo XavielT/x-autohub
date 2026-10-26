@@ -26,6 +26,8 @@ export class MisFavoritos {
     // Se vuelve a pedir la lista cuando cambian los ids (al abrir el perfil llegan después de iniciar sesión).
     effect(() => {
       this.favorites.ids();
+      // Sin esperar a que lleguen los ids, una lista vacía parecería "aún no guardas nada".
+      if (!this.favorites.loaded()) return;
       untracked(() => this.load());
     });
   }
