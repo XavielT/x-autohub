@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 140 archivos, 1493 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 140 archivos, 1498 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -330,6 +330,10 @@ Cosas que ya causaron un bug. No las repitas:
 - **Vender y renovar una publicación solo sirve si está aprobada** (0037): una pendiente o rechazada no se puede mover de fecha ni por su dueño ni por moderación; el estado manda.
   Una ficha de Hub Market vendida o vencida sigue abierta pero lleva `noindex` (`SeoPage.noindex`), y la ficha de un vehículo de Auto Hub que ya no está disponible dice "no encontrado".
   **`verify-prerender.mjs` no exige tarjetas** en `/auto-hub` ni en `/hub-market` si el sitemap no trae nada: todo vendido o vencido es un estado válido, no un fallo de build.
+- **`[priority]` de `NgOptimizedImage` no puede cambiar después de pintarse (NG02953).** Una lista que se filtra u ordena no puede pasar `[priority]="first"`: la tarjeta que pasa a
+  ser la primera cambia el input y, en desarrollo y en pruebas, revienta. `/auto-hub` fija el id de la tarjeta prioritaria **una vez**, al llegar los datos (`priorityId`). Con `track`
+  por id la instancia se reutiliza, así que el input de cada tarjeta tiene que ser estable. Los filtros de `/auto-hub` viven también en la URL (`?tipo=suv&precio=900000`), con
+  valores validados al leerlos (`autoHubFiltersFromParams`); solo se escribe en el navegador, nunca al prerenderizar.
 - **Los favoritos son de una cuenta, y sin cuenta no hay (0038).** `favorites (user_id, part_id)` tiene RLS `auth.uid() = user_id` en select, insert y delete, **sin UPDATE**
   y sin acceso para `anon`; borrar un producto se lleva sus favoritos, y un trigger limita a 200 por persona con un `22023`. `FavoriteService` lee los ids una vez al iniciar sesión,
   actualiza al instante al tocar el corazón y **deshace el cambio si la base lo rechaza**; sin sesión `toggle()` solo avisa. En modo simulado viven en memoria. `app-favorite-button`

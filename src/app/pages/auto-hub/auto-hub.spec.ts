@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { AutoHub } from './auto-hub';
 
@@ -53,5 +54,31 @@ describe('AutoHub', () => {
     fixture.detectChanges();
     expect(component.filteredAutos()).toHaveLength(total);
     expect(component.isFiltered()).toBe(false);
+  });
+
+  it('arranca con los filtros del enlace y deja los cambios en la URL', async () => {
+    TestBed.resetTestingModule();
+    const navigate = vi.fn(() => Promise.resolve(true));
+    await TestBed.configureTestingModule({
+      imports: [AutoHub],
+      providers: [
+        { provide: Router, useValue: { navigate } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ combustible: 'diesel', precio: '900000' }) } } },
+      ],
+    }).compileComponents();
+    const f = TestBed.createComponent(AutoHub);
+    f.detectChanges();
+    await f.whenStable();
+
+    expect(f.componentInstance.filters().fuel).toBe('diesel');
+    expect(f.componentInstance.filters().maxPrice).toBe(900000);
+    // Con filtros en el enlace el panel arranca abierto, para que se vean aplicados.
+    expect((f.nativeElement as HTMLElement).querySelector('.autohub__filters-panel')).not.toBeNull();
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { combustible: 'diesel', precio: '900000' }, replaceUrl: true }));
+
+    f.componentInstance.clearFilters();
+    f.detectChanges();
+    await f.whenStable();
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: {} }));
   });
 });

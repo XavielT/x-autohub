@@ -66,8 +66,8 @@
         }
     </div>
     <div class="autohub__content">
-        @for (auto of filteredAutos(); track auto.id; let first = $first){
-        <app-autohub-card [autoHub]="auto" [priority]="first"></app-autohub-card>
+        @for (auto of filteredAutos(); track auto.id){
+        <app-autohub-card [autoHub]="auto" [priority]="auto.id === priorityId()"></app-autohub-card>
         }
         @empty {
             <div class="empty-state">

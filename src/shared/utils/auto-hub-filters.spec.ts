@@ -1,5 +1,7 @@
 import { AutoHubModel } from '../models/auto-hub.model';
-import { EMPTY_AUTO_HUB_FILTERS, activeAutoHubFilters, filterAutoHub } from './auto-hub-filters';
+import {
+  AutoHubFilters, EMPTY_AUTO_HUB_FILTERS, activeAutoHubFilters, autoHubFiltersFromParams, autoHubFiltersToParams, filterAutoHub,
+} from './auto-hub-filters';
 
 function auto(over: Partial<AutoHubModel>): AutoHubModel {
   return {
@@ -60,5 +62,30 @@ describe('activeAutoHubFilters', () => {
   it('cuenta los filtros puestos, sin la busqueda ni el orden', () => {
     expect(activeAutoHubFilters(EMPTY_AUTO_HUB_FILTERS)).toBe(0);
     expect(activeAutoHubFilters({ ...EMPTY_AUTO_HUB_FILTERS, query: 'x', sort: 'km-asc', fuel: 'diesel', maxPrice: 5 })).toBe(2);
+  });
+});
+
+describe('filtros en la URL', () => {
+  const leer = (obj: Record<string, string>) => autoHubFiltersFromParams((k) => obj[k] ?? null);
+
+  it('sin filtros la URL queda limpia, y viceversa', () => {
+    expect(autoHubFiltersToParams(EMPTY_AUTO_HUB_FILTERS)).toEqual({});
+    expect(leer({})).toEqual(EMPTY_AUTO_HUB_FILTERS);
+  });
+
+  it('ida y vuelta con todos los filtros', () => {
+    const f: AutoHubFilters = {
+      query: 'kia', chasisType: 'suv', fuel: 'diesel', traction: '4x4', maxPrice: 900000, minYear: 2018, maxMileage: 80000, sort: 'precio-asc',
+    };
+    expect(leer(autoHubFiltersToParams(f))).toEqual(f);
+  });
+
+  it('descarta lo que no es valido', () => {
+    const f = leer({ tipo: 'tanque', combustible: 'agua', traccion: 'x', precio: 'mucho', anio: '-5', km: '', orden: 'azar' });
+    expect(f).toEqual(EMPTY_AUTO_HUB_FILTERS);
+  });
+
+  it('recorta la busqueda de texto', () => {
+    expect(leer({ q: 'a'.repeat(200) }).query).toHaveLength(60);
   });
 });

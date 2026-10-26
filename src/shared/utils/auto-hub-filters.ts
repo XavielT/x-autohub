@@ -90,3 +90,53 @@ export function filterAutoHub(autos: readonly AutoHubModel[], f: AutoHubFilters)
   const compare = by[f.sort];
   return compare ? [...result].sort(compare) : result;
 }
+
+const CHASIS_KEYS = Object.keys(CHASIS_LABELS);
+const FUEL_KEYS = Object.keys(FUEL_LABELS);
+const TRACTION_KEYS = Object.keys(TRACTION_LABELS);
+const SORT_KEYS = Object.keys(SORT_LABELS);
+
+/**
+ * Los filtros como parámetros de la URL, para compartir una búsqueda. Solo salen los que se
+ * apartan del valor por defecto: sin filtros la URL queda limpia (`/auto-hub`).
+ */
+export function autoHubFiltersToParams(f: AutoHubFilters): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (f.query.trim() !== '') params['q'] = f.query.trim();
+  if (f.chasisType) params['tipo'] = f.chasisType;
+  if (f.fuel) params['combustible'] = f.fuel;
+  if (f.traction) params['traccion'] = f.traction;
+  if (f.maxPrice !== null) params['precio'] = String(f.maxPrice);
+  if (f.minYear !== null) params['anio'] = String(f.minYear);
+  if (f.maxMileage !== null) params['km'] = String(f.maxMileage);
+  if (f.sort !== 'recientes') params['orden'] = f.sort;
+  return params;
+}
+
+/**
+ * Lo inverso. Lo que venga de la URL no es de fiar: un valor que no esté en la lista o un número
+ * que no lo sea se descarta en silencio, y la búsqueda de texto se recorta a 60 caracteres.
+ */
+export function autoHubFiltersFromParams(get: (key: string) => string | null): AutoHubFilters {
+  const pick = <T extends string>(key: string, valid: string[]): T | '' => {
+    const v = get(key);
+    return v !== null && valid.includes(v) ? (v as T) : '';
+  };
+  const num = (key: string): number | null => {
+    const v = get(key);
+    if (v === null || v.trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const sort = get('orden');
+  return {
+    query: (get('q') ?? '').slice(0, 60),
+    chasisType: pick<AutoHubModel['chasisType']>('tipo', CHASIS_KEYS),
+    fuel: pick<AutoHubModel['fuel']>('combustible', FUEL_KEYS),
+    traction: pick<AutoHubModel['traction']>('traccion', TRACTION_KEYS),
+    maxPrice: num('precio'),
+    minYear: num('anio'),
+    maxMileage: num('km'),
+    sort: sort !== null && SORT_KEYS.includes(sort) ? (sort as AutoHubSort) : 'recientes',
+  };
+}

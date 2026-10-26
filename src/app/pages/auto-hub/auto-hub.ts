@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
@@ -8,7 +10,7 @@ import { OnlineService } from '../../../shared/services/online.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import {
   AutoHubFilters, AutoHubSort, CHASIS_LABELS, EMPTY_AUTO_HUB_FILTERS, FUEL_LABELS, SORT_LABELS, TRACTION_LABELS,
-  activeAutoHubFilters, filterAutoHub,
+  activeAutoHubFilters, autoHubFiltersFromParams, autoHubFiltersToParams, filterAutoHub,
 } from '../../../shared/utils/auto-hub-filters';
 
 @Component({
@@ -21,20 +23,41 @@ import {
 export class AutoHub implements OnInit {
   private readonly autoHubService = inject(AutoHubService);
   private readonly seo = inject(SeoService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.seo.reset());
+
+    // La búsqueda queda en la URL (`?tipo=suv&precio=900000`) para poder compartirla. Solo en el
+    // navegador: el prerenderizado no tiene filtros y no debe navegar.
+    effect(() => {
+      const params = autoHubFiltersToParams(this.filters());
+      if (!this.isBrowser) return;
+      void this.router.navigate([], { relativeTo: this.route, queryParams: params, replaceUrl: true });
+    });
   }
 
   private readonly allAutos = signal<AutoHubModel[]>([]);
 
   protected readonly online = inject(OnlineService);
 
+  /**
+   * La tarjeta cuya foto carga con prioridad (LCP): la primera que se pinta. Se fija **una vez**, al llegar los
+   * datos, y por id: `NgOptimizedImage` no admite que `priority` cambie después (NG02953), y con filtros u
+   * orden la primera de la lista cambia.
+   */
+  protected readonly priorityId = signal<number | null>(null);
+
   readonly isLoading = signal(true);
   readonly hasError = signal(false);
-  readonly filters = signal<AutoHubFilters>(EMPTY_AUTO_HUB_FILTERS);
-  /** Los filtros avanzados empiezan cerrados; el botón dice cuántos hay puestos. */
-  readonly filtersOpen = signal(false);
+  /** Arranca con lo que traiga la URL (un enlace compartido); sin parámetros, sin filtros. */
+  readonly filters = signal<AutoHubFilters>(
+    autoHubFiltersFromParams((key) => this.route.snapshot.queryParamMap.get(key)),
+  );
+  /** El panel empieza cerrado, salvo que el enlace traiga filtros: así se ven aplicados. */
+  readonly filtersOpen = signal(activeAutoHubFilters(this.filters()) > 0);
 
   protected readonly chasisOptions = Object.entries(CHASIS_LABELS);
   protected readonly fuelOptions = Object.entries(FUEL_LABELS);
@@ -83,6 +106,7 @@ export class AutoHub implements OnInit {
 
     this.autoHubService.getAll().subscribe({
       next: (autos) => {
+        this.priorityId.set(filterAutoHub(autos, this.filters())[0]?.id ?? null);
         this.allAutos.set(autos);
         this.isLoading.set(false);
       },

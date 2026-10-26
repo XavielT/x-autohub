@@ -690,7 +690,7 @@ build. **Congelado por el pivote**: Comunidad no recibe trabajo nuevo por ahora.
 
 ### ~~Filtros de verdad en Auto Hub~~ ✅ (2.24.0)
 
-Hecho: `/auto-hub` filtra por tipo de chasis, combustible, tracción, precio máximo, año mínimo y kilometraje máximo, ordena (recientes, precio, año, kilometraje) y cuenta los resultados. La regla vive en `shared/utils/auto-hub-filters.ts` (pura, con sus pruebas); la página solo guarda los filtros en una señal. Los filtros son del navegador: no hay consulta nueva a la base. **Pendiente:** guardarlos en la URL para poder compartir una búsqueda; el catálogo crece poco y no hacía falta aún.
+Hecho: `/auto-hub` filtra por tipo de chasis, combustible, tracción, precio máximo, año mínimo y kilometraje máximo, ordena (recientes, precio, año, kilometraje) y cuenta los resultados. La regla vive en `shared/utils/auto-hub-filters.ts` (pura, con sus pruebas); la página solo guarda los filtros en una señal. Los filtros son del navegador: no hay consulta nueva a la base. **2.26.0:** los filtros también viven en la URL (`/auto-hub?tipo=suv&precio=900000&orden=precio-asc`), así que una búsqueda se comparte; lo que llegue de la URL se valida. **Pendiente:** revisar el panel de filtros en un teléfono real.
 
 ### ~~Video del hero: poster y peso~~ ✅ (2.24.1)
 
