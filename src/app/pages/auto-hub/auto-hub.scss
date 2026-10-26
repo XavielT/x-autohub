@@ -142,8 +142,10 @@
     }
 
     &__content {
-        display: flex;
-        flex-direction: column;
+        // De una a tres columnas según el ancho; `min(100%, …)` evita que una tarjeta se salga en un teléfono.
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+        align-content: start;
         background-color: #1a1a1a;
         border: 1px solid #2e2e2e;
         border-radius: 16px;
@@ -153,8 +155,6 @@
             0 8px 32px rgba(0, 0, 0, 0.5),
             0 32px 80px rgba(0, 0, 0, 0.4);
 
-        //display: grid;
-        //grid-template-columns: repeat(4, minmax(0,1fr));
         gap: 18px 16px;
         flex: 1;
         min-height: 650px;
@@ -185,6 +185,7 @@
 }
 
 .empty-state{
+    grid-column: 1 / -1; // dentro del grid de tarjetas, ocupa todo el ancho
     margin-top: 20px;
     padding: 34px 20px;
     text-align: center;

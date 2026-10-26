@@ -696,12 +696,9 @@ Hecho: `/auto-hub` filtra por tipo de chasis, combustible, tracción, precio má
 
 Hecho: el video lleva `poster="assets/imgs/hero-poster.jpg"` (un cuadro del propio video, 1280x720, 65 KB) y `preload="metadata"`, así que la comunidad muestra una imagen al instante en vez de un hueco mientras el MP4 (792 KB) llega. El video sigue donde estaba.
 
-### Layout de Auto Hub
+### ~~Layout de Auto Hub~~ ✅ (2.28.0)
 
-`auto-hub.scss` tiene el grid comentado y el contenedor en
-`flex-direction: column`, así que las tarjetas se apilan en una sola columna
-incluso en pantalla ancha. Parece un experimento a medias más que una decisión.
-**Confirmar con Xaviel** si va en grid.
+Hecho: `/auto-hub` es un grid de una a tres columnas (`repeat(auto-fill, minmax(min(100%, 340px), 1fr))`) y la tarjeta es vertical (foto 4:3 arriba, texto recortado a tres líneas). **Arregló además un desbordamiento real en teléfono:** la foto medía 500px fijos y en 390px la página medía 706px de ancho (`scrollWidth`). Comprobado con emulación móvil por CDP (Edge headless), no solo con el ancho de la ventana.
 
 ---
 

@@ -1,10 +1,13 @@
+// Vertical: la foto arriba y el texto debajo, para que varias quepan en una fila (grid de /auto-hub) y
+// que nada tenga un ancho fijo: antes la foto medía 500px y en un teléfono desbordaba la página.
 .autohub-card{
     display: flex;
-    gap: 20px;
+    flex-direction: column;
+    gap: 14px;
+    height: 100%;
+    box-sizing: border-box;
     background-color: var(--secondary);
     border-radius: 10px;
-    align-items: center;
-    //justify-content: center;
     border: 1px solid #2d2d2d;
     padding: 15px 15px;
 
@@ -15,9 +18,11 @@
     &__imgLink{
         display: block;
         position: relative;
-        flex-shrink: 0;
-        width: 500px;
-        height: 350px;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        background: #161616;
+        border-radius: 8px;
+        overflow: hidden;
     }
 
     &__img{
@@ -34,6 +39,8 @@
     &__info{
         display: flex;
         flex-direction: column;
+        flex: 1;
+        min-width: 0;
         color: #ffffff;
 
     }
@@ -65,8 +72,16 @@
     }
 
     &__info-content{
+        flex: 1;
+
         p{
             font-family: var(--font-body);
+            // Tres líneas: las tarjetas de una fila quedan parejas, y el texto completo está en la ficha.
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin: 10px 0;
         }
     }
 

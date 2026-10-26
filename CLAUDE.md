@@ -405,6 +405,9 @@ Cosas que ya causaron un bug. No las repitas:
 - **Precios siempre `RD$`** con `| number:'1.0-0'`. Nunca `$` solo.
 - **`AbstractControl.setValue(value, options)` tipa `options` como `Object`**, así
   que un typo como `emiEvent` compila sin error. Revisa esos nombres a mano.
+- **Para ver cómo queda en un teléfono, emula el dispositivo; no cambies el tamaño de la ventana.** Un navegador de escritorio (y un headless con `--window-size`) no baja de ~500px, y
+  la página parece "cortada" sin estarlo. `node scripts/mobile-shot.mjs <url> 390 900 salida.png` emula un móvil por CDP (necesita Edge) y imprime `sw`/`cw`: si `sw` > `cw`, la página
+  desborda a lo ancho. Así se vio que `/auto-hub` medía 706px en un teléfono de 390 por una foto de 500px fijos.
 - **Grids fijos.** `repeat(4, 1fr)` sin media query deja tarjetas de 70px en un
   teléfono. Usa `repeat(auto-fit, minmax(Xpx, 1fr))`.
 - **Especificaciones generadas por el CLI.** Los providers globales de prueba
