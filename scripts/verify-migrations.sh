@@ -2561,11 +2561,17 @@ check "hasta 200 si caben" "0" "select count(*) from favorites where user_id = '
 scalar "delete from hub_parts where name like 'Fav %';" >/dev/null
 
 echo "→ Camino de actualizacion de la 0038"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0038_favorites.sql upgrade
+apply supabase/migrations/0038_favorites.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
   "select (select count(*) from favorites) || '|' || (select relrowsecurity from pg_class where relname = 'favorites')::text;"
+
+echo "→ Camino de actualizacion de la 0039"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "el indice de favorites.part_id existe" "1"   "select count(*) from pg_indexes where indexname = 'favorites_part_idx';"
 
 # --- Resumen ------------------------------------------------------------------
 

@@ -61,7 +61,8 @@ en una consulta aparte, y revisa que termine sin error antes de seguir:
 | 36    | `supabase/migrations/0036_appointment_reminders.sql` | `appointment_reminders` y el cron `appointment-reminders`: recordatorio push de una cita, el día antes |
 | 37    | `supabase/migrations/0037_push_hardening.sql`  | `is_push_endpoint()` (lista de servicios de push), vender/renovar solo lo aprobado, y `deploy_alerts` sin limpieza por edad |
 | 38    | `supabase/migrations/0038_favorites.sql`       | `favorites`: productos guardados por una cuenta, con RLS y tope de 200 |
-| 39    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
+| 39    | `supabase/migrations/0039_favorites_part_index.sql` | Índice de `favorites.part_id` (lo pidió el linter de rendimiento) |
+| 40    | `supabase/seed.sql`                            | Los mismos datos que ves hoy con los mocks     |
 
 > El seed va **al final**: usa `stars_rating` (0004), `contact_phone` (0010),
 > `status` (0012), `is_test` (0013), las columnas de la tienda (0017), los métodos
@@ -507,6 +508,7 @@ con Negro, Gris y Beige, en vez de tres productos con su ficha, su stock y sus r
 
 - **Favoritos (migración 0038).** `favorites (user_id, part_id, created_at)`, clave primaria compuesta. RLS: select, insert y delete solo de la propia fila (`auth.uid() = user_id`);
   no hay UPDATE ni acceso de `anon`. `part_id` borra en cascada. El trigger `favorites_limit` rechaza el favorito 201 con `22023`. Solo aditiva: el frontend anterior no la usa. **La migración va antes que el frontend.**
+- **Índice de favoritos (migración 0039).** `favorites_part_idx` sobre `part_id`: borrar un producto busca sus favoritos por esa columna, y la clave primaria no la cubre. Solo aditiva.
 - **Endurecer los avisos (migración 0037).** Salió de una revisión del código de las versiones 2.15 a 2.23. `is_push_endpoint(text)` (inmutable) acepta solo `fcm.googleapis.com`,
   `android.googleapis.com`, `*.push.services.mozilla.com`, `*.push.apple.com` y `*.notify.windows.com`, con `https` y el host seguido de `/` o `:443` (el truco `https://fcm…@otro/` no pasa);
   lo exigen las tres funciones de registro (`register_push_subscription`, `register_order_push`, `register_appointment_push`) con `22023`, y `send-push` lo repite antes de
