@@ -336,6 +336,10 @@ Cosas que ya causaron un bug. No las repitas:
   símbolos ni a `'@@observable'`: rxjs `from()` los sondea y, si recibe una función, la llama y revienta con algo que ni es un `Error`. Las pruebas usan `TestSupabaseService` y no tocan el proxy:
   su prueba propia es `lazy-client.spec.ts`, y lo que de verdad lo ejerce con datos reales es el **build prerenderizado** (hace `getPrerenderParams` con `db`) y `verify-prerender`. Si tocas esto,
   corre `npm run build`, no solo `ng test`. Un doble de `SupabaseService` en un spec necesita también `client()` si el código lo usa (AuthService).
+- **El `postbuild` toca el HTML del build, y el service worker guarda su hash.** `scripts/preload-supabase.mjs` le agrega a cada página un `modulepreload` del módulo de supabase-js (su nombre
+  lleva hash: lo busca por contenido). `ngsw.json` tiene el SHA-1 de `/index.html`; si el HTML cambia después de que Angular lo calculó, el service worker lo da por corrupto y entra en **modo seguro**
+  (los usuarios pierden la caché). El mismo script recalcula ese hash, y `verify-prerender.mjs` falla el build si alguno de los `.html` de `ngsw.json` no coincide. Cualquier otro paso que
+  reescriba un archivo listado en `ngsw.json` tiene que hacer lo mismo. Con el despliegue puesto, `/ngsw/state` debe decir `Driver state: NORMAL`.
 - **`[priority]` de `NgOptimizedImage` no puede cambiar después de pintarse (NG02953).** Una lista que se filtra u ordena no puede pasar `[priority]="first"`: la tarjeta que pasa a
   ser la primera cambia el input y, en desarrollo y en pruebas, revienta. `/auto-hub` fija el id de la tarjeta prioritaria **una vez**, al llegar los datos (`priorityId`). Con `track`
   por id la instancia se reutiliza, así que el input de cada tarjeta tiene que ser estable. Los filtros de `/auto-hub` viven también en la URL (`?tipo=suv&precio=900000`), con

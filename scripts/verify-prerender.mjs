@@ -17,6 +17,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const OUT = 'dist/x-autohub/browser';
 const SITE_URL = 'https://xautohubrd.com';
@@ -114,6 +115,22 @@ for (const route of expected) {
 for (const [label, re] of [['productos', /^\/tienda\/p\//], ['categorías', /^\/tienda\/c\//], ['servicios', /^\/servicios\/(?!cotizar$|agendar$)[^/]+$/]]) {
   const inSitemap = urls.filter((u) => re.test(u)).length;
   if (inSitemap === 0) fail(`el sitemap no trae ${label}: sin ellos no hay nada que prerenderizar (¿falló la lectura de la base?)`);
+}
+
+// El módulo de supabase-js se precarga desde cada página (scripts/preload-supabase.mjs).
+if (!/<link rel="modulepreload" href="chunk-[A-Z0-9]+\.js">/.test(fs.readFileSync(path.join(OUT, 'index.html'), 'utf8'))) {
+  fail('index.html no precarga el módulo de supabase-js');
+}
+
+// Y el service worker no puede quedarse con el hash viejo de un HTML que se tocó después del build (modo seguro).
+const ngswPath = path.join(OUT, 'ngsw.json');
+if (fs.existsSync(ngswPath)) {
+  const { hashTable = {} } = JSON.parse(fs.readFileSync(ngswPath, 'utf8'));
+  for (const [key, expected] of Object.entries(hashTable)) {
+    if (!key.endsWith('.html')) continue;
+    const actual = crypto.createHash('sha1').update(fs.readFileSync(path.join(OUT, key))).digest('hex');
+    if (actual !== expected) fail('ngsw.json tiene un hash viejo de ' + key + ': el service worker lo daría por corrupto');
+  }
 }
 
 // La página que se sirve a lo que no está prerenderizado (carrito, pedidos, panel…).
