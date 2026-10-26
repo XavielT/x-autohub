@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from './supabase.service';
 
 /**
@@ -26,6 +26,10 @@ export class TestSupabaseService implements Pick<SupabaseService, 'isConfigured'
         'en modo mock; si necesitas la rama de Supabase, sustituye el provider ' +
         'de SupabaseService en ese spec.',
     );
+  }
+
+  client(): Promise<SupabaseClient> {
+    return Promise.reject(new Error('Una prueba intentó cargar el cliente real de Supabase.'));
   }
 
   shouldUseMockData(): boolean {

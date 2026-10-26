@@ -44,9 +44,10 @@ for (const r of routes) {
   });
   await send('Page.navigate', { url: base + r });
   await sleep(14000);
-  const v = (await send('Runtime.evaluate', { expression: 'JSON.stringify(window.__m)', returnByValue: true })).result?.value;
+  const v = (await send('Runtime.evaluate', { expression: 'JSON.stringify(Object.assign(window.__m, { res: performance.getEntriesByType("resource").filter(e => e.name.endsWith(".js")).map(e => e.name.split("/").pop().slice(0, 14) + "@" + Math.round(e.responseEnd) + "(" + Math.round(e.encodedBodySize / 1024) + "KB)").sort((a, b) => parseInt(b.split("(")[1]) - parseInt(a.split("(")[1])).slice(0, 6).join(" ") }))', returnByValue: true })).result?.value;
   const m = JSON.parse(v || '{}');
   console.log(`${r.padEnd(45)} FCP ${Math.round(m.fcp)} ms   LCP ${Math.round(m.lcp)} ms [${m.el}] ${(m.all || []).join(' ')}   ${(bytes / 1024).toFixed(0)} KB transferidos`);
+  if (m.res) console.log('   JS: ' + m.res);
 }
 ws.close();
 edge.kill();

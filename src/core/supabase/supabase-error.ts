@@ -1,4 +1,4 @@
-import { PostgrestError } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
 
 /**
  * Traduce un error de Postgrest a un mensaje que el usuario pueda entender.

@@ -220,6 +220,8 @@ describe('AuthService', () => {
         useValue: {
           isConfigured: true,
           db,
+          // `onAuthStateChange` devuelve algo sincrónico, así que AuthService pide el cliente por `client()` (la `db` real es un proxy diferido).
+          client: () => Promise.resolve(db),
           shouldUseMockData: () => false,
         },
       },

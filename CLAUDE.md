@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 140 archivos, 1499 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 141 archivos, 1508 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -330,6 +330,12 @@ Cosas que ya causaron un bug. No las repitas:
 - **Vender y renovar una publicación solo sirve si está aprobada** (0037): una pendiente o rechazada no se puede mover de fecha ni por su dueño ni por moderación; el estado manda.
   Una ficha de Hub Market vendida o vencida sigue abierta pero lleva `noindex` (`SeoPage.noindex`), y la ficha de un vehículo de Auto Hub que ya no está disponible dice "no encontrado".
   **`verify-prerender.mjs` no exige tarjetas** en `/auto-hub` ni en `/hub-market` si el sitemap no trae nada: todo vendido o vencido es un estado válido, no un fallo de build.
+- **`supabase.db` no es el cliente de Supabase: es un proxy que lo carga al primer uso (`core/supabase/lazy-client.ts`).** `supabase-js` salió del JS inicial (2.29.0). El proxy
+  graba la cadena (`from().select().eq()`) y la repite sobre el cliente real **cuando alguien la espera** (`await`, `.then`, `rxjs.from`), igual que los constructores de PostgREST, que no hacen
+  nada hasta entonces. **Lo que devuelve algo sincrónico no funciona a través de `db`** (`onAuthStateChange`, `storage.from().getPublicUrl()`): pide `await supabase.client()`. El proxy no responde a
+  símbolos ni a `'@@observable'`: rxjs `from()` los sondea y, si recibe una función, la llama y revienta con algo que ni es un `Error`. Las pruebas usan `TestSupabaseService` y no tocan el proxy:
+  su prueba propia es `lazy-client.spec.ts`, y lo que de verdad lo ejerce con datos reales es el **build prerenderizado** (hace `getPrerenderParams` con `db`) y `verify-prerender`. Si tocas esto,
+  corre `npm run build`, no solo `ng test`. Un doble de `SupabaseService` en un spec necesita también `client()` si el código lo usa (AuthService).
 - **`[priority]` de `NgOptimizedImage` no puede cambiar después de pintarse (NG02953).** Una lista que se filtra u ordena no puede pasar `[priority]="first"`: la tarjeta que pasa a
   ser la primera cambia el input y, en desarrollo y en pruebas, revienta. `/auto-hub` fija el id de la tarjeta prioritaria **una vez**, al llegar los datos (`priorityId`). Con `track`
   por id la instancia se reutiliza, así que el input de cada tarjeta tiene que ser estable. Los filtros de `/auto-hub` viven también en la URL (`?tipo=suv&precio=900000`), con

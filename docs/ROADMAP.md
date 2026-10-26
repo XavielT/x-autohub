@@ -649,25 +649,11 @@ vez, así que decídelo aparte.
 era falsa. Falta saber cuáles no, y migrarlos. (La antigua `PROYECTO.md`
 afirmaba que todos lo tenían; tampoco era cierto.)
 
-### Cargar `supabase-js` bajo demanda
+### ~~Cargar `supabase-js` bajo demanda~~ ✅ (2.29.0)
 
-El cliente pesa ~200 KB y hoy va en el bundle inicial (**630 kB** en total,
-**167 kB** transferidos, medido el 22/10/2026) porque el navbar necesita la
-sesión desde el primer render. La fase 2 sumó 45 kB al shell (navbar, buscador,
-barra de pestañas, footer) y por eso el presupuesto de aviso de `angular.json`
-subió de 600 a 700 kB; el error sigue en 1 MB. Esta es la palanca que queda si
-el margen se acaba: sacar `supabase-js` del bundle inicial.
-
-**Medido el 26/10/2026** (`scripts/mobile-perf.mjs`, móvil emulado de 390px, CPU x4, Slow 4G, producción, sin caché ni service worker): FCP 0,4–1,1 s en todas las páginas;
-LCP de `/tienda` 1,1 s, de la ficha de producto 1,4 s, de `/servicios` 0,5 s, **del home 3,1–3,3 s y de `/auto-hub` 3,0 s**. En el home hay dos candidatos de LCP, el título a 1,0 s (el HTML
-prerenderizado) y el mismo título a ~3,1 s: Angular vuelve a pintar la página al arrancar (sin hidratación, a propósito) y ese segundo pintado es el que cuenta. **No es la fuente:** precargar
-Chakra Petch, Space Grotesk y Manrope no movió la cifra (se revirtió). Lo que lo fija es cuánto tarda en bajar y ejecutar el JS inicial, que es justo lo que sacar `supabase-js` del bundle recortaría.
-Es el primer dato que justifica el cambio; **sigue sin hacerse** porque vuelve asíncronos todos los servicios y el LCP bueno es 2,5 s.
-
-Un `await import('@supabase/supabase-js')` dentro de `SupabaseService` lo sacaría
-del chunk inicial, a costa de volver asíncrono el getter `db` y, con él, todos los
-servicios. **Solo vale la pena si el tiempo de primera carga se vuelve un
-problema medible** — no antes. La fase 2 es el punto donde revisar la cifra.
+Hecho sin tocar las 157 consultas: `SupabaseService.db` devuelve un proxy (`lazy-client.ts`) que graba la cadena y la repite sobre el cliente real cuando se espera; `client()` da el cliente como promesa para lo
+sincrónico (`onAuthStateChange`). El JS inicial bajó de ~167 KB a ~129 KB transferidos (`ng build`: 448 KB sin comprimir). Mediciones en `docs/ROADMAP.md` más arriba y con `scripts/mobile-perf.mjs`;
+el resultado en producción está en las notas de la versión. Ver la trampa en `CLAUDE.md`.
 
 ### Nombres inconsistentes
 

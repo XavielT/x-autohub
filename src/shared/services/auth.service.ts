@@ -158,7 +158,8 @@ export class AuthService {
 
     // Mantiene la señal sincronizada con el cliente: cubre el refresh del token,
     // el cierre de sesión desde otra pestaña y el enlace de confirmación.
-    this.supabase.db.auth.onAuthStateChange((event, session) => {
+    // `onAuthStateChange` devuelve su suscripción de forma sincrónica, y `db` es un proxy que solo ejecuta lo que se espera: se pide el cliente.
+    void this.supabase.client().then((client) => client.auth.onAuthStateChange((event, session) => {
       // **Solo** `SIGNED_OUT` cierra la sesión. Antes bastaba con que el evento
       // llegara sin `session`, y eso borraba el usuario y la lectura en vuelo:
       // un `INITIAL_SESSION` sin sesión —que llega al arrancar— soltaba el
@@ -181,7 +182,7 @@ export class AuthService {
       if (this._user()?.id === session.user.id) return;
 
       void this.loadProfile();
-    });
+    }));
   }
 
   // --- API pública ---------------------------------------------------------
