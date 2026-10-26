@@ -54,6 +54,7 @@
 
 .hub-market__search {
   width: 100%;
+  box-sizing: border-box; // sin esto, el ancho + el relleno desbordaba la pantalla en un teléfono
   background: #111;
   border: 1px solid #272727;
   color: #fff;
@@ -195,6 +196,6 @@
   }
 
   .hub-market__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

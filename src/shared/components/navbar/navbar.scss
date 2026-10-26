@@ -334,7 +334,8 @@
 
         &__logo-compact { display: block; }
 
-        &__search { flex: 1 1 auto; max-width: none; }
+        // `min-width: 0`: los 190px de escritorio, sumados al logo y al carrito, desbordaban la barra en un teléfono de 320px.
+        &__search { flex: 1 1 auto; max-width: none; min-width: 0; }
 
         &__actions { margin-left: 0; }
     }
