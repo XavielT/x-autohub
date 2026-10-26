@@ -3,6 +3,7 @@
 //   MSYS_NO_PATHCONV=1 node scripts/mobile-perf.mjs <base> <ruta>...
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 const require = createRequire(process.cwd() + '/package.json');
 const WebSocket = require('ws');
 const [base, ...routes] = process.argv.slice(2);
@@ -28,6 +29,23 @@ const send = (method, params = {}) => new Promise((resolve) => {
   ws.send(JSON.stringify({ id: n, method, params }));
 });
 await send('Page.enable');
+// STRIP_PRELOAD=1: quita el <link rel="modulepreload"> del HTML al vuelo, para comparar con y sin él en el mismo sitio y la misma red.
+if (process.env.STRIP_PRELOAD) {
+  await send('Fetch.enable', { patterns: [{ resourceType: 'Document', requestStage: 'Response' }] });
+  ws.on('message', async (d) => {
+    const m = JSON.parse(d);
+    if (m.method !== 'Fetch.requestPaused') return;
+    const { requestId, responseStatusCode, responseHeaders } = m.params;
+    if (!responseStatusCode || responseStatusCode >= 300) return void send('Fetch.continueRequest', { requestId });
+    const body = await send('Fetch.getResponseBody', { requestId });
+    const html = (body.base64Encoded ? Buffer.from(body.body, 'base64').toString() : body.body).replace(/<link rel="modulepreload" href="chunk-[A-Z0-9]+.js">/g, '');
+    await send('Fetch.fulfillRequest', {
+      requestId, responseCode: responseStatusCode,
+      responseHeaders: responseHeaders.filter((h) => !/^content-(length|encoding)$/i.test(h.name)),
+      body: Buffer.from(html).toString('base64'),
+    });
+  });
+}
 await send('Network.enable');
 await send('Network.setCacheDisabled', { cacheDisabled: true });
 await send('Network.setBypassServiceWorker', { bypass: true });
@@ -50,5 +68,12 @@ for (const r of routes) {
   if (m.res) console.log('   JS: ' + m.res);
 }
 ws.close();
-edge.kill();
-process.exit(0);
+// Edge lanza procesos hijos: matar solo el padre los dejaba vivos, y varias corridas seguidas se estorban (mediciones de 30 s).
+spawn('taskkill', ['/PID', String(edge.pid), '/T', '/F'], { stdio: 'ignore' }).on('exit', () => {
+  try {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
+  } catch {
+    // Windows aún tiene archivos abiertos un instante; queda en %TEMP% y no estorba.
+  }
+  process.exit(0);
+});

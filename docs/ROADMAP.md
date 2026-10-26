@@ -656,6 +656,9 @@ sincrónico (`onAuthStateChange`). El JS inicial bajó de ~167 KB a ~129 KB tran
 **Resultado medido en producción (Slow 4G, CPU x4, dos corridas):** LCP del home 3,1–3,3 s → 2,7–2,9 s (mejora real, modesta); `/auto-hub` 3,0 s → 2,8–3,1 s (sin cambio claro); `/tienda` 1,3 s (igual).
 Por qué `/auto-hub` no mejora: su foto cuenta como LCP cuando la lista vuelve a pintarse con los datos, y ahora esos datos esperan primero a que llegue el módulo de `supabase-js` (lo pide AuthService al arrancar, pero
 solo después de que el JS principal corre). Lo que seguiría: que el HTML precargue ese módulo (su nombre lleva hash, hay que sacarlo del build) o que Angular hidrate en vez de repintar (descartado a propósito, ver `CLAUDE.md`).
+**2.29.2 (precarga del módulo desde el HTML):** el A/B con `STRIP_PRELOAD=1` (seis corridas intercaladas, mismo sitio) salió **demasiado ruidoso para concluir**: hubo corridas de 15 a 50 s por la red emulada, con
+medianas de `/auto-hub` de 4,4 s con la precarga y 9,8 s sin ella, y la del home igual en ambos. No hay señal de daño y sí una débil de mejora en `/auto-hub`, así que se queda; la teoría es sólida (el módulo baja en
+paralelo con el JS principal). Para medir bien haría falta un entorno de red estable o muchas más corridas. `scripts/mobile-perf.mjs` ya mata los procesos de Edge que lanza (antes quedaban vivos y ensuciaban las corridas siguientes).
 Sesión verificada en producción con la cuenta de admin: se restaura, el panel carga y favoritos inserta y borra. Ver la trampa en `CLAUDE.md`.
 
 ### Nombres inconsistentes
