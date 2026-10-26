@@ -101,6 +101,7 @@
                         <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" (click)="closeMenu()">Mi perfil</a>
                         <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" fragment="pedidos" (click)="closeMenu()">Mis pedidos</a>
                         <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" fragment="citas" (click)="closeMenu()">Mis citas</a>
+                        <a class="navbar__panel-link" role="menuitem" routerLink="/perfil" fragment="favoritos" (click)="closeMenu()">Mis favoritos@if (favoriteCount() > 0) { ({{ favoriteCount() }}) }</a>
                         @if (canModerate()) {
                             <a class="navbar__panel-link" role="menuitem" routerLink="/admin" (click)="closeMenu()">Panel</a>
                         }

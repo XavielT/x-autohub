@@ -681,7 +681,7 @@ su perfil.
 
 ### ~~Favoritos~~ ✅ (2.25.0)
 
-Hecho: una persona con cuenta guarda productos de la tienda con el corazón de la tarjeta y de la ficha, y los ve en "Mis favoritos" del perfil. Tabla `favorites` (0038) con RLS y tope de 200. **Fuera, a propósito:** vehículos de Auto Hub y publicaciones de Hub Market (son únicos y se venden: guardarlos pide aviso de vendido, que es otro trabajo), y favoritos sin cuenta (`localStorage`): la razón de guardarlos era dar un motivo para crearla. **Pendiente:** el contador en el navbar.
+Hecho: una persona con cuenta guarda productos de la tienda con el corazón de la tarjeta y de la ficha, y los ve en "Mis favoritos" del perfil. Tabla `favorites` (0038) con RLS y tope de 200. **Fuera, a propósito:** vehículos de Auto Hub y publicaciones de Hub Market (son únicos y se venden: guardarlos pide aviso de vendido, que es otro trabajo), y favoritos sin cuenta (`localStorage`): la razón de guardarlos era dar un motivo para crearla. **2.27.0:** el menú de la cuenta tiene "Mis favoritos (N)", que lleva a la sección del perfil (`/perfil#favoritos`).
 
 ### Publicar en Social Hub
 

@@ -6,6 +6,7 @@ import { LogoHub } from '../logo-hub/logo-hub';
 import { SearchBox } from '../search-box/search-box';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { FavoriteService } from '../../services/favorite.service';
 import { CategoryService } from '../../services/category.service';
 import { ToastService } from '../../services/toast.service';
 import { VehiclePickerService } from '../../services/vehicle-picker.service';
@@ -63,6 +64,7 @@ export class Navbar {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly cart = inject(CartService);
+  private readonly favorites = inject(FavoriteService);
   private readonly categories = inject(CategoryService);
   private readonly vehicles = inject(VehicleService);
   private readonly picker = inject(VehiclePickerService);
@@ -83,6 +85,7 @@ export class Navbar {
   readonly categoryTree = toSignal(this.categories.getTree(), { initialValue: [] });
 
   readonly cartCount = this.cart.totalItems;
+  readonly favoriteCount = this.favorites.count;
   /** "Toyota Corolla 2015", o `null` si no hay vehículo elegido. */
   readonly vehicleLabel = this.vehicles.selectedLabel;
 
