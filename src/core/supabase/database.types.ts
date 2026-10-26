@@ -331,6 +331,13 @@ export type ProfileVehicleRow = {
   created_at: string;
 }
 
+/** Un producto guardado por una persona con cuenta (0038). */
+export type FavoriteRow = {
+  user_id: string;
+  part_id: number;
+  created_at: string;
+}
+
 /**
  * Fila de `search_products()`: un producto más el total de la consulta. Es la
  * misma forma que `HubPartRow`, sin `search_vector`, y con `total_count` (el
@@ -868,6 +875,12 @@ export type Database = {
         Row: ProfileVehicleRow;
         Insert: Insert<ProfileVehicleRow, 'user_id' | 'make_id' | 'model_id' | 'year'>;
         Update: Partial<ProfileVehicleRow>;
+        Relationships: [];
+      };
+      favorites: {
+        Row: FavoriteRow;
+        Insert: Insert<FavoriteRow, 'user_id' | 'part_id'>;
+        Update: Partial<FavoriteRow>;
         Relationships: [];
       };
       hub_market_items: {

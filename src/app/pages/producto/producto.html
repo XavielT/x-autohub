@@ -17,6 +17,7 @@
           <span class="prod__brand">{{ p.brand }}</span>
           <span class="prod__sku">SKU {{ p.sku }}</span>
           @if (p.isTest) { <app-test-badge /> }
+          <app-favorite-button class="prod__fav" [partId]="p.id" [label]="p.name" />
         </div>
         <h1 class="prod__name">{{ p.name }}</h1>
         @if (p.shortDescription) { <p class="prod__short">{{ p.shortDescription }}</p> }

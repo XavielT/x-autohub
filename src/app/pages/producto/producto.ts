@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
+import { FavoriteButton } from '../../../shared/components/favorite-button/favorite-button';
 import { Reviews } from '../../../shared/components/reviews/reviews';
 import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
@@ -48,7 +49,7 @@ export interface FitmentLine {
  */
 @Component({
   selector: 'app-producto',
-  imports: [DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge, Reviews],
+  imports: [DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge, Reviews, FavoriteButton],
   templateUrl: './producto.html',
   styleUrl: './producto.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

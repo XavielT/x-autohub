@@ -23,7 +23,7 @@ x-autohub/
 ├── docs/                      Esta documentación
 ├── brand/                     Logos originales en alta. NO entra al build.
 ├── supabase/                  Esquema SQL, RLS, storage, funciones y seed
-│   ├── migrations/            0001 a 0037 (ver docs/BACKEND.md)
+│   ├── migrations/            0001 a 0038 (ver docs/BACKEND.md)
 │   ├── functions/             club-welcome (Edge Function)
 │   └── seed.sql               Generado por scripts/generate-seed.mjs
 ├── scripts/                   generate-seed, generate-sitemap (+ sitemap-lib), make-admin,
@@ -444,7 +444,7 @@ Decisiones que conviene conocer:
 
 ## Pruebas
 
-- 138 archivos, 1485 pruebas, todas pasando (2026-10-25). Corren siempre en modo mock (los
+- 140 archivos, 1493 pruebas, todas pasando (2026-10-25). Corren siempre en modo mock (los
   environments de prueba no traen credenciales), así que ninguna toca la red.
 - Providers globales en `src/test-providers.ts`, declarado como `providersFile` en
   `angular.json` y agregado al `include` de `tsconfig.spec.json`.

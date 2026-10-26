@@ -2523,11 +2523,49 @@ CHECK_DB=upgrade check "la tabla queda vacia, el cron una sola vez y sin secreto
   "select (select count(*) from appointment_reminders) || '|' || (select count(*) from cron.job where jobname = 'appointment-reminders') || '|' || send_appointment_reminders();"
 
 echo "→ Camino de actualizacion de la 0037"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0037_push_hardening.sql upgrade
+apply supabase/migrations/0037_push_hardening.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "is_push_endpoint existe y distingue" "true|false" \
   "select is_push_endpoint('https://fcm.googleapis.com/fcm/send/abc')::text || '|' || is_push_endpoint('https://servidor-ajeno.example/x')::text;"
+
+echo "→ Favoritos (migracion 0038): cada quien los suyos"
+PART_1="$(scalar "select id from hub_parts where not is_test order by id limit 1;")"
+PART_2="$(scalar "select id from hub_parts where not is_test order by id offset 1 limit 1;")"
+check "anon no tiene acceso a favoritos" 'ERROR:  permission denied for table favorites' \
+  "$(as_anon 'select count(*) from favorites;')"
+check "un usuario guarda un producto" "" \
+  "$(as_user "$USER_A" "insert into favorites (user_id, part_id) values (auth.uid(), $PART_1);")"
+check "y lo ve" "1" "$(as_user "$USER_A" 'select count(*) from favorites;')"
+check "otro usuario no ve los favoritos ajenos" "0" "$(as_user "$USER_B" 'select count(*) from favorites;')"
+check "nadie guarda en los favoritos de otro" \
+  'ERROR:  new row violates row-level security policy for table "favorites"' \
+  "$(as_user "$USER_B" "insert into favorites (user_id, part_id) values ('$USER_A', $PART_2);")"
+check "el mismo producto no se guarda dos veces" \
+  'ERROR:  duplicate key value violates unique constraint "favorites_pkey"' \
+  "$(as_user "$USER_A" "insert into favorites (user_id, part_id) values (auth.uid(), $PART_1);")"
+check "un favorito no se puede editar (no hay UPDATE)" 'ERROR:  permission denied for table favorites' \
+  "$(as_user "$USER_A" "update favorites set part_id = $PART_2 where user_id = auth.uid();")"
+scalar "$(as_user "$USER_B" "delete from favorites where user_id = '$USER_A';")" >/dev/null
+check "otro usuario no borra el favorito ajeno" "1" "$(as_user "$USER_A" 'select count(*) from favorites;')"
+scalar "$(as_user "$USER_A" "delete from favorites where part_id = $PART_1;")" >/dev/null
+check "el dueno lo quita" "0" "$(as_user "$USER_A" 'select count(*) from favorites;')"
+TEMP_PART="$(scalar "insert into hub_parts (name, brand, img_url, price) values ('Fav temporal', 'x', 'x.jpg', 1) returning id;")"
+scalar "insert into favorites (user_id, part_id) values ('$USER_A', $TEMP_PART);" >/dev/null
+scalar "delete from hub_parts where id = $TEMP_PART;" >/dev/null
+check "borrar el producto se lleva sus favoritos" "0" "select count(*) from favorites where part_id = $TEMP_PART;"
+scalar "insert into hub_parts (name, brand, img_url, price) select 'Fav ' || g, 'x', 'x.jpg', 1 from generate_series(1, 205) g;" >/dev/null
+check "el limite de 200 favoritos se exige con un 22023" 'ERROR:  Llegaste al maximo de 200 favoritos. Quita alguno para guardar otro.' \
+  "insert into favorites (user_id, part_id) select '$USER_B', id from hub_parts where name like 'Fav %' order by id limit 201;"
+check "hasta 200 si caben" "0" "select count(*) from favorites where user_id = '$USER_B';"
+scalar "delete from hub_parts where name like 'Fav %';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0038"
+apply "$LAST_MIGRATION" upgrade
+apply "$LAST_MIGRATION" upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
+  "select (select count(*) from favorites) || '|' || (select relrowsecurity from pg_class where relname = 'favorites')::text;"
 
 # --- Resumen ------------------------------------------------------------------
 

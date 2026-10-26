@@ -1,0 +1,38 @@
+.fav {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.8);
+  color: #fff;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+
+  svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+  }
+
+  &:hover {
+    border-color: var(--Hub);
+    color: var(--Hub);
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  &.is-saved {
+    color: var(--Hub);
+    border-color: var(--Hub);
+
+    svg {
+      fill: currentColor;
+    }
+  }
+}

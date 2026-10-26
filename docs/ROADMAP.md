@@ -679,10 +679,9 @@ página no llama a `deactivate()`: el servicio y las políticas RLS que la respa
 están, falta el botón. El usuario puede publicar y no puede retirar lo suyo desde
 su perfil.
 
-### Favoritos
+### ~~Favoritos~~ ✅ (2.25.0)
 
-Guardar vehículos y piezas. Encaja con el `Club X AutoHub` que ya se promociona en
-la página y da una razón concreta para crear cuenta.
+Hecho: una persona con cuenta guarda productos de la tienda con el corazón de la tarjeta y de la ficha, y los ve en "Mis favoritos" del perfil. Tabla `favorites` (0038) con RLS y tope de 200. **Fuera, a propósito:** vehículos de Auto Hub y publicaciones de Hub Market (son únicos y se venden: guardarlos pide aviso de vendido, que es otro trabajo), y favoritos sin cuenta (`localStorage`): la razón de guardarlos era dar un motivo para crearla. **Pendiente:** el contador en el navbar.
 
 ### Publicar en Social Hub
 

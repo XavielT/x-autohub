@@ -21,6 +21,7 @@
         </div>
     }
     <div class="hub-part-card__top">
+        <app-favorite-button class="hub-part-card__fav" [partId]="hubPart().id" [label]="hubPart().name" />
         @if (discount() > 0) {
             <span class="hub-part-card__off">-{{ discount() }}%</span>
         }

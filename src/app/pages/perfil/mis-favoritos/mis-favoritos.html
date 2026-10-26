@@ -1,0 +1,25 @@
+<section class="favs">
+  <header class="favs__head">
+    <h2 class="favs__title">Mis favoritos</h2>
+    @if (items().length > 0) {
+      <span class="favs__count">{{ items().length }}</span>
+    }
+  </header>
+
+  @if (isLoading()) {
+    <p class="favs__note">Cargando…</p>
+  } @else if (hasError()) {
+    <p class="favs__note">No pudimos cargar tus favoritos. <button type="button" class="favs__retry" (click)="load()">Reintentar</button></p>
+  } @else if (items().length === 0) {
+    <p class="favs__note">
+      Aún no guardas nada. Toca el corazón de un producto para volver a él cuando quieras.
+      <a routerLink="/tienda">Ir a la tienda</a>
+    </p>
+  } @else {
+    <ul class="favs__grid">
+      @for (p of items(); track p.id) {
+        <li><app-catalogo-card [hubPart]="p" /></li>
+      }
+    </ul>
+  }
+</section>

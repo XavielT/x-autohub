@@ -131,6 +131,13 @@
 
     // --- Oferta, disponibilidad y compatibilidad -------------------------------------
 
+    &__fav {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 3;
+    }
+
     &__off{
         position: absolute;
         top: 10px;

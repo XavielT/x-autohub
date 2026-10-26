@@ -285,6 +285,23 @@ export class ProductService {
     ).pipe(map((res) => (res.data ? toProduct(res.data) : undefined)));
   }
 
+  /** Varios productos por id, en el orden pedido. Los que no se ven (inactivos, de prueba, borrados) no vienen. */
+  getByIds(ids: readonly number[]): Observable<ProductModel[]> {
+    if (ids.length === 0) return of([]);
+    const order = (list: ProductModel[]) => {
+      const byId = new Map(list.map((p) => [p.id, p]));
+      return ids.map((id) => byId.get(id)).filter((p): p is ProductModel => p !== undefined);
+    };
+
+    if (this.supabase.shouldUseMockData()) {
+      return of(order(this.mockProducts().filter((p) => p.isActive !== false)));
+    }
+
+    return from(
+      this.supabase.db.from('hub_parts').select(PRODUCT_COLUMNS).in('id', [...ids]).eq('is_active', true),
+    ).pipe(map((res) => order(unwrap(res).map(toProduct))));
+  }
+
   getBySlug(slug: string): Observable<ProductModel | undefined> {
     if (this.supabase.shouldUseMockData()) {
       return of(this.mockProducts().find((p) => p.slug === slug));

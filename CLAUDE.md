@@ -150,7 +150,7 @@ node scripts/verify-build-status.mjs    # el handler de build-status, con una ba
 
 `verify-migrations.sh` levanta un cluster temporal con `initdb` (sin sudo, sin
 Docker), le aplica las **migraciones y el seed desde cero** y comprueba las
-reglas de seguridad con sesiones simuladas: 781 comprobaciones que ni el build ni
+reglas de seguridad con sesiones simuladas: 794 comprobaciones que ni el build ni
 las pruebas pueden ver, porque el suite corre en modo simulado a propósito.
 **Córrelo siempre que toques `supabase/`.** No sustituye al humo contra
 producción: no reproduce PostgREST, que es donde apareció el `PGRST201`.
@@ -191,7 +191,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 138 archivos, 1485 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 140 archivos, 1493 pruebas, todo verde (cifra al 25/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -330,6 +330,10 @@ Cosas que ya causaron un bug. No las repitas:
 - **Vender y renovar una publicación solo sirve si está aprobada** (0037): una pendiente o rechazada no se puede mover de fecha ni por su dueño ni por moderación; el estado manda.
   Una ficha de Hub Market vendida o vencida sigue abierta pero lleva `noindex` (`SeoPage.noindex`), y la ficha de un vehículo de Auto Hub que ya no está disponible dice "no encontrado".
   **`verify-prerender.mjs` no exige tarjetas** en `/auto-hub` ni en `/hub-market` si el sitemap no trae nada: todo vendido o vencido es un estado válido, no un fallo de build.
+- **Los favoritos son de una cuenta, y sin cuenta no hay (0038).** `favorites (user_id, part_id)` tiene RLS `auth.uid() = user_id` en select, insert y delete, **sin UPDATE**
+  y sin acceso para `anon`; borrar un producto se lleva sus favoritos, y un trigger limita a 200 por persona con un `22023`. `FavoriteService` lee los ids una vez al iniciar sesión,
+  actualiza al instante al tocar el corazón y **deshace el cambio si la base lo rechaza**; sin sesión `toggle()` solo avisa. En modo simulado viven en memoria. `app-favorite-button`
+  va dentro de `app-catalogo-card` y de la ficha: hace `preventDefault` y `stopPropagation` para no abrir el enlace de la tarjeta. Es solo productos de la tienda, no vehículos.
 - **El recordatorio de una cita lo pide la base cada hora, y `send-push` va ANTES que la migración.** `send_appointment_reminders()` (0036, cron al minuto 5) manda
   `{ kind: 'appointment_reminder', id }` por cada cita **confirmada** a entre 2 y 24 horas, de una cuenta con algún dispositivo o de un invitado con dispositivos de la cita
   (0035), y anota en `appointment_reminders` **para qué hora** ya recordó (reprogramar la habilita otra vez). `send-push` vuelve a comprobar estado y ventana (margen de 25 h por

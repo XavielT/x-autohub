@@ -30,6 +30,7 @@
 
   &__info { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
+  &__fav { margin-left: auto; }
   &__id { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
   &__brand { font-family: var(--font-brand); color: var(--Hub); font-size: 16px; }
   &__sku { color: var(--text-soft); }

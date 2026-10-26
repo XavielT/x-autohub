@@ -6,6 +6,7 @@ import { CartService } from '../../services/cart.service';
 import { ProductService } from '../../services/product.service';
 import { ToastService } from '../../services/toast.service';
 import { TestBadge } from '../../ui/test-badge/test-badge';
+import { FavoriteButton } from '../favorite-button/favorite-button';
 import { availabilityOf } from '../../utils/product-availability';
 
 /**
@@ -25,7 +26,7 @@ import { availabilityOf } from '../../utils/product-availability';
  */
 @Component({
   selector: 'app-catalogo-card',
-  imports: [RouterLink, CommonModule, NgOptimizedImage, TestBadge],
+  imports: [RouterLink, CommonModule, NgOptimizedImage, TestBadge, FavoriteButton],
   templateUrl: './catalogo-card.html',
   styleUrl: './catalogo-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
