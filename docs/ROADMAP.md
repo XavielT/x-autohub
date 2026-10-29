@@ -225,11 +225,11 @@ propios en cada ruta pública y `og-default.jpg` (`docs/SEO.md`).
 
 Pendiente:
 
-- **Aplicar las migraciones 0040 a 0046 y correr `./scripts/verify-migrations.sh` donde haya Postgres.** Ninguna se ejecutó
-  todavía contra una base. La 0043 no existe a propósito: el bucket `avatars` ya estaba en la 0003.
+- Las migraciones 0040 a 0047 ya están aplicadas en producción y pasan `verify-migrations.sh` (29/10/2026; 1 comprobación
+  de la 0021 solo falla en Windows por la codificación de la línea de comandos). La 0043 no existe a propósito: el bucket
+  `avatars` ya estaba en la 0003.
 - Medir la latencia del buscador antes y después (se dejó el debounce, la caché por prefijo y la precarga de supabase-js,
   pero no hay cifras).
-- Los `raise exception` de las migraciones siguen sin tildes (hay que redefinir cada función en una migración nueva).
 - Gefika (títulos) no trae `¿` ni `¡`.
 
 ---

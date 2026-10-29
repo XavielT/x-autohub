@@ -110,7 +110,7 @@ describe('OrderService (mock)', () => {
         'De "Disco" solo quedan 1 y pediste 3. Ajusta la cantidad.',
       );
       expect(await errorOf(service.create(PAYLOAD, [line({ id: 1, name: 'Disco', stock: 0 })]))).toBe(
-        'Se agoto "Disco". Quítala del carrito para continuar.',
+        'Se agotó "Disco". Quítala del carrito para continuar.',
       );
     });
 
@@ -141,7 +141,7 @@ describe('OrderService (mock)', () => {
           'De "Alfombras (Negro)" solo quedan 2 y pediste 3. Ajusta la cantidad.',
         );
         expect(await errorOf(service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 0))]))).toBe(
-          'Se agoto "Alfombras (Negro)". Quítala del carrito para continuar.',
+          'Se agotó "Alfombras (Negro)". Quítala del carrito para continuar.',
         );
       });
 
@@ -359,7 +359,7 @@ describe('OrderService (mock)', () => {
     });
 
     it('el stock se valida antes que el cupón, como en la base', async () => {
-      expect(await errorOf(service.create(withCoupon('NOEXISTE'), [line({ id: 1, stock: 0 })]))).toContain('Se agoto');
+      expect(await errorOf(service.create(withCoupon('NOEXISTE'), [line({ id: 1, stock: 0 })]))).toContain('Se agotó');
     });
   });
 

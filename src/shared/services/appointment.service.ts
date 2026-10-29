@@ -126,7 +126,7 @@ export class AppointmentService {
       }
       if (!canCancel(found)) {
         return throwError(
-          () => new Error('Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.'),
+          () => new Error('Solo se puede cancelar con más de 24 horas de anticipación. Escríbenos por WhatsApp.'),
         );
       }
 

@@ -206,7 +206,7 @@ describe('AppointmentService (mock)', () => {
       const soon = await firstValueFrom(service.book(input({ scheduledAt: slotInstant('2026-10-23', '09:00') })));
 
       expect(await errorOf(service.cancel(soon.id))).toBe(
-        'Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.',
+        'Solo se puede cancelar con más de 24 horas de anticipación. Escríbenos por WhatsApp.',
       );
     });
 

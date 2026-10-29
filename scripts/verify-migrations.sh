@@ -45,8 +45,11 @@ cd "$(dirname "$0")/.."
 
 # --- Postgres -----------------------------------------------------------------
 
-PGBIN=""
+# VERIFY_PGBIN apunta a un Postgres instalado fuera del PATH (en Windows: el zip de binarios,
+# p. ej. VERIFY_PGBIN=C:/dev/pgsql/bin). Ahi no hay sockets Unix, y se usa TCP en 127.0.0.1.
+PGBIN="${VERIFY_PGBIN:-}"
 for candidate in $(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -rV) ""; do
+  if [ -n "$PGBIN" ]; then break; fi
   if [ -x "${candidate}/initdb" ]; then PGBIN="$candidate"; break; fi
 done
 if [ -z "$PGBIN" ]; then
@@ -60,19 +63,21 @@ fi
 PORT="${PGPORT_VERIFY:-54329}"
 WORKDIR="$(mktemp -d /tmp/x-autohub-verify.XXXXXX)"
 SOCKET="$WORKDIR/socket"
-PSQL="$PGBIN/psql -h $SOCKET -p $PORT -U postgres -X -q"
+if [ -n "${VERIFY_PGBIN:-}" ]; then HOST=127.0.0.1; LISTEN=127.0.0.1; SOCKET_OPT=""; else HOST="$SOCKET"; LISTEN=""; SOCKET_OPT="-k $SOCKET"; fi
+PSQL="$PGBIN/psql -h $HOST -p $PORT -U postgres -X -q"
 
 cleanup() {
   "$PGBIN/pg_ctl" -D "$WORKDIR/data" stop -m immediate >/dev/null 2>&1 || true
   rm -rf "$WORKDIR"
 }
-trap cleanup EXIT
+[ -n "${VERIFY_KEEP:-}" ] || trap cleanup EXIT
 
 mkdir -p "$SOCKET"
 echo "→ Cluster temporal en $WORKDIR (puerto $PORT)"
-"$PGBIN/initdb" -D "$WORKDIR/data" -U postgres --auth=trust >"$WORKDIR/initdb.log" 2>&1
+export PGCLIENTENCODING=UTF8   # en Windows el valor por defecto es WIN1252 y las tildes de las pruebas no coinciden
+"$PGBIN/initdb" -D "$WORKDIR/data" -U postgres -E UTF8 --auth=trust >"$WORKDIR/initdb.log" 2>&1
 "$PGBIN/pg_ctl" -D "$WORKDIR/data" \
-  -o "-k $SOCKET -p $PORT -c listen_addresses=''" \
+  -o "${SOCKET_OPT} -p $PORT -c listen_addresses=${LISTEN:-''} -c lc_messages=C" \
   -l "$WORKDIR/postgres.log" start >/dev/null 2>&1
 
 for _ in $(seq 1 20); do
@@ -501,10 +506,10 @@ check "ni fitments" \
 check "un admin si crea una subcategoria" "discos" \
   "$(as_user "$ADMIN" "insert into product_categories (slug, name, parent_id) select 'discos', 'Discos', id from product_categories where slug='frenos' returning slug;")"
 check "una subcategoria no puede tener hijas: tres niveles no" \
-  "ERROR:  Las categorias admiten dos niveles como maximo." \
+  "ERROR:  Las categorías admiten dos niveles como máximo." \
   "$(as_user "$ADMIN" "insert into product_categories (slug, name, parent_id) select 'x3', 'X3', id from product_categories where slug='discos';")"
 check "ni una categoria con hijas puede pasar a ser hija" \
-  "ERROR:  Una categoria con subcategorias no puede ser subcategoria." \
+  "ERROR:  Una categoría con subcategorías no puede ser subcategoría." \
   "$(as_user "$ADMIN" "update product_categories set parent_id = (select id from product_categories where slug='suspension') where slug='frenos';")"
 
 echo "→ Reglas del producto (migracion 0017)"
@@ -723,7 +728,7 @@ check "rechaza el stock insuficiente, y dice cuanto queda" \
 check "la misma pieza en dos lineas se suma" \
   "ERROR:  De \"$NAME2\" solo quedan 1 y pediste 2. Ajusta la cantidad." \
   "$(as_anon "$(mk_order "$I2x1x2" transfer shipping standard)")"
-check "no vende lo agotado" "ERROR:  Se agoto \"$NAME4\". Quitala del carrito para continuar." \
+check "no vende lo agotado" "ERROR:  Se agotó \"$NAME4\". Quítala del carrito para continuar." \
   "$(as_anon "$(mk_order "$I4x1" transfer shipping standard)")"
 check "el rechazo no descuenta nada" "1" "select stock from hub_parts where id = 2;"
 
@@ -739,19 +744,19 @@ check "un retiro no pide direccion ni provincia" "Retiro en el taller|-|pickup" 
   "select address_line1 || '|' || coalesce(province, '-') || '|' || fulfillment_type from orders where id = '$ORD_R';"
 check "un envio sin provincia se rechaza" "ERROR:  Elige la provincia de entrega." \
   "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000');")"
-check "un envio sin direccion tambien" "ERROR:  Escribe la direccion de entrega." \
+check "un envio sin direccion tambien" "ERROR:  Escribe la dirección de entrega." \
   "$(as_anon "select * from create_order('c@x.com', 'Cliente', ' ', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
-check "el telefono es obligatorio" "ERROR:  Escribe tu telefono: lo usamos para coordinar la entrega." \
+check "el telefono es obligatorio" "ERROR:  Escribe tu teléfono: lo usamos para coordinar la entrega." \
   "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_province => 'Santiago');")"
 check "un retiro con la opcion de envio estandar no cuadra" \
-  "ERROR:  La opcion de envio no corresponde al tipo de entrega." \
+  "ERROR:  La opción de envío no corresponde al tipo de entrega." \
   "$(as_anon "$(mk_order "$I5x1" transfer pickup standard)")"
 check "ni un envio con la opcion de retiro" \
-  "ERROR:  La opcion de envio no corresponde al tipo de entrega." \
+  "ERROR:  La opción de envío no corresponde al tipo de entrega." \
   "$(as_anon "$(mk_order "$I5x1" transfer shipping pickup)")"
-check "un tipo de entrega inventado se rechaza" "ERROR:  Tipo de entrega no valido." \
+check "un tipo de entrega inventado se rechaza" "ERROR:  Tipo de entrega no válido." \
   "$(as_anon "$(mk_order "$I5x1" transfer volando standard)")"
-check "y uno nulo no cae en la rama de retiro" "ERROR:  Tipo de entrega no valido." \
+check "y uno nulo no cae en la rama de retiro" "ERROR:  Tipo de entrega no válido." \
   "$(as_anon "select * from create_order('c@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => null);")"
 check "el envio express suma 450 y el total lo calcula Postgres" "450.00|0.00" \
   "$(as_anon "select shipping_price || '|' || (total - subtotal - shipping_price) from create_order('c@x.com', 'Cliente', 'Calle 1', 'express', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');")"
@@ -765,7 +770,7 @@ check "pide instalacion de algo que no se instala: se ignora" "f" \
   "select wants_installation from orders where id = '$ORD_I0';"
 check "los metodos de pago que ve un visitante: transferencia y WhatsApp" "transfer,whatsapp" \
   "$(as_anon "select string_agg(id, ',' order by sort_order) from payment_methods;")"
-check "la tarjeta ya no se acepta" "ERROR:  Metodo de pago no valido." \
+check "la tarjeta ya no se acepta" "ERROR:  Método de pago no válido." \
   "$(as_anon "$(mk_order "$I5x1" card shipping standard)")"
 check "pero la fila de la tarjeta sigue existiendo (desactivada, no borrada)" "card|false" \
   "select id || '|' || is_active::text from payment_methods where id = 'card';"
@@ -803,7 +808,7 @@ check "anon no invoca set_order_status" "$(denied set_order_status)" \
 check "de awaiting_payment no se salta a shipped" \
   "ERROR:  Un pedido awaiting_payment no puede pasar a shipped." \
   "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'shipped');")"
-check "un estado inventado se rechaza" "ERROR:  Estado no valido: volando." \
+check "un estado inventado se rechaza" "ERROR:  Estado no válido: volando." \
   "$(as_user "$ADMIN" "select * from set_order_status('$ORD1', 'volando');")"
 check "un pedido que no existe tambien" "ERROR:  Ese pedido no existe." \
   "$(as_user "$ADMIN" "select * from set_order_status('00000000-0000-0000-0000-000000000000', 'paid');")"
@@ -996,22 +1001,22 @@ check "la franja pasa de 2 cupos a 1" "1" \
   "$(as_anon "select remaining from available_slots(1, '$MONDAY') where slot_at = '$SLOT0';")"
 APPT2="$(scalar "$(as_anon "select id from book_appointment(1, '$SLOT0', 'Cliente Dos', '829-555-0199');")")"
 check "con capacidad 2, una segunda persona entra a la misma hora" "requested" "select status from service_appointments where id = '$APPT2';"
-check "una tercera ya no: la franja esta llena" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "una tercera ya no: la franja esta llena" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "$(book "$SLOT0" 'Cliente Tres' '849-555-0111')")"
 check "y la franja llena deja de aparecer" "0" \
   "$(as_anon "select count(*) from available_slots(1, '$MONDAY') where slot_at = '$SLOT0';")"
-check "una hora que ya paso se rechaza" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "una hora que ya paso se rechaza" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "$(book "$(scalar "select date_trunc('hour', now()) - interval '1 day';")" 'Cliente' '809-555-0134')")"
-check "una hora que no es una franja (8:30) tambien" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "una hora que no es una franja (8:30) tambien" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "$(book "$(scalar "select '$SLOT0'::timestamptz + interval '30 minutes';")" 'Cliente' '809-555-0134')")"
-check "un domingo no abre" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "un domingo no abre" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "$(book "$(scalar "select ('$SUNDAY 10:00')::timestamp at time zone 'America/Santo_Domingo';")" 'Cliente' '809-555-0134')")"
-check "dentro de un cierre tampoco" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "dentro de un cierre tampoco" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "$(book "$(scalar "select ('$TUESDAY 08:00')::timestamp at time zone 'America/Santo_Domingo';")" 'Cliente' '809-555-0134')")"
-check "un servicio que no se agenda se rechaza" "ERROR:  Esa hora ya no esta disponible. Elige otra." \
+check "un servicio que no se agenda se rechaza" "ERROR:  Esa hora ya no está disponible. Elige otra." \
   "$(as_anon "select * from book_appointment(99999, '$SLOT1', 'Cliente', '809-555-0134');")"
 check "sin nombre no se agenda" "ERROR:  Escribe tu nombre." "$(as_anon "$(book "$SLOT1" ' ' '809-555-0134')")"
-check "un telefono corto tampoco" "ERROR:  Escribe un telefono valido: lo usamos para confirmar tu cita." \
+check "un telefono corto tampoco" "ERROR:  Escribe un teléfono válido: lo usamos para confirmar tu cita." \
   "$(as_anon "$(book "$SLOT1" 'Cliente' '12345')")"
 check "un pedido que no existe se rechaza" "ERROR:  Ese pedido no existe." \
   "$(as_anon "$(book "$SLOT1" 'Cliente' '809-555-0134' ", p_order_id => '00000000-0000-0000-0000-000000000000'")")"
@@ -1020,12 +1025,12 @@ echo "   (tope por telefono)"
 as_anon_book() { scalar "$(as_anon "select id from book_appointment(1, '$1', 'Cliente Uno', '809-555-0134');")" >/dev/null; }
 as_anon_book "$SLOT1"; as_anon_book "$SLOT2"
 check "con 3 citas abiertas, la cuarta se rechaza" \
-  "ERROR:  Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas." \
+  "ERROR:  Ya tienes 3 citas abiertas con este teléfono. Escríbenos por WhatsApp para cambiarlas." \
   "$(as_anon "$(book "$SLOT3" 'Cliente Uno' '(809) 555-0134')")"
 check "el tope cuenta el telefono, no como lo escribieron" "3" \
   "select count(*) from service_appointments where right(regexp_replace(contact_phone, '\D', '', 'g'), 10) = '8095550134';"
 check "ni con el codigo de pais por delante" \
-  "ERROR:  Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas." \
+  "ERROR:  Ya tienes 3 citas abiertas con este teléfono. Escríbenos por WhatsApp para cambiarlas." \
   "$(as_anon "$(book "$SLOT3" 'Cliente Uno' '+1 809 555 0134')")"
 
 echo "   (quien ve y quien escribe las citas)"
@@ -1042,7 +1047,7 @@ check "un admin las ve todas" "5" "$(as_user "$ADMIN" 'select count(*) from serv
 check "my_appointments trae las del usuario" "1" "$(as_user "$USER_A" 'select count(*) from my_appointments();')"
 check "y no las de otro" "0" "$(as_user "$USER_B" 'select count(*) from my_appointments();')"
 check "anon no invoca my_appointments" "$(denied my_appointments)" "$(as_anon 'select count(*) from my_appointments();')"
-check "no se agenda con el vehiculo del garaje de otro" "ERROR:  Ese vehiculo no es de tu garaje." \
+check "no se agenda con el vehiculo del garaje de otro" "ERROR:  Ese vehículo no es de tu garaje." \
   "$(as_user "$USER_B" "select * from book_appointment(1, '$SLOT4', 'Usuario B', '8095550002', p_profile_vehicle_id => $GARAGE_A);")"
 check "ni un admin cambia el estado con un update directo: no hay politica" "requested" \
   "$(as_user "$ADMIN" "update service_appointments set status = 'confirmed' where id = '$APPT1'; select status from service_appointments where id = '$APPT1';")"
@@ -1054,7 +1059,7 @@ check "un usuario normal recibe 42501" "ERROR:  Solo un administrador puede camb
   "$(as_user "$USER_A" "select * from set_appointment_status('$APPT_A', 'confirmed');")"
 check "de requested no se salta a done" "ERROR:  Una cita requested no puede pasar a done." \
   "$(as_user "$ADMIN" "select * from set_appointment_status('$APPT1', 'done');")"
-check "un estado inventado se rechaza" "ERROR:  Estado no valido: volando." \
+check "un estado inventado se rechaza" "ERROR:  Estado no válido: volando." \
   "$(as_user "$ADMIN" "select * from set_appointment_status('$APPT1', 'volando');")"
 check "una cita que no existe tambien" "ERROR:  Esa cita no existe." \
   "$(as_user "$ADMIN" "select * from set_appointment_status('00000000-0000-0000-0000-000000000000', 'confirmed');")"
@@ -1084,7 +1089,7 @@ insert into service_appointments (id, user_id, service_id, contact_name, contact
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '$USER_A', 1, 'Usuario A', '8095550001', now() + interval '10 hours');
 SQL
 check "con menos de 24 horas no se puede" \
-  "ERROR:  Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp." \
+  "ERROR:  Solo se puede cancelar con más de 24 horas de anticipación. Escríbenos por WhatsApp." \
   "$(as_user "$USER_A" "select cancel_appointment('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');")"
 
 echo "   (trabajos realizados y su bucket)"
@@ -1279,18 +1284,18 @@ check "el codigo se acepta en minusculas y con espacios" "100.00" "$(as_anon "$(
 check "un porcentaje respeta su tope: 50% de 1000 es 100, no 500" "100.00" "$(as_anon "$(vc PCT50CAP 1000)")"
 check "y sin llegar al tope descuenta lo que toca" "50.00" "$(as_anon "$(vc PCT50CAP 100)")"
 check "un monto fijo descuenta el monto" "500.00" "$(as_anon "$(vc FIJO500 5000)")"
-check "y respeta la compra minima, diciendo cuanto falta pedir" "ERROR:  Este cupon pide una compra de al menos RD$ 3,000." \
+check "y respeta la compra minima, diciendo cuanto falta pedir" "ERROR:  Este cupón pide una compra de al menos RD$ 3,000." \
   "$(as_anon "$(vc FIJO500 2000)")"
 check "un monto fijo nunca pasa del subtotal: el total no queda en negativo" "1000.00" "$(as_anon "$(vc FIJO9999 1000)")"
 check "el envio gratis descuenta el envio" "450.00" "$(as_anon "$(vc ENVIOFREE 1000 450)")"
-check "pero si el envio ya es gratis (un retiro) no aplica" "ERROR:  Este cupon no aplica a tu pedido." \
+check "pero si el envio ya es gratis (un retiro) no aplica" "ERROR:  Este cupón no aplica a tu pedido." \
   "$(as_anon "$(vc ENVIOFREE 1000 0)")"
-check "uno vencido" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc VENCIDO 1000)")"
-check "uno que todavia no empieza dice lo mismo" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc FUTURO 1000)")"
-check "uno apagado tambien" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc APAGADO 1000)")"
-check "y uno que no existe: nadie aprende cuales existen" "ERROR:  Ese cupon no existe o ya no esta disponible." "$(as_anon "$(vc NOEXISTE 1000)")"
-check "sin codigo se pide el codigo" "ERROR:  Escribe el codigo del cupon." "$(as_anon "$(vc '   ' 1000)")"
-check "un subtotal negativo se rechaza" "ERROR:  El subtotal no es valido." "$(as_anon "$(vc PCT10 -5)")"
+check "uno vencido" "ERROR:  Ese cupón no existe o ya no está disponible." "$(as_anon "$(vc VENCIDO 1000)")"
+check "uno que todavia no empieza dice lo mismo" "ERROR:  Ese cupón no existe o ya no está disponible." "$(as_anon "$(vc FUTURO 1000)")"
+check "uno apagado tambien" "ERROR:  Ese cupón no existe o ya no está disponible." "$(as_anon "$(vc APAGADO 1000)")"
+check "y uno que no existe: nadie aprende cuales existen" "ERROR:  Ese cupón no existe o ya no está disponible." "$(as_anon "$(vc NOEXISTE 1000)")"
+check "sin codigo se pide el codigo" "ERROR:  Escribe el código del cupón." "$(as_anon "$(vc '   ' 1000)")"
+check "un subtotal negativo se rechaza" "ERROR:  El subtotal no es válido." "$(as_anon "$(vc PCT10 -5)")"
 check "validar no gasta un uso: UNICO sigue disponible tras validarlo dos veces" "100.00" \
   "$(as_anon "$(vc UNICO 1000)")"
 
@@ -1306,35 +1311,35 @@ check "el codigo en minusculas se guarda en mayusculas" "true|PCT10|true" \
 check "un codigo en blanco es 'sin cupon': descuento 0" "true|-|true" \
   "$(as_anon "$(corder invitado@x.com '' x 0)")"
 STOCK5_BEFORE="$(scalar 'select stock from hub_parts where id = 5;')"
-check "un codigo que no existe rechaza el pedido entero" "ERROR:  Ese cupon no existe o ya no esta disponible." \
+check "un codigo que no existe rechaza el pedido entero" "ERROR:  Ese cupón no existe o ya no está disponible." \
   "$(as_anon "$(corder invitado@x.com NOEXISTE x 0)")"
 check "y no descuenta stock" "$STOCK5_BEFORE" "select stock from hub_parts where id = 5;"
-check "la compra minima tambien se exige al crear el pedido" "ERROR:  Este cupon pide una compra de al menos RD$ 1,000,000." \
+check "la compra minima tambien se exige al crear el pedido" "ERROR:  Este cupón pide una compra de al menos RD$ 1,000,000." \
   "$(as_anon "$(corder invitado@x.com MINALTO x 0)")"
 check "un monto enorme deja el total en el envio, nunca en negativo" "t" \
   "$(as_anon "select (discount = subtotal and total = shipping_price and total >= 0) from create_order('invitado@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'FIJO9999');")"
 check "el envio gratis deja el total en el subtotal" "t" \
   "$(as_anon "select (discount = shipping_price and total = subtotal) from create_order('invitado@x.com', 'Cliente', 'Calle 1', 'express', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'ENVIOFREE');")"
-check "un retiro con envio gratis no aplica" "ERROR:  Este cupon no aplica a tu pedido." \
+check "un retiro con envio gratis no aplica" "ERROR:  Este cupón no aplica a tu pedido." \
   "$(as_anon "select * from create_order('invitado@x.com', 'Cliente', '', 'pickup', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_fulfillment_type => 'pickup', p_coupon_code => 'ENVIOFREE');")"
-check "un cupon vencido no pasa al crear el pedido" "ERROR:  Ese cupon no existe o ya no esta disponible." \
+check "un cupon vencido no pasa al crear el pedido" "ERROR:  Ese cupón no existe o ya no está disponible." \
   "$(as_anon "$(corder invitado@x.com VENCIDO x 0)")"
 
 echo "   (cuantas veces se puede usar)"
 ORD_UNICO="$(scalar "$(as_anon "select id from create_order('u1@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago', p_coupon_code => 'UNICO');")")"
 check "UNICO se usa una vez" "UNICO" "select coupon_code from orders where id = '$ORD_UNICO';"
-check "la segunda vez ya se agoto" "ERROR:  Este cupon ya se agoto." "$(as_anon "$(corder u2@x.com UNICO x 10)")"
-check "y validarlo tambien lo dice" "ERROR:  Este cupon ya se agoto." "$(as_anon "$(vc UNICO 1000)")"
+check "la segunda vez ya se agoto" "ERROR:  Este cupón ya se agotó." "$(as_anon "$(corder u2@x.com UNICO x 10)")"
+check "y validarlo tambien lo dice" "ERROR:  Este cupón ya se agotó." "$(as_anon "$(vc UNICO 1000)")"
 check "cancelar el pedido devuelve el uso" "cancelled" \
   "$(as_user "$ADMIN" "select status from set_order_status('$ORD_UNICO', 'cancelled');")"
 check "y entonces otro cliente lo puede usar" "true|UNICO|true" "$(as_anon "$(corder u2@x.com UNICO x 10)")"
 ORD_UNAVEZ="$(scalar "$(as_user "$USER_A" "select id from create_order('a@x.com', 'Usuario A', 'Calle 1', 'standard', 'transfer', '$I5x1'::jsonb, p_contact_phone => '8095550001', p_province => 'Santiago', p_coupon_code => 'UNAVEZ');")")"
 check "UNAVEZ queda a nombre de su dueño" "$USER_A" "select user_id from orders where id = '$ORD_UNAVEZ';"
-check "el mismo cliente no lo repite" "ERROR:  Ya usaste este cupon." \
+check "el mismo cliente no lo repite" "ERROR:  Ya usaste este cupón." \
   "$(as_user "$USER_A" "$(corder a@x.com UNAVEZ x 10)")"
-check "ni validandolo (la sesion lo identifica)" "ERROR:  Ya usaste este cupon." "$(as_user "$USER_A" "$(vc UNAVEZ 1000)")"
+check "ni validandolo (la sesion lo identifica)" "ERROR:  Ya usaste este cupón." "$(as_user "$USER_A" "$(vc UNAVEZ 1000)")"
 check "otra persona si" "true|UNAVEZ|true" "$(as_user "$USER_B" "$(corder b@x.com UNAVEZ x 10)")"
-check "un invitado con el mismo correo que ya lo uso, tampoco" "ERROR:  Ya usaste este cupon." \
+check "un invitado con el mismo correo que ya lo uso, tampoco" "ERROR:  Ya usaste este cupón." \
   "$(as_anon "$(corder A@X.com UNAVEZ x 10)")"
 check "y uno con otro correo si" "true|UNAVEZ|true" "$(as_anon "$(corder otro@x.com UNAVEZ x 10)")"
 
@@ -1419,18 +1424,18 @@ VAR_GRIS="$(scalar "select id from product_variants where product_id = 99911 and
 VAR_BEIGE="$(scalar "select id from product_variants where product_id = 99911 and name = 'Beige';")"
 VAR_OTRO="$(scalar "select id from product_variants where product_id = 99912 and name = 'Negro';")"
 vorder() { echo "select * from create_order('v@x.com', 'Cliente', 'Calle 1', 'standard', 'transfer', '$1'::jsonb, p_contact_phone => '8095550000', p_province => 'Santiago');"; }
-check "sin elegir opcion se rechaza, diciendo cual producto" 'ERROR:  Elige una opcion de "Alfombra con opciones" antes de comprarlo.' \
+check "sin elegir opcion se rechaza, diciendo cual producto" 'ERROR:  Elige una opción de "Alfombra con opciones" antes de comprarlo.' \
   "$(as_anon "$(vorder '[{"part_id": 99911, "quantity": 1}]')")"
-check "una opcion de otro producto se rechaza" 'ERROR:  La opcion elegida de "Alfombra con opciones" ya no esta disponible.' \
+check "una opcion de otro producto se rechaza" 'ERROR:  La opción elegida de "Alfombra con opciones" ya no está disponible.' \
   "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_OTRO}]")")"
-check "una opcion inexistente tambien" 'ERROR:  La opcion elegida de "Alfombra con opciones" ya no esta disponible.' \
+check "una opcion inexistente tambien" 'ERROR:  La opción elegida de "Alfombra con opciones" ya no está disponible.' \
   "$(as_anon "$(vorder '[{"part_id": 99911, "quantity": 1, "variant_id": 987654}]')")"
 P5NAME="$(scalar 'select name from hub_parts where id = 5;')"
-check "un producto sin opciones no acepta ninguna" "ERROR:  La opcion elegida de \"$P5NAME\" ya no esta disponible." \
+check "un producto sin opciones no acepta ninguna" "ERROR:  La opción elegida de \"$P5NAME\" ya no está disponible." \
   "$(as_anon "$(vorder "[{\"part_id\": 5, \"quantity\": 1, \"variant_id\": $VAR_NEGRO}]")")"
 check "pedir mas de lo que tiene la opcion" 'ERROR:  De "Alfombra con opciones (Negro)" solo quedan 3 y pediste 4. Ajusta la cantidad.' \
   "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 4, \"variant_id\": $VAR_NEGRO}]")")"
-check "una opcion agotada se dice por su nombre" 'ERROR:  Se agoto "Alfombra con opciones (Beige)". Quitala del carrito para continuar.' \
+check "una opcion agotada se dice por su nombre" 'ERROR:  Se agotó "Alfombra con opciones (Beige)". Quítala del carrito para continuar.' \
   "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 1, \"variant_id\": $VAR_BEIGE}]")")"
 check "el stock se suma si la misma opcion viene dos veces" 'ERROR:  De "Alfombra con opciones (Negro)" solo quedan 3 y pediste 4. Ajusta la cantidad.' \
   "$(as_anon "$(vorder "[{\"part_id\": 99911, \"quantity\": 2, \"variant_id\": $VAR_NEGRO}, {\"part_id\": 99911, \"quantity\": 2, \"variant_id\": $VAR_NEGRO}]")")"
@@ -1640,7 +1645,7 @@ check "un admin lee el estado, con el enlace cargado" "true|0" \
   "$(as_user "$ADMIN" "select hook_configured::text || '|' || fired_count from site_rebuild_status();")"
 check "el estado no devuelve el enlace, solo si existe" "false" \
   "$(as_user "$ADMIN" "select (to_jsonb(s)::text like '%hook.example%')::text from site_rebuild_status() s;")"
-check "un usuario normal no lo lee" "ERROR:  Solo un administrador puede ver el estado de la publicacion." \
+check "un usuario normal no lo lee" "ERROR:  Solo un administrador puede ver el estado de la publicación." \
   "$(as_user "$USER_A" 'select * from site_rebuild_status();')"
 check "anon no lo invoca" "$(denied site_rebuild_status)" "$(as_anon 'select * from site_rebuild_status();')"
 check "un usuario normal no publica" "ERROR:  Solo un administrador puede publicar el sitio." \
@@ -1733,7 +1738,7 @@ check "registrar el mismo dispositivo otra vez no lo duplica" "" "$(as_anon "$(r
 check "sigue siendo uno" "1" "$(devices "$GUEST_ORDER")"
 check "la tabla no se puede leer despues desde el navegador (la lee send-push)" 'ERROR:  permission denied for table order_push_subscriptions' \
   "$(as_anon "$(reg "$GUEST_ORDER" https://fcm.googleapis.com/fcm/send/uno) select count(*) from order_push_subscriptions;")"
-check "un pedido con dueño rechaza el aviso de invitado" 'ERROR:  Este pedido es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
+check "un pedido con dueño rechaza el aviso de invitado" 'ERROR:  Este pedido es de una cuenta: inicia sesión y activa los avisos desde tu perfil.' \
   "$(as_anon "$(reg "$OW_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 check "un pedido que no existe, tambien" 'ERROR:  Ese pedido no existe.' \
   "$(as_anon "$(reg 99999999-9999-4999-8999-999999999999 https://fcm.googleapis.com/fcm/send/uno)")"
@@ -1757,7 +1762,7 @@ select create_order('final@correo.com','Cliente Final','Calle 2','standard','tra
 SQL
 DONE_ORDER="$(scalar "select id from orders where contact_email = 'final@correo.com' limit 1;")"
 $PSQL -d postgres -c "set request.jwt.claim.role='service_role'; update orders set status = 'delivered' where id = '$DONE_ORDER';" >/dev/null
-check "un pedido ya entregado no admite avisos: no va a cambiar" 'ERROR:  Este pedido ya termino: no va a cambiar de estado.' \
+check "un pedido ya entregado no admite avisos: no va a cambiar" 'ERROR:  Este pedido ya terminó: no va a cambiar de estado.' \
   "$(as_anon "$(reg "$DONE_ORDER" https://fcm.googleapis.com/fcm/send/uno)")"
 
 echo "   (el trigger: ya no ignora los pedidos sin dueño)"
@@ -1803,7 +1808,7 @@ check "el mismo dispositivo otra vez no se duplica" "" "$(as_anon "$(areg "$APPT
 check "sigue siendo uno" "1" "$(adevices "$APPT1")"
 check "la tabla no se lee despues desde el navegador" 'ERROR:  permission denied for table appointment_push_subscriptions' \
   "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/uno) select count(*) from appointment_push_subscriptions;")"
-check "una cita con dueno rechaza el aviso de invitado" 'ERROR:  Esta cita es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' \
+check "una cita con dueno rechaza el aviso de invitado" 'ERROR:  Esta cita es de una cuenta: inicia sesión y activa los avisos desde tu perfil.' \
   "$(as_anon "$(areg "$OW_APPT" https://fcm.googleapis.com/fcm/send/uno)")"
 check "una cita que no existe, tambien" 'ERROR:  Esa cita no existe.' \
   "$(as_anon "$(areg 99999999-9999-4999-8999-999999999999 https://fcm.googleapis.com/fcm/send/uno)")"
@@ -1822,7 +1827,7 @@ check "los dos que quedan siguen" "2" "$(adevices "$APPT1")"
 
 # Una cita ya terminada no admite avisos. Se termina la de prueba un momento y se devuelve a como estaba.
 $PSQL -d postgres -c "update service_appointments set status = 'done' where id = '$APPT1';" >/dev/null
-check "una cita ya hecha no admite avisos: no va a cambiar" 'ERROR:  Esta cita ya termino: no va a cambiar de estado.' \
+check "una cita ya hecha no admite avisos: no va a cambiar" 'ERROR:  Esta cita ya terminó: no va a cambiar de estado.' \
   "$(as_anon "$(areg "$APPT1" https://fcm.googleapis.com/fcm/send/cinco)")"
 $PSQL -d postgres -c "update service_appointments set status = 'in_progress' where id = '$APPT1';" >/dev/null
 
@@ -1942,15 +1947,15 @@ values (9301, '$USER_A', 'Dueno', 'Pendiente', 1000, 'Santiago', 'piezas', 'pend
        (9302, '$USER_A', 'Dueno', 'Rechazada', 1000, 'Santiago', 'piezas', 'rechazado'),
        (9303, '$USER_A', 'Dueno', 'Aprobada',  1000, 'Santiago', 'piezas', 'aprobado');
 SQL
-check "una pendiente no se marca como vendida" 'ERROR:  Solo una publicacion aprobada se puede marcar como vendida.' \
+check "una pendiente no se marca como vendida" 'ERROR:  Solo una publicación aprobada se puede marcar como vendida.' \
   "$(as_user "$USER_A" "select * from mark_publication_sold(9301);")"
-check "una rechazada tampoco" 'ERROR:  Solo una publicacion aprobada se puede marcar como vendida.' \
+check "una rechazada tampoco" 'ERROR:  Solo una publicación aprobada se puede marcar como vendida.' \
   "$(as_user "$USER_A" "select * from mark_publication_sold(9302);")"
-check "ni se renueva una pendiente" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+check "ni se renueva una pendiente" 'ERROR:  Solo una publicación aprobada se puede renovar.' \
   "$(as_user "$USER_A" "select * from renew_publication(9301);")"
-check "ni una rechazada" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+check "ni una rechazada" 'ERROR:  Solo una publicación aprobada se puede renovar.' \
   "$(as_user "$USER_A" "select * from renew_publication(9302);")"
-check "quien modera tampoco puede (el estado manda)" 'ERROR:  Solo una publicacion aprobada se puede renovar.' \
+check "quien modera tampoco puede (el estado manda)" 'ERROR:  Solo una publicación aprobada se puede renovar.' \
   "$(as_user "$ADMIN" "select * from renew_publication(9302);")"
 check "y no cambio nada de ellas" "0" \
   "select count(*) from hub_market_items where id in (9301, 9302) and sold_at is not null;"
@@ -1990,7 +1995,7 @@ check "las dos columnas existen y el plazo es obligatorio" "timestamp with time 
 
 check "el dueno marca su publicacion como vendida" "true" \
   "$(as_user "$USER_A" "select (sold_at is not null)::text from mark_publication_sold(9001);")"
-check "otro usuario no puede marcarla" 'ERROR:  Solo su dueno puede marcar una publicacion como vendida.' \
+check "otro usuario no puede marcarla" 'ERROR:  Solo su dueño puede marcar una publicación como vendida.' \
   "$(as_user "$USER_B" "select * from mark_publication_sold(9002);")"
 check "quien modera si puede" "true" \
   "$(as_user "$ADMIN" "select (sold_at is not null)::text from mark_publication_sold(9002);")"
@@ -1998,7 +2003,7 @@ check "anon no invoca mark_publication_sold" "$(denied mark_publication_sold)" \
   "$(as_anon "select * from mark_publication_sold(9001);")"
 check "anon no invoca renew_publication" "$(denied renew_publication)" \
   "$(as_anon "select * from renew_publication(9001);")"
-check "una publicacion que no existe se dice" 'ERROR:  Esa publicacion no existe.' \
+check "una publicacion que no existe se dice" 'ERROR:  Esa publicación no existe.' \
   "$(as_user "$USER_A" "select * from mark_publication_sold(987654);")"
 check "marcarla vendida otra vez no mueve la fecha" "1" \
   "$(as_user "$ADMIN" "select count(distinct sold_at) from (select sold_at from mark_publication_sold(9002) union all select sold_at from mark_publication_sold(9002)) t;")"
@@ -2013,7 +2018,7 @@ check "ni al publicar: nace a la venta y con 60 dias aunque mande otra cosa" "fa
 
 check "renovar la deja a la venta y con 60 dias" "true|true" \
   "$(as_user "$USER_A" "select (sold_at is null)::text || '|' || (expires_at > now() + interval '59 days')::text from renew_publication(9001);")"
-check "otro usuario no puede renovar la ajena" 'ERROR:  Solo su dueno puede renovar una publicacion.' \
+check "otro usuario no puede renovar la ajena" 'ERROR:  Solo su dueño puede renovar una publicación.' \
   "$(as_user "$USER_B" "select * from renew_publication(9001);")"
 
 echo "   (el HTML se entera)"
@@ -2599,7 +2604,7 @@ scalar "insert into favorites (user_id, part_id) values ('$USER_A', $TEMP_PART);
 scalar "delete from hub_parts where id = $TEMP_PART;" >/dev/null
 check "borrar el producto se lleva sus favoritos" "0" "select count(*) from favorites where part_id = $TEMP_PART;"
 scalar "insert into hub_parts (name, brand, img_url, price) select 'Fav ' || g, 'x', 'x.jpg', 1 from generate_series(1, 205) g;" >/dev/null
-check "el limite de 200 favoritos se exige con un 22023" 'ERROR:  Llegaste al maximo de 200 favoritos. Quita alguno para guardar otro.' \
+check "el limite de 200 favoritos se exige con un 22023" 'ERROR:  Llegaste al máximo de 200 favoritos. Quita alguno para guardar otro.' \
   "insert into favorites (user_id, part_id) select '$USER_B', id from hub_parts where name like 'Fav %' order by id limit 201;"
 check "hasta 200 si caben" "0" "select count(*) from favorites where user_id = '$USER_B';"
 scalar "delete from hub_parts where name like 'Fav %';" >/dev/null
@@ -2612,8 +2617,8 @@ CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
   "select (select count(*) from favorites) || '|' || (select relrowsecurity from pg_class where relname = 'favorites')::text;"
 
 echo "→ Camino de actualizacion de la 0039"
-apply "$LAST_MIGRATION" upgrade
-apply "$LAST_MIGRATION" upgrade
+apply supabase/migrations/0039_favorites_part_index.sql upgrade
+apply supabase/migrations/0039_favorites_part_index.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "el indice de favorites.part_id existe" "1"   "select count(*) from pg_indexes where indexname = 'favorites_part_idx';"
 

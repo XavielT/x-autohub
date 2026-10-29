@@ -146,6 +146,9 @@ npx ng test --watch=false              # lo mismo, explícito
 npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 ./scripts/verify-migrations.sh          # las migraciones contra un Postgres de verdad
+# En Windows no hay `initdb` en el PATH: baja el zip de binarios de PostgreSQL (EnterpriseDB), descomprímelo (p. ej. C:/dev/pgsql) y
+# corre `VERIFY_PGBIN=C:/dev/pgsql/bin ./scripts/verify-migrations.sh` (usa TCP en 127.0.0.1, mensajes en inglés y UTF-8). Queda
+# 1 comprobación que falla solo allí: la 0021, porque las tildes de un `-c` por línea de comandos pierden la codificación en Windows.
 node scripts/verify-webpush.mjs         # el cifrado y la firma de Web Push
 node scripts/verify-send-push.mjs       # el handler de send-push, con una base de mentira
 node scripts/verify-build-status.mjs    # el handler de build-status, con una base y una API de Vercel de mentira
@@ -213,8 +216,9 @@ Cosas que ya causaron un bug. No las repitas:
   acentuadas; **Gefika** (los títulos, `--font-heading`) no trae `¿` ni `¡`, que caen a la fuente de respaldo.
   Gefika no se puede regenerar para sumarlos: un subset solo quita glifos, y el original no los tiene.
   Cuidado al corregir cadenas en masa: `<?xml version=…>`, `acabo de` (verbo) y `publica` (verbo) no llevan
-  tilde, y `agendar.ts` compara el mensaje que lanza la base (`hora ya no est[aá] disponible`) — los
-  `raise exception` de las migraciones siguen sin tildes.
+  tilde, y `agendar.ts` compara el mensaje que lanza la base (`hora ya no est[aá] disponible`, acepta los dos textos).
+  Los `raise exception` salieron sin tildes hasta la 0047, que los reescribe leyendo la definición viva de cada función; si
+  escribes una función nueva, el mensaje va con tildes desde el principio.
 - **Lo que cargan el mapa y los videos tiene que estar en la CSP.** `vercel.json` lista a mano los orígenes: `img-src` lleva
   Supabase y `https://*.tile.openstreetmap.org` (los mosaicos del mapa de `/publicar`; sin eso el mapa sale gris), y `media-src`
   lleva Supabase y `blob:` (los videos del feed y la vista previa del compositor). Un origen nuevo de imágenes o video que no

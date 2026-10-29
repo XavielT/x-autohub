@@ -235,7 +235,7 @@ export class OrderService {
       // Con opción, el mensaje la nombra: "Alfombras (Negro)".
       const label = variant ? `${part.name} (${variant.name})` : part.name;
       if (stock <= 0) {
-        return throwError(() => new Error(`Se agoto "${label}". Quítala del carrito para continuar.`));
+        return throwError(() => new Error(`Se agotó "${label}". Quítala del carrito para continuar.`));
       }
       if (quantity > stock) {
         return throwError(
