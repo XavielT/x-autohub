@@ -8,6 +8,7 @@ import { AuthService } from '../../../shared/services/auth.service';
 import { SocialHubTab, SocialPostModel } from '../../../shared/models/social-hub.model';
 import { HomeWelcome } from '../../components/home-welcome/home-welcome';
 import { PostComposer } from '../../../shared/components/post-composer/post-composer';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { SocialPost } from '../../../shared/components/social-post/social-post';
 import { ClubChannel } from '../../../shared/components/club-channel/club-channel';
 
@@ -18,7 +19,7 @@ interface TabOption {
 
 @Component({
   selector: 'app-social-hub',
-  imports: [DatePipe, DecimalPipe, RouterLink, HomeWelcome, ClubChannel, SocialPost, PostComposer],
+  imports: [DatePipe, DecimalPipe, RouterLink, HomeWelcome, ClubChannel, SocialPost, PostComposer, Skeleton],
   templateUrl: './social-hub.html',
   styleUrl: './social-hub.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,10 +50,12 @@ export class SocialHub {
     { value: 'eventos', label: 'Eventos' },
   ];
 
-  readonly posts = toSignal(this.socialHub.getPosts(), { initialValue: [] });
+  readonly posts = toSignal(this.socialHub.getPosts());
   /** Lo que esta persona publicó desde que abrió la página: sale arriba sin volver a pedir el feed. */
   private readonly justPublished = signal<SocialPostModel[]>([]);
-  readonly feed = computed(() => [...this.justPublished(), ...this.posts()]);
+  readonly feed = computed(() => [...this.justPublished(), ...(this.posts() ?? [])]);
+  /** El feed todavía no llegó (y nada propio que enseñar). */
+  readonly isLoadingFeed = computed(() => this.posts() === undefined && this.justPublished().length === 0);
   readonly clubs = toSignal(this.socialHub.getClubs(), { initialValue: [] });
   readonly events = toSignal(this.socialHub.getEvents(), { initialValue: [] });
 

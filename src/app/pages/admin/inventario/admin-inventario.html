@@ -265,7 +265,7 @@
               <span>Artículo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
             </label>
             <div class="adm-inv__actions">
-              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a la tienda' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
@@ -366,7 +366,7 @@
               <span>Vehículo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
             </label>
             <div class="adm-inv__actions">
-              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a Auto Hub' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
@@ -417,7 +417,7 @@
               <span>Noticia de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
             </label>
             <div class="adm-inv__actions">
-              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
+              <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Publicar noticia' : 'Guardar cambios') }}
               </button>
               <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>

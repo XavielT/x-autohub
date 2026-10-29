@@ -5,7 +5,7 @@
       <input type="text" name="make" placeholder="Hyundai" maxlength="60"
              [ngModel]="newMakeName()" (ngModelChange)="newMakeName.set($event)" />
     </label>
-    <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()">Agregar marca</button>
+    <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()" [attr.aria-busy]="isSaving()">Agregar marca</button>
   </form>
 
   @if (unmatched().length > 0) {
@@ -46,7 +46,7 @@
             <input type="text" name="model" placeholder="Corolla" maxlength="60"
                    [ngModel]="newModelName()" (ngModelChange)="newModelName.set($event)" />
           </label>
-          <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()">
+          <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()" [attr.aria-busy]="isSaving()">
             Agregar modelo
           </button>
         </form>

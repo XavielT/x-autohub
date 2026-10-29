@@ -227,8 +227,6 @@ Pendiente:
 
 - **Aplicar las migraciones 0040 a 0046 y correr `./scripts/verify-migrations.sh` donde haya Postgres.** Ninguna se ejecutó
   todavía contra una base. La 0043 no existe a propósito: el bucket `avatars` ya estaba en la 0003.
-- Esqueletos en el home, el checkout y el feed de la comunidad; el spinner de botón (`aria-busy`) está en los formularios
-  principales, no en todos.
 - Medir la latencia del buscador antes y después (se dejó el debounce, la caché por prefijo y la precarga de supabase-js,
   pero no hay cifras).
 - Los `raise exception` de las migraciones siguen sin tildes (hay que redefinir cada función en una migración nueva).

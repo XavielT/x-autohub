@@ -46,7 +46,7 @@
     </ul>
 
     @if (remaining() > 0) {
-      <button type="button" class="rv__more" [disabled]="isLoadingMore()" (click)="loadMore()">
+      <button type="button" class="rv__more" [disabled]="isLoadingMore()" [attr.aria-busy]="isLoadingMore()" (click)="loadMore()">
         {{ isLoadingMore() ? 'Cargando…' : 'Ver más reseñas (' + remaining() + ')' }}
       </button>
     }

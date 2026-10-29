@@ -41,10 +41,14 @@
       @for (post of feed(); track post.id) {
         <app-social-post [post]="post" />
       } @empty {
+        @if (isLoadingFeed()) {
+          <app-skeleton variant="post" [count]="3" label="Cargando publicaciones…" />
+        } @else {
         <div class="social__empty">
           <h4>Todavía no hay publicaciones</h4>
           <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
         </div>
+        }
       }
     </section>
   }

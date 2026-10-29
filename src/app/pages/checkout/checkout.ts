@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -67,7 +68,7 @@ interface RememberedCheckout {
  */
 @Component({
   selector: 'app-checkout',
-  imports: [DecimalPipe, RouterLink, FormsModule, CouponBox],
+  imports: [DecimalPipe, RouterLink, FormsModule, CouponBox, Skeleton],
   templateUrl: './checkout.html',
   styleUrl: './checkout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

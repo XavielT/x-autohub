@@ -1,4 +1,8 @@
-@if (products().length > 0) {
-  <app-home-product-row eyebrow="Tienda" title="Ofertas" linkLabel="Ver la tienda"
-                        layout="carousel" [products]="products()" />
+@if (products(); as list) {
+  @if (list.length > 0) {
+    <app-home-product-row eyebrow="Tienda" title="Ofertas" linkLabel="Ver la tienda"
+                          layout="carousel" [products]="list" />
+  }
+} @else {
+  <app-skeleton variant="product-card" [count]="4" label="Cargando productos…" />
 }

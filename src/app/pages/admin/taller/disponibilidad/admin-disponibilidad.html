@@ -55,7 +55,7 @@
     </ul>
 
     <div class="tl__actions">
-      <button type="button" class="tl__btn" [disabled]="isSaving()" (click)="saveWeek()">
+      <button type="button" class="tl__btn" [disabled]="isSaving()" [attr.aria-busy]="isSaving()" (click)="saveWeek()">
         {{ isSaving() ? 'Guardando…' : 'Guardar la semana' }}
       </button>
     </div>

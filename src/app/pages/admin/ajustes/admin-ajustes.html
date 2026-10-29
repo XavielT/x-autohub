@@ -33,7 +33,7 @@
 
     <div class="adm-set__row">
       <button type="button" class="adm-set__secondary" (click)="addAccount()">+ Agregar una cuenta</button>
-      <button type="button" class="adm-set__primary" [disabled]="isSavingAccounts()" (click)="saveAccounts()">
+      <button type="button" class="adm-set__primary" [disabled]="isSavingAccounts()" [attr.aria-busy]="isSavingAccounts()" (click)="saveAccounts()">
         {{ isSavingAccounts() ? 'Guardando…' : 'Guardar las cuentas' }}
       </button>
     </div>
@@ -55,7 +55,7 @@
     </div>
 
     <div class="adm-set__row">
-      <button type="button" class="adm-set__primary" [disabled]="isSavingPickup()" (click)="savePickup()">
+      <button type="button" class="adm-set__primary" [disabled]="isSavingPickup()" [attr.aria-busy]="isSavingPickup()" (click)="savePickup()">
         {{ isSavingPickup() ? 'Guardando…' : 'Guardar la dirección' }}
       </button>
     </div>

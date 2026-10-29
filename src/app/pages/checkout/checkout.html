@@ -136,6 +136,7 @@
 
               @if (fulfillment() === 'shipping') {
                 <h3 class="checkout__subsection-title">Tipo de envío</h3>
+                @if (shippingOptions().length === 0) { <app-skeleton variant="row" [count]="2" label="Cargando las opciones de envío…" /> }
                 <ul class="checkout__options">
                   @for (opt of visibleShippingOptions(); track opt.id) {
                     <li class="checkout__option">
@@ -176,6 +177,7 @@
               <h2 id="checkout-step-heading" class="checkout__section-title" data-step-heading tabindex="-1">2. Pago</h2>
 
               <h3 class="checkout__subsection-title">Cómo vas a pagar</h3>
+              @if (paymentOptions().length === 0) { <app-skeleton variant="row" [count]="2" label="Cargando las formas de pago…" /> }
               <ul class="checkout__options">
                 @for (pm of paymentOptions(); track pm.id) {
                   <li class="checkout__option">

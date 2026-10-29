@@ -84,7 +84,7 @@
         <div class="tienda__more">
           <p>Mostrando {{ items().length }} de {{ total() }}</p>
           @if (canLoadMore()) {
-            <button type="button" class="tienda__btn" [disabled]="isLoadingMore()" (click)="loadMore()">
+            <button type="button" class="tienda__btn" [disabled]="isLoadingMore()" [attr.aria-busy]="isLoadingMore()" (click)="loadMore()">
               {{ isLoadingMore() ? 'Cargando…' : 'Cargar más' }}
             </button>
           }

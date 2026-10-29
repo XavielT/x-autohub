@@ -193,7 +193,7 @@ describe('bloques del home', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      const ids = fixture.componentInstance.products().map((p) => p.soldCount);
+      const ids = fixture.componentInstance.products()!.map((p) => p.soldCount);
       expect(ids.length).toBe(4);
       expect(ids).toEqual([...ids].sort((a, b) => b - a));
     });
@@ -203,7 +203,7 @@ describe('bloques del home', () => {
       fixture.detectChanges();
       await fixture.whenStable();
 
-      expect(fixture.componentInstance.products().some((p) => p.isTest)).toBe(false);
+      expect(fixture.componentInstance.products()!.some((p) => p.isTest)).toBe(false);
     });
   });
 

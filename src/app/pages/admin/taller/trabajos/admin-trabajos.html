@@ -51,7 +51,7 @@
 
       <div class="tl__actions">
         <button type="button" class="tl__btn tl__btn--ghost" (click)="cancel()" [disabled]="isSaving()">Cancelar</button>
-        <button type="submit" class="tl__btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando…' : 'Guardar' }}</button>
+        <button type="submit" class="tl__btn" [disabled]="isSaving()" [attr.aria-busy]="isSaving()">{{ isSaving() ? 'Guardando…' : 'Guardar' }}</button>
       </div>
     </form>
   } @else if (isLoading()) {
