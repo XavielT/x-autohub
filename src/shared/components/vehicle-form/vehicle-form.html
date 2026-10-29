@@ -1,4 +1,4 @@
-<form class="vf" (ngSubmit)="submit()">
+<form class="vf" (submit)="$event.preventDefault(); submit()">
   <div class="vf__field">
     <label [for]="idPrefix() + '-make'">Marca</label>
     <app-searchable-select [inputId]="idPrefix() + '-make'" [options]="makeOptions()"

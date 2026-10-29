@@ -99,6 +99,22 @@ describe('VehicleForm', () => {
     expect(chosen).toEqual([{ makeId: toyota.id, modelId: corolla.id, year: 2015 }]);
   });
 
+  it('el envío real del formulario emite el vehículo y no recarga la página', () => {
+    // Regresión: con `(ngSubmit)` y sin FormsModule el envío nunca llegaba al componente y el navegador
+    // hacía un GET nativo (`/?modelText=…`). Aquí se dispara el evento `submit` de verdad.
+    const { fixture, c, el, chosen } = montar();
+    c.onMakeChange(toyota.id);
+    c.modelId.set(corolla.id);
+    c.year.set(2015);
+    fixture.detectChanges();
+
+    const event = new Event('submit', { cancelable: true, bubbles: true });
+    el.querySelector('form')!.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(chosen).toEqual([{ makeId: toyota.id, modelId: corolla.id, year: 2015 }]);
+  });
+
   it('no emite si falta algo', () => {
     const { c, chosen } = montar();
     c.onMakeChange(toyota.id);
