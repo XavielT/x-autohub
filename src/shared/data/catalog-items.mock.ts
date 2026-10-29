@@ -20,7 +20,7 @@ export const CATALOG_ITEMS_MOCK: CatalogItem[] = [
     {
         id: 3,
         category: 'MOTOR',
-        title: 'BUJIAS / FILTROS / ...',
+        title: 'BUJÍAS / FILTROS / ...',
         imageUrl: 'assets/imgs/catalog/motor.jpg',
         variant: 'secondary',
     },

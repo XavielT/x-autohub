@@ -48,7 +48,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Brembo",
         starsRating: 4.9,
         price: 12950,
-        description: "Disco de alto rendimiento con excelente disipacion de calor para uso diario y track day."
+        description: "Disco de alto rendimiento con excelente disipación de calor para uso diario y track day."
     },
     {
         id: 2,
@@ -58,7 +58,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "K&N",
         starsRating: 4.7,
         price: 2850,
-        description: "Filtro reusable que mejora la respiracion del motor y la respuesta de aceleracion."
+        description: "Filtro reusable que mejora la respiración del motor y la respuesta de aceleración."
     },
     {
         id: 3,
@@ -178,7 +178,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "KYB",
         starsRating: 4.4,
         price: 5200,
-        description: "Confort y control mejorados para uso diario con mejor absorcion de impactos."
+        description: "Confort y control mejorados para uso diario con mejor absorción de impactos."
     },
     {
         id: 15,
@@ -188,13 +188,13 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "NGK",
         starsRating: 4.7,
         price: 2150,
-        description: "Entrega chispa estable para mejorar arranque y eficiencia de combustion."
+        description: "Entrega chispa estable para mejorar arranque y eficiencia de combustión."
     },
     {
         id: 16,
         category: "motor",
         imgUrl: "assets/imgs/hub-parts/bujias-iridio-set4.jpg",
-        name: "Set bujias iridio x4",
+        name: "Set bujías iridio x4",
         brand: "Denso",
         starsRating: 4.8,
         price: 1850,
@@ -417,7 +417,7 @@ const LEGACY_PARTS: LegacyPart[] = [
  */
 const EXTRAS: Readonly<Record<number, ProductExtras>> = {
     1:  { stock: 4,  fitmentType: "specific", featured: true, installationServiceId: 4, soldCount: 18, specs: { Diametro: "355 mm", Tipo: "Ventilado" } },
-    2:  { stock: 12, fitmentType: "specific", compareAtPrice: 3400, soldCount: 64, specs: { Material: "Algodon con aceite", Reusable: "Si" } },
+    2:  { stock: 12, fitmentType: "specific", compareAtPrice: 3400, soldCount: 64, specs: { Material: "Algodón con aceite", Reusable: "Si" } },
     3:  { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 15, featured: true, installationServiceId: 5, soldCount: 9, specs: { Ajuste: "Altura y dureza" } },
     4:  { stock: 40, fitmentType: "universal", installationServiceId: 2, soldCount: 210, specs: { Viscosidad: "5W-30", Contenido: "5 L" } },
     5:  { stock: 25, fitmentType: "specific", installationServiceId: 7, soldCount: 87, specs: { Base: "H7", Temperatura: "6000 K" } },

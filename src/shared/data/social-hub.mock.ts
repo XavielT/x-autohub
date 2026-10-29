@@ -73,7 +73,7 @@ export const SOCIAL_CLUBS_MOCK: SocialClubModel[] = [
     members: 178,
     focus: 'Volkswagen / Project cars',
     description:
-      'Todo lo relacionado con la plataforma MK4. Asesoria entre miembros, herramientas compartidas y caravanas.',
+      'Todo lo relacionado con la plataforma MK4. Asesoría entre miembros, herramientas compartidas y caravanas.',
     imageUrl: 'assets/imgs/vw-golf-mk4.webp',
   },
   {
@@ -83,7 +83,7 @@ export const SOCIAL_CLUBS_MOCK: SocialClubModel[] = [
     members: 94,
     focus: 'Europeos / Daily drivers',
     description:
-      'Comunidad enfocada en mantener europeos economicos rodando. Piezas usadas verificadas y talleres de confianza.',
+      'Comunidad enfocada en mantener europeos económicos rodando. Piezas usadas verificadas y talleres de confianza.',
     imageUrl: 'assets/imgs/auto-hub/c3.jpeg',
   },
   {
@@ -103,7 +103,7 @@ export const SOCIAL_EVENTS_MOCK: SocialEventModel[] = [
     id: 1,
     title: '809 Expo — Car Show & Drift',
     date: '2026-09-07',
-    location: 'Autódromo de las Americas',
+    location: 'Autódromo de las Américas',
     organizer: '100X35 Expo / Clean Culture',
     description:
       'Car show, exhibición de drift, vendor midway y premiación de los mejores proyectos del país.',
@@ -118,7 +118,7 @@ export const SOCIAL_EVENTS_MOCK: SocialEventModel[] = [
     location: 'Salida desde Santo Domingo',
     organizer: 'X AutoHub',
     description:
-      'Caravana abierta hasta Barahona. Punto de encuentro a las 6:00 AM, desayuno y paradas fotograficas.',
+      'Caravana abierta hasta Barahona. Punto de encuentro a las 6:00 AM, desayuno y paradas fotográficas.',
     imageUrl: 'assets/imgs/auto-hub/tiguan.jpeg',
     attendees: 86,
     price: 0,
@@ -127,7 +127,7 @@ export const SOCIAL_EVENTS_MOCK: SocialEventModel[] = [
     id: 3,
     title: 'Track Day — Novatos',
     date: '2026-10-05',
-    location: 'Autódromo de las Americas',
+    location: 'Autódromo de las Américas',
     organizer: 'X AutoHub / Supra Club RD',
     description:
       'Sesión guiada para quienes nunca han pisado pista. Incluye inspección técnica previa e instructor.',

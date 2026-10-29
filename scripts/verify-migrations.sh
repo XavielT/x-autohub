@@ -689,6 +689,15 @@ check "el admin si lo borra" "1" "$(as_user "$ADMIN" "with d as (delete from soc
 check "y el contador baja" "0" "select comments from social_posts where id = $POST1;"
 check "mas de 4 archivos en una publicacion, no"   'ERROR:  new row for relation "social_posts" violates check constraint "social_posts_media_check"'   "$(as_user "$USER_A" "insert into social_posts (author_id, author_name, text, media) values (auth.uid(), 'A', 'x', '[{},{},{},{},{}]');")"
 
+echo "→ Tildes en el contenido ya cargado (migracion 0049)"
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into social_posts (id, author_id, author_name, text) values (90002, '$USER_A', 'A', 'Instalacion RAPIDA y bateria nueva, mas barata: cumplio 20 anos. Slug: bateria-agm');
+SQL
+$PSQL -v ON_ERROR_STOP=1 -q -f supabase/migrations/0049_content_accents.sql >/dev/null
+check "las palabras sin tilde se corrigen, conservando mayusculas y sin tocar lo demas"   "Instalación RÁPIDA y batería nueva, más barata: cumplió 20 años. Slug: bateria-agm"   "select text from social_posts where id = 90002;"
+$PSQL -v ON_ERROR_STOP=1 -q -f supabase/migrations/0049_content_accents.sql >/dev/null
+check "ejecutarla otra vez no cambia nada" "Instalación RÁPIDA y batería nueva, más barata: cumplió 20 años. Slug: bateria-agm"   "select text from social_posts where id = 90002;"
+
 echo "→ Pedidos: estado, stock y reglas de entrega (migracion 0018)"
 # Cuatro piezas con comportamiento conocido. Se prepara por encima de RLS: es el
 # escenario, no lo que se comprueba.

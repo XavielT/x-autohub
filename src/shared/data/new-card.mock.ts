@@ -10,7 +10,7 @@ export const NEWS_MOCK: NewCardModel[] = [
         text: 'Evento con Car Show, Drift exhibition y entretenimiento en vivo. Con los mejores pilotos y proyectos de US y RD.',
         // TODO: add expo-809-2 / expo-809-3 to assets/imgs/news and list them here.
         images: ['assets/imgs/news/expo-809.jpg'],
-        textLarge: 'Por primera vez en República Dominicana. @809expo Presentado por 100X35 Expo y Clean Culture, traen AutoShow / Drift / Caribbean Culture en un evento con @adam_lz y amigos. El evento tendrá lugar en el Autódromo de las Americas este Domingo 7 de Junio de 2026. Será una experiencia de día completo con sección de Car Show, sección de Drift, Vendor midway, entretenimiento en vivo y la premiación de los mejores carros del evento. Podrás registrar tu vehículo para el evento próximamente en: cleancultureevents.com',
+        textLarge: 'Por primera vez en República Dominicana. @809expo Presentado por 100X35 Expo y Clean Culture, traen AutoShow / Drift / Caribbean Culture en un evento con @adam_lz y amigos. El evento tendrá lugar en el Autódromo de las Américas este Domingo 7 de Junio de 2026. Será una experiencia de día completo con sección de Car Show, sección de Drift, Vendor midway, entretenimiento en vivo y la premiación de los mejores carros del evento. Podrás registrar tu vehículo para el evento próximamente en: cleancultureevents.com',
     },
     {
         id: 2,
