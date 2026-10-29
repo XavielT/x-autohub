@@ -656,6 +656,7 @@ check "anon encuentra el producto por su alias y la sugerencia lo dice" "zzbumpe
 check "una busqueda de un caracter no devuelve nada" "0"   "$(as_anon "select count(*) from suggest_products('a');")"
 check "anon no escribe alias"   'ERROR:  permission denied for table product_aliases'   "$(as_anon "insert into product_aliases (product_id, alias) values (2, 'otro');")"
 check "el limite se recorta a 20" "t"   "$(as_anon "select count(*) <= 20 from suggest_products('de', 500);")"
+check "un error de tecleo en la marca (migracion 0048) tambien encuentra" "t"   "$(as_anon "select count(*) > 0 from suggest_products('brenbo');")"
 
 echo "→ Comunidad: me gusta, comentarios y contadores (migracion 0045)"
 POST1=90001
