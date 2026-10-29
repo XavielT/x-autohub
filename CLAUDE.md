@@ -147,8 +147,7 @@ npx tsc -p tsconfig.app.json --noEmit  # solo type-check, rápido
 
 ./scripts/verify-migrations.sh          # las migraciones contra un Postgres de verdad
 # En Windows no hay `initdb` en el PATH: baja el zip de binarios de PostgreSQL (EnterpriseDB), descomprímelo (p. ej. C:/dev/pgsql) y
-# corre `VERIFY_PGBIN=C:/dev/pgsql/bin ./scripts/verify-migrations.sh` (usa TCP en 127.0.0.1, mensajes en inglés y UTF-8). Queda
-# 1 comprobación que falla solo allí: la 0021, porque las tildes de un `-c` por línea de comandos pierden la codificación en Windows.
+# corre `VERIFY_PGBIN=C:/dev/pgsql/bin ./scripts/verify-migrations.sh` (usa TCP en 127.0.0.1, mensajes en inglés y UTF-8). Pasa completo (exit 0).
 node scripts/verify-webpush.mjs         # el cifrado y la firma de Web Push
 node scripts/verify-send-push.mjs       # el handler de send-push, con una base de mentira
 node scripts/verify-build-status.mjs    # el handler de build-status, con una base y una API de Vercel de mentira

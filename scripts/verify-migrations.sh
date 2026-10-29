@@ -246,7 +246,13 @@ check() {
   # rojo mata el script en vez de dejar comparar el mensaje. `|| true` no basta,
   # porque `pipefail` tambien alcanza a los pipes de la extraccion de abajo.
   set +e
-  raw="$($PSQL -d "${CHECK_DB:-postgres}" -t -A -c "$sql" 2>&1)"
+  if [ -n "${VERIFY_PGBIN:-}" ] && printf '%s' "$sql" | LC_ALL=C grep -q '[^ -~[:space:]]'; then
+    # Windows: un `-c` con tildes pierde la codificacion al pasar por la linea de comandos; por archivo no.
+    printf '%s' "$sql" > "$WORKDIR/check.sql"
+    raw="$($PSQL -d "${CHECK_DB:-postgres}" -t -A -v ON_ERROR_STOP=1 -f "$WORKDIR/check.sql" 2>&1 | sed -E 's/^psql:[^ ]*: //')"
+  else
+    raw="$($PSQL -d "${CHECK_DB:-postgres}" -t -A -c "$sql" 2>&1)"
+  fi
   set -e
 
   # De la salida se saca una sola linea para comparar:
