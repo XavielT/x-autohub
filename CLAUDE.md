@@ -212,7 +212,7 @@ Cosas que ya causaron un bug. No las repitas:
   Ver `brand/README.md`.
 - **La UI va con tildes y ñ.** Si un glifo no se ve, el problema es el subset de la fuente, no la palabra.
   Revisado el 28/10/2026: todas las fuentes de `src/assets/fonts` traen `ñ á é í ó ú ü Ñ` y las vocales
-  acentuadas; **Gefika** (los títulos, `--font-heading`) no trae `¿` ni `¡`, que caen a la fuente de respaldo.
+  acentuadas; **Gefika** (los títulos, `--font-heading`) no trae `¿` ni `¡`: `styles.scss` completa la familia con Chakra Petch Bold solo para esos dos signos (`unicode-range`).
   Gefika no se puede regenerar para sumarlos: un subset solo quita glifos, y el original no los tiene.
   Cuidado al corregir cadenas en masa: `<?xml version=…>`, `acabo de` (verbo) y `publica` (verbo) no llevan
   tilde, y `agendar.ts` compara el mensaje que lanza la base (`hora ya no est[aá] disponible`, acepta los dos textos).

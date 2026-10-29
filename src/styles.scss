@@ -105,6 +105,15 @@
     font-display: swap;
 }
 
+// Gefika no trae `¿` ni `¡` (y no se puede regenerar: un subset solo quita glifos). Se completa la misma familia con
+// Chakra Petch Bold, que tiene el mismo peso y trazo cuadrado, solo para esos dos signos.
+@font-face {
+    font-family: 'Gefika';
+    src: url('assets/fonts/Chakra-Petch/ChakraPetch-Bold.woff2') format('woff2');
+    font-display: swap;
+    unicode-range: U+00A1, U+00BF;
+}
+
 @font-face {
     font-family: 'Spoiler-script';
     src: url('assets/fonts/spoiler-script/Spoilers-Script.woff2') format('woff2');

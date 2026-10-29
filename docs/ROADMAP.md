@@ -229,7 +229,7 @@ Pendiente:
   `avatars` ya estaba en la 0003.
 - Medir la latencia del buscador antes y después (se dejó el debounce, la caché por prefijo y la precarga de supabase-js,
   pero no hay cifras).
-- Gefika (títulos) no trae `¿` ni `¡`.
+
 
 ---
 
