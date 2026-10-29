@@ -287,10 +287,11 @@ export class HubMarketService {
    *   publicación sale aprobada: no tiene sentido que se aprueben a sí mismos
    *   pasando por la cola.
    *
-   *   **En modo real este valor no decide nada.** El estado lo pone el trigger
+   *   **En modo real el trigger tiene la última palabra:** el estado lo pone el trigger
    *   `hub_market_force_status` (0012) preguntándole a Postgres quién está
-   *   publicando; aquí solo sirve para el modo simulado, que no tiene triggers.
-   *   Un cliente manipulado que mande `true` no consigue nada.
+   *   publicando. A un moderador o admin le respeta el `aprobado` que manda el cliente (sin él, el valor por
+   *   defecto de la columna lo dejaría en su propia cola); a cualquier otro le fuerza `pendiente`, mande lo
+   *   que mande: un cliente manipulado que mande `true` no consigue nada.
    */
   publish(
     item: Omit<HubMarketItemModel, 'id'>,
@@ -317,7 +318,12 @@ export class HubMarketService {
     return from(
       this.supabase.db
         .from('hub_market_items')
-        .insert(fromHubMarketItem(item, sellerId, sellerName))
+        // El trigger (0012) respeta el estado que mande un moderador o admin y fuerza `pendiente` a todos los demás.
+        // Sin mandarlo, el valor por defecto de la columna deja también a un admin en su propia cola.
+        .insert({
+          ...fromHubMarketItem(item, sellerId, sellerName),
+          ...(canModerate && { status: 'aprobado' as const }),
+        })
         .select(SELECT_WITH_SELLER)
         .single(),
     ).pipe(map((res) => toHubMarketItem(unwrap(res))));
