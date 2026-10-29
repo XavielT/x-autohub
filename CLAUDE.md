@@ -494,6 +494,9 @@ Cosas que ya causaron un bug. No las repitas:
   mano tampoco, porque la ambigüedad la resuelve PostgREST y no Postgres— así
   que si agregas una columna que referencie una tabla ya referenciada, revisa
   todos los `select` con embed de esa tabla.
+  **Una tabla puente cuenta como otra vía:** `social_post_likes` (0045, posts↔profiles) volvió ambiguo el embed `profiles(...)` de
+  `social_posts` y el feed de producción quedó "Cargando…" hasta nombrar la clave (`profiles!social_posts_author_id_fkey`).
+  Tras cada migración con tablas nuevas, abre el sitio real, no solo `verify-migrations.sh`.
 - **El texto de un `select` de supabase-js tiene que ser una sola cadena
   literal.** El tipo de la fila sale de leer ese texto; si lo armas con `'a, ' +
   'b'` (para que no quede una línea de 300 caracteres) TypeScript lo ensancha a

@@ -7,7 +7,9 @@ import { SocialClubModel, SocialEventModel, SocialPostModel } from '../models/so
 import { SOCIAL_CLUBS_MOCK, SOCIAL_EVENTS_MOCK, SOCIAL_POSTS_MOCK } from '../data/social-hub.mock';
 
 /** El nombre y la insignia salen del perfil cuando la publicación tiene autor real. */
-const POST_SELECT = '*, profiles(display_name, is_verified)';
+// Con la clave nombrada: desde la 0045 `social_post_likes` es una segunda vía a `profiles` (muchos a muchos) y el embed
+// sin nombre responde PGRST201.
+const POST_SELECT = '*, profiles!social_posts_author_id_fkey(display_name, is_verified)';
 
 @Injectable({ providedIn: 'root' })
 export class SocialHubService {

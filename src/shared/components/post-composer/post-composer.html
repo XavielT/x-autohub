@@ -11,7 +11,7 @@
             @if (item.isImage) {
               <img [src]="item.url" [alt]="'Foto ' + (i + 1)" />
             } @else {
-              <video [src]="item.url" muted playsinline preload="metadata"></video>
+              <video [src]="item.url" [muted]="true" playsinline preload="metadata"></video>
             }
           }
           <button type="button" class="pc__remove" [attr.aria-label]="'Quitar el archivo ' + (i + 1)" (click)="remove(i)">×</button>

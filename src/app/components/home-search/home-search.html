@@ -1,7 +1,7 @@
 <section class="hsearch" aria-labelledby="hsearch-title">
   <img class="hsearch__poster" src="assets/imgs/hero-poster.jpg" alt="" aria-hidden="true">
   @if (showVideo) {
-    <video class="hsearch__video" autoplay muted loop playsinline preload="metadata"
+    <video class="hsearch__video" autoplay [muted]="true" loop playsinline preload="metadata"
            poster="assets/imgs/hero-poster.jpg" aria-hidden="true" tabindex="-1">
       <source src="assets/videos/citroen-c3-flying.mp4" type="video/mp4">
     </video>
