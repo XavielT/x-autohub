@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, from, map, of } from 'rxjs';
+import { Observable, forkJoin, from, map, of, switchMap } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { PROOF_MAX_BYTES } from '../models/order.model';
 import { SocialMedia } from '../models/social-hub.model';
@@ -223,19 +223,24 @@ export class StorageService {
   ): Observable<string> {
     const path = `${folder}/${this.uniqueName(file.name)}`;
 
-    return from(
-      this.supabase.db.storage.from(bucket).upload(path, file, {
-        cacheControl: '31536000',
-        upsert: false,
-      }),
-    ).pipe(
-      map((res) => {
-        if (res.error) {
-          console.error('[storage]', res.error);
-          throw new Error('No pudimos subir uno de los archivos. Intenta de nuevo.');
-        }
-        return this.supabase.db.storage.from(bucket).getPublicUrl(res.data.path).data.publicUrl;
-      }),
+    // `getPublicUrl()` es sincrónico y por el proxy `db` nunca responde (se cuelga sin error): se pide el cliente real.
+    return from(this.supabase.client()).pipe(
+      switchMap((client) =>
+        from(
+          client.storage.from(bucket).upload(path, file, {
+            cacheControl: '31536000',
+            upsert: false,
+          }),
+        ).pipe(
+          map((res) => {
+            if (res.error) {
+              console.error('[storage]', res.error);
+              throw new Error('No pudimos subir uno de los archivos. Intenta de nuevo.');
+            }
+            return client.storage.from(bucket).getPublicUrl(res.data.path).data.publicUrl;
+          }),
+        ),
+      ),
     );
   }
 

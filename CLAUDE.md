@@ -360,6 +360,8 @@ Cosas que ya causaron un bug. No las repitas:
   símbolos ni a `'@@observable'`: rxjs `from()` los sondea y, si recibe una función, la llama y revienta con algo que ni es un `Error`. Las pruebas usan `TestSupabaseService` y no tocan el proxy:
   su prueba propia es `lazy-client.spec.ts`, y lo que de verdad lo ejerce con datos reales es el **build prerenderizado** (hace `getPrerenderParams` con `db`) y `verify-prerender`. Si tocas esto,
   corre `npm run build`, no solo `ng test`. Un doble de `SupabaseService` en un spec necesita también `client()` si el código lo usa (AuthService).
+  `getPublicUrl()` en `StorageService.uploadOne()` se colgó así desde la 2.29.0 hasta la 2.30.4: la foto se subía al bucket y la
+  petición nunca terminaba (publicar, avatares, servicios). `storage.service.spec.ts` hace que `db` lance para que no vuelva a pasar.
 - **El `postbuild` toca el HTML del build, y el service worker guarda su hash.** `scripts/preload-supabase.mjs` le agrega a cada página un `modulepreload` del módulo de supabase-js (su nombre
   lleva hash: lo busca por contenido). `ngsw.json` tiene el SHA-1 de `/index.html`; si el HTML cambia después de que Angular lo calculó, el service worker lo da por corrupto y entra en **modo seguro**
   (los usuarios pierden la caché). El mismo script recalcula ese hash, y `verify-prerender.mjs` falla el build si alguno de los `.html` de `ngsw.json` no coincide. Cualquier otro paso que
