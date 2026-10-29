@@ -56,7 +56,7 @@ const LEAFLET_CSS_HREF = 'assets/leaflet/leaflet.css';
 export class LocationSelect implements ControlValueAccessor {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  readonly placeholder = input('Selecciona una ubicacion');
+  readonly placeholder = input('Selecciona una ubicación');
   /** Marca el control en rojo. Se conecta con el `showError()` de la página. */
   readonly invalid = input(false);
   /** id del botón, para que el `<label for>` de la página lo apunte. */

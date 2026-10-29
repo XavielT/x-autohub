@@ -47,6 +47,21 @@
     color: var(--main);
     background-color: var(--Hub);
     border-radius: 50%;
+
+    // El icono es un SVG de trazo (`currentColor`) usado como máscara, así toma el color de la chip.
+    &--svg {
+      position: relative;
+      color: var(--main);
+
+      &::before {
+        content: '';
+        width: 20px;
+        height: 20px;
+        background-color: currentColor;
+        -webkit-mask: var(--icon) center / contain no-repeat;
+        mask: var(--icon) center / contain no-repeat;
+      }
+    }
   }
 }
 

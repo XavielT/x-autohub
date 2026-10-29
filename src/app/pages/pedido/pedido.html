@@ -2,7 +2,7 @@
   <div class="ped__inner">
     @switch (state()) {
       @case ('loading') {
-        <p class="ped__state" role="status">Cargando tu pedido…</p>
+        <app-skeleton variant="detail" label="Cargando tu pedido…" />
       }
 
       @case ('missing') {

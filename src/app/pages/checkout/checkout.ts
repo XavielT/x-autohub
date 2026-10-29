@@ -206,20 +206,20 @@ export class Checkout implements OnInit {
     if (step === 1) {
       const shipping = this.fulfillment() === 'shipping';
       return [
-        { key: 'email', label: 'Correo electronico', invalid: !this.email().trim() },
+        { key: 'email', label: 'Correo electrónico', invalid: !this.email().trim() },
         { key: 'fullName', label: 'Nombre completo', invalid: !this.fullName().trim() },
-        { key: 'phone', label: 'Telefono', invalid: normalizeDrPhone(this.phone()) === null },
+        { key: 'phone', label: 'Teléfono', invalid: normalizeDrPhone(this.phone()) === null },
         ...(shipping
           ? [
               { key: 'province', label: 'Provincia', invalid: !this.province().trim() },
-              { key: 'addressLine1', label: 'Direccion', invalid: !this.addressLine1().trim() },
+              { key: 'addressLine1', label: 'Dirección', invalid: !this.addressLine1().trim() },
             ]
           : []),
       ];
     }
 
     if (step === 2) {
-      return [{ key: 'payment', label: 'Metodo de pago', invalid: !this.selectedPayment() }];
+      return [{ key: 'payment', label: 'Método de pago', invalid: !this.selectedPayment() }];
     }
 
     return [];

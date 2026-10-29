@@ -62,7 +62,7 @@ export class AdminAjustes implements OnInit {
         this.pickupHours.set(pickup?.hours ?? '');
         this.pickupIsExample.set(pickup?.isExample ?? false);
       },
-      error: () => this.toast.show('No pudimos leer la direccion de retiro.', 'error'),
+      error: () => this.toast.show('No pudimos leer la dirección de retiro.', 'error'),
     });
   }
 
@@ -86,7 +86,7 @@ export class AdminAjustes implements OnInit {
 
     const incomplete = this.accounts().some((a) => !a.bank.trim() || !a.number.trim() || !a.holder.trim());
     if (incomplete) {
-      this.toast.show('Cada cuenta necesita banco, titular y numero.', 'error');
+      this.toast.show('Cada cuenta necesita banco, titular y número.', 'error');
       return;
     }
 
@@ -117,7 +117,7 @@ export class AdminAjustes implements OnInit {
     if (this.isSavingPickup()) return;
 
     if (!this.pickupAddress().trim()) {
-      this.toast.show('Escribe la direccion donde se retira.', 'error');
+      this.toast.show('Escribe la dirección donde se retira.', 'error');
       return;
     }
 
@@ -126,11 +126,11 @@ export class AdminAjustes implements OnInit {
       next: () => {
         this.isSavingPickup.set(false);
         this.pickupIsExample.set(false);
-        this.toast.show('Direccion de retiro guardada.');
+        this.toast.show('Dirección de retiro guardada.');
       },
       error: (err: unknown) => {
         this.isSavingPickup.set(false);
-        this.toast.show('No pudimos guardar la direccion.', 'error');
+        this.toast.show('No pudimos guardar la dirección.', 'error');
         console.error(err);
       },
     });

@@ -35,48 +35,14 @@
   <!-- Feed -->
   @if (activeTab() === 'feed') {
     <section class="social__feed">
-      @for (post of posts(); track post.id) {
-        <article class="post">
-          <header class="post__head">
-            <span class="post__avatar" aria-hidden="true">{{ post.authorName.charAt(0) }}</span>
-            <div class="post__identity">
-              <span class="post__author">
-                {{ post.authorName }}
-                @if (post.isVerified) {
-                  <span class="post__verified" title="Miembro verificado por X AutoHub">Verificado</span>
-                }
-              </span>
-              <span class="post__meta">
-                @if (post.authorClub) {
-                  {{ post.authorClub }} ·
-                }
-                {{ relativeTime(post.createdAt) }}
-              </span>
-            </div>
-          </header>
-
-          <p class="post__text">{{ post.text }}</p>
-
-          @if (post.imageUrl) {
-            <img class="post__img" [src]="post.imageUrl" [alt]="post.text.slice(0, 60)" loading="lazy" />
-          }
-
-          @if (post.tags.length) {
-            <ul class="post__tags">
-              @for (tag of post.tags; track tag) {
-                <li class="post__tag">#{{ tag }}</li>
-              }
-            </ul>
-          }
-
-          <footer class="post__actions">
-            <span class="post__stat">{{ post.likes | number }} me gusta</span>
-            <span class="post__stat">{{ post.comments }} comentarios</span>
-          </footer>
-        </article>
+      @if (isLoggedIn()) {
+        <app-post-composer (published)="onPublished($event)" />
+      }
+      @for (post of feed(); track post.id) {
+        <app-social-post [post]="post" />
       } @empty {
         <div class="social__empty">
-          <h4>Todavia no hay publicaciones</h4>
+          <h4>Todavía no hay publicaciones</h4>
           <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
         </div>
       }
@@ -105,7 +71,7 @@
         </article>
       } @empty {
         <div class="social__empty">
-          <h4>Aun no hay clubes registrados</h4>
+          <h4>Aún no hay clubes registrados</h4>
           <img src="assets/icons/not-found-hub-icon.svg" alt="" aria-hidden="true" />
         </div>
       }

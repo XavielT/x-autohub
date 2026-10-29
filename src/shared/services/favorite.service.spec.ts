@@ -35,14 +35,14 @@ describe('FavoriteService (mock)', () => {
     user = signal<UserModel | null>(null);
   });
 
-  it('sin sesion no guarda nada y avisa que hay que entrar', async () => {
+  it('sin sesión no guarda nada y avisa que hay que entrar', async () => {
     const favs = servicio();
     expect(await firstValueFrom(favs.toggle(1))).toBe(false);
     expect(favs.ids()).toEqual([]);
-    expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('Inicia sesion'), 'error');
+    expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('Inicia sesión'), 'error');
   });
 
-  it('con sesion guarda y quita, y el mas nuevo va primero', async () => {
+  it('con sesión guarda y quita, y el más nuevo va primero', async () => {
     user.set(USER);
     const favs = servicio();
 
@@ -57,13 +57,13 @@ describe('FavoriteService (mock)', () => {
     expect(favs.isFavorite(1)).toBe(false);
   });
 
-  it('loaded: sin sesion ya esta listo, y con sesion en modo simulado tambien', () => {
+  it('loaded: sin sesión ya está listo, y con sesión en modo simulado también', () => {
     const favs = servicio();
     TestBed.tick();
     expect(favs.loaded()).toBe(true);
   });
 
-  it('al cerrar sesion los favoritos se vacian', async () => {
+  it('al cerrar sesión los favoritos se vacian', async () => {
     user.set(USER);
     const favs = servicio();
     await firstValueFrom(favs.toggle(1));

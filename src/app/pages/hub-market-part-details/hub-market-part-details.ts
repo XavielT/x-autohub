@@ -8,6 +8,7 @@ import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
 import { isLive } from '../../../shared/utils/publication-lifecycle';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
@@ -17,7 +18,7 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-market-part-details',
-  imports: [PublicationNotice, DecimalPipe, RouterLink, HubMarketCard, TestBadge, ImageGallery],
+  imports: [PublicationNotice, DecimalPipe, RouterLink, HubMarketCard, TestBadge, ImageGallery, Skeleton],
   templateUrl: './hub-market-part-details.html',
   styleUrl: './hub-market-part-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,7 +49,7 @@ export class HubMarketPartDetails implements OnInit {
     if (!part?.contactPhone || !isLive(part)) return '';
     return buildWaLink(
       part.contactPhone,
-      `Hola! Vi tu publicacion "${part.title}" en X AutoHub y me interesa.`,
+      `Hola! Vi tu publicación "${part.title}" en X AutoHub y me interesa.`,
     );
   });
 

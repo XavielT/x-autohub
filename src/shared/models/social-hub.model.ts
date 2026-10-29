@@ -1,6 +1,23 @@
 /** Las tres vistas del Social Hub. */
 export type SocialHubTab = 'feed' | 'clubes' | 'eventos';
 
+/** Un archivo de una publicación: foto o video. */
+export interface SocialMedia {
+  type: 'image' | 'video';
+  url: string;
+}
+
+/** Comentario de una publicación del feed. */
+export interface SocialCommentModel {
+  id: number;
+  postId: number;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  text: string;
+  createdAt: string;
+}
+
 /** Publicación de un miembro de la comunidad. */
 export interface SocialPostModel {
   id: number;
@@ -12,6 +29,8 @@ export interface SocialPostModel {
   createdAt: string;
   text: string;
   imageUrl?: string;
+  /** Fotos y video (0045). Lo sembrado solo trae `imageUrl`: usa `mediaOf()`. */
+  media?: SocialMedia[];
   /** Etiquetas sin el '#'. */
   tags: string[];
   likes: number;

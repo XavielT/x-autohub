@@ -1,0 +1,45 @@
+<div class="up">
+  <div class="up__drop"
+       [class.up__drop--over]="isDragOver()"
+       [class.up__drop--invalid]="invalid()"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)"
+       (drop)="onDrop($event)">
+    <p class="up__text">
+      Arrastra tus fotos aquí o <span class="up__link">elige desde tu dispositivo</span>
+    </p>
+    <p class="up__hint">JPG, PNG o WebP · hasta 10 MB cada una · máximo {{ max() }} fotos</p>
+    <input class="up__input" type="file" accept="image/jpeg,image/png,image/webp" multiple
+           aria-label="Elegir fotos" [disabled]="isFull()" (change)="onPick($event)" />
+  </div>
+
+  @if (files().length > 0 || processing() > 0) {
+    <p class="up__count" aria-live="polite">
+      {{ files().length }} de {{ max() }} fotos
+      @if (processing() > 0) { · Optimizando {{ processing() }}… }
+    </p>
+  }
+
+  @if (files().length > 0) {
+    <ul class="up__grid">
+      @for (preview of previews(); track $index; let i = $index) {
+        <li class="up__item" draggable="true"
+            (dragstart)="onThumbDragStart(i)" (dragover)="$event.preventDefault()"
+            (drop)="onThumbDrop($event, i)" (dragend)="onThumbDragEnd()">
+          <button type="button" class="up__thumb" (click)="openLightbox(i)" [attr.aria-label]="'Ver la foto ' + (i + 1) + ' en grande'">
+            @if (preview) { <img [src]="preview" [alt]="'Foto ' + (i + 1)" /> }
+          </button>
+          @if (i === 0) { <span class="up__cover">Portada</span> }
+          <button type="button" class="up__remove" (click)="remove(i)" [attr.aria-label]="'Quitar la foto ' + (i + 1)">×</button>
+          <div class="up__move">
+            <button type="button" (click)="move(i, -1)" [disabled]="i === 0" aria-label="Mover a la izquierda">‹</button>
+            <button type="button" (click)="move(i, 1)" [disabled]="i === files().length - 1" aria-label="Mover a la derecha">›</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  <app-lightbox [images]="previews()" alt="Foto de la publicación"
+                [(open)]="lightboxOpen" [(index)]="lightboxIndex" />
+</div>

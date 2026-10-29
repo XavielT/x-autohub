@@ -6,6 +6,7 @@ import { unwrap } from '../../core/supabase/supabase-error';
 import {
   ProfileVehicleModel,
   SelectedVehicle,
+  UnmatchedVehicleModel,
   VehicleMakeModel,
   VehicleModelModel,
 } from '../models/product.model';
@@ -22,13 +23,13 @@ function readGuestVehicle(): SelectedVehicle | null {
     const raw = localStorage.getItem(GUEST_VEHICLE_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<SelectedVehicle> | null;
-    if (
-      v &&
-      Number.isInteger(v.makeId) &&
-      Number.isInteger(v.modelId) &&
-      Number.isInteger(v.year)
-    ) {
-      return { makeId: v.makeId as number, modelId: v.modelId as number, year: v.year as number };
+    if (v && Number.isInteger(v.makeId) && Number.isInteger(v.year)) {
+      // Sin `modelId` vale solo si trae el modelo escrito a mano.
+      if (Number.isInteger(v.modelId)) {
+        return { makeId: v.makeId as number, modelId: v.modelId as number, year: v.year as number };
+      }
+      const text = typeof v.modelText === 'string' ? v.modelText.trim() : '';
+      if (text) return { makeId: v.makeId as number, modelId: null, modelText: text, year: v.year as number };
     }
   } catch {
     // Sin almacenamiento o JSON roto: se trata como si no hubiera nada guardado.
@@ -44,8 +45,21 @@ function removeGuestVehicle(): void {
   }
 }
 
-const sameVehicle = (a: SelectedVehicle, b: SelectedVehicle) =>
-  a.makeId === b.makeId && a.modelId === b.modelId && a.year === b.year;
+const textOf = (v: { modelText?: string | null }) => (v.modelText ?? '').trim().toLowerCase();
+
+export const sameVehicle = (a: SelectedVehicle, b: SelectedVehicle) =>
+  a.makeId === b.makeId &&
+  a.modelId === b.modelId &&
+  a.year === b.year &&
+  (a.modelId !== null || textOf(a) === textOf(b));
+
+/** Del garaje al vehículo elegido. */
+const fromGarage = (v: ProfileVehicleModel): SelectedVehicle => ({
+  makeId: v.makeId,
+  modelId: v.modelId,
+  ...(v.modelText ? { modelText: v.modelText } : {}),
+  year: v.year,
+});
 
 /**
  * Marcas y modelos, y el vehículo que la persona eligió para filtrar la tienda.
@@ -143,7 +157,7 @@ export class VehicleService {
     return from(
       this.supabase.db
         .from('profile_vehicles')
-        .select('id, user_id, make_id, model_id, year, nickname, is_default, created_at')
+        .select('id, user_id, make_id, model_id, model_text, year, nickname, is_default, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true }),
     ).pipe(map((res) => unwrap(res).map(toProfileVehicle)));
@@ -210,6 +224,35 @@ export class VehicleService {
     );
   }
 
+  // --- Solo modo simulado ----------------------------------------------------------
+  // El panel necesita ver los garajes de todos; en modo simulado esos garajes viven aquí.
+
+  /** Los modelos escritos a mano de todos los garajes simulados, agrupados. */
+  mockUnmatched(makeNames: ReadonlyMap<number, string>): UnmatchedVehicleModel[] {
+    const groups = new Map<string, UnmatchedVehicleModel>();
+    for (const v of this.mockGarage) {
+      const text = v.modelText?.trim();
+      if (v.modelId !== null || !text) continue;
+      const key = `${v.makeId}|${text.toLowerCase()}`;
+      const g = groups.get(key);
+      if (g) g.vehicles += 1;
+      else groups.set(key, { makeId: v.makeId, makeName: makeNames.get(v.makeId) ?? 'Marca', modelText: text, vehicles: 1 });
+    }
+    return [...groups.values()];
+  }
+
+  /** Pasa al modelo real los garajes simulados que lo habían escrito. Devuelve cuántos. */
+  mockAdopt(makeId: number, text: string, modelId: number): number {
+    const wanted = text.trim().toLowerCase();
+    let moved = 0;
+    this.mockGarage = this.mockGarage.map((v) => {
+      if (v.makeId !== makeId || v.modelId !== null || (v.modelText ?? '').trim().toLowerCase() !== wanted) return v;
+      moved += 1;
+      return { ...v, modelId, modelText: null };
+    });
+    return moved;
+  }
+
   // --- El vehículo elegido -----------------------------------------------------
 
   /** Elige un vehículo. Se ve al instante; guardarlo en segundo plano no bloquea nada. */
@@ -226,7 +269,7 @@ export class VehicleService {
       .subscribe({
         // Solo se actualiza la lista: la señal ya tiene el vehículo que se eligió.
         next: (garage) => this._garage.set(garage),
-        error: () => this.toast.show('No pudimos guardar tu vehiculo en el garaje.', 'error'),
+        error: () => this.toast.show('No pudimos guardar tu vehículo en el garaje.', 'error'),
       });
   }
 
@@ -268,6 +311,11 @@ export class VehicleService {
           this._selectedLabel.set(null);
           return;
         }
+        // Modelo escrito a mano: no hay nada que buscar en vehicle_models.
+        if (vehicle.modelId === null) {
+          this._selectedLabel.set(vehicle.modelText ? `${make.name} · ${vehicle.modelText}` : make.name);
+          return;
+        }
         this.getModels(make.id).subscribe({
           next: (models) => {
             // Si mientras tanto eligieron otro, esta respuesta ya no vale.
@@ -293,9 +341,7 @@ export class VehicleService {
   /** El vehículo elegido sigue al predeterminado del garaje: sin predeterminado, ninguno. */
   private applyDefault(garage: ProfileVehicleModel[]): void {
     const preferred = garage.find((v) => v.isDefault);
-    this._selected.set(
-      preferred ? { makeId: preferred.makeId, modelId: preferred.modelId, year: preferred.year } : null,
-    );
+    this._selected.set(preferred ? fromGarage(preferred) : null);
   }
 
   private syncWithSession(userId: string | null): void {
@@ -312,11 +358,7 @@ export class VehicleService {
 
         const preferred = garage.find((v) => v.isDefault);
         if (preferred) {
-          this._selected.set({
-            makeId: preferred.makeId,
-            modelId: preferred.modelId,
-            year: preferred.year,
-          });
+          this._selected.set(fromGarage(preferred));
           return;
         }
 
@@ -380,6 +422,7 @@ export class VehicleService {
             userId: user.id,
             makeId: vehicle.makeId,
             modelId: vehicle.modelId,
+            modelText: vehicle.modelText?.trim() || null,
             year: vehicle.year,
             nickname,
             isDefault: asDefault,
@@ -400,16 +443,18 @@ export class VehicleService {
       switchMap((all) => {
         const rows = unwrap(all);
         const asDefault = makeDefault || rows.length === 0;
-        return from(
-          this.supabase.db
-            .from('profile_vehicles')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('make_id', vehicle.makeId)
-            .eq('model_id', vehicle.modelId)
-            .eq('year', vehicle.year)
-            .maybeSingle(),
-        ).pipe(
+        const base = this.supabase.db
+          .from('profile_vehicles')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('make_id', vehicle.makeId)
+          .eq('year', vehicle.year);
+        const modelText = vehicle.modelText?.trim() || null;
+        const lookup =
+          vehicle.modelId === null
+            ? base.is('model_id', null).ilike('model_text', (modelText ?? '').replace(/[%_\\]/g, '\\$&'))
+            : base.eq('model_id', vehicle.modelId);
+        return from(lookup.limit(1).maybeSingle()).pipe(
           switchMap((existing) =>
             existing.data
               ? from(
@@ -426,6 +471,7 @@ export class VehicleService {
                     user_id: user.id,
                     make_id: vehicle.makeId,
                     model_id: vehicle.modelId,
+                    model_text: modelText,
                     year: vehicle.year,
                     nickname,
                     is_default: asDefault,

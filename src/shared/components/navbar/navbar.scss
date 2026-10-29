@@ -288,20 +288,7 @@
         &:focus-visible { outline: 2px solid var(--Hub); border-radius: 22px; }
     }
 
-    &__user-initial {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 28px;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background-color: var(--Hub);
-        color: var(--main);
-        font-family: var(--font-brand);
-        font-weight: 700;
-        text-transform: uppercase;
-    }
+
 
     &__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
@@ -339,4 +326,25 @@
 
         &__actions { margin-left: 0; }
     }
+}
+
+.navbar__vehicle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.navbar__vehicle-clear {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover { color: var(--Hub); }
+  &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 1px; }
 }

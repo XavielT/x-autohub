@@ -18,7 +18,7 @@ const build = (patch: Partial<SiteBuild> = {}): SiteBuild => ({
   state: 'ready',
   createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
   readyAt: new Date(Date.now() - 4 * 60_000).toISOString(),
-  message: 'Bump version to 2.13.0',
+  message: 'Bump versión to 2.13.0',
   inspectorUrl: null,
   ...patch,
 });
@@ -49,9 +49,9 @@ describe('AdminPublicar', () => {
     return { fixture, el, requestNow, getStatus, getBuild, show };
   }
 
-  it('sin cambios dice que el sitio esta al dia', () => {
+  it('sin cambios dice que el sitio está al día', () => {
     const { el } = montar();
-    expect(el.textContent).toContain('El sitio esta al dia.');
+    expect(el.textContent).toContain('El sitio está al día.');
   });
 
   it('con cambios pendientes dice desde hace cuanto', () => {
@@ -61,7 +61,7 @@ describe('AdminPublicar', () => {
 
   it('sin el enlace avisa y no deja publicar', () => {
     const { el } = montar({ status: { ...AL_DIA, hookConfigured: false } });
-    expect(el.textContent).toContain('Falta el enlace de publicacion');
+    expect(el.textContent).toContain('Falta el enlace de publicación');
     expect((el.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -71,7 +71,7 @@ describe('AdminPublicar', () => {
     (el.querySelector('button') as HTMLButtonElement).click();
 
     expect(requestNow).toHaveBeenCalledTimes(1);
-    expect(show).toHaveBeenCalledWith(expect.stringContaining('Publicacion pedida'));
+    expect(show).toHaveBeenCalledWith(expect.stringContaining('Publicación pedida'));
     expect(getStatus.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -92,22 +92,22 @@ describe('AdminPublicar', () => {
   describe('el estado del despliegue (build-status)', () => {
     it('un despliegue listo dice cuando y con que mensaje', () => {
       const { el } = montar({ builds: [build()] });
-      expect(el.textContent).toContain('Ultimo despliegue: listo');
-      expect(el.textContent).toContain('Bump version to 2.13.0');
+      expect(el.textContent).toContain('Último despliegue: listo');
+      expect(el.textContent).toContain('Bump versión to 2.13.0');
     });
 
-    it('uno que fallo avisa que el sitio sigue con la version anterior, con el enlace a Vercel', () => {
+    it('uno que falló avisa que el sitio sigue con la versión anterior, con el enlace a Vercel', () => {
       const { el } = montar({ builds: [build({ state: 'error', readyAt: null, inspectorUrl: 'https://vercel.com/equipo/x/abc' })] });
 
-      expect(el.textContent).toContain('El ultimo despliegue fallo');
+      expect(el.textContent).toContain('El último despliegue falló');
       expect(el.querySelector('[role=alert] a')?.getAttribute('href')).toBe('https://vercel.com/equipo/x/abc');
     });
 
-    it('sin saber nada del despliegue (null) no dibuja esa linea y sigue diciendo lo de antes', () => {
+    it('sin saber nada del despliegue (null) no dibuja esa línea y sigue diciendo lo de antes', () => {
       const { el } = montar({ status: { ...AL_DIA, lastFiredAt: '2026-10-24T20:00:00Z' }, builds: [null] });
 
       expect(el.textContent).not.toContain('despliegue');
-      expect(el.textContent).toContain('Ultima publicacion pedida');
+      expect(el.textContent).toContain('Última publicación pedida');
     });
 
     it('mientras se construye, lo dice, bloquea el boton y vuelve a preguntar hasta que termina', () => {
@@ -116,7 +116,7 @@ describe('AdminPublicar', () => {
         builds: [build({ state: 'building', readyAt: null }), build({ state: 'building', readyAt: null }), build()],
       });
 
-      expect(el.textContent).toContain('Construyendo la version nueva');
+      expect(el.textContent).toContain('Construyendo la versión nueva');
       expect((el.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
       expect(getBuild).toHaveBeenCalledTimes(1);
 
@@ -126,7 +126,7 @@ describe('AdminPublicar', () => {
       vi.advanceTimersByTime(10_000);
       fixture.detectChanges();
       expect(getBuild).toHaveBeenCalledTimes(3);
-      expect(el.textContent).toContain('Ultimo despliegue: listo');
+      expect(el.textContent).toContain('Último despliegue: listo');
       expect((el.querySelector('button') as HTMLButtonElement).disabled).toBe(false);
 
       // Ya termino: no se sigue preguntando.
@@ -134,7 +134,7 @@ describe('AdminPublicar', () => {
       expect(getBuild).toHaveBeenCalledTimes(3);
     });
 
-    it('despues de Publicar ahora espera el despliegue nuevo, aunque primero llegue el viejo', () => {
+    it('después de Publicar ahora espera el despliegue nuevo, aunque primero llegue el viejo', () => {
       vi.useFakeTimers();
       const viejo = build();
       const nuevo = build({ state: 'ready', createdAt: new Date(Date.now() + 5_000).toISOString() });

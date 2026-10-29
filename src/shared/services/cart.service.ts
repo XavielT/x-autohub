@@ -239,7 +239,7 @@ export class CartService {
           }),
       );
     } catch (error) {
-      console.warn('[carrito] no se pudo poner al dia contra el catalogo', error);
+      console.warn('[carrito] no se pudo poner al día contra el catálogo', error);
     }
   }
 }

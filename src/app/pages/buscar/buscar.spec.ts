@@ -49,7 +49,7 @@ describe('Buscar', () => {
     expect(searchCommunity).not.toHaveBeenCalled();
   });
 
-  it('con consulta busca en la tienda y en la comunidad, y pone el titulo de la pestana', async () => {
+  it('con consulta busca en la tienda y en la comunidad, y pone el título de la pestana', async () => {
     const { el } = await montar('disco');
 
     expect(searchProducts).toHaveBeenCalledWith({ query: 'disco', limit: 24 });
@@ -59,7 +59,7 @@ describe('Buscar', () => {
     expect(el.querySelectorAll('#bus-store ~ ul app-catalogo-card, .bus__section:not(.bus__section--community) app-catalogo-card').length).toBe(2);
   });
 
-  it('lo de la comunidad va en su propia seccion, con su aviso, separado de la tienda', async () => {
+  it('lo de la comunidad va en su propia sección, con su aviso, separado de la tienda', async () => {
     searchCommunity.mockReturnValue(of(community));
     const { el } = await montar('rines');
 
@@ -96,7 +96,7 @@ describe('Buscar', () => {
     expect(el.textContent).toContain('Nada de la comunidad');
   });
 
-  it('si hay mas resultados que los que se muestran, lo dice', async () => {
+  it('si hay más resultados que los que se muestran, lo dice', async () => {
     searchProducts.mockReturnValue(of({ items: [makeProduct({ id: 1 })], total: 40 }));
     const { el } = await montar('filtro');
 

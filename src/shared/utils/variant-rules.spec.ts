@@ -37,7 +37,7 @@ describe('variant-rules', () => {
       expect(validateVariantDrafts([v('A'), v('B')])).toBeNull();
     });
 
-    it('hasta 8 fotos por opcion, sin repetir', () => {
+    it('hasta 8 fotos por opción, sin repetir', () => {
       const fotos = (n: number) => Array.from({ length: n }, (_, i) => 'f' + i + '.jpg');
       expect(validateVariantDrafts([v('A', 1, { imageUrls: fotos(8) })])).toBeNull();
       expect(validateVariantDrafts([v('A', 1, { imageUrls: fotos(9) })])).toContain('demasiadas fotos');

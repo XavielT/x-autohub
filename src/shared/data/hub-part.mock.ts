@@ -68,17 +68,17 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "BC Racing",
         starsRating: 4.8,
         price: 32500,
-        description: "Suspension ajustable en altura y dureza para mayor control y mejor estabilidad."
+        description: "Suspensión ajustable en altura y dureza para mayor control y mejor estabilidad."
     },
     {
         id: 4,
         category: "aceites",
         imgUrl: "assets/imgs/hub-parts/aceite-5w30-sintetico.jpg",
-        name: "Aceite sintetico 5W-30 5L",
+        name: "Aceite sintético 5W-30 5L",
         brand: "Motul",
         starsRating: 4.6,
         price: 2250,
-        description: "Lubricante premium para motores gasolina y turbo con proteccion termica avanzada."
+        description: "Lubricante premium para motores gasolina y turbo con protección térmica avanzada."
     },
     {
         id: 5,
@@ -88,7 +88,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Philips",
         starsRating: 4.5,
         price: 3650,
-        description: "Iluminacion blanca de alta intensidad con bajo consumo y larga duracion."
+        description: "Iluminación blanca de alta intensidad con bajo consumo y larga duración."
     },
     {
         id: 6,
@@ -104,11 +104,11 @@ const LEGACY_PARTS: LegacyPart[] = [
         id: 7,
         category: "bateria",
         imgUrl: "assets/imgs/hub-parts/bateria-agm-70ah.jpg",
-        name: "Bateria AGM 70Ah",
+        name: "Batería AGM 70Ah",
         brand: "Bosch",
         starsRating: 4.7,
         price: 6900,
-        description: "Bateria de alto arranque para vehiculos modernos con sistema start-stop."
+        description: "Batería de alto arranque para vehículos modernos con sistema start-stop."
     },
     {
         id: 8,
@@ -138,27 +138,27 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Enkei",
         starsRating: 4.6,
         price: 9800,
-        description: "Aro ligero y resistente que mejora manejo, frenado y estetica del vehiculo."
+        description: "Aro ligero y resistente que mejora manejo, frenado y estética del vehículo."
     },
     {
         id: 11,
         category: "frenos",
         imgUrl: "assets/imgs/hub-parts/pastillas-ceramicas-sport.jpg",
-        name: "Pastillas ceramicas Sport",
+        name: "Pastillas cerámicas Sport",
         brand: "EBC",
         starsRating: 4.7,
         price: 4100,
-        description: "Compuesto ceramico con menor polvo y frenada consistente en ciudad y carretera."
+        description: "Compuesto cerámico con menor polvo y frenada consistente en ciudad y carretera."
     },
     {
         id: 12,
         category: "frenos",
         imgUrl: "assets/imgs/hub-parts/liquido-frenos-dot4.jpg",
-        name: "Liquido de frenos DOT 4",
+        name: "Líquido de frenos DOT 4",
         brand: "Liqui Moly",
         starsRating: 4.5,
         price: 950,
-        description: "Liquido de alto punto de ebullicion para mantener respuesta firme del pedal."
+        description: "Líquido de alto punto de ebullición para mantener respuesta firme del pedal."
     },
     {
         id: 13,
@@ -168,7 +168,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Whiteline",
         starsRating: 4.6,
         price: 7400,
-        description: "Reduce balanceo de carroceria y mejora la precision en curvas."
+        description: "Reduce balanceo de carrocería y mejora la precisión en curvas."
     },
     {
         id: 14,
@@ -208,7 +208,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Corsa",
         starsRating: 4.6,
         price: 11200,
-        description: "Sistema de admision de aire frio para mejorar flujo y sonido de admision."
+        description: "Sistema de admisión de aire frío para mejorar flujo y sonido de admisión."
     },
     {
         id: 18,
@@ -234,11 +234,11 @@ const LEGACY_PARTS: LegacyPart[] = [
         id: 20,
         category: "transmision",
         imgUrl: "assets/imgs/hub-parts/aceite-transmision-75w90.jpg",
-        name: "Aceite transmision 75W-90",
+        name: "Aceite transmisión 75W-90",
         brand: "Red Line",
         starsRating: 4.5,
         price: 1450,
-        description: "Proteccion de engranajes y cambios mas suaves en caja manual."
+        description: "Protección de engranajes y cambios más suaves en caja manual."
     },
     {
         id: 21,
@@ -248,7 +248,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Garrett",
         starsRating: 4.9,
         price: 19800,
-        description: "Reduce temperatura del aire de admision para mantener potencia estable."
+        description: "Reduce temperatura del aire de admisión para mantener potencia estable."
     },
     {
         id: 22,
@@ -278,7 +278,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Stinger",
         starsRating: 4.6,
         price: 2950,
-        description: "Kit completo de instalacion para amplificador con conductores de baja perdida."
+        description: "Kit completo de instalación para amplificador con conductores de baja pérdida."
     },
     {
         id: 25,
@@ -288,7 +288,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Morimoto",
         starsRating: 4.8,
         price: 18600,
-        description: "Haz mas uniforme y potente para mejor visibilidad nocturna."
+        description: "Haz más uniforme y potente para mejor visibilidad nocturna."
     },
     {
         id: 26,
@@ -298,7 +298,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Rigid",
         starsRating: 4.7,
         price: 6400,
-        description: "Iluminacion auxiliar de largo alcance ideal para rutas y caminos oscuros."
+        description: "Iluminación auxiliar de largo alcance ideal para rutas y caminos oscuros."
     },
     {
         id: 27,
@@ -334,11 +334,11 @@ const LEGACY_PARTS: LegacyPart[] = [
         id: 30,
         category: "detailing",
         imgUrl: "assets/imgs/hub-parts/cera-hibrida-spray.jpg",
-        name: "Cera hibrida en spray",
+        name: "Cera híbrida en spray",
         brand: "Turtle Wax",
         starsRating: 4.3,
         price: 1150,
-        description: "Proteccion hidrofobica rapida con brillo intenso para uso frecuente."
+        description: "Protección hidrofóbica rápida con brillo intenso para uso frecuente."
     },
     {
         id: 31,
@@ -358,7 +358,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Maxton",
         starsRating: 4.2,
         price: 3250,
-        description: "Mejora estetica frontal con instalacion sencilla y acabado resistente."
+        description: "Mejora estética frontal con instalación sencilla y acabado resistente."
     },
     {
         id: 33,
@@ -368,7 +368,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "APR",
         starsRating: 4.6,
         price: 21400,
-        description: "Aleron con soportes regulables para look agresivo y carga aerodinamica."
+        description: "Alerón con soportes regulables para look agresivo y carga aerodinámica."
     },
     {
         id: 34,
@@ -388,7 +388,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "Autel",
         starsRating: 4.5,
         price: 2450,
-        description: "Lectura y borrado de codigos de falla desde el celular."
+        description: "Lectura y borrado de códigos de falla desde el celular."
     },
     // Artículo de prueba (fase 6). Solo lo ven admin, moderador y usuarios de
     // prueba; para el resto no existe, ni en el catálogo ni por URL directa.
@@ -402,7 +402,7 @@ const LEGACY_PARTS: LegacyPart[] = [
         brand: "X AutoHub",
         starsRating: 5,
         price: 100,
-        description: "Articulo de prueba del equipo. No esta a la venta.",
+        description: "Artículo de prueba del equipo. No está a la venta.",
         isTest: true
     }
 ];
@@ -426,7 +426,7 @@ const EXTRAS: Readonly<Record<number, ProductExtras>> = {
     8:  { stock: 16, fitmentType: "specific", soldCount: 41, specs: { Material: "Termoplastico", Piezas: "4" } },
     9:  { stock: 0,  fitmentType: "specific", fulfillment: "on_order", leadTimeDays: 12, soldCount: 7, specs: { Material: "Aluminio", Filas: "2" } },
     10: { stock: 0,  fitmentType: "universal", fulfillment: "on_order", leadTimeDays: 21, compareAtPrice: 11500, featured: true, soldCount: 12, specs: { Medida: "18x8.5", Material: "Forjado" } },
-    11: { stock: 22, fitmentType: "specific", installationServiceId: 4, soldCount: 73, specs: { Compuesto: "Ceramico" } },
+    11: { stock: 22, fitmentType: "specific", installationServiceId: 4, soldCount: 73, specs: { Compuesto: "Cerámico" } },
     12: { stock: 0,  fitmentType: "universal", soldCount: 95, specs: { Tipo: "DOT 4", Contenido: "500 ml" } },
     13: { stock: 6,  fitmentType: "specific", soldCount: 4, specs: { Ajuste: "Ajustable" } },
     14: { stock: 14, fitmentType: "specific", installationServiceId: 5, soldCount: 38, specs: { Tipo: "A gas" } },
@@ -469,7 +469,7 @@ export const HUB_PART_MOCK: ProductModel[] = LEGACY_PARTS.map((part) => {
 
     const categorySlug = LEGACY_CATEGORY_TO_SLUG[part.category];
     const category = PRODUCT_CATEGORIES_MOCK.find((c) => c.slug === categorySlug);
-    if (!category) throw new Error(`La categoria ${part.category} no tiene mapeo`);
+    if (!category) throw new Error(`La categoría ${part.category} no tiene mapeo`);
 
     const fulfillment = extra.fulfillment ?? "stock";
     // Con opciones, el stock es la suma de las activas (lo mismo que hace el trigger).

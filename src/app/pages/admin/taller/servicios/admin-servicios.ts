@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import {
@@ -67,7 +68,7 @@ const toDraft = (s: ServiceModel): ServiceDraft => ({
  */
 @Component({
   selector: 'app-admin-servicios',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, Skeleton],
   templateUrl: './admin-servicios.html',
   styleUrl: './admin-servicios.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

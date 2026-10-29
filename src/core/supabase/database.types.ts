@@ -134,6 +134,8 @@ export type ProfileRow = {
   phone: string | null;
   location: string | null;
   avatar_url: string | null;
+  /** La última versión del sitio cuyas novedades vio esta persona (0044). Nula = ninguna. */
+  last_seen_version: string | null;
   is_verified: boolean;
   role: UserRoleDb;
   /**
@@ -243,6 +245,29 @@ export type HubPartRow = {
  * Una opción de un producto (color, talla…) con su propio stock. Comparte el precio del
  * producto. Migración 0023.
  */
+/** Otro nombre con el que se busca un producto (migración 0042). */
+export type ProductAliasRow = {
+  id: number;
+  product_id: number;
+  alias: string;
+  created_at: string;
+}
+
+/** Fila de `suggest_products()` (0042): lo mínimo que pinta una sugerencia. */
+export type SuggestProductRow = {
+  id: number;
+  slug: string;
+  name: string;
+  brand: string;
+  img_url: string;
+  price: number;
+  stock: number;
+  fulfillment: 'stock' | 'on_order';
+  /** El alias que coincidió, solo cuando el nombre no. */
+  matched_alias: string | null;
+  score: number;
+}
+
 export type ProductVariantRow = {
   id: number;
   product_id: number;
@@ -324,7 +349,9 @@ export type ProfileVehicleRow = {
   id: number;
   user_id: string;
   make_id: number;
-  model_id: number;
+  /** Nulo cuando la marca no tiene modelos cargados y se escribió a mano (0040). */
+  model_id: number | null;
+  model_text: string | null;
   year: number;
   nickname: string | null;
   is_default: boolean;
@@ -519,12 +546,30 @@ export type SocialPostRow = {
   author_club: string | null;
   text: string;
   image_url: string | null;
+  /** Hasta 4 archivos (0045). */
+  media: { type: 'image' | 'video'; url: string }[];
   tags: string[];
   likes: number;
   comments: number;
   created_at: string;
   /** Presente solo cuando el select incluye `profiles(display_name, is_verified)`. */
   profiles?: { display_name: string; is_verified: boolean } | null;
+}
+
+/** Un comentario del feed (0045). `profiles` viene cuando el select lo embebe. */
+export type SocialCommentRow = {
+  id: number;
+  post_id: number;
+  author_id: string;
+  text: string;
+  created_at: string;
+  profiles?: { display_name: string; avatar_url: string | null } | null;
+}
+
+export type SocialPostLikeRow = {
+  post_id: number;
+  user_id: string;
+  created_at: string;
 }
 
 export type SocialEventRow = {
@@ -662,6 +707,8 @@ export type ReleaseRow = {
   released_at: string;
   title: string;
   summary: string;
+  /** El resumen para el usuario final (0044). Nulo = la modal usa `summary`. */
+  user_summary: string | null;
   changes: string[];
   is_published: boolean;
   created_at: string;
@@ -755,6 +802,15 @@ type OrderItemRelationships = [
     referencedColumns: ['id'];
   },
 ];
+type ProductAliasRelationships = [
+  {
+    foreignKeyName: 'product_aliases_product_id_fkey';
+    columns: ['product_id'];
+    isOneToOne: false;
+    referencedRelation: 'hub_parts';
+    referencedColumns: ['id'];
+  },
+];
 type ProductVariantRelationships = [
   {
     foreignKeyName: 'product_variants_product_id_fkey';
@@ -792,6 +848,31 @@ type ReviewRelationships = [
   },
 ];
 
+type SocialCommentRelationships = [
+  {
+    foreignKeyName: 'social_post_comments_post_id_fkey';
+    columns: ['post_id'];
+    isOneToOne: false;
+    referencedRelation: 'social_posts';
+    referencedColumns: ['id'];
+  },
+  {
+    foreignKeyName: 'social_post_comments_author_id_fkey';
+    columns: ['author_id'];
+    isOneToOne: false;
+    referencedRelation: 'profiles';
+    referencedColumns: ['id'];
+  },
+];
+type SocialLikeRelationships = [
+  {
+    foreignKeyName: 'social_post_likes_post_id_fkey';
+    columns: ['post_id'];
+    isOneToOne: false;
+    referencedRelation: 'social_posts';
+    referencedColumns: ['id'];
+  },
+];
 type SocialPostRelationships = [
   {
     foreignKeyName: 'social_posts_author_id_fkey';
@@ -831,6 +912,13 @@ export type Database = {
        * Opciones de un producto (migración 0023). Las ve quien ve el producto; solo un admin
        * escribe. El stock del producto es la suma de las activas (lo mantiene un trigger).
        */
+      /** Alias de búsqueda de un producto (0042). Los lee quien ve el producto; los escribe un admin. */
+      product_aliases: {
+        Row: ProductAliasRow;
+        Insert: Insert<ProductAliasRow, 'product_id' | 'alias'>;
+        Update: Partial<ProductAliasRow>;
+        Relationships: ProductAliasRelationships;
+      };
       product_variants: {
         Row: ProductVariantRow;
         Insert: Insert<ProductVariantRow, 'product_id' | 'name'>;
@@ -873,7 +961,7 @@ export type Database = {
       };
       profile_vehicles: {
         Row: ProfileVehicleRow;
-        Insert: Insert<ProfileVehicleRow, 'user_id' | 'make_id' | 'model_id' | 'year'>;
+        Insert: Insert<ProfileVehicleRow, 'user_id' | 'make_id' | 'year'>;
         Update: Partial<ProfileVehicleRow>;
         Relationships: [];
       };
@@ -965,6 +1053,20 @@ export type Database = {
         Insert: Insert<SocialPostRow, 'author_name' | 'text'>;
         Update: Partial<Omit<SocialPostRow, 'profiles'>>;
         Relationships: SocialPostRelationships;
+      };
+      /** Comentarios del feed (0045): públicos de lectura, escribe quien tiene sesión. */
+      social_post_comments: {
+        Row: SocialCommentRow;
+        Insert: Insert<SocialCommentRow, 'post_id' | 'author_id' | 'text'>;
+        Update: Partial<Omit<SocialCommentRow, 'profiles'>>;
+        Relationships: SocialCommentRelationships;
+      };
+      /** Me gusta (0045): cada quien ve y toca solo los suyos. */
+      social_post_likes: {
+        Row: SocialPostLikeRow;
+        Insert: Insert<SocialPostLikeRow, 'post_id' | 'user_id'>;
+        Update: Partial<SocialPostLikeRow>;
+        Relationships: SocialLikeRelationships;
       };
       social_events: {
         Row: SocialEventRow;
@@ -1126,6 +1228,21 @@ export type Database = {
        * motivo, quién revisó y cuándo). Es el único camino sancionado: el
        * trigger de 0012 congela esas columnas en cualquier otro update.
        */
+      /** Sugerencias del buscador: prefijo, trigramas y alias (0042). */
+      suggest_products: {
+        Args: { p_query: string; p_limit?: number };
+        Returns: SuggestProductRow[];
+      };
+      /** Modelos escritos por usuarios, agrupados por marca y texto (0040). Solo admin. */
+      admin_unmatched_vehicle_models: {
+        Args: Record<string, never>;
+        Returns: { make_id: number; make_name: string; model_text: string; vehicles: number }[];
+      };
+      /** Crea el modelo y pasa a él los garajes que lo escribieron (0040). Solo admin. */
+      admin_create_vehicle_model: {
+        Args: { p_make_id: number; p_name: string };
+        Returns: { model_id: number; migrated: number }[];
+      };
       moderate_publication: {
         Args: { p_id: number; p_decision: 'aprobado' | 'rechazado'; p_reason?: string | null };
         Returns: {

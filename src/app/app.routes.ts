@@ -23,12 +23,12 @@ export const routes: Routes = [
   // --- Auto Hub: inventario propio, verificado por X AutoHub ---
   {
     path: 'auto-hub',
-    title: `Auto Hub — Vehiculos verificados | ${BRAND}`,
+    title: `Auto Hub — Vehículos verificados | ${BRAND}`,
     loadComponent: () => import('./pages/auto-hub/auto-hub').then((m) => m.AutoHub),
   },
   {
     path: 'auto-hub-details/:id',
-    title: `Detalle del vehiculo | ${BRAND}`,
+    title: `Detalle del vehículo | ${BRAND}`,
     loadComponent: () =>
       import('./pages/auto-hub-details/auto-hub-details').then((m) => m.AutoHubDetails),
   },
@@ -61,7 +61,7 @@ export const routes: Routes = [
   {
     path: 'hub-part-details/:id',
     canActivate: [productIdRedirectGuard],
-    // Nunca se pinta: el guard siempre devuelve una redireccion. El router pide un
+    // Nunca se pinta: el guard siempre devuelve una redirección. El router pide un
     // destino y esta es la forma de no inventarle una pagina.
     children: [],
   },
@@ -90,7 +90,7 @@ export const routes: Routes = [
   },
   {
     path: 'car-details/:id',
-    title: `Detalle del vehiculo | ${BRAND}`,
+    title: `Detalle del vehículo | ${BRAND}`,
     loadComponent: () => import('./pages/car-details/car-details').then((m) => m.CarDetails),
   },
   {
@@ -152,7 +152,7 @@ export const routes: Routes = [
   // --- Cuenta ---
   {
     path: 'login',
-    title: `Iniciar sesion | ${BRAND}`,
+    title: `Iniciar sesión | ${BRAND}`,
     canActivate: [guestGuard],
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
   },
@@ -185,7 +185,7 @@ export const routes: Routes = [
   // rol dentro de Postgres.
   {
     path: 'admin',
-    title: `Administracion | ${BRAND}`,
+    title: `Administración | ${BRAND}`,
     canActivate: [moderatorGuard],
     loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin),
     children: [
@@ -195,7 +195,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'moderacion' },
       {
         path: 'moderacion',
-        title: `Moderacion | ${BRAND}`,
+        title: `Moderación | ${BRAND}`,
         canActivate: [moderatorGuard],
         loadComponent: () =>
           import('./pages/admin/moderacion/admin-moderacion').then((m) => m.AdminModeracion),
@@ -295,10 +295,17 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/baja/baja').then((m) => m.Baja),
   },
 
+  // --- Novedades: el historial público de versiones ---
+  {
+    path: 'novedades',
+    title: `Novedades | ${BRAND}`,
+    loadComponent: () => import('./pages/novedades/novedades').then((m) => m.Novedades),
+  },
+
   // --- Legal ---
   {
     path: 'terminos-condiciones',
-    title: `Terminos y condiciones | ${BRAND}`,
+    title: `Términos y condiciones | ${BRAND}`,
     loadComponent: () =>
       import('./pages/terminos-condiciones/terminos-condiciones').then((m) => m.TerminosCondiciones),
   },
@@ -306,7 +313,7 @@ export const routes: Routes = [
   // Debe quedar de ultimo: captura cualquier URL que no coincida arriba.
   {
     path: '**',
-    title: `Pagina no encontrada | ${BRAND}`,
+    title: `Página no encontrada | ${BRAND}`,
     loadComponent: () => import('./pages/not-found/not-found').then((m) => m.NotFound),
   },
 ];

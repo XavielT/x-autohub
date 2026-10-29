@@ -11,6 +11,7 @@ import {
   ProductModel,
   ProductSearchParams,
   ProductSort,
+  SelectedVehicle,
 } from '../../../shared/models/product.model';
 import { CategoryService } from '../../../shared/services/category.service';
 import { OnlineService } from '../../../shared/services/online.service';
@@ -29,6 +30,7 @@ import {
 } from '../../../shared/utils/store-filters';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /** Cuántos productos se piden por página. El botón "Cargar más" pide la siguiente. */
 export const PAGE_SIZE = 24;
 
@@ -48,7 +50,7 @@ export const PAGE_SIZE = 24;
  */
 @Component({
   selector: 'app-tienda',
-  imports: [CatalogoCard, StoreFiltersPanel, RouterLink, OfflineState],
+  imports: [Skeleton, CatalogoCard, StoreFiltersPanel, RouterLink, OfflineState],
   templateUrl: './tienda.html',
   styleUrl: './tienda.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -135,7 +137,7 @@ export class Tienda {
       inStockOnly: f.inStockOnly || undefined,
       sort: f.sort,
       makeId: v?.makeId,
-      modelId: v?.modelId,
+      modelId: v?.modelId ?? undefined,
       year: v?.year,
     };
   });
@@ -161,7 +163,7 @@ export class Tienda {
 
   private fetch(
     params: ProductSearchParams,
-    vehicle: { makeId: number; modelId: number; year: number } | null,
+    vehicle: SelectedVehicle | null,
     offset: number,
   ): void {
     const id = ++this.requestId;
@@ -190,7 +192,7 @@ export class Tienda {
   /** Marca las tarjetas que le sirven al vehículo, aunque el filtro esté apagado. */
   private markCompatible(
     items: ProductModel[],
-    vehicle: { makeId: number; modelId: number; year: number } | null,
+    vehicle: SelectedVehicle | null,
     replace: boolean,
   ): void {
     if (replace) this.compatibleIds.set(new Set());

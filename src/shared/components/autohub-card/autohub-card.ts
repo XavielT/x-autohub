@@ -1,18 +1,26 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { AutoHubModel } from '../../models/auto-hub.model';
-import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { TestBadge } from '../../ui/test-badge/test-badge';
+import { CHASIS_LABELS, FUEL_LABELS } from '../../utils/auto-hub-filters';
+import { VehicleCard, VehicleCardSpec } from '../vehicle-card/vehicle-card';
 
+/** Un vehículo oficial de Auto Hub, con la tarjeta única de vehículos. */
 @Component({
   selector: 'app-autohub-card',
-  imports: [CommonModule, RouterLink, NgOptimizedImage, TestBadge],
+  imports: [VehicleCard],
   templateUrl: './autohub-card.html',
-  styleUrl: './autohub-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AutohubCard {
   readonly autoHub = input.required<AutoHubModel>();
-  /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
+  /** Marca la imagen como LCP; solo para la primera tarjeta de la lista. */
   readonly priority = input(false);
+
+  readonly specs = computed<VehicleCardSpec[]>(() => {
+    const a = this.autoHub();
+    return [
+      { label: 'Carrocería', value: CHASIS_LABELS[a.chasisType] },
+      { label: 'Tracción', value: a.traction.toUpperCase() },
+      { label: 'Combustible', value: FUEL_LABELS[a.fuel] },
+    ];
+  });
 }

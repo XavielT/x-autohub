@@ -19,7 +19,7 @@ const VEHICULO: AutoHubModel = {
   fuel: 'gasoline',
   cylinders: 4,
   images: ['assets/imgs/auto-hub/corolla.jpg'],
-  description: 'Vehiculo verificado por el equipo.',
+  description: 'Vehículo verificado por el equipo.',
   location: 'Santo Domingo',
   // Como está guardado de verdad en el mock y en el seed: solo dígitos.
   contact: '8099539782',
@@ -46,7 +46,7 @@ describe('AutoHubDetails', () => {
     expect(componente).toBeTruthy();
   });
 
-  it('muestra el telefono con formato, no los diez digitos pegados', async () => {
+  it('muestra el teléfono con formato, no los diez digitos pegados', async () => {
     const { fixture, componente } = montar();
     await fixture.whenStable();
 
@@ -54,7 +54,7 @@ describe('AutoHubDetails', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('809-953-9782');
   });
 
-  it('pone el titulo, la descripcion y la vista previa del vehiculo', async () => {
+  it('pone el título, la descripción y la vista previa del vehículo', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
@@ -67,7 +67,7 @@ describe('AutoHubDetails', () => {
     );
   });
 
-  it('declara el vehiculo como Car en JSON-LD, y lo quita al salir', async () => {
+  it('declara el vehículo como Car en JSON-LD, y lo quita al salir', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
@@ -79,7 +79,7 @@ describe('AutoHubDetails', () => {
     expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
   });
 
-  it('un vehiculo de prueba no se anuncia: la pagina queda como "no encontrado"', async () => {
+  it('un vehículo de prueba no se anuncia: la página queda como "no encontrado"', async () => {
     const { fixture } = montar({ ...VEHICULO, isTest: true });
     await fixture.whenStable();
 
@@ -88,7 +88,7 @@ describe('AutoHubDetails', () => {
     expect(document.title).not.toContain('Toyota');
   });
 
-  it('un vehiculo que no existe dice que no se encontro, y apunta al listado', async () => {
+  it('un vehículo que no existe dice que no se encontro, y apunta al listado', async () => {
     const { fixture } = montar(null as unknown as AutoHubModel);
     await fixture.whenStable();
 

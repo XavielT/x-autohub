@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
@@ -41,7 +42,7 @@ export function dayDrafts(rules: readonly AvailabilityRule[]): DayDraft[] {
  */
 @Component({
   selector: 'app-admin-disponibilidad',
-  imports: [DatePipe],
+  imports: [DatePipe, Skeleton],
   templateUrl: './admin-disponibilidad.html',
   styleUrl: './admin-disponibilidad.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

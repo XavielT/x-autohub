@@ -224,10 +224,10 @@ export class OrderService {
 
       // Las opciones, igual que `create_order()`: con opciones hay que elegir una.
       if (part.hasVariants && !variant) {
-        return throwError(() => new Error(`Elige una opcion de "${part.name}" antes de comprarlo.`));
+        return throwError(() => new Error(`Elige una opción de "${part.name}" antes de comprarlo.`));
       }
       if (!part.hasVariants && variant) {
-        return throwError(() => new Error(`La opcion elegida de "${part.name}" ya no esta disponible.`));
+        return throwError(() => new Error(`La opción elegida de "${part.name}" ya no está disponible.`));
       }
 
       if (part.fulfillment !== 'stock') continue;
@@ -235,7 +235,7 @@ export class OrderService {
       // Con opción, el mensaje la nombra: "Alfombras (Negro)".
       const label = variant ? `${part.name} (${variant.name})` : part.name;
       if (stock <= 0) {
-        return throwError(() => new Error(`Se agoto "${label}". Quitala del carrito para continuar.`));
+        return throwError(() => new Error(`Se agoto "${label}". Quítala del carrito para continuar.`));
       }
       if (quantity > stock) {
         return throwError(
@@ -245,7 +245,7 @@ export class OrderService {
     }
 
     const shipping = CHECKOUT_SHIPPING_OPTIONS_MOCK.find((o) => o.id === payload.shippingOptionId);
-    if (!shipping) return throwError(() => new Error('Metodo de envio no valido.'));
+    if (!shipping) return throwError(() => new Error('Método de envío no válido.'));
 
     const subtotal = items.reduce((acc, i) => acc + i.part.price * i.quantity, 0);
 

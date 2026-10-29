@@ -44,7 +44,7 @@ describe('AdminModeracion', () => {
   const texto = (fixture: { nativeElement: unknown }) =>
     (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-  it('lista lo que espera revision, con lo que hace falta para decidir', async () => {
+  it('lista lo que espera revisión, con lo que hace falta para decidir', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
     const t = texto(fixture);
@@ -72,7 +72,7 @@ describe('AdminModeracion', () => {
 
     expect(moderate).toHaveBeenCalledWith(501, 'aprobado', undefined);
     expect(componente.items()).toEqual([]);
-    expect(show).toHaveBeenCalledWith('"Turbo Garrett GT2860" ya esta publicada.');
+    expect(show).toHaveBeenCalledWith('"Turbo Garrett GT2860" ya está publicada.');
     expect(texto(fixture)).toContain('No hay publicaciones pendientes.');
   });
 
@@ -99,7 +99,7 @@ describe('AdminModeracion', () => {
 
     expect(moderate).not.toHaveBeenCalled();
     expect(show).toHaveBeenCalledWith(
-      'Explica en al menos 10 caracteres por que se rechaza.',
+      'Explica en al menos 10 caracteres por qué se rechaza.',
       'error',
     );
     // Y el error se ve junto al campo, no solo en el aviso.
@@ -124,14 +124,14 @@ describe('AdminModeracion', () => {
     await fixture.whenStable();
 
     componente.askReject(PENDIENTE);
-    componente.reason.set('  Las fotos no dejan ver el vehiculo completo.  ');
+    componente.reason.set('  Las fotos no dejan ver el vehículo completo.  ');
     componente.confirmReject(PENDIENTE);
     await fixture.whenStable();
 
     expect(moderate).toHaveBeenCalledWith(
       501,
       'rechazado',
-      'Las fotos no dejan ver el vehiculo completo.',
+      'Las fotos no dejan ver el vehículo completo.',
     );
     expect(componente.items()).toEqual([]);
     expect(show).toHaveBeenCalledWith(
@@ -151,7 +151,7 @@ describe('AdminModeracion', () => {
     expect(componente.showReasonError).toBe(false);
   });
 
-  it('si la base rechaza la operacion, la tarjeta se queda en la cola', async () => {
+  it('si la base rechaza la operación, la tarjeta se queda en la cola', async () => {
     const { fixture, componente, show } = montar();
     await fixture.whenStable();
     // Se sustituye por una que falla, como haria un moderador degradado a la
@@ -172,7 +172,7 @@ describe('AdminModeracion', () => {
   });
 
   describe('marcar como prueba', () => {
-    it('marca la publicacion y la deja en la cola', async () => {
+    it('marca la publicación y la deja en la cola', async () => {
       const { fixture, componente, setTestFlag, moderate } = montar();
       await fixture.whenStable();
 
@@ -198,7 +198,7 @@ describe('AdminModeracion', () => {
       expect(componente.items()[0].isTest).toBe(false);
     });
 
-    it('si la base falla, la publicacion se queda como estaba', async () => {
+    it('si la base falla, la publicación se queda como estaba', async () => {
       const { fixture, componente, show } = montar();
       const service = TestBed.inject(HubMarketService) as unknown as {
         setTestFlag: ReturnType<typeof vi.fn>;

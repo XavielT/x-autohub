@@ -1,11 +1,14 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SocialHubService } from '../../../shared/services/social-hub.service';
+import { SeoService } from '../../../shared/services/seo.service';
 import { AuthService } from '../../../shared/services/auth.service';
-import { SocialHubTab } from '../../../shared/models/social-hub.model';
+import { SocialHubTab, SocialPostModel } from '../../../shared/models/social-hub.model';
 import { HomeWelcome } from '../../components/home-welcome/home-welcome';
+import { PostComposer } from '../../../shared/components/post-composer/post-composer';
+import { SocialPost } from '../../../shared/components/social-post/social-post';
 import { ClubChannel } from '../../../shared/components/club-channel/club-channel';
 
 interface TabOption {
@@ -15,7 +18,7 @@ interface TabOption {
 
 @Component({
   selector: 'app-social-hub',
-  imports: [DatePipe, DecimalPipe, RouterLink, HomeWelcome, ClubChannel],
+  imports: [DatePipe, DecimalPipe, RouterLink, HomeWelcome, ClubChannel, SocialPost, PostComposer],
   templateUrl: './social-hub.html',
   styleUrl: './social-hub.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,7 +27,19 @@ export class SocialHub {
   private readonly socialHub = inject(SocialHubService);
   private readonly auth = inject(AuthService);
 
+  private readonly seo = inject(SeoService);
+
   readonly isLoggedIn = this.auth.isLoggedIn;
+
+  constructor() {
+    this.seo.set({
+      title: 'Comunidad — Clubes y eventos | X AutoHub',
+      description:
+        'La comunidad automotriz de X AutoHub: publicaciones, clubes y eventos de carros en República Dominicana.',
+      path: '/social-hub',
+    });
+    inject(DestroyRef).onDestroy(() => this.seo.reset());
+  }
 
   readonly activeTab = signal<SocialHubTab>('feed');
 
@@ -35,11 +50,18 @@ export class SocialHub {
   ];
 
   readonly posts = toSignal(this.socialHub.getPosts(), { initialValue: [] });
+  /** Lo que esta persona publicó desde que abrió la página: sale arriba sin volver a pedir el feed. */
+  private readonly justPublished = signal<SocialPostModel[]>([]);
+  readonly feed = computed(() => [...this.justPublished(), ...this.posts()]);
   readonly clubs = toSignal(this.socialHub.getClubs(), { initialValue: [] });
   readonly events = toSignal(this.socialHub.getEvents(), { initialValue: [] });
 
   /** Las pestañas: es donde aterrizan los botones del hero. */
   private readonly tabsAnchor = viewChild<ElementRef<HTMLElement>>('tabsAnchor');
+
+  onPublished(post: SocialPostModel): void {
+    this.justPublished.update((all) => [post, ...all]);
+  }
 
   selectTab(tab: SocialHubTab): void {
     this.activeTab.set(tab);
@@ -52,23 +74,5 @@ export class SocialHub {
   showTab(tab: SocialHubTab): void {
     this.selectTab(tab);
     this.tabsAnchor()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  /** "hace 3 dias" en vez de una fecha absoluta, que lee mejor en un feed. */
-  relativeTime(isoDate: string): string {
-    const diffMs = Date.now() - new Date(isoDate).getTime();
-    const minutes = Math.floor(diffMs / 60_000);
-
-    if (minutes < 1) return 'ahora mismo';
-    if (minutes < 60) return `hace ${minutes} min`;
-
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `hace ${hours} h`;
-
-    const days = Math.floor(hours / 24);
-    if (days < 30) return `hace ${days} ${days === 1 ? 'dia' : 'dias'}`;
-
-    const months = Math.floor(days / 30);
-    return `hace ${months} ${months === 1 ? 'mes' : 'meses'}`;
   }
 }

@@ -173,7 +173,7 @@ export type EditableNews = NewNewsDraft & { id: number };
 
 /** Opciones de los enums, con etiqueta en español para los selectores. */
 export const CHASIS_OPTIONS: readonly { value: ChasisType; label: string }[] = [
-  { value: 'sedan', label: 'Sedan' },
+  { value: 'sedan', label: 'Sedán' },
   { value: 'suv', label: 'SUV' },
   { value: 'hatchback', label: 'Hatchback' },
   { value: 'pickup', label: 'Pickup' },
@@ -190,7 +190,7 @@ export const FUEL_OPTIONS: readonly { value: FuelType; label: string }[] = [
   { value: 'gasoline', label: 'Gasolina' },
   { value: 'diesel', label: 'Diesel' },
   { value: 'glp', label: 'GLP' },
-  { value: 'electric', label: 'Electrico' },
+  { value: 'electric', label: 'Eléctrico' },
 ];
 
 export const SCOPE_OPTIONS: readonly { value: NewsScope; label: string }[] = [

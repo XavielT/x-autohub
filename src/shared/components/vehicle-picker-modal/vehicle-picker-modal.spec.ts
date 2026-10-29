@@ -45,7 +45,7 @@ describe('VehiclePickerModal', () => {
     expect(el.querySelector('.vpm__clear')).toBeNull(); // sin vehiculo no hay que quitar
   });
 
-  it('elegir un vehiculo lo guarda, cierra y avisa', () => {
+  it('elegir un vehículo lo guarda, cierra y avisa', () => {
     const { fixture, c, picker, vehicles } = montar();
     picker.open();
     fixture.detectChanges();
@@ -57,7 +57,7 @@ describe('VehiclePickerModal', () => {
     expect(toast.show).toHaveBeenCalled();
   });
 
-  it('con un vehiculo elegido muestra cual y deja quitarlo', () => {
+  it('con un vehículo elegido muestra cual y deja quitarlo', () => {
     const { fixture, c, picker, vehicles, el } = montar();
     vehicles.select({ makeId: 1, modelId: 1, year: 2015 });
     fixture.detectChanges();

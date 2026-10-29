@@ -26,7 +26,7 @@ describe('rutas de /admin', () => {
     expect(admin!.canActivate).toEqual([moderatorGuard]);
   });
 
-  it('toda seccion hija declara su propio guard', () => {
+  it('toda sección hija declara su propio guard', () => {
     const secciones = (admin!.children ?? []).filter((child) => child.path);
 
     expect(secciones.length).toBeGreaterThan(0);
@@ -34,13 +34,13 @@ describe('rutas de /admin', () => {
     for (const seccion of secciones) {
       expect(
         seccion.canActivate,
-        `La seccion '${seccion.path}' no declara canActivate: el guard del padre ` +
+        `La sección '${seccion.path}' no declara canActivate: el guard del padre ` +
           `la dejaria abierta a los moderadores.`,
       ).toBeDefined();
     }
   });
 
-  it('las secciones de admin usan adminGuard, y solo moderacion se afloja', () => {
+  it('las secciones de admin usan adminGuard, y solo moderación se afloja', () => {
     const secciones = (admin!.children ?? []).filter((child): child is Route => !!child.path);
 
     for (const seccion of secciones) {
@@ -93,7 +93,7 @@ describe('rutas de la tienda', () => {
     expect(tienda).not.toBe(buscar);
   });
 
-  it('la tienda tiene categoria y ficha por slug, y /tienda/c y /tienda/p cargan sus paginas', async () => {
+  it('la tienda tiene categoría y ficha por slug, y /tienda/c y /tienda/p cargan sus páginas', async () => {
     const tienda = await route('tienda')!.loadComponent!();
 
     expect(await route('tienda/c/:slug')!.loadComponent!()).toBe(tienda);
@@ -144,11 +144,11 @@ describe('rutas de la tienda', () => {
     expect(paths.indexOf('servicios/agendar')).toBeLessThan(paths.indexOf('servicios/:slug'));
   });
 
-  it('las rutas del taller cargan páginas distintas y tienen titulo', async () => {
+  it('las rutas del taller cargan páginas distintas y tienen título', async () => {
     const pages = await Promise.all(
       ['servicios', 'servicios/cotizar', 'servicios/agendar', 'servicios/:slug'].map(async (path) => {
         const r = route(path)!;
-        expect(r.title, `Falta el titulo de '${path}'`).toBeTruthy();
+        expect(r.title, `Falta el título de '${path}'`).toBeTruthy();
         return r.loadComponent!();
       }),
     );
@@ -165,11 +165,11 @@ describe('rutas de la tienda', () => {
     expect(route('social-hub')?.title).toBe('Comunidad — Clubes y eventos | X AutoHub');
   });
 
-  it('el home tiene el titulo del pivote', () => {
+  it('el home tiene el título del pivote', () => {
     expect(route('')?.title).toBe('X AutoHub — Todo lo que tu carro necesita');
   });
 
-  it('el comodin sigue de ultimo', () => {
+  it('el comodin sigue de último', () => {
     expect(routes[routes.length - 1].path).toBe('**');
   });
 });

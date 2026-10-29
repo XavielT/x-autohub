@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { Avatar } from '../../ui/avatar/avatar';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { LogoHub } from '../logo-hub/logo-hub';
@@ -50,7 +51,7 @@ const SECTION_PREFIXES: Record<NavSection, readonly string[]> = {
  */
 @Component({
   selector: 'app-navbar',
-  imports: [LogoHub, RouterModule, SearchBox],
+  imports: [LogoHub, RouterModule, SearchBox, Avatar],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,6 +89,11 @@ export class Navbar {
   readonly favoriteCount = this.favorites.count;
   /** "Toyota Corolla 2015", o `null` si no hay vehículo elegido. */
   readonly vehicleLabel = this.vehicles.selectedLabel;
+
+  /** Deja de filtrar por vehículo (la x del chip). */
+  clearVehicle(): void {
+    this.vehicles.clear();
+  }
 
   /** El menú desplegado, si hay alguno. Solo uno a la vez. */
   readonly openMenu = signal<MenuId | null>(null);
@@ -150,7 +156,7 @@ export class Navbar {
   logout(): void {
     this.auth.logout();
     this.closeMenu();
-    this.toast.show('Sesion cerrada.');
+    this.toast.show('Sesión cerrada.');
     void this.router.navigateByUrl('/');
   }
 }

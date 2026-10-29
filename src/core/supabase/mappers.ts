@@ -33,6 +33,7 @@ import {
 import {
   SocialClubModel,
   SocialEventModel,
+  SocialCommentModel,
   SocialPostModel,
 } from '../../shared/models/social-hub.model';
 import {
@@ -69,6 +70,7 @@ import {
   ShippingOptionRow,
   SocialClubRow,
   SocialEventRow,
+  SocialCommentRow,
   SocialPostRow,
   VehicleMakeRow,
   VehicleModelRow,
@@ -82,7 +84,7 @@ import {
  * del usuario en sesión sale de Supabase Auth, que es su fuente autoritativa;
  * por eso `toUser` lo recibe aparte en vez de leerlo de la fila.
  */
-export type PublicProfileRow = Omit<ProfileRow, 'email' | 'phone'>;
+export type PublicProfileRow = Omit<ProfileRow, 'email' | 'phone' | 'last_seen_version'>;
 
 /**
  * @param email Siempre desde Supabase Auth, que es su fuente autoritativa:
@@ -241,6 +243,7 @@ export function toProfileVehicle(row: ProfileVehicleRow): ProfileVehicleModel {
     userId: row.user_id,
     makeId: row.make_id,
     modelId: row.model_id,
+    modelText: row.model_text,
     year: row.year,
     nickname: row.nickname,
     isDefault: row.is_default,
@@ -452,9 +455,22 @@ export function toSocialPost(row: SocialPostRow): SocialPostModel {
     createdAt: row.created_at,
     text: row.text,
     imageUrl: row.image_url ?? undefined,
+    media: row.media ?? [],
     tags: row.tags ?? [],
     likes: row.likes,
     comments: row.comments,
+  };
+}
+
+export function toSocialComment(row: SocialCommentRow): SocialCommentModel {
+  return {
+    id: row.id,
+    postId: row.post_id,
+    authorId: row.author_id,
+    authorName: row.profiles?.display_name ?? 'Miembro',
+    authorAvatarUrl: row.profiles?.avatar_url ?? undefined,
+    text: row.text,
+    createdAt: row.created_at,
   };
 }
 

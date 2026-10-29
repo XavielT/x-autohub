@@ -1,11 +1,32 @@
 .hsearch {
+  position: relative;
+  overflow: hidden;
   padding: clamp(36px, 8vw, 84px) 25px;
   background:
     radial-gradient(ellipse at 20% 0%, rgba(255, 179, 0, 0.12), transparent 55%),
     var(--main);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
+  // El póster (un <img>, no un fondo CSS, para que la ruta pase por la base de la app).
+  &__poster,
+  &__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  // Oscurece el fondo (mínimo 60 %) para que el texto se lea sobre el video.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.68);
+  }
+
   &__inner {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -1,9 +1,10 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminCatalogService } from '../../../../../shared/services/admin-catalog.service';
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { VehicleService } from '../../../../../shared/services/vehicle.service';
-import { VehicleMakeModel, VehicleModelModel } from '../../../../../shared/models/product.model';
+import { UnmatchedVehicleModel, VehicleMakeModel, VehicleModelModel } from '../../../../../shared/models/product.model';
 
 /**
  * Marcas y modelos de vehículos, los que alimentan la compatibilidad de los
@@ -19,7 +20,7 @@ import { VehicleMakeModel, VehicleModelModel } from '../../../../../shared/model
  */
 @Component({
   selector: 'app-admin-marcas',
-  imports: [FormsModule],
+  imports: [FormsModule, Skeleton],
   templateUrl: './admin-marcas.html',
   styleUrl: './admin-marcas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,7 +45,43 @@ export class AdminMarcas implements OnInit {
   readonly newModelName = signal('');
   readonly isSaving = signal(false);
 
+  /** Modelos que los usuarios escribieron a mano, por marca y texto. */
+  readonly unmatched = signal<UnmatchedVehicleModel[]>([]);
+  /** La fila de `unmatched` que se está creando ahora (`marca|texto`). */
+  readonly creatingKey = signal<string | null>(null);
+
+  unmatchedKey(u: UnmatchedVehicleModel): string {
+    return `${u.makeId}|${u.modelText.toLowerCase()}`;
+  }
+
+  /** "Crear modelo": lo agrega al catálogo y pasa los garajes que lo escribieron. */
+  createFromText(u: UnmatchedVehicleModel): void {
+    this.creatingKey.set(this.unmatchedKey(u));
+    this.catalog.createModelFromText(u.makeId, u.modelText).subscribe({
+      next: ({ model, migrated }) => {
+        this.creatingKey.set(null);
+        this.unmatched.update((l) => l.filter((x) => this.unmatchedKey(x) !== this.unmatchedKey(u)));
+        if (this.selectedMakeId() === u.makeId) {
+          this.models.update((l) =>
+            l.some((m) => m.id === model.id) ? l : [...l, model].sort((a, b) => a.name.localeCompare(b.name, 'es')),
+          );
+        }
+        this.toast.show(`${u.makeName} ${model.name} creado; ${migrated} garaje(s) actualizado(s).`);
+      },
+      error: (e: Error) => {
+        this.creatingKey.set(null);
+        this.toast.show(e.message, 'error');
+      },
+    });
+  }
+
   ngOnInit(): void {
+    this.catalog.getUnmatchedModels().subscribe({
+      next: (list) => this.unmatched.set(list),
+      // Sin permiso o sin red la lista simplemente no aparece.
+      error: () => undefined,
+    });
+
     this.vehicles.getMakes().subscribe({
       next: (list) => {
         this.makes.set(list);

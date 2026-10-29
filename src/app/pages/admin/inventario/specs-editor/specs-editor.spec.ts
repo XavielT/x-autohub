@@ -48,7 +48,7 @@ describe('SpecsEditor', () => {
     c.add();
 
     expect(c.specs()).toEqual({ Material: 'Aluminio' });
-    expect(c.error()).toContain('ya esta en la lista');
+    expect(c.error()).toContain('ya está en la lista');
   });
 
   it('quita un par sin tocar los demas', () => {

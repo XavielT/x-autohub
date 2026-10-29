@@ -1,0 +1,32 @@
+<div class="al">
+  @if (productId() === null) {
+    <p class="al__hint">Guarda el producto primero; después podrás agregarle alias.</p>
+  } @else {
+    <p class="al__hint">
+      Otros nombres con los que lo buscaría la gente (ej. «bumper» para un parachoques). Se guardan al instante.
+    </p>
+
+    @if (aliases().length > 0) {
+      <ul class="al__list">
+        @for (alias of aliases(); track alias.id) {
+          <li class="al__item">
+            <span>{{ alias.alias }}</span>
+            <button type="button" class="al__remove" [attr.aria-label]="'Quitar el alias ' + alias.alias"
+                    (click)="remove(alias)">×</button>
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="al__add">
+      <input type="text" maxlength="60" placeholder="bumper" aria-label="Nuevo alias"
+             [ngModel]="text()" (ngModelChange)="text.set($event)" [ngModelOptions]="{ standalone: true }"
+             (keydown.enter)="$event.preventDefault(); add()" />
+      <button type="button" class="al__btn" [disabled]="isBusy()" [attr.aria-busy]="isBusy()" (click)="add()">
+        Agregar alias
+      </button>
+    </div>
+
+    @if (error()) { <p class="al__error" role="alert">{{ error() }}</p> }
+  }
+</div>

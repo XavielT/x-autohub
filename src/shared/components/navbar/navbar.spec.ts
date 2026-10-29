@@ -70,14 +70,14 @@ describe('Navbar', () => {
     expect(texts(el, '.navbar__menu > li > a, .navbar__menu > li > button.navbar__link')).toEqual(
       expect.arrayContaining(['Tienda', 'Servicios', 'Comunidad']),
     );
-    expect(el.textContent).toContain('Vehiculos');
+    expect(el.textContent).toContain('Vehículos');
     // El lugar del boton ambar ahora es del carrito.
     expect(el.querySelector('.navbar__cart')).not.toBeNull();
     expect(el.querySelector('a[href="/publicar"].navbar__cart, .nav-button-primary')).toBeNull();
   });
 
   describe('menu de la Tienda', () => {
-    it('empieza cerrado y se abre con el caret, con las 12 categorias de primer nivel', async () => {
+    it('empieza cerrado y se abre con el caret, con las 12 categorías de primer nivel', async () => {
       const { fixture, c, el } = montar();
       expect(el.querySelector('.navbar__panel--mega')).toBeNull();
 
@@ -91,7 +91,7 @@ describe('Navbar', () => {
       expect(texts(el, '.navbar__mega-root')[0]).toBe('Accesorios interior');
     });
 
-    it('cada categoria enlaza a /tienda con su slug', async () => {
+    it('cada categoría enlaza a /tienda con su slug', async () => {
       const { fixture, c, el } = montar();
       c.toggleMenu('tienda');
       fixture.detectChanges();
@@ -139,7 +139,7 @@ describe('Navbar', () => {
     });
   });
 
-  describe('Vehiculos', () => {
+  describe('Vehículos', () => {
     it('agrupa Auto Hub, Hub Market y Publicar', () => {
       const { fixture, c, el } = montar();
       c.toggleMenu('vehiculos');
@@ -151,7 +151,7 @@ describe('Navbar', () => {
   });
 
   describe('seccion activa', () => {
-    it('marca la seccion segun la ruta, incluidas las paginas de detalle', async () => {
+    it('marca la sección segun la ruta, incluidas las páginas de detalle', async () => {
       const { fixture, c } = montar();
       const router = TestBed.inject(Router);
 
@@ -187,16 +187,16 @@ describe('Navbar', () => {
     });
   });
 
-  describe('chip Mi vehiculo', () => {
-    it('sin vehiculo invita a elegir uno', () => {
+  describe('chip Mi vehículo', () => {
+    it('sin vehículo invita a elegir uno', () => {
       const { el } = montar();
       const chip = el.querySelector('.navbar__vehicle') as HTMLElement;
 
-      expect(chip.textContent).toContain('Elige tu vehiculo');
+      expect(chip.textContent).toContain('Elige tu vehículo');
       expect(chip.classList.contains('has-vehicle')).toBe(false);
     });
 
-    it('con vehiculo dice cual es', () => {
+    it('con vehículo dice cual es', () => {
       label.set('Toyota Corolla 2015');
       const { fixture, el } = montar();
       fixture.detectChanges();
@@ -204,7 +204,7 @@ describe('Navbar', () => {
 
       expect(chip.textContent).toContain('Toyota Corolla 2015');
       expect(chip.classList.contains('has-vehicle')).toBe(true);
-      expect(chip.getAttribute('aria-label')).toBe('Mi vehiculo: Toyota Corolla 2015. Cambiar');
+      expect(chip.getAttribute('aria-label')).toBe('Mi vehículo: Toyota Corolla 2015. Cambiar');
     });
 
     it('al tocarlo abre el selector', () => {
@@ -218,18 +218,18 @@ describe('Navbar', () => {
   });
 
   describe('carrito', () => {
-    it('sin articulos no muestra contador', () => {
+    it('sin artículos no muestra contador', () => {
       const { el } = montar();
       expect(el.querySelector('.navbar__cart-count')).toBeNull();
     });
 
-    it('con articulos muestra el contador y lo dice a los lectores de pantalla', () => {
+    it('con artículos muestra el contador y lo dice a los lectores de pantalla', () => {
       count.set(3);
       const { fixture, el } = montar();
       fixture.detectChanges();
 
       expect(el.querySelector('.navbar__cart-count')?.textContent?.trim()).toBe('3');
-      expect(el.querySelector('.navbar__cart')?.getAttribute('aria-label')).toBe('Abrir el carrito, 3 articulos');
+      expect(el.querySelector('.navbar__cart')?.getAttribute('aria-label')).toBe('Abrir el carrito, 3 artículos');
     });
 
     it('tocarlo abre el carrito', () => {
@@ -240,25 +240,25 @@ describe('Navbar', () => {
   });
 
   describe('cuenta', () => {
-    it('sin sesion hay un enlace para entrar', () => {
+    it('sin sesión hay un enlace para entrar', () => {
       const { el } = montar();
       expect(el.querySelector('.navbar__login')?.getAttribute('href')).toBe('/login');
       expect(el.querySelector('.navbar__user')).toBeNull();
     });
 
-    it('con sesion muestra la inicial y el nombre, con Perfil y Salir', () => {
+    it('con sesión muestra la inicial y el nombre, con Perfil y Salir', () => {
       user.set(BASE);
       const { fixture, c, el } = montar();
       c.toggleMenu('cuenta');
       fixture.detectChanges();
 
-      expect(el.querySelector('.navbar__user-initial')?.textContent?.trim()).toBe('M');
+      expect(el.querySelector('.navbar__user app-avatar')?.textContent?.trim()).toBe('M');
       expect(el.querySelector('.navbar__user-name')?.textContent?.trim()).toBe('Maria Perez');
       const items = texts(el, '.navbar__panel--right .navbar__panel-link');
       expect(items).toEqual(['Mi perfil', 'Mis pedidos', 'Mis citas', 'Mis favoritos', 'Salir']);
     });
 
-    it('un moderador ve ademas el Panel; un usuario normal no', () => {
+    it('un moderador ve además el Panel; un usuario normal no', () => {
       user.set({ ...BASE, role: 'moderador' });
       const { fixture, c, el } = montar();
       c.toggleMenu('cuenta');
@@ -267,7 +267,7 @@ describe('Navbar', () => {
       expect(texts(el, '.navbar__panel--right .navbar__panel-link')).toContain('Panel');
     });
 
-    it('Salir cierra la sesion, avisa y vuelve al inicio', () => {
+    it('Salir cierra la sesión, avisa y vuelve al inicio', () => {
       user.set(BASE);
       const { c } = montar();
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -275,7 +275,7 @@ describe('Navbar', () => {
       c.logout();
 
       expect(logout).toHaveBeenCalled();
-      expect(toast.show).toHaveBeenCalledWith('Sesion cerrada.');
+      expect(toast.show).toHaveBeenCalledWith('Sesión cerrada.');
       expect(navigate).toHaveBeenCalledWith('/');
     });
   });

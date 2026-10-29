@@ -1,0 +1,94 @@
+<article class="post">
+  <header class="post__head">
+    <span class="post__avatar" aria-hidden="true">{{ post().authorName.charAt(0) }}</span>
+    <div class="post__identity">
+      <span class="post__author">
+        {{ post().authorName }}
+        @if (post().isVerified) {
+          <span class="post__verified" title="Miembro verificado por X AutoHub">Verificado</span>
+        }
+      </span>
+      <span class="post__meta">
+        @if (post().authorClub) { {{ post().authorClub }} · }
+        {{ time() }}
+      </span>
+    </div>
+  </header>
+
+  <p class="post__text">{{ post().text }}</p>
+
+  @if (media().length > 0) {
+    <div class="post__media" [class.post__media--many]="media().length > 1">
+      @for (item of media(); track item.url) {
+        @if (item.type === 'video') {
+          <!-- preload="metadata": el cuadro inicial sin bajar todo el video hasta que se le da play. -->
+          <video class="post__video" [src]="item.url" controls playsinline preload="metadata"
+                 aria-label="Video de la publicación"></video>
+        } @else {
+          <button type="button" class="post__img-btn" (click)="openImage(item.url)" aria-label="Ver la foto en grande">
+            <img class="post__img" [src]="item.url" [alt]="post().text.slice(0, 60)" loading="lazy" />
+          </button>
+        }
+      }
+    </div>
+  }
+
+  @if (post().tags.length) {
+    <ul class="post__tags">
+      @for (tag of post().tags; track tag) {
+        <li class="post__tag">#{{ tag }}</li>
+      }
+    </ul>
+  }
+
+  <footer class="post__actions">
+    <button type="button" class="post__action" [class.post__action--on]="liked()"
+            [attr.aria-pressed]="liked()" aria-label="Me gusta" (click)="toggleLike()">
+      <span aria-hidden="true">{{ liked() ? '♥' : '♡' }}</span> {{ likes() | number }} me gusta
+    </button>
+    <button type="button" class="post__action" [attr.aria-expanded]="showComments()" (click)="toggleComments()">
+      <span aria-hidden="true">💬</span> {{ commentCount() }} {{ commentCount() === 1 ? 'comentario' : 'comentarios' }}
+    </button>
+  </footer>
+
+  @if (showComments()) {
+    <section class="post__comments" aria-label="Comentarios">
+      @if (isLoadingComments()) {
+        <app-skeleton variant="row" [count]="2" label="Cargando los comentarios…" />
+      } @else if (commentsFailed()) {
+        <p class="post__note">No pudimos cargar los comentarios.
+          <button type="button" class="post__link" (click)="loadComments()">Reintentar</button>
+        </p>
+      } @else {
+        @for (comment of comments(); track comment.id) {
+          <div class="comment">
+            <app-avatar [avatarUrl]="comment.authorAvatarUrl" [name]="comment.authorName" [size]="32" />
+            <div class="comment__body">
+              <span class="comment__author">{{ comment.authorName }}</span>
+              <span class="comment__time">{{ comment.createdAt | date: 'd MMM, h:mm a' }}</span>
+              <p class="comment__text">{{ comment.text }}</p>
+            </div>
+            @if (canDelete(comment)) {
+              <button type="button" class="comment__remove" aria-label="Borrar el comentario" (click)="remove(comment)">×</button>
+            }
+          </div>
+        } @empty {
+          <p class="post__note">Todavía no hay comentarios. ¡Sé el primero!</p>
+        }
+      }
+
+      @if (isLoggedIn()) {
+        <form class="comment-form" (submit)="$event.preventDefault(); send()">
+          <input type="text" maxlength="500" placeholder="Escribe un comentario…" aria-label="Escribe un comentario"
+                 [ngModel]="draft()" (ngModelChange)="draft.set($event)" [ngModelOptions]="{ standalone: true }" />
+          <button type="submit" [disabled]="isSending() || !draft().trim()" [attr.aria-busy]="isSending()">Comentar</button>
+        </form>
+      } @else {
+        <p class="post__note">Inicia sesión para comentar.</p>
+      }
+    </section>
+  }
+
+  <app-lightbox [images]="images()" [alt]="post().text.slice(0, 60)"
+                [(open)]="lightboxOpen" [(index)]="lightboxIndex" />
+</article>

@@ -81,7 +81,7 @@ describe('mappers', () => {
       });
     });
 
-    it('deja vehicleSpecs indefinido cuando no es un vehiculo', () => {
+    it('deja vehicleSpecs indefinido cuando no es un vehículo', () => {
       const part = toHubMarketItem({
         ...base,
         category: 'piezas',
@@ -112,15 +112,15 @@ describe('mappers', () => {
       expect(toHubMarketItem(base).sellerName).toBe('Juan M.');
     });
 
-    it('trae el telefono de contacto de la publicacion', () => {
+    it('trae el teléfono de contacto de la publicación', () => {
       expect(toHubMarketItem(base).contactPhone).toBe('8095550134');
     });
 
-    it('deja contactPhone indefinido cuando la publicacion no trae telefono', () => {
+    it('deja contactPhone indefinido cuando la publicación no trae teléfono', () => {
       expect(toHubMarketItem({ ...base, contact_phone: null }).contactPhone).toBeUndefined();
     });
 
-    it('deriva la ruta de detalle segun la categoria', () => {
+    it('deriva la ruta de detalle segun la categoría', () => {
       expect(toHubMarketItem(base).detailRoute).toBe('/car-details/101');
       expect(toHubMarketItem({ ...base, category: 'piezas' }).detailRoute).toBe(
         '/hub-market-part-details/101',
@@ -158,7 +158,7 @@ describe('mappers', () => {
       expect(row.contact_phone).toBeNull();
     });
 
-    it('lleva el telefono de contacto tal como se lo dieron, ya normalizado', () => {
+    it('lleva el teléfono de contacto tal como se lo dieron, ya normalizado', () => {
       const row = fromHubMarketItem(
         {
           title: 'Discos Brembo',
@@ -224,18 +224,18 @@ describe('mappers', () => {
       expect(p.updatedAt?.toISOString()).toBe('2026-01-02T00:00:00.000Z');
     });
 
-    it('convierte la calificacion numerica a numero, como espera la plantilla', () => {
+    it('convierte la calificación numerica a número, como espera la plantilla', () => {
       expect(toProduct(row).starsRating).toBe(4.9);
       // Postgres devuelve numeric como texto en algunos clientes.
       expect(toProduct({ ...row, stars_rating: '4.9' as unknown as number }).starsRating).toBe(4.9);
     });
 
-    it('deja images indefinido cuando el arreglo viene vacio', () => {
+    it('deja images indefinido cuando el arreglo viene vacío', () => {
       expect(toProduct(row).images).toBeUndefined();
       expect(toProduct({ ...row, images: ['a.jpg'] }).images).toEqual(['a.jpg']);
     });
 
-    it('un producto sin oferta tiene compareAtPrice nulo, y con oferta es un numero', () => {
+    it('un producto sin oferta tiene compareAtPrice nulo, y con oferta es un número', () => {
       expect(toProduct(row).compareAtPrice).toBeNull();
       expect(toProduct({ ...row, compare_at_price: '14900.00' as unknown as number }).compareAtPrice).toBe(14900);
     });
@@ -422,7 +422,7 @@ describe('mappers', () => {
       expect(toSpecs({ Material: 'Aluminio', Medida: '18x8.5' })).toEqual({ Material: 'Aluminio', Medida: '18x8.5' });
     });
 
-    it('convierte en texto lo que alguien cargo como numero o booleano', () => {
+    it('convierte en texto lo que alguien cargo como número o booleano', () => {
       expect(toSpecs({ Piezas: 4, Reusable: true })).toEqual({ Piezas: '4', Reusable: 'true' });
     });
 
@@ -434,7 +434,7 @@ describe('mappers', () => {
     });
   });
 
-  describe('catalogo de vehiculos y categorias', () => {
+  describe('catálogo de vehículos y categorías', () => {
     it('toProductCategory', () => {
       expect(
         toProductCategory({
@@ -460,7 +460,7 @@ describe('mappers', () => {
       });
     });
 
-    it('toProductFitment conserva los nulos: toda la marca, sin limite de anos', () => {
+    it('toProductFitment conserva los nulos: toda la marca, sin límite de años', () => {
       expect(
         toProductFitment({ id: 1, product_id: 9, make_id: 1, model_id: null, year_from: null, year_to: 2020 }),
       ).toEqual({ id: 1, productId: 9, makeId: 1, modelId: null, yearFrom: null, yearTo: 2020 });
@@ -473,12 +473,24 @@ describe('mappers', () => {
           user_id: 'u-1',
           make_id: 1,
           model_id: 2,
+          model_text: null,
           year: 2015,
           nickname: 'El diario',
           is_default: true,
           created_at: '2026-01-01T00:00:00Z',
         }),
-      ).toEqual({ id: 3, userId: 'u-1', makeId: 1, modelId: 2, year: 2015, nickname: 'El diario', isDefault: true });
+      ).toEqual({
+        id: 3, userId: 'u-1', makeId: 1, modelId: 2, modelText: null, year: 2015, nickname: 'El diario', isDefault: true,
+      });
+    });
+
+    it('toProfileVehicle con el modelo escrito a mano', () => {
+      expect(
+        toProfileVehicle({
+          id: 4, user_id: 'u-1', make_id: 1, model_id: null, model_text: 'Corolla', year: 2015,
+          nickname: null, is_default: false, created_at: '2026-01-01T00:00:00Z',
+        }),
+      ).toMatchObject({ modelId: null, modelText: 'Corolla' });
     });
   });
 
@@ -513,7 +525,7 @@ describe('mappers', () => {
   });
 
   describe('toNews', () => {
-    it('parsea la fecha a mediodia UTC para que no retroceda un dia en RD', () => {
+    it('parsea la fecha a mediodia UTC para que no retroceda un día en RD', () => {
       const row: NewsRow = {
         id: 1,
         title: '809 Expo',
@@ -541,6 +553,7 @@ describe('mappers', () => {
       author_club: 'Supra Club RD',
       text: 'Build listo',
       image_url: null,
+      media: [],
       tags: ['2JZ'],
       likes: 184,
       comments: 32,
@@ -557,6 +570,12 @@ describe('mappers', () => {
       });
       expect(verified.isVerified).toBe(true);
       expect(verified.authorName).toBe('Juan Manuel');
+    });
+
+    it('trae la media de la publicación (0045), vacía si no hay', () => {
+      expect(toSocialPost(row).media).toEqual([]);
+      const video = toSocialPost({ ...row, media: [{ type: 'video', url: 'v.mp4' }] });
+      expect(video.media).toEqual([{ type: 'video', url: 'v.mp4' }]);
     });
   });
 

@@ -6,6 +6,7 @@ import { ToastService } from '../../../../shared/services/toast.service';
 import { APPOINTMENT_STATUS_LABELS, CANCEL_WINDOW_HOURS, canCancel } from '../../../../shared/utils/appointment-rules';
 import { formatWhen } from '../../../../shared/utils/service-time';
 
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 /**
  * "Mis citas" en el perfil: las citas de quien tiene sesión, con su estado y, si falta
  * **más de 24 horas**, la opción de cancelar.
@@ -16,7 +17,7 @@ import { formatWhen } from '../../../../shared/utils/service-time';
  */
 @Component({
   selector: 'app-mis-citas',
-  imports: [RouterLink],
+  imports: [Skeleton, RouterLink],
   templateUrl: './mis-citas.html',
   styleUrl: './mis-citas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

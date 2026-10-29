@@ -55,7 +55,7 @@
       </div>
     </form>
   } @else if (isLoading()) {
-    <p class="tl__empty">Cargando los trabajos...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando los trabajos…" />
   } @else if (works().length === 0) {
     <p class="tl__empty">Todavía no hay trabajos. Cuando publiques el primero, aparece la sección "Trabajos realizados" en /servicios.</p>
   } @else {

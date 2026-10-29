@@ -12,7 +12,7 @@ import { CouponService } from './coupon.service';
 const COUPON_COLUMNS =
   'id, code, description, discount_type, discount_value, min_subtotal, max_discount, starts_at, ends_at, max_uses, max_uses_per_customer, is_active, created_at';
 
-const DUPLICATE_CODE = 'Ya hay un cupon con ese codigo.';
+const DUPLICATE_CODE = 'Ya hay un cupón con ese código.';
 
 /**
  * Los cupones desde el panel (`/admin/cupones`): crear, editar, apagar y borrar.

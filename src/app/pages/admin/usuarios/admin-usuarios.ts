@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +24,7 @@ import { UserRole } from '../../../../shared/models/user.model';
  */
 @Component({
   selector: 'app-admin-usuarios',
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, Skeleton],
   templateUrl: './admin-usuarios.html',
   styleUrl: './admin-usuarios.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

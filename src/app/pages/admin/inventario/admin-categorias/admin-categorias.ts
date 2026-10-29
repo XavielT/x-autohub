@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminCatalogService } from '../../../../../shared/services/admin-catalog.service';
@@ -17,7 +18,7 @@ import { buildCategoryTree } from '../../../../../shared/utils/category-tree';
  */
 @Component({
   selector: 'app-admin-categorias',
-  imports: [FormsModule],
+  imports: [FormsModule, Skeleton],
   templateUrl: './admin-categorias.html',
   styleUrl: './admin-categorias.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,7 +58,7 @@ export class AdminCategorias implements OnInit {
   add(): void {
     const name = this.newName().trim();
     if (!name) {
-      this.toast.show('Escribe el nombre de la categoria.', 'error');
+      this.toast.show('Escribe el nombre de la categoría.', 'error');
       return;
     }
 
@@ -84,7 +85,7 @@ export class AdminCategorias implements OnInit {
     const name = (event.target as HTMLInputElement).value.trim();
     if (!name) {
       (event.target as HTMLInputElement).value = category.name;
-      this.toast.show('El nombre no puede quedar vacio.', 'error');
+      this.toast.show('El nombre no puede quedar vacío.', 'error');
       return;
     }
     if (name === category.name) return;
@@ -106,7 +107,7 @@ export class AdminCategorias implements OnInit {
       next: (saved) => {
         this.savingId.set(null);
         this.replace(saved);
-        this.toast.show(saved.isActive ? 'Categoria visible.' : 'Categoria oculta del sitio.');
+        this.toast.show(saved.isActive ? 'Categoría visible.' : 'Categoría oculta del sitio.');
       },
       error: (e: Error) => this.fail(e),
     });

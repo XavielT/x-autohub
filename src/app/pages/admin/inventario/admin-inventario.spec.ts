@@ -31,7 +31,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
     c.existingImages.set(['assets/imgs/hub-parts/disco-brembo-gtr.jpg']);
   }
 
-  it('carga las piezas, las categorias y los servicios', () => {
+  it('carga las piezas, las categorías y los servicios', () => {
     const { c } = montar();
 
     expect(c.parts().length).toBe(5);
@@ -40,7 +40,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
     expect(c.isLoading()).toBe(false);
   });
 
-  it('el selector de categoria ofrece las 12 de primer nivel y deshabilita la opcion vacia', () => {
+  it('el selector de categoría ofrece las 12 de primer nivel y deshabilita la opción vacia', () => {
     const { fixture, c, el } = montar();
     c.startCreate();
     fixture.detectChanges();
@@ -52,7 +52,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
     expect(select.options[0].disabled).toBe(true);
   });
 
-  it('una categoria con hijas se ofrece agrupada, con su opcion general', async () => {
+  it('una categoría con hijas se ofrece agrupada, con su opción general', async () => {
     const { fixture, c, el, catalog } = montar();
     const frenos = c.categories().find((x) => x.slug === 'frenos')!;
     const hija = await new Promise<{ id: number }>((resolve) =>
@@ -69,7 +69,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
     expect(hija.id).toBeGreaterThan(0);
   });
 
-  it('un formulario nuevo nace en stock, especifico y sin categoria elegida', () => {
+  it('un formulario nuevo nace en stock, especifico y sin categoría elegida', () => {
     const { c } = montar();
     c.startCreate();
 
@@ -99,7 +99,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(c.partRuleError('compareAtLow')).toBe(false);
     });
 
-    it('un articulo bajo pedido sin dias de entrega es un error', () => {
+    it('un artículo bajo pedido sin días de entrega es un error', () => {
       const { c } = montar();
       c.startCreate();
       llenar(c);
@@ -114,7 +114,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(c.partForm.valid).toBe(true);
     });
 
-    it('un articulo en stock no pide dias de entrega', () => {
+    it('un artículo en stock no pide días de entrega', () => {
       const { c } = montar();
       c.startCreate();
       llenar(c, { fulfillment: 'stock', leadTimeDays: null });
@@ -123,7 +123,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(c.partForm.valid).toBe(true);
     });
 
-    it('el slug solo admite minusculas, numeros y guiones, y vacio vale', () => {
+    it('el slug solo admite minúsculas, números y guiones, y vacío vale', () => {
       const { c } = montar();
       c.startCreate();
       llenar(c);
@@ -138,7 +138,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       }
     });
 
-    it('el formulario cambia de campos: stock si es de inventario, dias si es bajo pedido', () => {
+    it('el formulario cambia de campos: stock si es de inventario, días si es bajo pedido', () => {
       const { fixture, c, el } = montar();
       c.startCreate();
       llenar(c);
@@ -181,7 +181,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(c.parts()[0].name).toBe('Pieza nueva');
       expect(replace).toHaveBeenCalledWith(c.parts()[0].id, [f]);
       expect(c.isCreating()).toBe(false);
-      expect(show).toHaveBeenCalledWith('"Pieza nueva" agregada al catalogo.');
+      expect(show).toHaveBeenCalledWith('"Pieza nueva" agregada al catálogo.');
     });
 
     it('una pieza universal no lleva compatibilidad: se manda la lista vacia', () => {
@@ -257,7 +257,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(show).toHaveBeenCalledWith('No se pueden borrar las opciones con pedidos: quedaron apagadas (Rojo).');
     });
 
-    it('no guarda un formulario invalido ni uno sin imagen', () => {
+    it('no guarda un formulario inválido ni uno sin imagen', () => {
       const { c } = montar();
       const antes = c.parts().length;
       c.startCreate();
@@ -273,7 +273,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(show).toHaveBeenCalledWith('Agrega al menos una imagen.', 'error');
     });
 
-    it('un articulo bajo pedido sin plazo no se guarda', () => {
+    it('un artículo bajo pedido sin plazo no se guarda', () => {
       const { c } = montar();
       const antes = c.parts().length;
       c.startCreate();
@@ -343,7 +343,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(el.querySelector('app-admin-marcas')).not.toBeNull();
     });
 
-    it('la lista de piezas muestra categoria, SKU y si es bajo pedido', () => {
+    it('la lista de piezas muestra categoría, SKU y si es bajo pedido', () => {
       const { el } = montar();
       const texto = el.textContent ?? '';
 

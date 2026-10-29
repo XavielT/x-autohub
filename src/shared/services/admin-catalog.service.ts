@@ -10,7 +10,9 @@ import {
   VariantDraft,
 } from '../models/admin-inventory.model';
 import {
+  ProductAlias,
   ProductCategoryModel,
+  UnmatchedVehicleModel,
   VehicleMakeModel,
   VehicleModelModel,
 } from '../models/product.model';
@@ -19,6 +21,7 @@ import { PRODUCT_FITMENTS_MOCK } from '../data/product-fitment.mock';
 import { PRODUCT_VARIANTS_MOCK } from '../data/product-variant.mock';
 import { VEHICLE_MAKES_MOCK, VEHICLE_MODELS_MOCK } from '../data/vehicle.mock';
 import { slugify } from '../utils/slugify';
+import { VehicleService } from './vehicle.service';
 import { variantPhotos } from '../utils/variant-gallery';
 import { validateVariantDrafts } from '../utils/variant-rules';
 
@@ -46,6 +49,7 @@ const FOREIGN_KEY_VIOLATION = '23503';
 @Injectable({ providedIn: 'root' })
 export class AdminCatalogService {
   private readonly supabase = inject(SupabaseService);
+  private readonly vehicles = inject(VehicleService);
 
   private mockCategories: ProductCategoryModel[] = PRODUCT_CATEGORIES_MOCK.map((c) => ({ ...c }));
   private mockMakes: VehicleMakeModel[] = [...VEHICLE_MAKES_MOCK];
@@ -54,6 +58,8 @@ export class AdminCatalogService {
   private mockFitments = new Map<number, FitmentDraft[]>();
   /** Opciones por producto, en modo mock. */
   private mockVariants = new Map<number, VariantDraft[]>();
+  private mockAliases = new Map<number, ProductAlias[]>();
+  private mockAliasId = 0;
   private mockVariantSeq = 1000;
 
   // --- Categorías ----------------------------------------------------------------
@@ -110,7 +116,7 @@ export class AdminCatalogService {
   updateCategory(id: number, change: CategoryChange): Observable<ProductCategoryModel> {
     if (this.supabase.shouldUseMockData()) {
       const current = this.mockCategories.find((c) => c.id === id);
-      if (!current) return throwError(() => new Error('No encontramos esa categoria.'));
+      if (!current) return throwError(() => new Error('No encontramos esa categoría.'));
 
       const next = { ...current, ...change };
       const problem =
@@ -156,17 +162,17 @@ export class AdminCatalogService {
 
   /** Las reglas que en la base hacen la unicidad y el trigger de dos niveles. */
   private mockCategoryProblem(parentId: number | null, slug: string, selfId?: number): string | null {
-    if (!slug) return 'La categoria necesita un nombre.';
+    if (!slug) return 'La categoría necesita un nombre.';
     if (this.mockCategories.some((c) => c.slug === slug && c.id !== selfId)) {
       return 'Ese registro ya existe.';
     }
     if (parentId !== null) {
       const parent = this.mockCategories.find((c) => c.id === parentId);
       if (parent && parent.parentId !== null) {
-        return 'Las categorias admiten dos niveles como maximo.';
+        return 'Las categorías admiten dos niveles como máximo.';
       }
       if (selfId !== undefined && this.mockCategories.some((c) => c.parentId === selfId)) {
-        return 'Una categoria con subcategorias no puede ser subcategoria.';
+        return 'Una categoría con subcategorías no puede ser subcategoría.';
       }
     }
     return null;
@@ -225,6 +231,99 @@ export class AdminCatalogService {
         .select('id, make_id, name, slug')
         .single(),
     ).pipe(map((res) => toVehicleModel(unwrap(res))));
+  }
+
+  // --- Alias de búsqueda (0042) -------------------------------------------------
+
+  getAliases(productId: number): Observable<ProductAlias[]> {
+    if (this.supabase.shouldUseMockData()) return of(this.mockAliases.get(productId) ?? []);
+
+    return from(
+      this.supabase.db.from('product_aliases').select('id, alias').eq('product_id', productId).order('alias'),
+    ).pipe(map((res) => unwrap(res)));
+  }
+
+  addAlias(productId: number, alias: string): Observable<ProductAlias> {
+    const text = alias.trim();
+    if (text.length < 2 || text.length > 60) {
+      return throwError(() => new Error('El alias debe tener entre 2 y 60 letras.'));
+    }
+
+    if (this.supabase.shouldUseMockData()) {
+      const current = this.mockAliases.get(productId) ?? [];
+      const key = slugify(text);
+      if (current.some((a) => slugify(a.alias) === key)) {
+        return throwError(() => new Error('Ese alias ya está en la lista.'));
+      }
+      const created = { id: ++this.mockAliasId, alias: text };
+      this.mockAliases.set(productId, [...current, created]);
+      return of(created);
+    }
+
+    return from(
+      this.supabase.db.from('product_aliases').insert({ product_id: productId, alias: text }).select('id, alias').single(),
+    ).pipe(
+      map((res) => {
+        if (res.error) {
+          // 23505 = unique_violation: el mismo alias (sin tildes ni mayúsculas) ya estaba.
+          throw new Error(res.error.code === '23505' ? 'Ese alias ya está en la lista.' : 'No pudimos guardar el alias.');
+        }
+        return res.data;
+      }),
+    );
+  }
+
+  removeAlias(productId: number, id: number): Observable<void> {
+    if (this.supabase.shouldUseMockData()) {
+      this.mockAliases.set(productId, (this.mockAliases.get(productId) ?? []).filter((a) => a.id !== id));
+      return of(undefined);
+    }
+
+    return from(this.supabase.db.from('product_aliases').delete().eq('id', id)).pipe(
+      map((res) => {
+        if (res.error) throw new Error('No pudimos quitar el alias.');
+      }),
+    );
+  }
+
+  /** Los modelos que la gente escribió a mano porque su marca no los tenía. */
+  getUnmatchedModels(): Observable<UnmatchedVehicleModel[]> {
+    if (this.supabase.shouldUseMockData()) {
+      const names = new Map(this.mockMakes.map((m) => [m.id, m.name] as const));
+      return of(this.vehicles.mockUnmatched(names));
+    }
+
+    return from(this.supabase.db.rpc('admin_unmatched_vehicle_models')).pipe(
+      map((res) =>
+        unwrap(res).map((r) => ({
+          makeId: r.make_id,
+          makeName: r.make_name,
+          modelText: r.model_text,
+          vehicles: Number(r.vehicles),
+        })),
+      ),
+    );
+  }
+
+  /**
+   * "Crear modelo" desde un texto escrito: lo agrega a `vehicle_models` y pasa a él
+   * los garajes que lo habían escrito. Devuelve cuántos garajes se actualizaron.
+   */
+  createModelFromText(makeId: number, text: string): Observable<{ model: VehicleModelModel; migrated: number }> {
+    if (this.supabase.shouldUseMockData()) {
+      return this.createModel(makeId, text).pipe(
+        map((model) => ({ model, migrated: this.vehicles.mockAdopt(makeId, text, model.id) })),
+      );
+    }
+
+    return from(this.supabase.db.rpc('admin_create_vehicle_model', { p_make_id: makeId, p_name: text.trim() })).pipe(
+      switchMap((res) => {
+        const row = unwrap(res)[0];
+        return from(
+          this.supabase.db.from('vehicle_models').select('id, make_id, name, slug').eq('id', row.model_id).single(),
+        ).pipe(map((m) => ({ model: toVehicleModel(unwrap(m)), migrated: Number(row.migrated) })));
+      }),
+    );
   }
 
   // --- Compatibilidad ------------------------------------------------------------------
@@ -303,7 +402,7 @@ export class AdminCatalogService {
             if (inserted.error) {
               console.error('[supabase]', inserted.error);
               throw new Error(
-                'La pieza se guardo, pero su compatibilidad no. Vuelve a guardarla para reintentar.',
+                'La pieza se guardó, pero su compatibilidad no. Vuelve a guardarla para reintentar.',
               );
             }
           }),

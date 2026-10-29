@@ -1,86 +1,28 @@
 @if (car(); as car) {
-<div class="car-details">
-  <div class="car-details__body">
+  <app-vehicle-detail
+    [images]="images()" [title]="car.title" [location]="car.location" [price]="car.price"
+    [specs]="specs()" [description]="car.description" [sellerName]="car.sellerName"
+    [waLink]="waLink()" [isTest]="!!car.isTest">
     @if (!isLive(car)) {
-      <app-publication-notice [item]="car" />
+      <app-publication-notice notice [item]="car" />
     }
-    <div class="car-details__media">
-      <app-image-gallery [images]="images()" [alt]="car.title" />
-    </div>
-
-    <div class="car-details__info">
-      <div class="car-details__info-top">
-        <div>
-          @if (car.isTest) { <app-test-badge /> }
-          <h1 class="car-details__title">{{car.title}}</h1>
-          <p class="car-details__location">{{car.location}}</p>
+    @if (relatedVehicles().length > 0) {
+      <section related class="related-vehicles" aria-labelledby="related-title">
+        <h2 class="related-vehicles__title" id="related-title">Vehículos relacionados</h2>
+        <div class="related-vehicles__grid">
+          @for (vehicle of relatedVehicles(); track vehicle.id) {
+            <app-car-card [car]="vehicle" />
+          }
         </div>
-        <div class="car-details__price">
-          <span>Precio</span>
-          <h2>RD$ {{car.price | number:'1.0-0'}}</h2>
-        </div>
-      </div>
-
-      @if (car.vehicleSpecs; as specs) {
-        <div class="car-details__specs">
-          <div class="car-details__specs-grid">
-            <div class="car-details__spec-item">
-              <span>Año</span>
-              <strong>{{specs.year}}</strong>
-            </div>
-            <div class="car-details__spec-item">
-              <span>Kilometraje</span>
-              <strong>{{specs.mileage | number}} KM</strong>
-            </div>
-            <div class="car-details__spec-item">
-              <span>HP</span>
-              <strong>{{specs.hp || 'N/A'}}</strong>
-            </div>
-            <div class="car-details__spec-item">
-              <span>0-100 km/h</span>
-              <strong>{{specs.zeroTo100 ? specs.zeroTo100 + 's' : 'N/A'}}</strong>
-            </div>
-            <div class="car-details__spec-item">
-              <span>Velocidad máxima</span>
-              <strong>{{specs.topSpeed ? specs.topSpeed + ' km/h' : 'N/A'}}</strong>
-            </div>
-          </div>
-        </div>
-      }
-
-      <div class="car-details__seller">
-        <h3>Vendedor</h3>
-        <p>{{car.sellerName}}</p>
-        @if (waLink(); as link) {
-          <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
-            <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
-            Contactar por WhatsApp
-          </a>
-        }
-      </div>
-
-      <div class="car-details__description">
-        <h3>Descripción</h3>
-        <app-expandable-text [text]="car.description" />
-      </div>
-    </div>
-  </div>
-</div>
-} @else if (!isLoading()) {
+      </section>
+    }
+  </app-vehicle-detail>
+} @else if (isLoading()) {
+  <app-skeleton variant="detail" label="Cargando el vehículo…" />
+} @else {
   <div class="car-details__not-found">
-    <h2>No encontramos este vehiculo</h2>
-    <p>Puede que la publicacion ya no este disponible.</p>
+    <h2>No encontramos este vehículo</h2>
+    <p>Puede que la publicación ya no esté disponible.</p>
     <a routerLink="/hub-market">Volver a Hub Market</a>
-  </div>
-}
-
-@if (relatedVehicles().length > 0) {
-  <div class="related-vehicles">
-    <h2 class="related-vehicles__title">Vehículos Relacionados</h2>
-    <div class="related-vehicles__grid">
-      @for (vehicle of relatedVehicles(); track vehicle.id) {
-        <app-car-card [car]="vehicle" />
-      }
-    </div>
   </div>
 }

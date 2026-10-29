@@ -1,35 +1,5 @@
-<div class="car-card">
-    <div class="car-card-img">
-        <a [routerLink]="car().detailRoute || ['/car-details', car().id]" class="car-card-link car-card-img-link">
-            <img class="car-card-img-item" [ngSrc]="car().images[0]" fill/>
-        </a>
-    </div>
-    <div class="car-card-info">
-        <div class="car-card-info-up">
-            <div class="car-card-info-up-left">
-                <a [routerLink]="car().detailRoute || ['/car-details', car().id]" class="car-card-link">
-                    <h4>{{car().vehicleSpecs?.brand}} {{car().vehicleSpecs?.model}}</h4>
-                </a>
-                <span>{{car().vehicleSpecs?.year}} &bull; {{car().vehicleSpecs?.mileage}} KM</span>
-                @if (car().isTest) { <app-test-badge /> }
-            </div>
-            <div class="car-card-info-up-right">
-                <h5>RD$ {{car().price | number:'1.0-0'}}</h5>
-            </div>
-        </div>
-        <div class="car-card-info-down">
-            <div class="car-card-info-down-item">
-                <span>HP</span>
-                <h6>{{car().vehicleSpecs?.hp}} HP</h6>
-            </div>
-            <div class="car-card-info-down-item">
-                <span>0-100</span>
-                <h6>{{car().vehicleSpecs?.zeroTo100}}S</h6>
-            </div>
-            <div class="car-card-info-down-item">
-                <span>Top Speed</span>
-                <h6>{{car().vehicleSpecs?.topSpeed}} KM/H</h6>
-            </div>
-        </div>
-    </div>
-</div>
+<app-vehicle-card
+  [link]="link()" [image]="car().images.at(0) ?? null" [title]="title()" [price]="car().price"
+  [year]="car().vehicleSpecs?.year ?? null" [mileage]="car().vehicleSpecs?.mileage ?? null"
+  [meta]="meta()" badge="De la comunidad" [specs]="specs()" [isTest]="!!car().isTest"
+  [priority]="priority()" />

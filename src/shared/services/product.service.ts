@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, from, map, of, switchMap } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { toProduct, toProductFitment, toProductVariant } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
@@ -9,6 +9,7 @@ import {
   ProductModel,
   ProductSearchParams,
   ProductSearchResult,
+  ProductSuggestion,
   ProductVariantModel,
 } from '../models/product.model';
 import { SearchProductRow } from '../../core/supabase/database.types';
@@ -79,6 +80,40 @@ export class ProductService {
     }
 
     return from(params.brand ? this.searchByBrand(params) : this.searchPage(params));
+  }
+
+  /**
+   * Las sugerencias del buscador mientras se escribe: más liviano que `searchProducts()` y con
+   * tolerancia a errores de tecleo y a alias (`suggest_products()`, migración 0042). Si esa función
+   * todavía no existe en la base (frontend desplegado antes que la migración), cae a la búsqueda
+   * completa para que el buscador no se quede sin sugerencias.
+   */
+  suggestProducts(query: string, limit = 6): Observable<ProductSuggestion[]> {
+    const fromSearch = () =>
+      this.searchProducts({ query, limit }).pipe(map((r) => r.items.map((p) => this.toSuggestion(p))));
+
+    if (this.supabase.shouldUseMockData()) return fromSearch();
+
+    return from(this.supabase.db.rpc('suggest_products', { p_query: query, p_limit: limit })).pipe(
+      switchMap((res) => {
+        if (res.error) return fromSearch();
+        return of(
+          (res.data ?? []).map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            name: row.name,
+            brand: row.brand,
+            imgUrl: row.img_url,
+            price: Number(row.price),
+            ...(row.matched_alias ? { matchedAlias: row.matched_alias } : {}),
+          })),
+        );
+      }),
+    );
+  }
+
+  private toSuggestion(p: ProductModel): ProductSuggestion {
+    return { id: p.id, slug: p.slug, name: p.name, brand: p.brand, imgUrl: p.imgUrl, price: p.price };
   }
 
   /** Una página de `search_products()`, ya traducida. */

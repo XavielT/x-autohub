@@ -6,19 +6,19 @@
       todo para tu carro, en RD
     </h2>
     <p class="auth__aside-text">
-      Entra a tu cuenta para guardar tu vehiculo en tu garaje, publicar en Hub Market y seguir a
+      Entra a tu cuenta para guardar tu vehículo en tu garaje, publicar en Hub Market y seguir a
       la comunidad.
     </p>
     <ul class="auth__aside-perks">
-      <li class="auth__aside-perk">Tu vehiculo guardado: ves lo que le sirve</li>
-      <li class="auth__aside-perk">Publica vehiculos, piezas y accesorios</li>
+      <li class="auth__aside-perk">Tu vehículo guardado: ves lo que le sirve</li>
+      <li class="auth__aside-perk">Publica vehículos, piezas y accesorios</li>
       <li class="auth__aside-perk">Servicios de taller a un mensaje</li>
     </ul>
   </aside>
 
   <main class="auth__main">
     <div class="auth__card">
-      <h1 class="auth__heading">Iniciar sesion</h1>
+      <h1 class="auth__heading">Iniciar sesión</h1>
       <p class="auth__subheading">Usa el correo con el que te registraste.</p>
 
       <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
@@ -37,26 +37,26 @@
             [class.is-invalid]="showError('email')"
           />
           @if (showError('email')) {
-            <span class="auth__error">Ingresa un correo valido.</span>
+            <span class="auth__error">Ingresa un correo válido.</span>
           }
         </div>
 
         <div class="auth__field">
-          <label for="login-password">Contrasena</label>
+          <label for="login-password">Contraseña</label>
           <input
             id="login-password"
             type="password"
             formControlName="password"
             autocomplete="current-password"
-            placeholder="Minimo 6 caracteres"
+            placeholder="Mínimo 6 caracteres"
             [class.is-invalid]="showError('password')"
           />
           @if (showError('password')) {
-            <span class="auth__error">La contrasena debe tener al menos 6 caracteres.</span>
+            <span class="auth__error">La contraseña debe tener al menos 6 caracteres.</span>
           }
         </div>
 
-        <button class="auth__submit" type="submit" [disabled]="isSubmitting()">
+        <button class="auth__submit" type="submit" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
           {{ isSubmitting() ? 'Entrando...' : 'Entrar' }}
         </button>
       </form>
@@ -67,8 +67,8 @@
 
       @if (isDemoMode) {
         <p class="auth__hint">
-          Autenticacion de demostracion: cualquier correo valido con una contrasena de 6+ caracteres
-          inicia sesion. El backend real se conecta despues.
+          Autenticación de demostracion: cualquier correo válido con una contraseña de 6+ caracteres
+          inicia sesión. El backend real se conecta después.
         </p>
       }
     </div>

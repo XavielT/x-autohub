@@ -73,7 +73,7 @@ describe('SiteRebuildService (migración 0027)', () => {
       expect(toBuildFromResponse('x')).toBeNull();
     });
 
-    it('un estado que no se conoce cae en unknown y los campos que faltan en vacio', () => {
+    it('un estado que no se conoce cae en unknown y los campos que faltan en vacío', () => {
       expect(toBuildFromResponse({ configured: true, available: true, build: { state: 'raro' } })).toEqual({
         state: 'unknown',
         createdAt: null,

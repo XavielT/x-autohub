@@ -8,7 +8,9 @@ import { StorageService } from '../../../shared/services/storage.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
+import { ImageUploader } from '../../../shared/components/image-uploader/image-uploader';
 import { LocationSelect } from '../../../shared/ui/location-select/location-select';
+import { SearchableSelect } from '../../../shared/ui/searchable-select/searchable-select';
 import {
   RequiredField,
   focusFirstInvalid,
@@ -18,7 +20,7 @@ import { drPhoneValidator, normalizeDrPhone } from '../../../shared/utils/phone'
 
 @Component({
   selector: 'app-publicar',
-  imports: [ReactiveFormsModule, LocationSelect],
+  imports: [ReactiveFormsModule, LocationSelect, ImageUploader, SearchableSelect],
   templateUrl: './publicar.html',
   styleUrl: './publicar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,12 +34,9 @@ export class Publicar {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** Archivos originales: son los que se suben a Storage. */
+  /** Las fotos ya comprimidas, en el orden en que se suben (la primera es la portada). */
   readonly selectedFiles = signal<File[]>([]);
-  /** Data URLs solo para la vista previa del formulario. */
-  readonly imagePreviews = signal<string[]>([]);
 
-  readonly isDragOver = signal(false);
   readonly isSubmitting = signal(false);
 
   /**
@@ -131,17 +130,17 @@ export class Publicar {
   requiredFields(): RequiredField[] {
     const c = this.publishForm.controls;
     const fields: RequiredField[] = [
-      { key: 'images', label: 'Imagenes', invalid: this.selectedFiles().length === 0 },
-      { key: 'category', label: 'Categoria', invalid: c.category.invalid },
-      { key: 'title', label: 'Titulo', invalid: c.title.invalid },
-      { key: 'description', label: 'Descripcion', invalid: c.description.invalid },
+      { key: 'images', label: 'Imágenes', invalid: this.selectedFiles().length === 0 },
+      { key: 'category', label: 'Categoría', invalid: c.category.invalid },
+      { key: 'title', label: 'Título', invalid: c.title.invalid },
+      { key: 'description', label: 'Descripción', invalid: c.description.invalid },
       { key: 'price', label: 'Precio', invalid: c.price.invalid },
-      { key: 'location', label: 'Ubicacion', invalid: c.location.invalid },
+      { key: 'location', label: 'Ubicación', invalid: c.location.invalid },
     ];
 
     if (this.isVehicle) {
       fields.push(
-        { key: 'year', label: 'Ano', invalid: c.year.invalid },
+        { key: 'year', label: 'Año', invalid: c.year.invalid },
         { key: 'mileage', label: 'Kilometraje', invalid: c.mileage.invalid },
       );
     }
@@ -160,35 +159,11 @@ export class Publicar {
     return this.imagesTouched() && this.selectedFiles().length === 0;
   }
 
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.length) {
-      Array.from(input.files).forEach((file) => this.handleFile(file));
-    }
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver.set(true);
-  }
-
-  onDragLeave(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver.set(false);
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOver.set(false);
-    const files = event.dataTransfer?.files;
-    if (files?.length) {
-      Array.from(files).forEach((file) => this.handleFile(file));
-    }
-  }
-
-  removeImage(index: number): void {
-    this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
-    this.imagePreviews.update((previews) => previews.filter((_, i) => i !== index));
+  setCategory(value: string | number | null): void {
+    const control = this.publishForm.controls.category;
+    control.setValue(String(value ?? ''));
+    control.markAsDirty();
+    control.markAsTouched();
   }
 
   formatPriceDisplay(event: Event): void {
@@ -218,9 +193,9 @@ export class Publicar {
     // normalizaría a `undefined` en silencio y la publicación saldría sin botón
     // de WhatsApp, que es justo lo que el usuario quiso poner.
     if (this.publishForm.controls.contactPhone.invalid) {
-      this.toast.show('Escribe un telefono valido, ej. 809 555 0134.', 'error');
+      this.toast.show('Escribe un teléfono válido, ej. 809 555 0134.', 'error');
       focusFirstInvalid(this.host.nativeElement, [
-        { key: 'contactPhone', label: 'Telefono de contacto', invalid: true },
+        { key: 'contactPhone', label: 'Teléfono de contacto', invalid: true },
       ]);
       return;
     }
@@ -229,7 +204,7 @@ export class Publicar {
     if (!user) {
       // El authGuard ya protege esta ruta; esto cubre que la sesión expire
       // mientras el formulario estaba abierto.
-      this.toast.show('Tu sesion expiro. Vuelve a iniciar sesion.', 'error');
+      this.toast.show('Tu sesión expiró. Vuelve a iniciar sesión.', 'error');
       void this.router.navigate(['/login'], { queryParams: { returnUrl: '/publicar' } });
       return;
     }
@@ -282,8 +257,8 @@ export class Publicar {
           const canModerate = this.auth.canModerate();
           this.toast.show(
             canModerate
-              ? 'Tu publicacion ya esta en Hub Market.'
-              : 'Tu publicacion fue enviada y sera visible cuando un moderador la apruebe.',
+              ? 'Publicada. Como moderador, tu publicación no necesita aprobación y ya está en Hub Market.'
+              : 'Recibimos tu publicación. La revisa un moderador y te aparecerá como "Pendiente" en tu perfil hasta que se apruebe.',
           );
 
           // A quien modera se le lleva a su publicación, que ya está visible. Al
@@ -296,26 +271,8 @@ export class Publicar {
         },
         error: (error: Error) => {
           this.isSubmitting.set(false);
-          this.toast.show(error.message || 'No pudimos publicar tu articulo.', 'error');
+          this.toast.show(error.message || 'No pudimos publicar tu artículo.', 'error');
         },
       });
-  }
-
-  private handleFile(file: File): void {
-    const problem = this.storage.validate(file);
-    if (problem) {
-      this.toast.show(problem, 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (result && !this.imagePreviews().includes(result)) {
-        this.selectedFiles.update((files) => [...files, file]);
-        this.imagePreviews.update((previews) => [...previews, result]);
-      }
-    };
-    reader.readAsDataURL(file);
   }
 }

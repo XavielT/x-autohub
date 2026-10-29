@@ -23,7 +23,7 @@ describe('FitmentEditor', () => {
     return { fixture, c, el, escribir };
   }
 
-  it('empieza vacio y lo dice: sin compatibilidad la ficha pedira consultar', () => {
+  it('empieza vacío y lo dice: sin compatibilidad la ficha pedira consultar', () => {
     const { el } = montar();
     expect(el.textContent).toContain('Consultar compatibilidad');
   });
@@ -33,7 +33,7 @@ describe('FitmentEditor', () => {
     expect(el.querySelectorAll('#fit-makes option').length).toBe(35);
   });
 
-  it('agrega marca, modelo y anos, sin distinguir mayusculas ni acentos', () => {
+  it('agrega marca, modelo y años, sin distinguir mayusculas ni acentos', () => {
     const { c, escribir } = montar();
     escribir('TOYOTA', 'corolla', 2010, 2020);
 
@@ -43,7 +43,7 @@ describe('FitmentEditor', () => {
     expect(c.error()).toBe('');
   });
 
-  it('limpia el modelo y los anos despues de agregar, para poder seguir con otro', () => {
+  it('limpia el modelo y los años después de agregar, para poder seguir con otro', () => {
     const { c, escribir } = montar();
     escribir('Toyota', 'Corolla', 2010, 2020);
     c.add();
@@ -54,7 +54,7 @@ describe('FitmentEditor', () => {
     expect(c.makeName()).toBe('Toyota'); // la marca se queda: lo normal es agregar varios de la misma
   });
 
-  it('sin modelo es toda la marca, y sin anos no tiene limite', () => {
+  it('sin modelo es toda la marca, y sin años no tiene límite', () => {
     const { c, escribir } = montar();
     escribir('Toyota');
     c.add();
@@ -100,7 +100,7 @@ describe('FitmentEditor', () => {
     expect(c.error()).toContain('no tiene ese modelo');
   });
 
-  it('rechaza anos al reves o fuera de rango', () => {
+  it('rechaza años al reves o fuera de rango', () => {
     const { c, escribir } = montar();
 
     escribir('Toyota', '', 2020, 2010);
@@ -126,7 +126,7 @@ describe('FitmentEditor', () => {
     c.add();
 
     expect(c.fitments().length).toBe(1);
-    expect(c.error()).toContain('ya esta en la lista');
+    expect(c.error()).toContain('ya está en la lista');
   });
 
   it('quita una fila', () => {
@@ -141,7 +141,7 @@ describe('FitmentEditor', () => {
     expect(c.fitments().map((f) => f.makeId)).toEqual([VEHICLE_MAKES_MOCK.find((m) => m.slug === 'honda')!.id]);
   });
 
-  it('lee los anos de un input numerico: vacio es nulo y basura tambien', () => {
+  it('lee los años de un input numerico: vacío es nulo y basura también', () => {
     const { c } = montar();
     expect(c.parseYear('')).toBeNull();
     expect(c.parseYear(null)).toBeNull();
@@ -150,7 +150,7 @@ describe('FitmentEditor', () => {
     expect(c.parseYear(2015)).toBe(2015);
   });
 
-  it('pinta las filas que ya traia, con el nombre del modelo y no un numero', () => {
+  it('pinta las filas que ya traia, con el nombre del modelo y no un número', () => {
     const fixture = TestBed.createComponent(FitmentEditor);
     fixture.componentInstance.fitments.set([
       { makeId: toyota.id, modelId: corolla.id, yearFrom: 2010, yearTo: 2020 },

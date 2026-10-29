@@ -72,7 +72,7 @@ describe('AuthService', () => {
       }),
     );
 
-  it('sin sesion el rol es user: el permiso mas bajo', () => {
+  it('sin sesión el rol es user: el permiso más bajo', () => {
     expect(service.role()).toBe('user');
     expect(service.canModerate()).toBe(false);
     expect(service.isAdmin()).toBe(false);
@@ -95,7 +95,7 @@ describe('AuthService', () => {
     expect(service.isAdmin()).toBe(false);
   });
 
-  it('admin@ entra como admin, y canModerate tambien lo incluye', async () => {
+  it('admin@ entra como admin, y canModerate también lo incluye', async () => {
     await entrar('admin@ejemplo.com');
 
     expect(service.role()).toBe('admin');
@@ -129,7 +129,7 @@ describe('AuthService', () => {
     return TestBed.inject(AuthService);
   };
 
-  it('el rol sobrevive a recargar la pagina', async () => {
+  it('el rol sobrevive a recargar la página', async () => {
     await entrar('mod@ejemplo.com');
 
     const revivido = recargar();
@@ -138,7 +138,7 @@ describe('AuthService', () => {
     expect(revivido.canModerate()).toBe(true);
   });
 
-  it('una sesion guardada antes de la fase 5 no se queda sin rol', () => {
+  it('una sesión guardada antes de la fase 5 no se queda sin rol', () => {
     // Sin `role`, como la dejaria un bundle anterior.
     localStorage.setItem(
       'x-autohub.session',
@@ -146,6 +146,19 @@ describe('AuthService', () => {
     );
 
     expect(recargar().role()).toBe('moderador');
+  });
+
+  it('guardar el perfil conserva la foto si no se manda, y la quita con null', async () => {
+    await entrar('ana@ejemplo.com');
+
+    await new Promise((r) => service.updateProfile({ displayName: 'Ana', avatarUrl: 'assets/avatars/rueda.svg' }).subscribe(r));
+    expect(service.user()?.avatarUrl).toBe('assets/avatars/rueda.svg');
+
+    await new Promise((r) => service.updateProfile({ displayName: 'Ana B' }).subscribe(r));
+    expect(service.user()?.avatarUrl).toBe('assets/avatars/rueda.svg');
+
+    await new Promise((r) => service.updateProfile({ displayName: 'Ana B', avatarUrl: null }).subscribe(r));
+    expect(service.user()?.avatarUrl).toBeUndefined();
   });
 
   // --- Registro contra Supabase (imp 27082026, fase 1) ----------------------
@@ -245,7 +258,7 @@ describe('AuthService', () => {
     return TestBed.inject(AuthService);
   };
 
-  it('sin sesion en el signUp devuelve confirm-email y no toca el perfil', async () => {
+  it('sin sesión en el signUp devuelve confirm-email y no toca el perfil', async () => {
     const double = supabaseDouble({ signUpSession: null });
     const outcome = await registrar(conSupabase(double));
 
@@ -255,7 +268,7 @@ describe('AuthService', () => {
     expect(double.calls.rpc).toBe(0);
   });
 
-  it('con sesion en el signUp devuelve active con el usuario cargado', async () => {
+  it('con sesión en el signUp devuelve active con el usuario cargado', async () => {
     const double = supabaseDouble({ signUpSession: { access_token: 'jwt' } });
     const outcome = await registrar(conSupabase(double));
 
@@ -286,7 +299,7 @@ describe('AuthService', () => {
     expect(outcome.status).toBe('active');
   });
 
-  it('un fallo del perfil no filtra el detalle tecnico al usuario', async () => {
+  it('un falló del perfil no filtra el detalle técnico al usuario', async () => {
     const double = supabaseDouble({
       signUpSession: { access_token: 'jwt' },
       rpc: () => Promise.resolve({ data: null, error: { code: '42501', message: 'denied' } }),
@@ -314,12 +327,12 @@ describe('AuthService', () => {
   // --- Cargas repetidas del perfil (imp 27082026, seguimiento) -------------
   //
   // El perfil se pedia 4 o 5 veces por navegacion: cada evento de
-  // `onAuthStateChange` lanzaba su lectura, y encima la restauracion de sesion
+  // `onAuthStateChange` lanzaba su lectura, y encima la restauración de sesion
   // y `login`/`register` pedian la suya. Todas devolvian lo mismo.
 
   const SESSION = { access_token: 'jwt', user: { id: PROFILE_ROW.id } };
 
-  it('el registro lee el perfil una sola vez, aunque el evento SIGNED_IN tambien lo pida', async () => {
+  it('el registro lee el perfil una sola vez, aunque el evento SIGNED_IN también lo pida', async () => {
     const double = supabaseDouble({ signUpSession: SESSION });
     const svc = conSupabase(double);
 
@@ -346,7 +359,7 @@ describe('AuthService', () => {
     expect(double.calls.rpc).toBe(after);
   });
 
-  it('cerrar sesion limpia el usuario y permite volver a leer', async () => {
+  it('cerrar sesión limpia el usuario y permite volver a leer', async () => {
     const double = supabaseDouble({ signUpSession: SESSION });
     const svc = conSupabase(double);
     await registrar(svc);

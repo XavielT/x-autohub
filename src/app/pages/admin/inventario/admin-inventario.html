@@ -3,14 +3,14 @@
     <div>
       <h2 class="adm-inv__title">Inventario propio</h2>
       <p class="adm-inv__lead">
-        Tienda, Auto Hub y noticias, mas las categorias y los vehiculos de la tienda. Hub Market no se administra aqui: lo publica la comunidad.
+        Tienda, Auto Hub y noticias, más las categorías y los vehículos de la tienda. Hub Market no se administra aquí: lo publica la comunidad.
       </p>
     </div>
     @if (!isCreating() && tab() !== 'categorias' && tab() !== 'marcas') {
       <button type="button" class="adm-inv__new" (click)="startCreate()">
         @switch (tab()) {
           @case ('piezas') { + Nueva pieza }
-          @case ('vehiculos') { + Nuevo vehiculo }
+          @case ('vehiculos') { + Nuevo vehículo }
           @case ('noticias') { + Nueva noticia }
         }
       </button>
@@ -32,7 +32,7 @@
     </button>
     <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'categorias'"
             [class.adm-inv__tab--active]="tab() === 'categorias'" (click)="setTab('categorias')">
-      Categorias
+      Categorías
     </button>
     <button type="button" role="tab" class="adm-inv__tab" [attr.aria-selected]="tab() === 'marcas'"
             [class.adm-inv__tab--active]="tab() === 'marcas'" (click)="setTab('marcas')">
@@ -47,25 +47,25 @@
         @if (editingId() === null) {
           @switch (tab()) {
             @case ('piezas') { Nueva pieza de la tienda }
-            @case ('vehiculos') { Nuevo vehiculo de Auto Hub }
+            @case ('vehiculos') { Nuevo vehículo de Auto Hub }
             @case ('noticias') { Nueva noticia }
           }
         } @else {
           @switch (tab()) {
             @case ('piezas') { Editar pieza }
-            @case ('vehiculos') { Editar vehiculo }
+            @case ('vehiculos') { Editar vehículo }
             @case ('noticias') { Editar noticia }
           }
         }
       </h3>
 
       @if (isLoadingOne()) {
-        <p class="adm-inv__loading-one">Cargando el articulo...</p>
+        <p class="adm-inv__loading-one">Cargando el artículo...</p>
       }
 
       <div class="adm-inv__images">
         <span class="adm-inv__images-label">
-          Imagenes <small>(la primera es la portada)</small>
+          Imágenes <small>(la primera es la portada)</small>
         </span>
         <div class="adm-inv__thumbs">
           @for (src of existingImages(); track src) {
@@ -95,7 +95,7 @@
             <span>+ Agregar</span>
           </label>
         </div>
-        <span class="adm-inv__hint">JPG, PNG o WebP. Maximo 5 MB por imagen.</span>
+        <span class="adm-inv__hint">JPG, PNG o WebP. Máximo 5 MB por imagen.</span>
       </div>
 
       @switch (tab()) {
@@ -112,9 +112,9 @@
               @if (showError('part', 'brand')) { <small class="adm-inv__err">Obligatorio.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>Categoria</span>
+              <span>Categoría</span>
               <select formControlName="categoryId">
-                <option [ngValue]="null" disabled>Elige una categoria</option>
+                <option [ngValue]="null" disabled>Elige una categoría</option>
                 @for (root of categoryTree(); track root.id) {
                   @if (root.children.length === 0) {
                     <option [ngValue]="root.id">{{ root.name }}</option>
@@ -128,26 +128,26 @@
                   }
                 }
               </select>
-              @if (showError('part', 'categoryId')) { <small class="adm-inv__err">Elige una categoria.</small> }
+              @if (showError('part', 'categoryId')) { <small class="adm-inv__err">Elige una categoría.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>SKU <small>(vacio = automatico)</small></span>
+              <span>SKU <small>(vacío = automático)</small></span>
               <input type="text" formControlName="sku" placeholder="XAH-000123" />
             </label>
             <label class="adm-inv__field">
-              <span>Direccion web (slug) <small>(vacio = automatica)</small></span>
+              <span>Dirección web (slug) <small>(vacío = automática)</small></span>
               <input type="text" formControlName="slug" placeholder="disco-ventilado-gtr-355mm" />
               @if (showError('part', 'slug')) {
-                <small class="adm-inv__err">Solo minusculas, numeros y guiones.</small>
+                <small class="adm-inv__err">Solo minúsculas, números y guiones.</small>
               }
             </label>
             <label class="adm-inv__field adm-inv__field--full">
-              <span>Descripcion corta <small>(la que sale en las tarjetas)</small></span>
+              <span>Descripción corta <small>(la que sale en las tarjetas)</small></span>
               <input type="text" formControlName="shortDescription" maxlength="160"
-                     placeholder="Una linea: que es y para que sirve" />
+                     placeholder="Una línea: que es y para qué sirve" />
             </label>
             <label class="adm-inv__field adm-inv__field--full">
-              <span>Descripcion</span>
+              <span>Descripción</span>
               <textarea formControlName="description" rows="3"
                         placeholder="El detalle completo de la pieza…"></textarea>
             </label>
@@ -156,10 +156,10 @@
             <label class="adm-inv__field">
               <span>Precio (RD$)</span>
               <input type="number" inputmode="decimal" formControlName="price" min="0" step="50" />
-              @if (showError('part', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              @if (showError('part', 'price')) { <small class="adm-inv__err">Debe ser 0 o más.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>Precio anterior (RD$) <small>(vacio = sin oferta)</small></span>
+              <span>Precio anterior (RD$) <small>(vacío = sin oferta)</small></span>
               <input type="number" inputmode="decimal" formControlName="compareAtPrice" min="0" step="50" />
               @if (partRuleError('compareAtLow')) {
                 <small class="adm-inv__err">Tiene que ser mayor que el precio actual.</small>
@@ -180,29 +180,29 @@
                 <p class="adm-inv__field adm-inv__note">
                   <span>Existencias</span>
                   <strong>{{ variantsStock() }}</strong>
-                  <small>La suma de las opciones de abajo: se cambian ahi, una por una.</small>
+                  <small>La suma de las opciones de abajo: se cambian ahí, una por una.</small>
                 </p>
               } @else {
                 <label class="adm-inv__field">
                   <span>Existencias</span>
                   <input type="number" inputmode="numeric" formControlName="stock" min="0" step="1" />
-                  @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+                  @if (showError('part', 'stock')) { <small class="adm-inv__err">Debe ser 0 o más.</small> }
                 </label>
               }
             } @else {
               <label class="adm-inv__field">
-                <span>Dias de entrega</span>
+                <span>Días de entrega</span>
                 <input type="number" inputmode="numeric" formControlName="leadTimeDays" min="1" step="1"
                        placeholder="10" />
                 @if (partRuleError('leadTimeMissing')) {
-                  <small class="adm-inv__err">Un articulo bajo pedido tiene que decir cuantos dias tarda.</small>
+                  <small class="adm-inv__err">Un artículo bajo pedido tiene que decir cuántos días tarda.</small>
                 }
               </label>
             }
 
             <h4 class="adm-inv__section">Opciones <small>(color, talla…)</small></h4>
             <label class="adm-inv__field adm-inv__field--full">
-              <span>Que se elige <small>(por ejemplo "Color" o "Talla"; vacio = "Opcion")</small></span>
+              <span>Que se elige <small>(por ejemplo "Color" o "Talla"; vacío = "Opción")</small></span>
               <input type="text" formControlName="variantLabel" [attr.maxlength]="variantLabelMax" placeholder="Color" />
             </label>
             <div class="adm-inv__field adm-inv__field--full">
@@ -211,7 +211,7 @@
 
             <h4 class="adm-inv__section">Compatibilidad</h4>
             <label class="adm-inv__field adm-inv__field--full">
-              <span>Para que vehiculos sirve</span>
+              <span>Para qué vehículos sirve</span>
               <select formControlName="fitmentType">
                 @for (o of fitmentOptions; track o.value) {
                   <option [value]="o.value">{{ o.label }}</option>
@@ -224,14 +224,14 @@
               </div>
             }
 
-            <h4 class="adm-inv__section">Instalacion</h4>
+            <h4 class="adm-inv__section">Instalación</h4>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="installable" />
               <span>Se puede instalar en el taller</span>
             </label>
             @if (partForm.controls.installable.value) {
               <label class="adm-inv__field adm-inv__field--full">
-                <span>Servicio que la instala <small>(opcional: de ahi sale el precio)</small></span>
+                <span>Servicio que la instala <small>(opcional: de ahí sale el precio)</small></span>
                 <select formControlName="installationServiceId">
                   <option [ngValue]="null">Sin servicio asociado</option>
                   @for (svc of services(); track svc.id) {
@@ -246,6 +246,11 @@
               <app-specs-editor [(specs)]="specs" />
             </div>
 
+            <h4 class="adm-inv__section">Alias de búsqueda</h4>
+            <div class="adm-inv__field adm-inv__field--full">
+              <app-alias-editor [productId]="editingId()" />
+            </div>
+
             <h4 class="adm-inv__section">Visibilidad</h4>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="isFeatured" />
@@ -257,7 +262,7 @@
             </label>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="isTest" />
-              <span>Articulo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
+              <span>Artículo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
@@ -281,14 +286,14 @@
               @if (showError('vehicle', 'model')) { <small class="adm-inv__err">Obligatorio.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>Ano</span>
+              <span>Año</span>
               <input type="number" formControlName="year" min="1900" [max]="maxYear" step="1" />
               @if (showError('vehicle', 'year')) { <small class="adm-inv__err">Entre 1900 y 2100.</small> }
             </label>
             <label class="adm-inv__field">
               <span>Precio (RD$)</span>
               <input type="number" formControlName="price" min="0" step="5000" />
-              @if (showError('vehicle', 'price')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              @if (showError('vehicle', 'price')) { <small class="adm-inv__err">Debe ser 0 o más.</small> }
             </label>
             <label class="adm-inv__field">
               <span>Color</span>
@@ -298,7 +303,7 @@
             <label class="adm-inv__field">
               <span>Kilometraje</span>
               <input type="number" formControlName="mileage" min="0" step="1000" />
-              @if (showError('vehicle', 'mileage')) { <small class="adm-inv__err">Debe ser 0 o mas.</small> }
+              @if (showError('vehicle', 'mileage')) { <small class="adm-inv__err">Debe ser 0 o más.</small> }
             </label>
             <label class="adm-inv__field">
               <span>Chasis</span>
@@ -335,11 +340,11 @@
               @if (showError('vehicle', 'cylinders')) { <small class="adm-inv__err">Entre 0 y 16.</small> }
             </label>
             <label class="adm-inv__field">
-              <span>Ubicacion</span>
+              <span>Ubicación</span>
               <app-location-select formControlName="location"
                                    [invalid]="showError('vehicle', 'location')" />
               @if (showError('vehicle', 'location')) {
-                <small class="adm-inv__err">Selecciona una ubicacion.</small>
+                <small class="adm-inv__err">Selecciona una ubicación.</small>
               }
             </label>
             <label class="adm-inv__field">
@@ -348,7 +353,7 @@
               @if (showError('vehicle', 'contact')) { <small class="adm-inv__err">Obligatorio.</small> }
             </label>
             <label class="adm-inv__field adm-inv__field--full">
-              <span>Descripcion</span>
+              <span>Descripción</span>
               <textarea formControlName="description" rows="3"
                         placeholder="Estado, mantenimientos, extras…"></textarea>
             </label>
@@ -358,7 +363,7 @@
             </label>
             <label class="adm-inv__check">
               <input type="checkbox" formControlName="isTest" />
-              <span>Vehiculo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
+              <span>Vehículo de prueba <small>(solo lo ven admin, moderadores y usuarios de prueba)</small></span>
             </label>
             <div class="adm-inv__actions">
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()">
@@ -372,7 +377,7 @@
         @case ('noticias') {
           <form [formGroup]="newsForm" (ngSubmit)="submitNews()" class="adm-inv__fields">
             <label class="adm-inv__field adm-inv__field--wide">
-              <span>Titulo</span>
+              <span>Título</span>
               <input type="text" formControlName="title" placeholder="809 Expo por primera vez en RD" />
               @if (showError('news', 'title')) { <small class="adm-inv__err">Obligatorio.</small> }
             </label>
@@ -395,7 +400,7 @@
             <label class="adm-inv__field adm-inv__field--full">
               <span>Entradilla <small>(lo que se ve en la tarjeta)</small></span>
               <textarea formControlName="text" rows="2"
-                        placeholder="Un parrafo corto que invite a leer"></textarea>
+                        placeholder="Un párrafo corto que invite a leer"></textarea>
               @if (showError('news', 'text')) { <small class="adm-inv__err">Obligatorio.</small> }
             </label>
             <label class="adm-inv__field adm-inv__field--full">
@@ -428,7 +433,7 @@
   } @else if (tab() === 'marcas') {
     <app-admin-marcas />
   } @else if (isLoading()) {
-    <p class="adm-inv__empty">Cargando inventario...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando inventario…" />
   } @else {
     @switch (tab()) {
       @case ('piezas') {
@@ -500,13 +505,13 @@
 
       @case ('vehiculos') {
         @if (vehicles().length === 0) {
-          <p class="adm-inv__empty">No hay vehiculos en Auto Hub.</p>
+          <p class="adm-inv__empty">No hay vehículos en Auto Hub.</p>
         } @else {
           <div class="adm-inv__table-wrap">
             <table class="adm-inv__table">
-              <caption class="adm-inv__caption">Vehiculos oficiales</caption>
+              <caption class="adm-inv__caption">Vehículos oficiales</caption>
               <thead>
-                <tr><th scope="col">Vehiculo</th><th scope="col">Precio (RD$)</th>
+                <tr><th scope="col">Vehículo</th><th scope="col">Precio (RD$)</th>
                     <th scope="col">Kilometraje</th><th scope="col">Estado</th></tr>
               </thead>
               <tbody>
@@ -558,7 +563,7 @@
             <table class="adm-inv__table">
               <caption class="adm-inv__caption">Noticias</caption>
               <thead>
-                <tr><th scope="col">Titulo</th><th scope="col">Alcance</th>
+                <tr><th scope="col">Título</th><th scope="col">Alcance</th>
                     <th scope="col">Fecha</th><th scope="col">Estado</th></tr>
               </thead>
               <tbody>

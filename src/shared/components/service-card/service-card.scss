@@ -3,43 +3,68 @@
   flex-direction: column;
   gap: 8px;
   height: 100%;
-  padding: 18px;
+  padding: 14px 16px;
   box-sizing: border-box;
   background-color: #1a1a1a;
   border: 1px solid #2e2e2e;
   border-radius: 14px;
   font-family: var(--font-body);
 
-  &__icon { width: 40px; height: 40px; }
+  &__category {
+    align-self: flex-start;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--Hub);
+    background-color: rgba(255, 170, 0, 0.12);
+    border-radius: 999px;
+  }
+
+  &__head { display: flex; align-items: center; gap: 10px; }
+  &__icon { flex: none; width: 32px; height: 32px; }
 
   &__title {
-    margin: 4px 0 0;
+    margin: 0;
     font-family: var(--font-brand);
     font-size: 1.05rem;
 
     a { color: #fff; text-decoration: none; &:hover { color: var(--Hub); } }
   }
 
-  &__desc { margin: 0; flex: 1; font-size: 14px; line-height: 1.45; color: var(--main-ultra-light); }
+  // Dos líneas: una descripción larga no estira la tarjeta.
+  &__desc {
+    margin: 0;
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--main-ultra-light);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
   &__meta {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    justify-content: space-between;
-    gap: 4px 12px;
-    margin: 6px 0 0;
+    gap: 4px 8px;
+    margin: 4px 0 0;
   }
 
   &__price { font-family: var(--font-price); font-weight: 700; color: var(--Hub); }
   &__duration { font-size: 13px; color: var(--main-ultra-light); }
+  &__sep { color: var(--main-ultra-light); }
 
   &__btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 48px;
-    margin-top: 8px;
+    min-height: 44px;
+    margin-top: 6px;
     border-radius: 10px;
     background-color: var(--Hub);
     color: #000;

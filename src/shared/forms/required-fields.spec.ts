@@ -8,22 +8,22 @@ import {
 /** Los tres campos que hoy fallan más en `publicar`, en el orden del formulario. */
 const campos = (invalidos: string[]): RequiredField[] =>
   [
-    { key: 'category', label: 'Categoria' },
-    { key: 'title', label: 'Titulo' },
+    { key: 'category', label: 'Categoría' },
+    { key: 'title', label: 'Título' },
     { key: 'price', label: 'Precio' },
-    { key: 'location', label: 'Ubicacion' },
+    { key: 'location', label: 'Ubicación' },
   ].map((f) => ({ ...f, invalid: invalidos.includes(f.key) }));
 
 describe('missingFieldsMessage', () => {
   it('nombra los campos que faltan en el orden del formulario', () => {
     // Se pasan desordenados a proposito: el orden lo manda la lista, no el argumento.
     expect(missingFieldsMessage(campos(['price', 'title']))).toBe(
-      'Te falta completar: Titulo, Precio.',
+      'Te falta completar: Título, Precio.',
     );
   });
 
   it('nombra uno solo sin coma', () => {
-    expect(missingFieldsMessage(campos(['location']))).toBe('Te falta completar: Ubicacion.');
+    expect(missingFieldsMessage(campos(['location']))).toBe('Te falta completar: Ubicación.');
   });
 
   it('devuelve cadena vacia cuando no falta nada', () => {
@@ -32,8 +32,8 @@ describe('missingFieldsMessage', () => {
 
   it('missingFieldLabels devuelve solo las etiquetas invalidas', () => {
     expect(missingFieldLabels(campos(['category', 'location']))).toEqual([
-      'Categoria',
-      'Ubicacion',
+      'Categoría',
+      'Ubicación',
     ]);
   });
 });
@@ -78,9 +78,9 @@ describe('focusFirstInvalid', () => {
     expect(document.activeElement).toBe(host.querySelector('#location'));
   });
 
-  it('enfoca un elemento que no es un control, como la caja de imagenes', () => {
+  it('enfoca un elemento que no es un control, como la caja de imágenes', () => {
     const encontrado = focusFirstInvalid(host, [
-      { key: 'images', label: 'Imagenes', invalid: true },
+      { key: 'images', label: 'Imágenes', invalid: true },
     ]);
 
     expect(encontrado).toBe(true);

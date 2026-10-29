@@ -126,7 +126,7 @@ export class AppointmentService {
       }
       if (!canCancel(found)) {
         return throwError(
-          () => new Error('Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp.'),
+          () => new Error('Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.'),
         );
       }
 
@@ -164,13 +164,13 @@ export class AppointmentService {
   private bookMock(input: BookingInput): Observable<BookedAppointment> {
     if (!input.contactName.trim()) return throwError(() => new Error('Escribe tu nombre.'));
     if (digits(input.contactPhone).length < 10) {
-      return throwError(() => new Error('Escribe un telefono valido: lo usamos para confirmar tu cita.'));
+      return throwError(() => new Error('Escribe un teléfono válido: lo usamos para confirmar tu cita.'));
     }
 
     return this.slotsMock(input.serviceId, localDate(input.scheduledAt)).pipe(
       switchMap((slots) => {
         if (!slots.some((s) => +s.at === +input.scheduledAt)) {
-          return throwError(() => new Error('Esa hora ya no esta disponible. Elige otra.'));
+          return throwError(() => new Error('Esa hora ya no está disponible. Elige otra.'));
         }
 
         const open = this.mock.filter(
@@ -181,7 +181,7 @@ export class AppointmentService {
         ).length;
         if (open >= MAX_OPEN_PER_PHONE) {
           return throwError(
-            () => new Error('Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas.'),
+            () => new Error('Ya tienes 3 citas abiertas con este teléfono. Escríbenos por WhatsApp para cambiarlas.'),
           );
         }
 

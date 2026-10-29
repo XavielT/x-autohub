@@ -47,10 +47,10 @@ export const moderatorGuard: CanActivateFn = async (_route, state) => {
   // permiso: ofrecerle el login otra vez solo confunde. Mismo criterio que
   // `adminGuard`.
   if (auth.isLoggedIn()) {
-    toast.show('Esa seccion es solo para el equipo de X AutoHub.', 'error');
+    toast.show('Esa sección es solo para el equipo de X AutoHub.', 'error');
     return router.createUrlTree(['/']);
   }
 
-  toast.show('Inicia sesion para continuar.', 'error');
+  toast.show('Inicia sesión para continuar.', 'error');
   return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };

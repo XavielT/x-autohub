@@ -65,7 +65,7 @@ describe('CouponBox (el campo de cupón del checkout)', () => {
     c.apply();
     await settle(fixture);
 
-    expect(el.querySelector('.cpn__error')?.textContent).toContain('no existe o ya no esta disponible');
+    expect(el.querySelector('.cpn__error')?.textContent).toContain('no existe o ya no está disponible');
     expect(emitted).toEqual([]);
     expect(el.querySelector('.cpn__applied')).toBeNull();
   });

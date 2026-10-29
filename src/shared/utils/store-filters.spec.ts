@@ -13,7 +13,7 @@ describe('store-filters', () => {
     expect(from({})).toEqual(EMPTY_FILTERS);
   });
 
-  it('lee categoria, marca, precios, stock, compat y orden', () => {
+  it('lee categoría, marca, precios, stock, compat y orden', () => {
     expect(
       from({ categoria: 'frenos', marca: 'Brembo', min: '500', max: '4000', stock: '1', compat: '0', orden: 'precio-menor' }),
     ).toEqual({
@@ -37,7 +37,7 @@ describe('store-filters', () => {
     expect(f.inStockOnly).toBe(false);
   });
 
-  it('escribe solo lo que no esta en su valor por omision', () => {
+  it('escribe solo lo que no está en su valor por omision', () => {
     expect(filtersToParams(EMPTY_FILTERS)).toEqual({
       categoria: null, marca: null, min: null, max: null, stock: null, compat: null, orden: null,
     });

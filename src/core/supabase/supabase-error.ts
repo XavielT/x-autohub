@@ -10,7 +10,7 @@ import type { PostgrestError } from '@supabase/supabase-js';
  * Códigos: https://postgrest.org/en/stable/references/errors.html
  */
 export function translateDbError(error: PostgrestError | null): string {
-  if (!error) return 'Algo salio mal. Intenta de nuevo.';
+  if (!error) return 'Algo salió mal. Intenta de nuevo.';
 
   switch (error.code) {
     case '23505': // unique_violation
@@ -24,20 +24,20 @@ export function translateDbError(error: PostgrestError | null): string {
     case '22023': // invalid_parameter_value
       // Los mensajes que las funciones de la base (create_order, set_order_status,
       // attach_payment_proof…) escriben **para quien los lee**: "De X solo quedan
-      // 2 y pediste 5". Traducirlos a "Algo salio mal" borraba justo lo que el
+      // 2 y pediste 5". Traducirlos a "Algo salió mal" borraba justo lo que el
       // cliente necesitaba para arreglar su carrito.
       return error.message || 'Los datos no cumplen con lo requerido.';
     case '42501': // insufficient_privilege — típicamente RLS
     case 'PGRST301':
-      return 'No tienes permiso para hacer esto. Inicia sesion e intenta de nuevo.';
+      return 'No tienes permiso para hacer esto. Inicia sesión e intenta de nuevo.';
     case 'PGRST116': // 0 filas cuando se esperaba exactamente 1
       return 'No encontramos lo que buscabas.';
     default:
       // Sin conexión: supabase-js no llena `code`.
       if (!error.code && /fetch|network/i.test(error.message ?? '')) {
-        return 'Sin conexion con el servidor. Revisa tu internet.';
+        return 'Sin conexión con el servidor. Revisa tu internet.';
       }
-      return 'Algo salio mal. Intenta de nuevo.';
+      return 'Algo salió mal. Intenta de nuevo.';
   }
 }
 

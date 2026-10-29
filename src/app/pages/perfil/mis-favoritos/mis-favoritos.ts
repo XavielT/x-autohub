@@ -4,13 +4,14 @@ import { CatalogoCard } from '../../../../shared/components/catalogo-card/catalo
 import { ProductModel } from '../../../../shared/models/product.model';
 import { FavoriteService } from '../../../../shared/services/favorite.service';
 
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 /**
  * "Mis favoritos" en el perfil: los productos que guardó la persona, con la misma tarjeta de la
  * tienda. Quitar uno con el corazón lo saca de la lista al instante.
  */
 @Component({
   selector: 'app-mis-favoritos',
-  imports: [CatalogoCard, RouterLink],
+  imports: [Skeleton, CatalogoCard, RouterLink],
   templateUrl: './mis-favoritos.html',
   styleUrl: './mis-favoritos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

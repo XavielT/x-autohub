@@ -137,16 +137,37 @@ export interface ProfileVehicleModel {
   id: number;
   userId: string;
   makeId: number;
-  modelId: number;
+  /** Nulo cuando se escribió el modelo a mano (`modelText`): vale como "toda la marca". */
+  modelId: number | null;
+  modelText: string | null;
   year: number;
   nickname: string | null;
   isDefault: boolean;
 }
 
+/**
+ * Lo que pinta una sugerencia del buscador. `matchedAlias` viene cuando lo que se escribió coincidió
+ * con un alias del producto y no con su nombre ("también: bumper").
+ */
+export type ProductSuggestion = Pick<ProductModel, 'id' | 'slug' | 'name' | 'brand' | 'imgUrl' | 'price'> & {
+  matchedAlias?: string;
+};
+
+/** Un modelo que varios garajes escribieron a mano, agrupado (para /admin → Vehículos). */
+export interface UnmatchedVehicleModel {
+  makeId: number;
+  makeName: string;
+  modelText: string;
+  /** Cuántos garajes lo escribieron. */
+  vehicles: number;
+}
+
 /** El vehículo que el visitante eligió para filtrar la tienda. */
 export interface SelectedVehicle {
   makeId: number;
-  modelId: number;
+  /** Nulo si la marca no tiene modelos cargados y se escribió a mano (`modelText`). */
+  modelId: number | null;
+  modelText?: string | null;
   year: number;
 }
 
@@ -179,4 +200,10 @@ export interface ProductSearchResult {
   items: ProductModel[];
   /** Coincidencias totales antes de paginar. */
   total: number;
+}
+
+/** Otro nombre con el que se busca un producto (migración 0042). */
+export interface ProductAlias {
+  id: number;
+  alias: string;
 }

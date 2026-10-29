@@ -27,7 +27,7 @@ export const CATALOG_ITEMS_MOCK: CatalogItem[] = [
     {
         id: 4,
         category: 'SUSPENSION',
-        title: 'SUSPENSION KITS',
+        title: 'SUSPENSIÓN KITS',
         imageUrl: 'assets/imgs/catalog/suspension.jpg',
         variant: 'secondary-wide',
     },

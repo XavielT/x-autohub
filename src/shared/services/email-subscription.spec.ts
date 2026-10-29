@@ -81,7 +81,7 @@ describe('EmailSubscriptionService', () => {
   });
 
   describe('modo simulado', () => {
-    it('no invoca la funcion y no promete ningun correo', async () => {
+    it('no invoca la función y no promete ningún correo', async () => {
       fake.mockMode = true;
 
       const result = await firstValueFrom(service.subscribe('quien.sea@correo.com'));
@@ -103,7 +103,7 @@ describe('EmailSubscriptionService', () => {
       expect(result).toEqual({ ok: true, alreadySubscribed: false, welcomeEmailSent: true });
     });
 
-    it('no promete el correo si la funcion responde que no lo envio', async () => {
+    it('no promete el correo si la función responde que no lo envío', async () => {
       // Es lo que pasa mientras no exista la RESEND_API_KEY en el proyecto.
       fake.invokeBehavior = () =>
         Promise.resolve({ data: { sent: false }, error: null });
@@ -115,8 +115,8 @@ describe('EmailSubscriptionService', () => {
     });
   });
 
-  describe('cuando el envio falla, la suscripcion sigue valiendo', () => {
-    it('la funcion devuelve error', async () => {
+  describe('cuando el envío falla, la suscripcion sigue valiendo', () => {
+    it('la función devuelve error', async () => {
       fake.invokeBehavior = () =>
         Promise.resolve({ data: null, error: { message: 'FunctionsHttpError' } });
 
@@ -125,7 +125,7 @@ describe('EmailSubscriptionService', () => {
       expect(result).toEqual({ ok: true, alreadySubscribed: false, welcomeEmailSent: false });
     });
 
-    it('la funcion no esta desplegada y el invoke revienta', async () => {
+    it('la función no está desplegada y el invoke revienta', async () => {
       fake.invokeBehavior = () => Promise.reject(new Error('Failed to fetch'));
 
       const result = await firstValueFrom(service.subscribe('quien.sea@correo.com'));
@@ -135,7 +135,7 @@ describe('EmailSubscriptionService', () => {
   });
 
   describe('correo repetido (23505)', () => {
-    it('es un exito, pero no vuelve a mandar el correo', async () => {
+    it('es un éxito, pero no vuelve a mandar el correo', async () => {
       fake.insertError = { code: '23505', message: 'duplicate key value' };
 
       const result = await firstValueFrom(service.subscribe('quien.sea@correo.com'));
@@ -148,7 +148,7 @@ describe('EmailSubscriptionService', () => {
   describe('darse de baja con el token del correo', () => {
     const TOKEN = 'a1b2c3d4-1111-2222-3333-444455556666';
 
-    it('llama a la funcion con el token tal como vino', async () => {
+    it('llama a la función con el token tal como vino', async () => {
       const salio = await firstValueFrom(service.unsubscribe(TOKEN));
 
       expect(fake.rpcCalls).toEqual([
@@ -181,7 +181,7 @@ describe('EmailSubscriptionService', () => {
   });
 
   describe('cualquier otro error de la base', () => {
-    it('falla y no invoca la funcion', async () => {
+    it('falla y no invoca la función', async () => {
       fake.insertError = { code: '42501', message: 'permission denied' };
 
       await expect(firstValueFrom(service.subscribe('quien.sea@correo.com'))).rejects.toThrow();

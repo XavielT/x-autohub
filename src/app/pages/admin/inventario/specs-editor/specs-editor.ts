@@ -34,7 +34,7 @@ export class SpecsEditor {
       return;
     }
     if (key in this.specs()) {
-      this.error.set(`"${key}" ya esta en la lista. Quitala para cambiarla.`);
+      this.error.set(`"${key}" ya está en la lista. Quítala para cambiarla.`);
       return;
     }
 

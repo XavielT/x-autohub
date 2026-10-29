@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, ElementRef, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,7 +26,7 @@ const MIN_REASON = 10;
  */
 @Component({
   selector: 'app-admin-moderacion',
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, Skeleton],
   templateUrl: './admin-moderacion.html',
   styleUrl: './admin-moderacion.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -99,8 +100,8 @@ export class AdminModeracion implements OnInit {
         );
         this.toast.show(
           next
-            ? `"${item.title}" quedo marcada como publicacion de prueba.`
-            : `"${item.title}" ya no es una publicacion de prueba.`,
+            ? `"${item.title}" quedó marcada como publicación de prueba.`
+            : `"${item.title}" ya no es una publicación de prueba.`,
         );
       },
       error: (error: Error) => {
@@ -130,7 +131,7 @@ export class AdminModeracion implements OnInit {
     this.reasonTouched.set(true);
 
     if (this.isReasonInvalid) {
-      this.toast.show(`Explica en al menos ${MIN_REASON} caracteres por que se rechaza.`, 'error');
+      this.toast.show(`Explica en al menos ${MIN_REASON} caracteres por qué se rechaza.`, 'error');
       focusFirstInvalid(this.host.nativeElement, [
         { key: 'reason', label: 'Motivo', invalid: true },
       ]);
@@ -159,7 +160,7 @@ export class AdminModeracion implements OnInit {
         this.items.update((list) => list.filter((i) => i.id !== item.id));
         this.toast.show(
           decision === 'aprobado'
-            ? `"${item.title}" ya esta publicada.`
+            ? `"${item.title}" ya está publicada.`
             : `"${item.title}" fue rechazada. El vendedor vera el motivo.`,
         );
       },

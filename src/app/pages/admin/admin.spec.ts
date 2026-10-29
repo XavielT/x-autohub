@@ -60,7 +60,7 @@ describe('Admin', () => {
     ]);
   });
 
-  it('un moderador solo ve moderacion', () => {
+  it('un moderador solo ve moderación', () => {
     const { componente } = montar('moderador');
 
     expect(componente.sections().map((s) => s.path)).toEqual(['moderacion']);
@@ -71,7 +71,7 @@ describe('Admin', () => {
     await fixture.whenStable();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(texto).toContain('Moderacion');
+    expect(texto).toContain('Moderación');
     expect(texto).not.toContain('Usuarios');
     expect(texto).not.toContain('Inventario');
     expect(texto).not.toContain('Pedidos');
@@ -79,12 +79,12 @@ describe('Admin', () => {
     expect(texto).not.toContain('Ajustes');
   });
 
-  it('dice de que rol es la sesion abierta', async () => {
+  it('dice de que rol es la sesión abierta', async () => {
     const { fixture } = montar('moderador');
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Sesion de Xaviel Terrero · Moderador',
+      'Sesión de Xaviel Terrero · Moderador',
     );
   });
 });

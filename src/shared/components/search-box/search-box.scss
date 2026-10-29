@@ -92,6 +92,7 @@
   &__name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   &__brand { font-size: 12px; color: var(--text-soft); }
+  &__alias { font-size: 12px; font-style: italic; color: var(--Hub); }
 
   &__price { flex: none; font-family: var(--font-price); font-size: 13px; color: var(--Hub); }
 
@@ -129,4 +130,32 @@
   .sb:not(.sb--hero) .sb__submit { display: none; }
   .sb--hero { height: 54px; }
   .sb--hero .sb__submit { padding: 0 16px; }
+}
+
+.sb__spinner {
+  position: absolute;
+  right: 96px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--Hub);
+  border-radius: 50%;
+  animation: sb-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+.sb__status {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.sb__submit:disabled { opacity: 0.6; cursor: progress; }
+
+@keyframes sb-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sb__spinner { animation: none; border-top-color: rgba(255, 255, 255, 0.25); border-right-color: var(--Hub); }
 }

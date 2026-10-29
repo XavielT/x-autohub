@@ -1,3 +1,5 @@
+import { AliasEditor } from './alias-editor/alias-editor';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
@@ -95,6 +97,8 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     VariantEditor,
     AdminCategorias,
     AdminMarcas,
+    AliasEditor,
+    Skeleton,
   ],
   templateUrl: './admin-inventario.html',
   styleUrl: './admin-inventario.scss',
@@ -169,7 +173,7 @@ export class AdminInventario implements OnInit {
     { value: 'on_order', label: 'Bajo pedido' },
   ];
   readonly fitmentOptions: readonly { value: ProductFitmentType; label: string }[] = [
-    { value: 'specific', label: 'Solo para ciertos vehiculos' },
+    { value: 'specific', label: 'Solo para ciertos vehículos' },
     { value: 'universal', label: 'Universal (sirve para cualquiera)' },
   ];
 
@@ -604,7 +608,7 @@ export class AdminInventario implements OnInit {
           this.cleanUpRemovedImages();
           this.cancelCreate();
           this.toast.show(
-            id === null ? `"${saved.name}" agregada al catalogo.` : `"${saved.name}" actualizada.`,
+            id === null ? `"${saved.name}" agregada al catálogo.` : `"${saved.name}" actualizada.`,
           );
           if (deactivated.length > 0) {
             this.toast.show(
@@ -740,7 +744,7 @@ export class AdminInventario implements OnInit {
         this.parts.update((l) =>
           l.map((p) => (p.id === part.id ? { ...p, isActive: !part.isActive } : p)),
         );
-        this.toast.show(part.isActive ? 'Pieza oculta del catalogo.' : 'Pieza visible.');
+        this.toast.show(part.isActive ? 'Pieza oculta del catálogo.' : 'Pieza visible.');
       },
       error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
     });
@@ -751,7 +755,7 @@ export class AdminInventario implements OnInit {
     const value = Number(raw);
 
     if (!Number.isFinite(value) || value < 0) {
-      this.toast.show('Ese valor no es valido.', 'error');
+      this.toast.show('Ese valor no es válido.', 'error');
       return;
     }
     if (value === part[field]) return;
@@ -775,7 +779,7 @@ export class AdminInventario implements OnInit {
         this.vehicles.update((l) =>
           l.map((x) => (x.id === v.id ? { ...x, isAvailable: !v.isAvailable } : x)),
         );
-        this.toast.show(v.isAvailable ? 'Vehiculo marcado como vendido.' : 'Vehiculo disponible.');
+        this.toast.show(v.isAvailable ? 'Vehículo marcado como vendido.' : 'Vehículo disponible.');
       },
       error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
     });
@@ -797,7 +801,7 @@ export class AdminInventario implements OnInit {
           l.map((p) => (p.id === part.id ? { ...p, isTest: !part.isTest } : p)),
         );
         this.toast.show(
-          part.isTest ? 'Ya no es un articulo de prueba.' : 'Marcada como articulo de prueba.',
+          part.isTest ? 'Ya no es un artículo de prueba.' : 'Marcada como artículo de prueba.',
         );
       },
       error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
@@ -811,7 +815,7 @@ export class AdminInventario implements OnInit {
         this.savingId.set(null);
         this.vehicles.update((l) => l.map((x) => (x.id === v.id ? { ...x, isTest: !v.isTest } : x)));
         this.toast.show(
-          v.isTest ? 'Ya no es un vehiculo de prueba.' : 'Marcado como vehiculo de prueba.',
+          v.isTest ? 'Ya no es un vehículo de prueba.' : 'Marcado como vehículo de prueba.',
         );
       },
       error: (e: Error) => { this.savingId.set(null); this.toast.show(e.message, 'error'); },
@@ -835,7 +839,7 @@ export class AdminInventario implements OnInit {
   saveVehiclePrice(v: AdminVehicleModel, event: Event): void {
     const value = Number((event.target as HTMLInputElement).value);
     if (!Number.isFinite(value) || value < 0) {
-      this.toast.show('Ese precio no es valido.', 'error');
+      this.toast.show('Ese precio no es válido.', 'error');
       return;
     }
     if (value === v.price) return;

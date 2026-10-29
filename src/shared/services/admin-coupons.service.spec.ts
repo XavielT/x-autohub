@@ -83,7 +83,7 @@ describe('AdminCouponsService (mock)', () => {
     });
 
     it('un código repetido se rechaza, sin importar cómo se escriba', async () => {
-      expect(await errorOf(service.saveCoupon(draft({ code: 'bienvenido10' })))).toBe('Ya hay un cupon con ese codigo.');
+      expect(await errorOf(service.saveCoupon(draft({ code: 'bienvenido10' })))).toBe('Ya hay un cupón con ese código.');
     });
 
     it('el envío gratis no guarda monto ni tope; un monto fijo no guarda tope', async () => {
@@ -124,7 +124,7 @@ describe('AdminCouponsService (mock)', () => {
     it('cambiar el código de uno a otro que ya existe se rechaza, pero conservar el propio no', async () => {
       const a = coupons.mockCoupons.find((c) => c.code === 'ENVIOGRATIS')!;
 
-      expect(await errorOf(service.saveCoupon(draft({ id: a.id, code: 'VERANO25' })))).toBe('Ya hay un cupon con ese codigo.');
+      expect(await errorOf(service.saveCoupon(draft({ id: a.id, code: 'VERANO25' })))).toBe('Ya hay un cupón con ese código.');
       expect(await errorOf(service.saveCoupon(draft({ id: a.id, code: 'ENVIOGRATIS', type: 'free_shipping', value: null, maxDiscount: null })))).toBeNull();
     });
 
@@ -132,7 +132,7 @@ describe('AdminCouponsService (mock)', () => {
       const c = coupons.mockCoupons.find((x) => x.code === 'BIENVENIDO10')!;
 
       await firstValueFrom(service.setActive(c, false));
-      expect(await errorOf(coupons.validate('BIENVENIDO10', 1000, 0))).toContain('no existe o ya no esta disponible');
+      expect(await errorOf(coupons.validate('BIENVENIDO10', 1000, 0))).toContain('no existe o ya no está disponible');
 
       await firstValueFrom(service.setActive({ ...c, isActive: false }, true));
       expect((await firstValueFrom(coupons.validate('BIENVENIDO10', 1000, 0))).discount).toBe(100);

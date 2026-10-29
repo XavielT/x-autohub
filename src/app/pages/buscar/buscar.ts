@@ -11,6 +11,7 @@ import { ProductModel } from '../../../shared/models/product.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { ProductService } from '../../../shared/services/product.service';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /** Cuántos productos de la tienda se muestran en los resultados. */
 const STORE_LIMIT = 24;
 
@@ -32,7 +33,7 @@ interface Results {
  */
 @Component({
   selector: 'app-buscar',
-  imports: [CatalogoCard, HubMarketCard, SearchBox, RouterLink],
+  imports: [Skeleton, CatalogoCard, HubMarketCard, SearchBox, RouterLink],
   templateUrl: './buscar.html',
   styleUrl: './buscar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -60,32 +60,32 @@ describe('CouponService (mock)', () => {
   });
 
   it('un monto fijo con compra mínima dice cuánto falta', async () => {
-    expect(await errorOf(service.validate('DESCUENTO500', 2000, 0))).toBe('Este cupon pide una compra de al menos RD$ 3,000.');
+    expect(await errorOf(service.validate('DESCUENTO500', 2000, 0))).toBe('Este cupón pide una compra de al menos RD$ 3,000.');
     expect((await firstValueFrom(service.validate('DESCUENTO500', 5000, 0))).discount).toBe(500);
   });
 
   it('el envío gratis descuenta el envío, y en un retiro no aplica', async () => {
     expect((await firstValueFrom(service.validate('ENVIOGRATIS', 5000, 450))).discount).toBe(450);
-    expect(await errorOf(service.validate('ENVIOGRATIS', 5000, 0))).toBe('Este cupon no aplica a tu pedido.');
+    expect(await errorOf(service.validate('ENVIOGRATIS', 5000, 0))).toBe('Este cupón no aplica a tu pedido.');
   });
 
   it('uno apagado y uno que no existe dicen lo mismo', async () => {
-    const same = 'Ese cupon no existe o ya no esta disponible.';
+    const same = 'Ese cupón no existe o ya no está disponible.';
 
     expect(await errorOf(service.validate('APAGADO10', 1000, 0))).toBe(same);
     expect(await errorOf(service.validate('NOEXISTE', 1000, 0))).toBe(same);
   });
 
   it('sin código se pide el código, y un subtotal negativo se rechaza', async () => {
-    expect(await errorOf(service.validate('   ', 1000, 0))).toBe('Escribe el codigo del cupon.');
-    expect(await errorOf(service.validate('BIENVENIDO10', -5, 0))).toBe('El subtotal no es valido.');
+    expect(await errorOf(service.validate('   ', 1000, 0))).toBe('Escribe el código del cupón.');
+    expect(await errorOf(service.validate('BIENVENIDO10', -5, 0))).toBe('El subtotal no es válido.');
   });
 
   describe('los usos salen de los pedidos guardados', () => {
     it('DESCUENTO500 (50 usos en total) se agota con 50 pedidos', async () => {
       storeOrders(Array.from({ length: 50 }, () => order('DESCUENTO500')));
 
-      expect(await errorOf(service.validate('DESCUENTO500', 5000, 0))).toBe('Este cupon ya se agoto.');
+      expect(await errorOf(service.validate('DESCUENTO500', 5000, 0))).toBe('Este cupón ya se agoto.');
     });
 
     it('un pedido cancelado devuelve el uso', async () => {
@@ -98,7 +98,7 @@ describe('CouponService (mock)', () => {
       storeOrders([order('BIENVENIDO10', { userId: 'u-1' })]);
 
       user.set(USER);
-      expect(await errorOf(service.validate('BIENVENIDO10', 1000, 0))).toBe('Ya usaste este cupon.');
+      expect(await errorOf(service.validate('BIENVENIDO10', 1000, 0))).toBe('Ya usaste este cupón.');
 
       user.set({ ...USER, id: 'u-2' });
       expect((await firstValueFrom(service.validate('BIENVENIDO10', 1000, 0))).discount).toBe(100);
@@ -107,7 +107,7 @@ describe('CouponService (mock)', () => {
     it('un invitado se reconoce por su correo, sin importar mayúsculas', async () => {
       storeOrders([order('BIENVENIDO10', { email: 'a@x.com' })]);
 
-      expect(await errorOf(service.validate('BIENVENIDO10', 1000, 0, 'A@X.com'))).toBe('Ya usaste este cupon.');
+      expect(await errorOf(service.validate('BIENVENIDO10', 1000, 0, 'A@X.com'))).toBe('Ya usaste este cupón.');
       expect((await firstValueFrom(service.validate('BIENVENIDO10', 1000, 0, 'otro@x.com'))).discount).toBe(100);
     });
 

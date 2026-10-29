@@ -13,7 +13,7 @@
                (click)="closeMenu()">
                 <img class="navbar__link-icon" [src]="icon('tienda')" alt="" aria-hidden="true">Tienda
             </a>
-            <button type="button" class="navbar__caret" aria-label="Ver las categorias de la tienda"
+            <button type="button" class="navbar__caret" aria-label="Ver las categorías de la tienda"
                     aria-haspopup="true" [attr.aria-expanded]="openMenu() === 'tienda'"
                     (click)="toggleMenu('tienda')">▾</button>
 
@@ -48,20 +48,20 @@
             <button type="button" class="navbar__link navbar__link--button" [class.is-active]="isActive('vehiculos')"
                     aria-haspopup="true" [attr.aria-expanded]="openMenu() === 'vehiculos'"
                     (click)="toggleMenu('vehiculos')">
-                <img class="navbar__link-icon" [src]="icon('vehiculos')" alt="" aria-hidden="true">Vehiculos
+                <img class="navbar__link-icon" [src]="icon('vehiculos')" alt="" aria-hidden="true">Vehículos
                 <span aria-hidden="true">▾</span>
             </button>
 
             @if (openMenu() === 'vehiculos') {
                 <div class="navbar__panel" role="menu">
                     <a class="navbar__panel-link" role="menuitem" routerLink="/auto-hub" (click)="closeMenu()">
-                        Auto Hub <small>Vehiculos verificados por X AutoHub</small>
+                        Auto Hub <small>Vehículos verificados por X AutoHub</small>
                     </a>
                     <a class="navbar__panel-link" role="menuitem" routerLink="/hub-market" (click)="closeMenu()">
                         Hub Market <small>Compra y vende entre la comunidad</small>
                     </a>
                     <a class="navbar__panel-link" role="menuitem" routerLink="/publicar" (click)="closeMenu()">
-                        Publicar <small>Pon tu vehiculo, pieza o accesorio</small>
+                        Publicar <small>Pon tu vehículo, pieza o accesorio</small>
                     </a>
                 </div>
             }
@@ -76,15 +76,21 @@
     </ul>
 
     <div class="navbar__actions">
+        <span class="navbar__vehicle-wrap">
         <button type="button" class="navbar__vehicle" [class.has-vehicle]="vehicleLabel()"
                 (click)="openVehiclePicker()"
-                [attr.aria-label]="vehicleLabel() ? 'Mi vehiculo: ' + vehicleLabel() + '. Cambiar' : 'Elige tu vehiculo'">
+                [attr.aria-label]="vehicleLabel() ? 'Mi vehículo: ' + vehicleLabel() + '. Cambiar' : 'Elige tu vehículo'">
             <span class="navbar__vehicle-dot" aria-hidden="true"></span>
-            <span class="navbar__vehicle-text">{{ vehicleLabel() ?? 'Elige tu vehiculo' }}</span>
+            <span class="navbar__vehicle-text">{{ vehicleLabel() ?? 'Elige tu vehículo' }}</span>
         </button>
+        @if (vehicleLabel()) {
+            <button type="button" class="navbar__vehicle-clear" (click)="clearVehicle()"
+                    [attr.aria-label]="'Quitar ' + vehicleLabel()">&times;</button>
+        }
+        </span>
 
         <button type="button" class="navbar__cart" (click)="openCart()"
-                [attr.aria-label]="cartCount() > 0 ? 'Abrir el carrito, ' + cartCount() + ' articulos' : 'Abrir el carrito'">
+                [attr.aria-label]="cartCount() > 0 ? 'Abrir el carrito, ' + cartCount() + ' artículos' : 'Abrir el carrito'">
             <img src="assets/icons/cart-b-icon.svg" alt="" aria-hidden="true">
             @if (cartCount() > 0) { <span class="navbar__cart-count">{{ cartCount() }}</span> }
         </button>
@@ -93,7 +99,7 @@
             @if (isLoggedIn()) {
                 <button type="button" class="navbar__user" aria-haspopup="true"
                         [attr.aria-expanded]="openMenu() === 'cuenta'" (click)="toggleMenu('cuenta')">
-                    <span class="navbar__user-initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
+                    <app-avatar [avatarUrl]="user()?.avatarUrl" [name]="user()?.displayName ?? ''" [size]="28" />
                     <span class="navbar__user-name">{{ user()?.displayName }}</span>
                 </button>
                 @if (openMenu() === 'cuenta') {

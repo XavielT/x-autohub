@@ -16,6 +16,7 @@ function toRelease(row: ReleaseRow): ReleaseModel {
     releasedAt: new Date(`${row.released_at}T12:00:00Z`),
     title: row.title,
     summary: row.summary,
+    userSummary: row.user_summary?.trim() || undefined,
     changes: row.changes ?? [],
     isPublished: row.is_published,
   };
@@ -91,6 +92,7 @@ export class ReleaseService {
           released_at: draft.releasedAt,
           title: draft.title.trim(),
           summary: draft.summary.trim(),
+          user_summary: draft.userSummary?.trim() || null,
           changes: draft.changes,
           is_published: draft.isPublished,
         })
@@ -118,6 +120,7 @@ export class ReleaseService {
           released_at: draft.releasedAt,
           title: draft.title.trim(),
           summary: draft.summary.trim(),
+          user_summary: draft.userSummary?.trim() || null,
           changes: draft.changes,
           is_published: draft.isPublished,
         })

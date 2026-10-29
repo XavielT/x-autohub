@@ -52,7 +52,7 @@ describe('CarDetails', () => {
     expect(componente).toBeTruthy();
   });
 
-  it('pone el titulo, la descripcion y la vista previa de la publicacion', async () => {
+  it('pone el título, la descripción y la vista previa de la publicación', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
@@ -62,14 +62,14 @@ describe('CarDetails', () => {
     expect(meta('meta[name="description"]')).toContain('RD$ 130,000');
   });
 
-  it('una publicacion de prueba no se anuncia', async () => {
+  it('una publicación de prueba no se anuncia', async () => {
     const { fixture } = montar({ ...VEHICULO, isTest: true });
     await fixture.whenStable();
 
     expect(document.title).toBe('Publicación no encontrada | X AutoHub');
   });
 
-  it('muestra el boton de WhatsApp cuando la publicacion trae telefono', async () => {
+  it('muestra el boton de WhatsApp cuando la publicación trae teléfono', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
@@ -82,18 +82,18 @@ describe('CarDetails', () => {
     expect(enlace!.getAttribute('rel')).toBe('noopener');
   });
 
-  it('arma el enlace con el numero en E.164 y el titulo en el mensaje', async () => {
+  it('arma el enlace con el número en E.164 y el título en el mensaje', async () => {
     const { fixture, componente } = montar();
     await fixture.whenStable();
 
     expect(componente.waLink()).toBe(
       'https://wa.me/18095550134?text=' +
-        encodeURIComponent('Hola! Vi tu publicacion "Toyota Supra MK4" en X AutoHub y me interesa.'),
+        encodeURIComponent('Hola! Vi tu publicación "Toyota Supra MK4" en X AutoHub y me interesa.'),
     );
     expect(boton(fixture)!.getAttribute('href')).toBe(componente.waLink());
   });
 
-  it('una publicacion vendida avisa que se vendio, sin WhatsApp ni JSON-LD, y la ficha sigue abierta', async () => {
+  it('una publicación vendida avisa que se vendio, sin WhatsApp ni JSON-LD, y la ficha sigue abierta', async () => {
     const { fixture } = montar({ ...VEHICULO, soldAt: '2026-10-01T00:00:00Z' });
     await fixture.whenStable();
 
@@ -104,7 +104,7 @@ describe('CarDetails', () => {
     expect(document.head.querySelector('script[data-ld="listing"]')).toBeNull();
   });
 
-  it('una publicacion vendida o vencida no se indexa; una a la venta si', async () => {
+  it('una publicación vendida o vencida no se indexa; una a la venta si', async () => {
     const vendida = montar({ ...VEHICULO, soldAt: '2026-10-01T00:00:00Z' });
     await vendida.fixture.whenStable();
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex');
@@ -117,21 +117,21 @@ describe('CarDetails', () => {
     expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
   });
 
-  it('una publicacion vencida avisa que venció', async () => {
+  it('una publicación vencida avisa que venció', async () => {
     const { fixture } = montar({ ...VEHICULO, expiresAt: '2020-01-01T00:00:00Z' });
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('app-publication-notice')?.textContent).toContain('venció');
   });
 
-  it('una publicacion a la venta no lleva aviso', async () => {
+  it('una publicación a la venta no lleva aviso', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('app-publication-notice')).toBeNull();
   });
 
-  it('sin telefono no hay boton, y el vendedor se sigue viendo', async () => {
+  it('sin teléfono no hay boton, y el vendedor se sigue viendo', async () => {
     const { fixture, componente } = montar({ ...VEHICULO, contactPhone: undefined });
     await fixture.whenStable();
 

@@ -632,6 +632,50 @@ check "...y desmarca al primero: queda uno solo por defecto" "1" \
 check "los dos siguen en el garaje" "2" \
   "select count(*) from profile_vehicles where user_id = '$USER_A';"
 
+echo "→ Modelo escrito a mano en el garaje (migracion 0040)"
+check "model_id nulo con model_text entra, para el dueno" ""   "$(as_user "$USER_A" "insert into profile_vehicles (user_id, make_id, model_text, year) select auth.uid(), mk.id, 'Impreza', 2012 from vehicle_makes mk where mk.slug='subaru';")"
+check "un usuario no escribe model_text en el garaje de otro"   'ERROR:  new row violates row-level security policy for table "profile_vehicles"'   "$(as_user "$USER_B" "insert into profile_vehicles (user_id, make_id, model_text, year) select '$USER_A', mk.id, 'Impreza', 2013 from vehicle_makes mk where mk.slug='subaru';")"
+check "ni lo cambia en una fila ajena (no ve la fila: 0 actualizadas)" "0"   "$(as_user "$USER_B" "with u as (update profile_vehicles set model_text = 'Hackeado' where user_id = '$USER_A' returning 1) select count(*) from u;")"
+check "model_id y model_text a la vez, no"   'ERROR:  new row for relation "profile_vehicles" violates check constraint "profile_vehicles_model_or_text"'   "$(as_user "$USER_A" "insert into profile_vehicles (user_id, make_id, model_id, model_text, year) select auth.uid(), mk.id, vm.id, 'Corolla', 2020 from vehicle_makes mk join vehicle_models vm on vm.make_id = mk.id where mk.slug='toyota' and vm.slug='corolla';")"
+check "un usuario normal no puede crear modelos"   'ERROR:  Solo un administrador puede crear modelos'   "$(as_user "$USER_A" "select * from admin_create_vehicle_model((select id from vehicle_makes where slug='subaru'), 'Impreza');")"
+check "anon no ejecuta admin_create_vehicle_model"   'ERROR:  permission denied for function admin_create_vehicle_model'   "$(as_anon "select * from admin_create_vehicle_model(1, 'X');")"
+check "el admin crea el modelo y migra 1 garaje" "1"   "$(as_user "$ADMIN" "select migrated from admin_create_vehicle_model((select id from vehicle_makes where slug='subaru'), 'impreza');")"
+check "el garaje ahora apunta al modelo y sin texto" "1"   "select count(*) from profile_vehicles pv join vehicle_models vm on vm.id = pv.model_id where pv.user_id = '$USER_A' and vm.slug = 'impreza' and pv.model_text is null;"
+
+
+echo "→ Sugerencias del buscador y alias (migracion 0042)"
+check "un usuario normal no escribe alias"   'ERROR:  new row violates row-level security policy for table "product_aliases"'   "$(as_user "$USER_A" "insert into product_aliases (product_id, alias) values (2, 'zzbumper');")"
+check "el admin agrega un alias" "" "$(as_user "$ADMIN" "insert into product_aliases (product_id, alias) values (2, 'zzbumper');")"
+check "el mismo alias (sin tildes ni mayusculas) no se repite"   'ERROR:  duplicate key value violates unique constraint "product_aliases_unique"'   "$(as_user "$ADMIN" "insert into product_aliases (product_id, alias) values (2, 'ZZBUMPER');")"
+check "anon encuentra el producto por su alias y la sugerencia lo dice" "zzbumper"   "$(as_anon "select matched_alias from suggest_products('zzbump') limit 1;")"
+check "una busqueda de un caracter no devuelve nada" "0"   "$(as_anon "select count(*) from suggest_products('a');")"
+check "anon no escribe alias"   'ERROR:  permission denied for table product_aliases'   "$(as_anon "insert into product_aliases (product_id, alias) values (2, 'otro');")"
+check "el limite se recorta a 20" "t"   "$(as_anon "select count(*) <= 20 from suggest_products('de', 500);")"
+
+echo "→ Comunidad: me gusta, comentarios y contadores (migracion 0045)"
+POST1=90001
+$PSQL -v ON_ERROR_STOP=1 >/dev/null <<SQL
+insert into social_posts (id, author_id, author_name, text) values ($POST1, '$USER_A', 'A', 'hola');
+SQL
+check "sin sesion no hay me gusta"   'ERROR:  permission denied for table social_post_likes'   "$(as_anon "insert into social_post_likes (post_id, user_id) values ($POST1, '$USER_A');")"
+check "no se da un me gusta a nombre de otro"   'ERROR:  new row violates row-level security policy for table "social_post_likes"'   "$(as_user "$USER_B" "insert into social_post_likes (post_id, user_id) values ($POST1, '$USER_A');")"
+check "dar un me gusta" "" "$(as_user "$USER_B" "insert into social_post_likes (post_id, user_id) values ($POST1, auth.uid());")"
+check "el contador sube solo" "1" "select likes from social_posts where id = $POST1;"
+check "el mismo me gusta dos veces, no"   'ERROR:  duplicate key value violates unique constraint "social_post_likes_pkey"'   "$(as_user "$USER_B" "insert into social_post_likes (post_id, user_id) values ($POST1, auth.uid());")"
+check "cada quien ve solo sus me gusta" "0" "$(as_user "$USER_A" "select count(*) from social_post_likes;")"
+check "quitar el me gusta" "" "$(as_user "$USER_B" "delete from social_post_likes where post_id = $POST1;")"
+check "el contador baja" "0" "select likes from social_posts where id = $POST1;"
+check "el autor no se escribe sus propios me gusta"   'ERROR:  permission denied for table social_posts'   "$(as_user "$USER_A" "update social_posts set likes = 999 where id = $POST1;")"
+check "pero si edita su texto" "" "$(as_user "$USER_A" "update social_posts set text = 'hola otra vez' where id = $POST1;")"
+check "anon lee comentarios pero no escribe" "0" "$(as_anon "select count(*) from social_post_comments;")"
+check "anon no comenta"   'ERROR:  permission denied for table social_post_comments'   "$(as_anon "insert into social_post_comments (post_id, author_id, text) values ($POST1, '$USER_A', 'x');")"
+check "comentar" "" "$(as_user "$USER_B" "insert into social_post_comments (post_id, author_id, text) values ($POST1, auth.uid(), 'buen carro');")"
+check "el contador de comentarios sube" "1" "select comments from social_posts where id = $POST1;"
+check "un comentario vacio, no"   'ERROR:  new row for relation "social_post_comments" violates check constraint "social_post_comments_text_check"'   "$(as_user "$USER_B" "insert into social_post_comments (post_id, author_id, text) values ($POST1, auth.uid(), '');")"
+check "otro usuario no borra el comentario (0 filas)" "0" "$(as_user "$USER_A" "with d as (delete from social_post_comments where post_id = $POST1 returning 1) select count(*) from d;")"
+check "el admin si lo borra" "1" "$(as_user "$ADMIN" "with d as (delete from social_post_comments where post_id = $POST1 returning 1) select count(*) from d;")"
+check "y el contador baja" "0" "select comments from social_posts where id = $POST1;"
+check "mas de 4 archivos en una publicacion, no"   'ERROR:  new row for relation "social_posts" violates check constraint "social_posts_media_check"'   "$(as_user "$USER_A" "insert into social_posts (author_id, author_name, text, media) values (auth.uid(), 'A', 'x', '[{},{},{},{},{}]');")"
 
 echo "→ Pedidos: estado, stock y reglas de entrega (migracion 0018)"
 # Cuatro piezas con comportamiento conocido. Se prepara por encima de RLS: es el

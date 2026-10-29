@@ -93,7 +93,7 @@
       </div>
     </form>
   } @else if (isLoading()) {
-    <p class="tl__empty">Cargando los cupones...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando los cupones…" />
   } @else if (coupons().length === 0) {
     <p class="tl__empty">Todavía no hay cupones. Crea el primero con "+ Nuevo cupón".</p>
   } @else {

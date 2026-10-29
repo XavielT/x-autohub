@@ -7,6 +7,7 @@ import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
 import { isLive } from '../../../shared/utils/publication-lifecycle';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
@@ -15,7 +16,7 @@ import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 
 @Component({
   selector: 'app-accessory-details',
-  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink, ImageGallery],
+  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink, ImageGallery, Skeleton],
   templateUrl: './accessory-details.html',
   styleUrl: './accessory-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,7 +45,7 @@ export class AccessoryDetails implements OnInit {
     if (!accessory?.contactPhone || !isLive(accessory)) return '';
     return buildWaLink(
       accessory.contactPhone,
-      `Hola! Vi tu publicacion "${accessory.title}" en X AutoHub y me interesa.`,
+      `Hola! Vi tu publicación "${accessory.title}" en X AutoHub y me interesa.`,
     );
   });
 

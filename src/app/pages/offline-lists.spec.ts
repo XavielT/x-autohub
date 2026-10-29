@@ -58,13 +58,13 @@ describe('Listas sin conexión', () => {
       name: 'Auto Hub',
       component: AutoHub,
       providers: () => [{ provide: AutoHubService, useValue: { getAll: boom } }],
-      generic: 'No hay articulos para mostrar',
+      generic: 'No hay artículos para mostrar',
     },
     {
       name: 'Hub Market',
       component: HubMarket,
       providers: () => [{ provide: HubMarketService, useValue: { getAll: boom } }],
-      generic: 'No encontramos resultados',
+      generic: 'No pudimos cargar las publicaciones',
     },
   ];
 

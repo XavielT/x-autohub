@@ -85,10 +85,10 @@ export class Registro {
     return [
       { key: 'displayName', label: 'Nombre', invalid: c.displayName.invalid },
       { key: 'email', label: 'Correo', invalid: c.email.invalid },
-      { key: 'password', label: 'Contrasena', invalid: c.password.invalid },
+      { key: 'password', label: 'Contraseña', invalid: c.password.invalid },
       {
         key: 'confirmPassword',
-        label: 'Confirmar contrasena',
+        label: 'Confirmar contraseña',
         invalid: c.confirmPassword.invalid || this.form.hasError('passwordMismatch'),
       },
     ];

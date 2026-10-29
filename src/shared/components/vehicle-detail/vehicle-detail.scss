@@ -1,0 +1,158 @@
+.vd {
+  box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-body);
+  color: var(--text-strong, #fff);
+
+  &__body {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  &__media { min-width: 0; }
+  &__info { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+  &__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+  &__heading { min-width: 0; }
+  &__title { margin: 0; font-family: var(--font-brand); font-size: clamp(1.5rem, 3.4vw, 2rem); line-height: 1.15; color: #fff; overflow-wrap: anywhere; }
+
+  &__location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
+    font-size: 15px;
+    color: var(--text-soft);
+  }
+
+  &__price {
+    flex: none;
+    text-align: right;
+
+    span { display: block; font-size: 13px; color: var(--text-soft); }
+    strong { font-size: clamp(1.4rem, 3vw, 1.8rem); font-weight: 800; color: var(--Hub); white-space: nowrap; }
+  }
+
+  // Tres columnas; las especificaciones sin dato no se pintan.
+  &__specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 0;
+  }
+
+  &__spec {
+    min-width: 0;
+    padding: 12px;
+    background-color: var(--secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+
+    dt { font-size: 12px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+    dd { margin: 4px 0 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+  }
+
+  &__description h2 { margin: 0 0 8px; font-family: var(--font-brand); font-size: 1.1rem; }
+
+  &__seller {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background-color: var(--secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+  }
+
+  &__avatar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    font-family: var(--font-brand);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 50%;
+  }
+
+  &__seller-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  &__contact { font-size: 14px; color: var(--text-soft); }
+  &__seller-label { font-size: 12px; color: var(--text-soft); }
+
+  &__actions { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+
+  &__wa {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 20px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    background-color: #25d366;
+    border-radius: 10px;
+
+    img { width: 20px; height: 20px; }
+    &:hover { filter: brightness(1.08); }
+  }
+
+  &__share {
+    min-height: 48px;
+    padding: 0 20px;
+    font-family: inherit;
+    font-weight: 700;
+    color: var(--Hub);
+    background: transparent;
+    border: 1px solid var(--Hub);
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:hover { background-color: rgba(255, 170, 0, 0.1); }
+  }
+
+  // La barra fija solo existe en el teléfono.
+  &__bar { display: none; }
+}
+
+@media (max-width: 900px) {
+  .vd {
+    // Deja sitio a la barra fija y a la barra de pestañas (60px) que va debajo.
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+
+    &__body { grid-template-columns: 1fr; gap: 20px; }
+    &__specs { grid-template-columns: repeat(2, 1fr); }
+    &__top { flex-direction: column; gap: 10px; }
+    &__price { text-align: left; }
+
+    &__bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      // Justo encima de la barra de pestañas del teléfono (60px de alto).
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      z-index: 85;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background-color: var(--main);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    &__bar-price { font-size: 1.2rem; color: var(--Hub); white-space: nowrap; }
+    &__bar .vd__wa { flex: none; }
+  }
+}

@@ -1,17 +1,17 @@
-<section class="adm-pub" aria-label="Publicacion del sitio">
+<section class="adm-pub" aria-label="Publicación del sitio">
   @if (status(); as s) {
     <div class="adm-pub__text">
       @if (!s.hookConfigured) {
         <p class="adm-pub__line adm-pub__line--warn">
-          Falta el enlace de publicacion: los cambios no se publican solos.
+          Falta el enlace de publicación: los cambios no se publican solos.
         </p>
       } @else if (s.pendingSince) {
         <p class="adm-pub__line adm-pub__line--pending">
-          Hay cambios sin publicar desde hace {{ pendingMinutes() }} min. Se publican solos unos minutos despues del
-          ultimo cambio.
+          Hay cambios sin publicar desde hace {{ pendingMinutes() }} min. Se publican solos unos minutos después del
+          último cambio.
         </p>
       } @else {
-        <p class="adm-pub__line">El sitio esta al dia.</p>
+        <p class="adm-pub__line">El sitio está al día.</p>
       }
 
       @if (build(); as b) {
@@ -20,11 +20,11 @@
             <p class="adm-pub__meta adm-pub__meta--busy" role="status">En cola en Vercel...</p>
           }
           @case ('building') {
-            <p class="adm-pub__meta adm-pub__meta--busy" role="status">Construyendo la version nueva...</p>
+            <p class="adm-pub__meta adm-pub__meta--busy" role="status">Construyendo la versión nueva...</p>
           }
           @case ('ready') {
             <p class="adm-pub__meta">
-              Ultimo despliegue: listo
+              Último despliegue: listo
               @if (b.readyAt) {
                 el {{ b.readyAt | date: 'd MMM, h:mm a' }}
               }
@@ -35,18 +35,18 @@
           }
           @case ('error') {
             <p class="adm-pub__meta adm-pub__meta--error" role="alert">
-              El ultimo despliegue fallo: el sitio sigue con la version anterior.
+              El último despliegue falló: el sitio sigue con la versión anterior.
               @if (b.inspectorUrl) {
                 <a [href]="b.inspectorUrl" target="_blank" rel="noopener noreferrer">Ver por que en Vercel</a>
               }
             </p>
           }
           @case ('canceled') {
-            <p class="adm-pub__meta">El ultimo despliegue se cancelo.</p>
+            <p class="adm-pub__meta">El último despliegue se canceló.</p>
           }
         }
       } @else if (s.lastFiredAt) {
-        <p class="adm-pub__meta">Ultima publicacion pedida: {{ s.lastFiredAt | date: 'd MMM, h:mm a' }}</p>
+        <p class="adm-pub__meta">Última publicación pedida: {{ s.lastFiredAt | date: 'd MMM, h:mm a' }}</p>
       }
     </div>
 
@@ -58,6 +58,6 @@
       {{ isSending() ? 'Pidiendo...' : isBuilding() ? 'Publicando...' : 'Publicar ahora' }}
     </button>
   } @else if (failed()) {
-    <p class="adm-pub__line adm-pub__line--warn">No pudimos leer el estado de la publicacion.</p>
+    <p class="adm-pub__line adm-pub__line--warn">No pudimos leer el estado de la publicación.</p>
   }
 </section>

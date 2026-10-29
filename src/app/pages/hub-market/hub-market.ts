@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
@@ -7,6 +8,8 @@ import { OfflineState } from '../../../shared/components/offline-state/offline-s
 import { OnlineService } from '../../../shared/services/online.service';
 import { SeoService } from '../../../shared/services/seo.service';
 
+import { SearchableSelect, SelectOption, normalizeSearch } from '../../../shared/ui/searchable-select/searchable-select';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 interface HubMarketCategoryOption {
   value: 'all' | HubMarketCategory;
   label: string;
@@ -14,7 +17,7 @@ interface HubMarketCategoryOption {
 
 @Component({
   selector: 'app-hub-market',
-  imports: [FormsModule, HubMarketCard, OfflineState],
+  imports: [Skeleton, FormsModule, RouterLink, HubMarketCard, OfflineState, SearchableSelect],
   templateUrl: './hub-market.html',
   styleUrl: './hub-market.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,27 +41,76 @@ export class HubMarket implements OnInit {
 
   readonly categories: readonly HubMarketCategoryOption[] = [
     { value: 'all', label: 'Todo' },
-    { value: 'vehiculos', label: 'Vehiculos' },
+    { value: 'vehiculos', label: 'Vehículos' },
     { value: 'piezas', label: 'Piezas' },
     { value: 'accesorios', label: 'Accesorios' },
   ];
 
-  /** Se recalcula solo cuando cambian las publicaciones, la búsqueda o la categoría. */
-  readonly filteredItems = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const category = this.selectedCategory();
+  readonly location = signal('');
+  readonly brand = signal('');
+  readonly sort = signal<'recientes' | 'precio-asc' | 'precio-desc'>('recientes');
 
-    return this.allItems().filter((item) => {
+  readonly sortOptions: readonly SelectOption[] = [
+    { value: 'recientes', label: 'Más recientes' },
+    { value: 'precio-asc', label: 'Precio: menor a mayor' },
+    { value: 'precio-desc', label: 'Precio: mayor a menor' },
+  ];
+
+  /** Solo las ubicaciones que tienen publicaciones: filtrar por una vacía no lleva a nada. */
+  readonly locationOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'Todo el país' },
+    ...[...new Set(this.allItems().map((i) => i.location).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((value) => ({ value, label: value })),
+  ]);
+
+  readonly brandOptions = computed<SelectOption[]>(() => [
+    { value: '', label: 'Todas las marcas' },
+    ...[
+      ...new Set(
+        this.allItems()
+          .filter((i) => i.category === 'vehiculos')
+          .map((i) => i.vehicleSpecs?.brand)
+          .filter((b): b is string => !!b),
+      ),
+    ]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .map((value) => ({ value, label: value })),
+  ]);
+
+  readonly hasFilters = computed(
+    () =>
+      this.searchQuery().trim() !== '' ||
+      this.selectedCategory() !== 'all' ||
+      this.location() !== '' ||
+      this.brand() !== '',
+  );
+
+  /** Se recalcula solo cuando cambian las publicaciones o cualquier filtro. */
+  readonly filteredItems = computed(() => {
+    const query = normalizeSearch(this.searchQuery());
+    const category = this.selectedCategory();
+    const location = this.location();
+    const brand = this.brand();
+
+    const items = this.allItems().filter((item) => {
       const matchesCategory = category === 'all' || item.category === category;
+      const matchesLocation = location === '' || item.location === location;
+      const matchesBrand = brand === '' || item.vehicleSpecs?.brand === brand;
 
       const matchesSearch =
         query.length === 0 ||
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.sellerName.toLowerCase().includes(query);
+        normalizeSearch(item.title).includes(query) ||
+        normalizeSearch(item.description).includes(query) ||
+        normalizeSearch(item.sellerName).includes(query);
 
-      return matchesCategory && matchesSearch;
+      return matchesCategory && matchesLocation && matchesBrand && matchesSearch;
     });
+
+    const sort = this.sort();
+    if (sort === 'precio-asc') return [...items].sort((a, b) => a.price - b.price);
+    if (sort === 'precio-desc') return [...items].sort((a, b) => b.price - a.price);
+    return items;
   });
 
   ngOnInit(): void {
@@ -91,5 +143,15 @@ export class HubMarket implements OnInit {
 
   onCategorySelect(category: HubMarketCategoryOption['value']): void {
     this.selectedCategory.set(category);
+    // La marca solo existe en Vehículos: al salir de ahí no puede quedar filtrando a escondidas.
+    if (category !== 'vehiculos') this.brand.set('');
+  }
+
+  clearFilters(): void {
+    this.searchQuery.set('');
+    this.selectedCategory.set('all');
+    this.location.set('');
+    this.brand.set('');
+    this.sort.set('recientes');
   }
 }

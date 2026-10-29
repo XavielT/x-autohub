@@ -51,7 +51,7 @@ describe('sitemap', () => {
       expect(routePaths).toContain('accessory-details/:id');
     });
 
-    it('arma una URL por cada vehiculo de Auto Hub y por cada publicacion, en la ruta de su categoria', () => {
+    it('arma una URL por cada vehículo de Auto Hub y por cada publicación, en la ruta de su categoría', () => {
       const entries = dynamic({
         autos: [{ id: 0, created_at: '2026-09-01T10:00:00+00:00' }, { id: 4 }],
         marketItems: [
@@ -72,7 +72,7 @@ describe('sitemap', () => {
       expect(entries[4].lastmod).toBe('2026-10-02');
     });
 
-    it('una publicacion de una categoria que no se conoce no inventa una ruta', () => {
+    it('una publicación de una categoría que no se conoce no inventa una ruta', () => {
       expect(dynamic({ marketItems: [{ id: 1, category: 'motos' }] })).toEqual([]);
     });
 

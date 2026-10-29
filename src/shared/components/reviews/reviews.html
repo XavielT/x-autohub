@@ -2,7 +2,7 @@
   <h2 id="rv-title" class="rv__title">Reseñas</h2>
 
   @if (isLoading()) {
-    <p class="rv__muted" role="status">Cargando las reseñas…</p>
+    <app-skeleton variant="row" [count]="3" label="Cargando las reseñas…" />
   } @else if (hasError()) {
     <p class="rv__muted" role="alert">No pudimos cargar las reseñas. Inténtalo otra vez en un momento.</p>
   } @else if (stats().total === 0) {
@@ -91,7 +91,7 @@
 
           @if (formError()) { <p class="rv__error" role="alert">{{ formError() }}</p> }
 
-          <button type="submit" class="rv__submit">{{ isSending() ? 'Publicando…' : 'Publicar reseña' }}</button>
+          <button type="submit" class="rv__submit" [disabled]="isSending()" [attr.aria-busy]="isSending()">{{ isSending() ? 'Publicando…' : 'Publicar reseña' }}</button>
         </fieldset>
       </form>
     }

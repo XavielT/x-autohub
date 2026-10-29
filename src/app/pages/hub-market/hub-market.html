@@ -3,7 +3,7 @@
     <div class="hub-market__title-wrap">
       <span>Comunidad AutoHub</span>
       <h1>Hub <span class="hub-market__title-highlight">Market</span></h1>
-      <p>Publicaciones de vehiculos, piezas y accesorios hechas por la comunidad.</p>
+      <p>Publicaciones de vehículos, piezas y accesorios hechas por la comunidad.</p>
     </div>
   </header>
 
@@ -11,21 +11,37 @@
     <input
       type="text"
       class="hub-market__search"
-      placeholder="Buscar por titulo, descripcion o vendedor..."
+      placeholder="Buscar por título, descripción o vendedor..."
       [ngModel]="searchQuery()"
       (ngModelChange)="searchQuery.set($event)"
     />
 
-    <div class="hub-market__chips">
+    <div class="hub-market__chips" role="tablist" aria-label="Categoría">
       @for (category of categories; track category.value) {
         <button
           type="button"
+          role="tab"
           class="hub-market__chip"
           [class.hub-market__chip--active]="selectedCategory() === category.value"
+          [attr.aria-selected]="selectedCategory() === category.value"
           (click)="onCategorySelect(category.value)"
         >
           {{ category.label }}
         </button>
+      }
+    </div>
+
+    <div class="hub-market__selects">
+      <app-searchable-select [options]="locationOptions()" [value]="location()"
+                             (valueChange)="location.set($any($event))" placeholder="Ubicación" />
+      @if (selectedCategory() === 'vehiculos' && brandOptions().length > 1) {
+        <app-searchable-select [options]="brandOptions()" [value]="brand()"
+                               (valueChange)="brand.set($any($event))" placeholder="Marca" />
+      }
+      <app-searchable-select [options]="sortOptions" [value]="sort()"
+                             (valueChange)="sort.set($any($event))" placeholder="Ordenar" />
+      @if (hasFilters()) {
+        <button type="button" class="hub-market__clear" (click)="clearFilters()">Limpiar</button>
       }
     </div>
   </div>
@@ -40,13 +56,24 @@
     @if (hasError() && !online.isOnline()) {
       <app-offline-state (retry)="load()" />
     } @else {
-      <p class="hub-market__empty">
-        @if (isLoading()) {
-          Cargando publicaciones...
-        } @else {
-          No encontramos resultados para tu busqueda.
-        }
-      </p>
+      @if (isLoading()) {
+        <app-skeleton variant="vehicle-card" [count]="6" label="Cargando publicaciones…" />
+      } @else {
+        <div class="hub-market__empty">
+          @if (hasError()) {
+            <p>No pudimos cargar las publicaciones.</p>
+            <button type="button" class="hub-market__clear" (click)="load()">Reintentar</button>
+          } @else if (hasFilters()) {
+            <p>No encontramos resultados con esos filtros.</p>
+            <button type="button" class="hub-market__clear" (click)="clearFilters()">Limpiar filtros</button>
+          } @else {
+            <p>Todavía no hay publicaciones aquí.</p>
+          }
+          @if (!hasError()) {
+            <a class="hub-market__publish" routerLink="/publicar">Publicar el tuyo</a>
+          }
+        </div>
+      }
     }
   }
 </section>

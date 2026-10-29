@@ -208,7 +208,7 @@ export class AuthService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(this.translateAuthError(error.message));
-        if (!data.user) throw new Error('No pudimos iniciar tu sesion.');
+        if (!data.user) throw new Error('No pudimos iniciar tu sesión.');
       }),
       // El nombre visible sale del perfil, no de los metadatos del auth.
       switchMap(() => this.loadProfileOrThrow()),
@@ -293,7 +293,7 @@ export class AuthService {
 
         if (result.status === 'missing') {
           console.error(
-            '[supabase] get_my_profile no devolvio fila para una sesion valida. ' +
+            '[supabase] get_my_profile no devolvió fila para una sesión válida. ' +
               'Verifica que el trigger on_auth_user_created este instalado (0001_schema.sql).',
           );
         }
@@ -406,10 +406,12 @@ export class AuthService {
     displayName: string;
     phone?: string;
     location?: string;
+    /** Ausente = no se toca; `null` = quitar la foto; texto = la URL (subida) o la ruta de un avatar del sitio. */
+    avatarUrl?: string | null;
   }): Observable<UserModel> {
     const current = this._user();
     if (!current) {
-      return throwError(() => new Error('Necesitas una sesion para editar tu perfil.'));
+      return throwError(() => new Error('Necesitas una sesión para editar tu perfil.'));
     }
 
     const next: UserModel = {
@@ -417,6 +419,7 @@ export class AuthService {
       displayName: changes.displayName.trim(),
       phone: changes.phone?.trim() || undefined,
       location: changes.location?.trim() || undefined,
+      avatarUrl: changes.avatarUrl === undefined ? current.avatarUrl : (changes.avatarUrl ?? undefined),
     };
 
     if (this.supabase.shouldUseMockData()) {
@@ -431,6 +434,7 @@ export class AuthService {
           display_name: next.displayName,
           phone: next.phone ?? null,
           location: next.location ?? null,
+          ...(changes.avatarUrl !== undefined && { avatar_url: changes.avatarUrl }),
         })
         .eq('id', current.id),
     ).pipe(
@@ -468,7 +472,7 @@ export class AuthService {
     const normalized = message.toLowerCase();
 
     if (normalized.includes('invalid login credentials')) {
-      return 'Correo o contrasena incorrectos.';
+      return 'Correo o contraseña incorrectos.';
     }
     if (normalized.includes('email not confirmed')) {
       return 'Confirma tu correo antes de entrar. Revisa tu bandeja.';
@@ -477,12 +481,12 @@ export class AuthService {
       return 'Ese correo ya tiene una cuenta.';
     }
     if (normalized.includes('password should be at least')) {
-      return 'La contrasena debe tener al menos 6 caracteres.';
+      return 'La contraseña debe tener al menos 6 caracteres.';
     }
     if (normalized.includes('rate limit') || normalized.includes('too many')) {
       return 'Demasiados intentos. Espera un momento.';
     }
-    return 'No pudimos completar la operacion. Intenta de nuevo.';
+    return 'No pudimos completar la operación. Intenta de nuevo.';
   }
 
   // --- Modo simulado -------------------------------------------------------
@@ -510,10 +514,10 @@ export class AuthService {
 
   private validateMock(email: string, password: string): string | null {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return 'Ingresa un correo valido.';
+      return 'Ingresa un correo válido.';
     }
     if (password.length < 6) {
-      return 'La contrasena debe tener al menos 6 caracteres.';
+      return 'La contraseña debe tener al menos 6 caracteres.';
     }
     return null;
   }

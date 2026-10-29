@@ -1,0 +1,198 @@
+$surface: #1a1a1a;
+$surface-line: #2e2e2e;
+
+:host { display: block; }
+
+.post {
+  background-color: $surface;
+  border: 1px solid $surface-line;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 18px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  &__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--Hub);
+    color: var(--main);
+    font-family: var(--font-brand);
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  &__identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-family: var(--font-brand);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  &__verified {
+    padding: 2px 7px;
+    border-radius: 20px;
+    background-color: var(--Hub-translucid);
+    color: var(--Hub);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  &__meta {
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+
+  &__text {
+    margin: 0 0 14px;
+    color: #e6e6e6;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__tag {
+    color: var(--tertiary-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+
+  &__media {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+
+    &--many { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  &__img-btn { display: block; padding: 0; background: none; border: 0; border-radius: 10px; overflow: hidden; cursor: zoom-in; }
+
+  &__img {
+    display: block;
+    width: 100%;
+    max-height: 380px;
+    border-radius: 10px;
+    object-fit: cover;
+  }
+
+  &__video {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    background-color: #000;
+    border-radius: 10px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #262626;
+  }
+
+  &__action {
+    min-height: 40px;
+    padding: 0 12px;
+    color: var(--main-ultra-light);
+    font-family: var(--font-body);
+    font-size: 14px;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover { background-color: rgba(255, 255, 255, 0.06); }
+    &--on { color: #ff5a6e; font-weight: 700; }
+  }
+
+  &__comments { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+  &__note { margin: 0; font-size: 13px; color: var(--main-ultra-light); }
+  &__link { padding: 0; color: var(--Hub); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  &__body { flex: 1; min-width: 0; }
+  &__author { margin-right: 8px; font-weight: 700; font-size: 14px; color: #fff; }
+  &__time { font-size: 12px; color: var(--main-ultra-light); }
+  &__text { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: #e6e6e6; overflow-wrap: anywhere; }
+
+  &__remove {
+    width: 28px;
+    height: 28px;
+    color: var(--main-ultra-light);
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+
+    &:hover { background-color: rgba(255, 255, 255, 0.08); }
+  }
+}
+
+.comment-form {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    color: #fff;
+    font-family: var(--font-body);
+    background-color: var(--main-light);
+    border: 1px solid transparent;
+    border-radius: 8px;
+
+    &:focus { outline: none; border-color: var(--Hub); }
+  }
+
+  button {
+    min-height: 40px;
+    padding: 0 16px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.5; cursor: default; }
+  }
+}

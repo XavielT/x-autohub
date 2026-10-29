@@ -1,0 +1,29 @@
+<main class="nov">
+  <h1 class="nov__title">Novedades</h1>
+  <p class="nov__lead">Lo que ha cambiado en X AutoHub, de lo más reciente a lo más viejo.</p>
+
+  @if (isLoading()) {
+    <app-skeleton variant="row" [count]="4" label="Cargando las novedades…" />
+  } @else if (hasError()) {
+    <p class="nov__state" role="alert">No pudimos cargar las novedades. Inténtalo otra vez en un momento.</p>
+  } @else if (releases().length === 0) {
+    <p class="nov__state">Todavía no hay novedades publicadas.</p>
+  } @else {
+    <ol class="nov__list">
+      @for (release of releases(); track release.version) {
+        <li class="nov__item">
+          <header class="nov__head">
+            <h2 class="nov__h2">{{ release.title }}</h2>
+            <span class="nov__meta">v{{ release.version }} &middot; {{ release.releasedAt | date: 'd MMM y' }}</span>
+          </header>
+          <p class="nov__summary">{{ release.userSummary || release.summary }}</p>
+          @if (release.changes.length > 0) {
+            <ul class="nov__changes">
+              @for (change of release.changes; track change) { <li>{{ change }}</li> }
+            </ul>
+          }
+        </li>
+      }
+    </ol>
+  }
+</main>

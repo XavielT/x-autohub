@@ -1,9 +1,12 @@
 <article class="scard">
-  <img class="scard__icon" [src]="service().icon" alt="" aria-hidden="true" width="40" height="40" />
+  @if (categoryLabel()) { <span class="scard__category">{{ categoryLabel() }}</span> }
 
-  <h3 class="scard__title">
-    <a [routerLink]="['/servicios', service().slug]">{{ service().title }}</a>
-  </h3>
+  <div class="scard__head">
+    <img class="scard__icon" [src]="service().icon" alt="" aria-hidden="true" width="32" height="32" />
+    <h3 class="scard__title">
+      <a [routerLink]="['/servicios', service().slug]">{{ service().title }}</a>
+    </h3>
+  </div>
   <p class="scard__desc">{{ service().description }}</p>
 
   <p class="scard__meta">
@@ -14,6 +17,7 @@
         A cotizar
       }
     </span>
+    <span class="scard__sep" aria-hidden="true">&middot;</span>
     <span class="scard__duration">{{ duration() }}</span>
   </p>
 

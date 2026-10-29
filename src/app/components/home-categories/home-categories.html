@@ -1,10 +1,15 @@
 @if (categories().length > 0) {
-  <nav class="hcat" aria-label="Categorias de la tienda">
+  <nav class="hcat" aria-label="Categorías de la tienda">
     <ul class="hcat__list">
       @for (c of categories(); track c.id) {
         <li>
           <a class="hcat__chip" [routerLink]="['/tienda', 'c', c.slug]">
-            <span class="hcat__icon" aria-hidden="true">{{ c.name.charAt(0) }}</span>
+            @if (c.icon) {
+              <span class="hcat__icon hcat__icon--svg" aria-hidden="true"
+                    [style.--icon]="'url(assets/icons/categories/' + c.icon + '.svg)'"></span>
+            } @else {
+              <span class="hcat__icon" aria-hidden="true">{{ c.name.charAt(0) }}</span>
+            }
             <span class="hcat__name">{{ c.name }}</span>
           </a>
         </li>

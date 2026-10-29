@@ -137,14 +137,13 @@
         }
     }
 
-    &__field--sort select {
-        min-width: 190px;
-    }
+    &__field--sort { min-width: 190px; }
 
     &__content {
         // De una a tres columnas según el ancho; `min(100%, …)` evita que una tarjeta se salga en un teléfono.
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        align-items: stretch;
         align-content: start;
         background-color: #1a1a1a;
         border: 1px solid #2e2e2e;

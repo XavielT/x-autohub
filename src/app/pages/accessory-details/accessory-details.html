@@ -33,7 +33,9 @@
     </div>
   </div>
 </div>
-} @else if (!isLoading()) {
+} @else if (isLoading()) {
+  <app-skeleton variant="detail" label="Cargando el artículo…" />
+} @else {
   <!--
     Sin este bloque la pagina quedaba **en blanco** para cualquier id que no
     existiera, y desde la fase 6 eso incluye los articulos de prueba abiertos
@@ -41,8 +43,8 @@
     "esto no existe". Las otras paginas de detalle ya tenian su estado; esta no.
   -->
   <div class="accessory-details__not-found">
-    <h2 class="accessory-details__not-found-title">Upss, Articulo no encontrado!</h2>
-    <p>Este articulo es inexistente o fue borrado.</p>
+    <h2 class="accessory-details__not-found-title">Upss, Artículo no encontrado!</h2>
+    <p>Este artículo es inexistente o fue borrado.</p>
     <img class="accessory-details__not-found-img" src="assets/icons/not-found-hub-icon.svg" alt="" />
     <a class="accessory-details__not-found-link" routerLink="/hub-market">Volver a Hub Market</a>
   </div>

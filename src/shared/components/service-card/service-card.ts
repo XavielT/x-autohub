@@ -18,6 +18,8 @@ import { formatDuration } from '../../utils/format-duration';
 })
 export class ServiceCard {
   readonly service = input.required<ServiceModel>();
+  /** El nombre de la categoría, como etiqueta pequeña sobre el título. */
+  readonly categoryLabel = input<string | null>(null);
 
   readonly duration = computed(() => formatDuration(this.service().durationMinutes));
 }

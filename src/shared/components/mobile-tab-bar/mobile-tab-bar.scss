@@ -164,19 +164,7 @@ $bar-offset: calc(#{$bar-height} + env(safe-area-inset-bottom, 0px));
     small { color: var(--text-soft); }
   }
 
-  &__initial {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    font-family: var(--font-brand);
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--main);
-    background-color: var(--Hub);
-    border-radius: 50%;
-  }
+
 
   &__guest { display: flex; gap: 10px; }
 

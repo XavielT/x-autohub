@@ -1,0 +1,42 @@
+<div class="ss" [class.ss--open]="isOpen()" [class.ss--invalid]="invalid()">
+  <input
+    class="ss__input"
+    type="text"
+    role="combobox"
+    autocomplete="off"
+    aria-autocomplete="list"
+    [id]="inputId()"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="listId()"
+    [attr.aria-activedescendant]="isOpen() && filtered().length ? listId() + '-' + activeIndex() : null"
+    [attr.aria-invalid]="invalid() || null"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [value]="displayText()"
+    (focus)="open()"
+    (click)="open()"
+    (input)="onInput($any($event.target).value)"
+    (keydown)="onKeydown($event)"
+  />
+  <span class="ss__chevron" aria-hidden="true"></span>
+
+  @if (isOpen()) {
+    <div class="ss__backdrop" (pointerdown)="close()"></div>
+    <ul class="ss__list" role="listbox" [id]="listId()">
+      @for (option of filtered(); track option.value; let i = $index) {
+        <li
+          role="option"
+          class="ss__option"
+          [id]="listId() + '-' + i"
+          [class.ss__option--active]="i === activeIndex()"
+          [attr.aria-selected]="option.value === value()"
+          (pointerdown)="$event.preventDefault()"
+          (click)="choose(option)"
+          (mouseenter)="activeIndex.set(i)"
+        >{{ option.label }}</li>
+      } @empty {
+        <li class="ss__empty" role="presentation">{{ emptyText() }}</li>
+      }
+    </ul>
+  }
+</div>

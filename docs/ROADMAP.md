@@ -211,6 +211,31 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 
 ---
 
+## Pulido de la tienda y novedades (2.30.0) ✅
+
+Hecho (el prompt 08 sustituye al 04b, que no llegó a correrse y queda **absorbido** aquí): "Mi vehículo" con selector
+buscable y modelo escrito a mano (0040, y "Crear modelo" en el panel); home con video, íconos de categoría (0041) y una sola
+tarjeta de vehículo; tildes y ñ en toda la interfaz; `/publicar` con subida de fotos comprimidas (1600 px, JPEG 85 %),
+reordenar, visor y mapa con su CSP; moderación completa; listados de Auto Hub y Hub Market con filtros buscables,
+pestañas y estado vacío; fichas de vehículo rediseñadas con relacionados; tarjeta de producto cuadrada con respaldo;
+esqueletos de carga y barra de progreso; sugerencias del buscador con trigramas y alias (0042); perfil con foto
+(recorte a 512×512 o uno de 8 avatares del sitio); modal de novedades y `/novedades` (0044); `/servicios` con chips;
+comunidad con me gusta, comentarios y video (0045); descripciones reales en Auto Hub (0046); título y descripción
+propios en cada ruta pública y `og-default.jpg` (`docs/SEO.md`).
+
+Pendiente:
+
+- **Aplicar las migraciones 0040 a 0046 y correr `./scripts/verify-migrations.sh` donde haya Postgres.** Ninguna se ejecutó
+  todavía contra una base. La 0043 no existe a propósito: el bucket `avatars` ya estaba en la 0003.
+- Esqueletos en el home, el checkout y el feed de la comunidad; el spinner de botón (`aria-busy`) está en los formularios
+  principales, no en todos.
+- Medir la latencia del buscador antes y después (se dejó el debounce, la caché por prefijo y la precarga de supabase-js,
+  pero no hay cifras).
+- Los `raise exception` de las migraciones siguen sin tildes (hay que redefinir cada función en una migración nueva).
+- Gefika (títulos) no trae `¿` ni `¡`.
+
+---
+
 ## Republicación automática (2.11.0 a 2.14.0) ✅
 
 Hecho: un cambio de producto, opción, categoría, servicio o ajuste del sitio hace que la base pida un despliegue a Vercel

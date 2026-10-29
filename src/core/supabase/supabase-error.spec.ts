@@ -7,7 +7,7 @@ const err = (code: string, message = 'x'): PostgrestError =>
 
 describe('translateDbError', () => {
   it('los mensajes que la base escribe para quien los lee (22023) llegan tal cual', () => {
-    // Antes todo esto se volvía "Algo salio mal", y justo lo que el cliente
+    // Antes todo esto se volvía "Algo salió mal", y justo lo que el cliente
     // necesitaba para arreglar su carrito se perdía.
     expect(translateDbError(err('22023', 'De "Disco" solo quedan 1 y pediste 2. Ajusta la cantidad.'))).toBe(
       'De "Disco" solo quedan 1 y pediste 2. Ajusta la cantidad.',
@@ -24,13 +24,13 @@ describe('translateDbError', () => {
 
   it('el resto de códigos se traducen y lo desconocido es genérico', () => {
     expect(translateDbError(err('23505'))).toBe('Ese registro ya existe.');
-    expect(translateDbError(err('XX000', 'algo interno'))).toBe('Algo salio mal. Intenta de nuevo.');
-    expect(translateDbError(null)).toBe('Algo salio mal. Intenta de nuevo.');
+    expect(translateDbError(err('XX000', 'algo interno'))).toBe('Algo salió mal. Intenta de nuevo.');
+    expect(translateDbError(null)).toBe('Algo salió mal. Intenta de nuevo.');
   });
 
   it('sin conexión (fetch sin código) lo dice', () => {
     expect(translateDbError({ ...err('', 'TypeError: Failed to fetch'), code: '' } as PostgrestError)).toBe(
-      'Sin conexion con el servidor. Revisa tu internet.',
+      'Sin conexión con el servidor. Revisa tu internet.',
     );
   });
 });
@@ -39,8 +39,8 @@ describe('unwrap', () => {
   it('lanza con el mensaje ya traducido', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    expect(() => unwrap({ data: null, error: err('22023', 'Se agoto "Disco". Quitala del carrito para continuar.') })).toThrow(
-      'Se agoto "Disco". Quitala del carrito para continuar.',
+    expect(() => unwrap({ data: null, error: err('22023', 'Se agoto "Disco". Quítala del carrito para continuar.') })).toThrow(
+      'Se agoto "Disco". Quítala del carrito para continuar.',
     );
   });
 });

@@ -93,6 +93,20 @@
     }
   }
 
+  &__badge {
+    display: inline-block;
+    min-width: 20px;
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    color: #121212;
+    background-color: var(--Hub);
+    border-radius: 999px;
+  }
+
   &__nav-label {
     font-family: var(--font-brand);
     font-size: 17px;

@@ -31,6 +31,7 @@ import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { productJsonLd } from '../../../shared/utils/structured-data';
 import { variantGallery } from '../../../shared/utils/variant-gallery';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /** Una fila de compatibilidad con nombres: "Toyota Corolla · 2010–2020". */
 export interface FitmentLine {
   id: number;
@@ -49,7 +50,7 @@ export interface FitmentLine {
  */
 @Component({
   selector: 'app-producto',
-  imports: [DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge, Reviews, FavoriteButton],
+  imports: [Skeleton, DecimalPipe, RouterLink, CatalogoCard, ImageGallery, TestBadge, Reviews, FavoriteButton],
   templateUrl: './producto.html',
   styleUrl: './producto.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -303,7 +304,7 @@ export class Producto {
       this.toast.show(`${product.name}${option} agregado al carrito`);
       return true;
     } catch {
-      this.toast.show('No se pudo agregar el articulo', 'error');
+      this.toast.show('No se pudo agregar el artículo', 'error');
       return false;
     }
   }

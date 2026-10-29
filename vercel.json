@@ -10,7 +10,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://bzhokbcvfkipqimifrrq.supabase.co; font-src 'self'; media-src 'self'; connect-src 'self' https://bzhokbcvfkipqimifrrq.supabase.co wss://bzhokbcvfkipqimifrrq.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://bzhokbcvfkipqimifrrq.supabase.co https://*.tile.openstreetmap.org; font-src 'self'; media-src 'self' blob: https://bzhokbcvfkipqimifrrq.supabase.co; connect-src 'self' https://bzhokbcvfkipqimifrrq.supabase.co wss://bzhokbcvfkipqimifrrq.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
         },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },

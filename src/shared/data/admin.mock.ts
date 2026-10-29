@@ -179,7 +179,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderModel[] = [
     status: 'awaiting_payment',
     isGuest: false,
     createdAt: new Date('2026-08-10T08:00:00Z'),
-    items: [{ id: 5, name: 'Aceite sintetico 5W-30 5L', unitPrice: 2250, quantity: 1 }],
+    items: [{ id: 5, name: 'Aceite sintético 5W-30 5L', unitPrice: 2250, quantity: 1 }],
   },
 ];
 
@@ -187,7 +187,7 @@ export const ADMIN_PARTS_MOCK: AdminPartModel[] = [
   { id: 1, name: 'Disco ventilado GTR 355mm', brand: 'Brembo', categoryId: 6, sku: 'XAH-000001', fulfillment: 'stock', price: 12950, stock: 8, hasVariants: false, isActive: true, isTest: false },
   { id: 2, name: 'Filtro de aire de alto flujo', brand: 'K&N', categoryId: 8, sku: 'XAH-000002', fulfillment: 'stock', price: 2850, stock: 24, hasVariants: false, isActive: true, isTest: false },
   { id: 3, name: 'Kit Coilover Street Pro', brand: 'BC Racing', categoryId: 7, sku: 'XAH-000003', fulfillment: 'on_order', price: 32500, stock: 3, hasVariants: false, isActive: true, isTest: false },
-  { id: 4, name: 'Aceite sintetico 5W-30 5L', brand: 'Motul', categoryId: 8, sku: 'XAH-000004', fulfillment: 'stock', price: 2250, stock: 0, hasVariants: false, isActive: false, isTest: false },
+  { id: 4, name: 'Aceite sintético 5W-30 5L', brand: 'Motul', categoryId: 8, sku: 'XAH-000004', fulfillment: 'stock', price: 2250, stock: 0, hasVariants: false, isActive: false, isTest: false },
   // Mismo id que la pieza de prueba de HUB_PART_MOCK, para que marcar y
   // desmarcar desde el panel se corresponda con lo que se ve en el catalogo.
   { id: 36, name: 'PRUEBA - Pieza de prueba', brand: 'X AutoHub', categoryId: 12, sku: 'XAH-000036', fulfillment: 'stock', price: 100, stock: 5, hasVariants: false, isActive: true, isTest: true },
@@ -196,11 +196,11 @@ export const ADMIN_PARTS_MOCK: AdminPartModel[] = [
 export const ADMIN_VEHICLES_MOCK: AdminVehicleModel[] = [
   { id: 1, brand: 'Toyota', model: 'Corolla', year: 2020, price: 985000, mileage: 42000, isAvailable: true, isTest: false },
   { id: 2, brand: 'Honda', model: 'CR-V', year: 2019, price: 1290000, mileage: 58000, isAvailable: true, isTest: false },
-  { id: 6, brand: 'PRUEBA', model: 'Vehiculo de prueba', year: 2020, price: 100, mileage: 1000, isAvailable: true, isTest: true },
+  { id: 6, brand: 'PRUEBA', model: 'Vehículo de prueba', year: 2020, price: 100, mileage: 1000, isAvailable: true, isTest: true },
 ];
 
 export const ADMIN_NEWS_MOCK: AdminNewsModel[] = [
   { id: 1, title: '809 Expo por primera vez en RD', scope: 'local', publishedAt: new Date('2026-08-01T12:00:00Z'), isPublished: true, isTest: false },
-  { id: 2, title: 'Primer Mercedes Benz completamente electrico', scope: 'internacional', publishedAt: new Date('2026-07-20T12:00:00Z'), isPublished: true, isTest: false },
+  { id: 2, title: 'Primer Mercedes Benz completamente eléctrico', scope: 'internacional', publishedAt: new Date('2026-07-20T12:00:00Z'), isPublished: true, isTest: false },
   { id: 3, title: 'PRUEBA - Noticia de prueba', scope: 'local', publishedAt: new Date('2026-08-15T12:00:00Z'), isPublished: true, isTest: true },
 ];

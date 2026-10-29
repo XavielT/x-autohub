@@ -19,9 +19,18 @@
     [value]="query()"
     (input)="onInput($any($event.target).value)"
     (keydown)="onKeydown($event)"
-    (focus)="isOpen.set(true)"
+    (focus)="onFocus()"
   />
-  <button class="sb__submit" type="submit" aria-label="Buscar">Buscar</button>
+  @if (isSearching()) { <span class="sb__spinner" aria-hidden="true"></span> }
+  <button class="sb__submit" type="submit" aria-label="Buscar" [disabled]="isSearching()">Buscar</button>
+
+  @if (isOpen() && suggestions().length === 0 && (isSearching() || noResults())) {
+    <ul class="sb__list" role="listbox" [id]="idPrefix() + '-list'">
+      <li class="sb__status" role="status">
+        @if (isSearching()) { Buscando… } @else { Sin resultados para «{{ trimmed() }}» }
+      </li>
+    </ul>
+  }
 
   @if (isOpen() && suggestions().length > 0) {
     <ul class="sb__list" role="listbox" [id]="idPrefix() + '-list'">
@@ -39,6 +48,7 @@
           <span class="sb__text">
             <span class="sb__name">{{ p.name }}</span>
             <span class="sb__brand">{{ p.brand }}</span>
+            @if (p.matchedAlias) { <span class="sb__alias">también: {{ p.matchedAlias }}</span> }
           </span>
           <span class="sb__price">RD$ {{ p.price | number:'1.0-0' }}</span>
         </li>

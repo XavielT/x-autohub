@@ -43,13 +43,13 @@ describe('adminGuard', () => {
   const state = { url: '/admin/pedidos' } as RouterStateSnapshot;
   const run = () => TestBed.runInInjectionContext(() => adminGuard(route, state));
 
-  it('deja pasar a un admin, aunque la sesion se restaure despues', async () => {
+  it('deja pasar a un admin, aunque la sesión se restaure después', async () => {
     provideAuth('admin');
 
     await expect(run()).resolves.toBe(true);
   });
 
-  it('manda a la raiz a un usuario con sesion que no es admin', async () => {
+  it('manda a la raiz a un usuario con sesión que no es admin', async () => {
     provideAuth('usuario');
 
     const result = await run();
@@ -58,7 +58,7 @@ describe('adminGuard', () => {
     expect((result as UrlTree).toString()).toBe('/');
   });
 
-  it('manda al login, con returnUrl, a quien no tiene sesion', async () => {
+  it('manda al login, con returnUrl, a quien no tiene sesión', async () => {
     provideAuth('anonimo');
 
     const result = await run();

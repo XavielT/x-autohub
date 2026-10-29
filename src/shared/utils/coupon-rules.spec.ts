@@ -85,10 +85,10 @@ describe('coupon-rules', () => {
     it('la compra mínima dice cuánto falta pedir, con miles', () => {
       const c = coupon({ minSubtotal: 3000 });
 
-      expect(errorOf(() => check(c, 2000))).toBe('Este cupon pide una compra de al menos RD$ 3,000.');
+      expect(errorOf(() => check(c, 2000))).toBe('Este cupón pide una compra de al menos RD$ 3,000.');
       expect(errorOf(() => check(c, 3000))).toBeNull();
       expect(errorOf(() => check(coupon({ minSubtotal: 1000000 }), 10))).toBe(
-        'Este cupon pide una compra de al menos RD$ 1,000,000.',
+        'Este cupón pide una compra de al menos RD$ 1,000,000.',
       );
     });
 
@@ -96,20 +96,20 @@ describe('coupon-rules', () => {
       const c = coupon({ maxUses: 1 });
 
       expect(errorOf(() => check(c, 1000, 0, { total: 0, byCustomer: 0 }))).toBeNull();
-      expect(errorOf(() => check(c, 1000, 0, { total: 1, byCustomer: 0 }))).toBe('Este cupon ya se agoto.');
+      expect(errorOf(() => check(c, 1000, 0, { total: 1, byCustomer: 0 }))).toBe('Este cupón ya se agoto.');
     });
 
     it('el límite por cliente cuenta lo de esa persona, no el total', () => {
       const c = coupon({ maxUsesPerCustomer: 1 });
 
       expect(errorOf(() => check(c, 1000, 0, { total: 5, byCustomer: 0 }))).toBeNull();
-      expect(errorOf(() => check(c, 1000, 0, { total: 5, byCustomer: 1 }))).toBe('Ya usaste este cupon.');
+      expect(errorOf(() => check(c, 1000, 0, { total: 5, byCustomer: 1 }))).toBe('Ya usaste este cupón.');
     });
 
     it('un cupón que no descuenta nada no aplica (envío gratis en un retiro)', () => {
       const free = coupon({ type: 'free_shipping', value: null });
 
-      expect(errorOf(() => check(free, 1000, 0))).toBe('Este cupon no aplica a tu pedido.');
+      expect(errorOf(() => check(free, 1000, 0))).toBe('Este cupón no aplica a tu pedido.');
       expect(check(free, 1000, 450)).toBe(450);
     });
 

@@ -4,17 +4,18 @@ import { Subject, of, throwError } from 'rxjs';
 
 import { MAX_SUGGESTIONS, SUGGESTION_DEBOUNCE_MS, SearchBox } from './search-box';
 import { ProductService } from '../../services/product.service';
-import { ProductModel, ProductSearchResult } from '../../models/product.model';
+import { ProductModel, ProductSuggestion } from '../../models/product.model';
 import { makeProduct } from '../../testing/product.fixture';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
 
 describe('SearchBox', () => {
-  const search = vi.fn<(params: { query?: string; limit?: number }) => unknown>();
+  const search = vi.fn<(query: string, limit?: number) => unknown>();
 
-  const result = (items: ProductModel[]): ProductSearchResult => ({ items, total: items.length });
+  const result = (items: ProductModel[]): ProductSuggestion[] => items;
 
   function montar(variant: 'navbar' | 'hero' = 'navbar') {
     TestBed.configureTestingModule({
-      providers: [{ provide: ProductService, useValue: { searchProducts: search } }],
+      providers: [{ provide: ProductService, useValue: { suggestProducts: search } }],
     });
     const fixture = TestBed.createComponent(SearchBox);
     fixture.componentRef.setInput('variant', variant);
@@ -32,7 +33,7 @@ describe('SearchBox', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('espera 300 ms desde la ultima tecla antes de pedir sugerencias', () => {
+  it('espera 250 ms desde la última tecla antes de pedir sugerencias', () => {
     const { c } = montar();
 
     c.onInput('dis');
@@ -41,7 +42,7 @@ describe('SearchBox', () => {
 
     vi.advanceTimersByTime(1);
     expect(search).toHaveBeenCalledTimes(1);
-    expect(search).toHaveBeenCalledWith({ query: 'dis', limit: MAX_SUGGESTIONS });
+    expect(search).toHaveBeenCalledWith('dis', MAX_SUGGESTIONS);
   });
 
   it('seguir escribiendo reinicia la espera: tres teclas rapidas, una sola consulta', () => {
@@ -55,7 +56,28 @@ describe('SearchBox', () => {
     vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
 
     expect(search).toHaveBeenCalledTimes(1);
-    expect(search).toHaveBeenCalledWith({ query: 'dis', limit: MAX_SUGGESTIONS });
+    expect(search).toHaveBeenCalledWith('dis', MAX_SUGGESTIONS);
+  });
+
+  it('si una sugerencia coincidió por un alias, lo dice ("también: …")', () => {
+    const { c, el, fixture } = montar();
+    search.mockReturnValueOnce(of([{ ...makeProduct({ id: 5, name: 'Parachoques GTR', slug: 'parachoques-gtr' }), matchedAlias: 'bumper' }]));
+
+    c.onInput('bump');
+    vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.sb__alias')?.textContent?.trim()).toBe('también: bumper');
+  });
+
+  it('sin alias no pinta la línea "también"', () => {
+    const { c, el, fixture } = montar();
+
+    c.onInput('dis');
+    vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+    fixture.detectChanges();
+
+    expect(el.querySelector('.sb__alias')).toBeNull();
   });
 
   it('pide como maximo 6 sugerencias', () => {
@@ -86,7 +108,7 @@ describe('SearchBox', () => {
   });
 
   it('una respuesta vieja no pisa a la nueva (switchMap)', () => {
-    const lenta = new Subject<ProductSearchResult>();
+    const lenta = new Subject<ProductSuggestion[]>();
     search.mockReturnValueOnce(lenta);
     search.mockReturnValueOnce(of(result([makeProduct({ id: 9, name: 'Nuevo' })])));
     const { c } = montar();
@@ -101,7 +123,7 @@ describe('SearchBox', () => {
     expect(c.suggestions().map((p) => p.id)).toEqual([9]);
   });
 
-  it('si la busqueda falla no rompe: sin sugerencias, y el Enter sigue funcionando', () => {
+  it('si la búsqueda falla no rompe: sin sugerencias, y el Enter sigue funcionando', () => {
     search.mockReturnValue(throwError(() => new Error('sin red')));
     const { c, navigate } = montar();
 
@@ -124,7 +146,7 @@ describe('SearchBox', () => {
     expect(c.isOpen()).toBe(false);
   });
 
-  it('Enter con el campo vacio no navega', () => {
+  it('Enter con el campo vacío no navega', () => {
     const { c, navigate } = montar();
     c.onInput('   ');
     c.submit();
@@ -214,12 +236,88 @@ describe('SearchBox', () => {
     expect(el.querySelector('.sb--hero')).not.toBeNull();
   });
 
-  it('el submit del formulario no recarga la pagina', () => {
+  it('el submit del formulario no recarga la página', () => {
     const { c } = montar();
     const event = new Event('submit', { cancelable: true });
 
     c.onSubmit(event);
 
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  describe('estados de carga', () => {
+    it('mientras la petición está en vuelo: spinner, "Buscando…" y el botón apagado', () => {
+      const pending = new Subject<ProductSuggestion[]>();
+      search.mockReturnValue(pending);
+      const { fixture, c, el } = montar();
+
+      c.onInput('liqui');
+      c.isOpen.set(true);
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      fixture.detectChanges();
+
+      expect(c.isSearching()).toBe(true);
+      expect(el.querySelector('.sb__spinner')).not.toBeNull();
+      expect(el.querySelector('.sb__status')?.textContent).toContain('Buscando…');
+      expect(el.querySelector<HTMLButtonElement>('.sb__submit')?.disabled).toBe(true);
+
+      pending.next(result([makeProduct({ id: 9, name: 'Liquido', slug: 'liquido' })]));
+      fixture.detectChanges();
+      expect(c.isSearching()).toBe(false);
+      expect(el.querySelector('.sb__spinner')).toBeNull();
+      expect(el.querySelector<HTMLButtonElement>('.sb__submit')?.disabled).toBe(false);
+    });
+
+    it('sin coincidencias dice "Sin resultados para «liqui»"', () => {
+      search.mockReturnValue(of(result([])));
+      const { fixture, c, el } = montar();
+
+      c.onInput('liqui');
+      c.isOpen.set(true);
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      fixture.detectChanges();
+
+      expect(el.querySelector('.sb__status')?.textContent).toContain('Sin resultados para «liqui»');
+    });
+
+    it('un prefijo ya buscado sale del caché y no vuelve a la red', () => {
+      const { c } = montar();
+
+      c.onInput('dis');
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      c.onInput('disc');
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      expect(search).toHaveBeenCalledTimes(2);
+
+      c.onInput('dis');
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      expect(search).toHaveBeenCalledTimes(2);
+      expect(c.suggestions().length).toBe(2);
+    });
+
+    it('seguir escribiendo cancela la petición anterior', () => {
+      const first = new Subject<ProductSuggestion[]>();
+      const second = new Subject<ProductSuggestion[]>();
+      search.mockReturnValueOnce(first).mockReturnValueOnce(second);
+      const { c } = montar();
+
+      c.onInput('dis');
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+      c.onInput('disc');
+      vi.advanceTimersByTime(SUGGESTION_DEBOUNCE_MS);
+
+      expect(first.observed).toBe(false); // switchMap se desuscribió: se aborta también en el cliente
+      expect(second.observed).toBe(true);
+    });
+
+    it('enfocar el campo pide el módulo de supabase-js una sola vez', () => {
+      const { c } = montar();
+      const client = vi.spyOn(TestBed.inject(SupabaseService), 'client');
+
+      c.onFocus();
+      c.onFocus();
+
+      expect(client).toHaveBeenCalledTimes(1);
+    });
   });
 });

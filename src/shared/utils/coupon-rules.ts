@@ -24,7 +24,7 @@ export interface CouponUsage {
 }
 
 /** El mismo mensaje para "no existe", "apagado" y "fuera de fecha": no se revela cuáles existen. */
-export const COUPON_UNAVAILABLE = 'Ese cupon no existe o ya no esta disponible.';
+export const COUPON_UNAVAILABLE = 'Ese cupón no existe o ya no está disponible.';
 
 /** `3000` → `"3,000"`, como lo escribe la base (`to_char(.., 'FM999,999,990')`). */
 const money = (n: number): string => Math.round(n).toLocaleString('en-US');
@@ -73,19 +73,19 @@ export function checkCoupon(
   }
 
   if (input.subtotal < coupon.minSubtotal) {
-    throw new Error(`Este cupon pide una compra de al menos RD$ ${money(coupon.minSubtotal)}.`);
+    throw new Error(`Este cupón pide una compra de al menos RD$ ${money(coupon.minSubtotal)}.`);
   }
 
   if (coupon.maxUses !== null && input.usage.total >= coupon.maxUses) {
-    throw new Error('Este cupon ya se agoto.');
+    throw new Error('Este cupón ya se agoto.');
   }
 
   if (coupon.maxUsesPerCustomer !== null && input.usage.byCustomer >= coupon.maxUsesPerCustomer) {
-    throw new Error('Ya usaste este cupon.');
+    throw new Error('Ya usaste este cupón.');
   }
 
   const discount = couponDiscount(coupon, input.subtotal, input.shipping);
-  if (discount <= 0) throw new Error('Este cupon no aplica a tu pedido.');
+  if (discount <= 0) throw new Error('Este cupón no aplica a tu pedido.');
 
   return discount;
 }

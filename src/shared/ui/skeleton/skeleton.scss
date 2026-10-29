@@ -1,0 +1,75 @@
+:host {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+// Las variantes de tarjeta se reparten como las grillas reales del sitio.
+:host(.sk--product-card),
+:host(.sk--vehicle-card),
+:host(.sk--service-card),
+:host(.sk--post) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  align-items: stretch;
+}
+
+:host(.sk--detail) { grid-template-columns: 1fr; }
+
+.sk__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// El bloque base: gris sobre --main, con un brillo que cruza de izquierda a derecha.
+.sk__block {
+  position: relative;
+  overflow: hidden;
+  background-color: #262626;
+  border-radius: 8px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+    animation: sk-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes sk-shimmer { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk__block::after { animation: none; display: none; }
+}
+
+.sk__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background-color: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+}
+
+.sk__img { width: 100%; aspect-ratio: 16 / 10; border-radius: 10px; &--square { aspect-ratio: 1 / 1; } &--tall { aspect-ratio: 4 / 3; } }
+.sk__line { height: 14px; &--sm { height: 10px; } &--lg { height: 22px; } }
+.sk__cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sk__head { display: flex; align-items: center; gap: 10px; }
+.sk__dot { flex: none; width: 32px; height: 32px; border-radius: 50%; }
+.sk__btn { height: 44px; border-radius: 10px; margin-top: 6px; }
+.sk__row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.sk__thumb { flex: none; width: 56px; height: 56px; }
+.sk__grow { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.sk__avatar { flex: none; width: 72px; height: 72px; border-radius: 50%; }
+.sk__profile { display: flex; align-items: center; gap: 16px; }
+.sk__detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; }
+.sk__side { display: flex; flex-direction: column; gap: 12px; }
+
+.w30 { width: 30%; } .w40 { width: 40%; } .w50 { width: 50%; } .w60 { width: 60%; }
+.w70 { width: 70%; } .w80 { width: 80%; }

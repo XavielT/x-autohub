@@ -16,7 +16,7 @@
   }
 
   @if (isLoading()) {
-    <p class="garage__empty">Cargando tu garaje...</p>
+    <app-skeleton variant="row" [count]="2" label="Cargando tu garaje…" />
   } @else if (rows().length === 0) {
     <p class="garage__empty">Todavía no tienes vehículos guardados. Agrega el primero y te lo recordamos en cada visita.</p>
   } @else {

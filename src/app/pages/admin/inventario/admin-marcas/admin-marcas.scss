@@ -97,3 +97,10 @@
     text-align: center;
   }
 }
+
+.mk__unmatched .mk__model {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

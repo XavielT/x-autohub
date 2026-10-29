@@ -33,12 +33,12 @@ describe('productIdRedirectGuard', () => {
     expect(((await run('999')) as UrlTree).toString()).toBe('/tienda');
   });
 
-  it('un id que no es un numero ni consulta el servicio', async () => {
+  it('un id que no es un número ni consulta el servicio', async () => {
     expect(((await run('abc')) as UrlTree).toString()).toBe('/tienda');
     expect(getById).not.toHaveBeenCalled();
   });
 
-  it('si el servicio falla tambien va a la tienda', async () => {
+  it('si el servicio falla también va a la tienda', async () => {
     getById.mockReturnValue(throwError(() => new Error('caido')));
 
     expect(((await run('2')) as UrlTree).toString()).toBe('/tienda');

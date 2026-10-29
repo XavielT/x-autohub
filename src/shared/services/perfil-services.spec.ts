@@ -82,7 +82,7 @@ describe('AuthService.updateProfile (mock)', () => {
     await firstValueFrom(auth.login({ email: 'xaviel@correo.com', password: 'secreta1' }));
   });
 
-  it('actualiza la senal de sesion', async () => {
+  it('actualiza la senal de sesión', async () => {
     await firstValueFrom(
       auth.updateProfile({ displayName: 'Nombre Nuevo', phone: '809-555-1111', location: 'Azua' }),
     );
@@ -92,14 +92,14 @@ describe('AuthService.updateProfile (mock)', () => {
     expect(auth.user()?.location).toBe('Azua');
   });
 
-  it('persiste en localStorage, asi que sobrevive una recarga', async () => {
+  it('persiste en localStorage, así que sobrevive una recarga', async () => {
     await firstValueFrom(auth.updateProfile({ displayName: 'Persistido' }));
 
     const guardado = JSON.parse(localStorage.getItem('x-autohub.session') ?? '{}');
     expect(guardado.displayName).toBe('Persistido');
   });
 
-  it('recorta los espacios y convierte lo vacio en undefined', async () => {
+  it('recorta los espacios y convierte lo vacío en undefined', async () => {
     await firstValueFrom(
       auth.updateProfile({ displayName: '  Con Espacios  ', phone: '   ', location: '' }),
     );
@@ -119,11 +119,11 @@ describe('AuthService.updateProfile (mock)', () => {
     expect(auth.user()?.id).toBe(antes.id);
   });
 
-  it('falla con un mensaje claro si no hay sesion', async () => {
+  it('falla con un mensaje claro si no hay sesión', async () => {
     auth.logout();
 
     await expect(firstValueFrom(auth.updateProfile({ displayName: 'X' }))).rejects.toThrow(
-      /sesion/i,
+      /sesión/i,
     );
   });
 });

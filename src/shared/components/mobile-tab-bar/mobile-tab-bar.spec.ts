@@ -68,7 +68,7 @@ describe('MobileTabBar', () => {
     expect(tabLabels(el)).toEqual(['Inicio', 'Categorías', 'Buscar', 'Carrito', 'Cuenta']);
   });
 
-  it('Inicio y Buscar son enlaces; Categorias, Carrito y Cuenta son botones', () => {
+  it('Inicio y Buscar son enlaces; Categorías, Carrito y Cuenta son botones', () => {
     const { el } = montar();
     const tabs = Array.from(el.querySelectorAll('.tabs__tab'));
     expect(tabs.map((t) => t.tagName)).toEqual(['A', 'BUTTON', 'A', 'BUTTON', 'BUTTON']);
@@ -77,7 +77,7 @@ describe('MobileTabBar', () => {
   });
 
   describe('pestana activa', () => {
-    it('sigue la pagina: Inicio en /, Buscar en /buscar', async () => {
+    it('sigue la página: Inicio en /, Buscar en /buscar', async () => {
       const { c } = montar();
       const router = TestBed.inject(Router);
 
@@ -91,7 +91,7 @@ describe('MobileTabBar', () => {
       expect(c.activeTab()).toBeNull();
     });
 
-    it('una hoja abierta manda sobre la pagina, y el carrito abierto tambien', async () => {
+    it('una hoja abierta manda sobre la página, y el carrito abierto también', async () => {
       const { c } = montar();
       await TestBed.inject(Router).navigateByUrl('/');
 
@@ -113,8 +113,8 @@ describe('MobileTabBar', () => {
     });
   });
 
-  describe('hoja de Categorias', () => {
-    it('lista las 12 categorias y un enlace a toda la tienda', async () => {
+  describe('hoja de Categorías', () => {
+    it('lista las 12 categorías y un enlace a toda la tienda', async () => {
       const { fixture, c, el } = montar();
       c.toggleSheet('categorias');
       fixture.detectChanges();
@@ -126,7 +126,7 @@ describe('MobileTabBar', () => {
       expect(el.querySelector('.tabs__root')?.getAttribute('href')).toBe('/tienda/c/accesorios-interior');
     });
 
-    it('tocar la pestana otra vez la cierra, y Escape tambien', () => {
+    it('tocar la pestana otra vez la cierra, y Escape también', () => {
       const { c } = montar();
       c.toggleSheet('categorias');
       expect(c.sheet()).toBe('categorias');
@@ -138,7 +138,7 @@ describe('MobileTabBar', () => {
       expect(c.sheet()).toBeNull();
     });
 
-    it('abrir una hoja cierra el carrito, y elegir una categoria cierra la hoja', () => {
+    it('abrir una hoja cierra el carrito, y elegir una categoría cierra la hoja', () => {
       const { c } = montar();
       c.toggleSheet('categorias');
       expect(closePanel).toHaveBeenCalled();
@@ -149,7 +149,7 @@ describe('MobileTabBar', () => {
   });
 
   describe('hoja de Cuenta', () => {
-    it('sin sesion ofrece Entrar y Crear cuenta', () => {
+    it('sin sesión ofrece Entrar y Crear cuenta', () => {
       const { fixture, c, el } = montar();
       c.toggleSheet('cuenta');
       fixture.detectChanges();
@@ -159,7 +159,7 @@ describe('MobileTabBar', () => {
       expect(el.textContent).not.toContain('Salir');
     });
 
-    it('con sesion muestra el perfil y Salir', () => {
+    it('con sesión muestra el perfil y Salir', () => {
       user.set(BASE);
       const { fixture, c, el } = montar();
       c.toggleSheet('cuenta');
@@ -169,7 +169,7 @@ describe('MobileTabBar', () => {
       expect(el.textContent).toContain('Salir');
     });
 
-    it('agrupa Vehiculos (Auto Hub, Hub Market, Publicar), Servicios y Comunidad', () => {
+    it('agrupa Vehículos (Auto Hub, Hub Market, Publicar), Servicios y Comunidad', () => {
       const { fixture, c, el } = montar();
       c.toggleSheet('cuenta');
       fixture.detectChanges();
@@ -178,7 +178,7 @@ describe('MobileTabBar', () => {
       expect(links).toEqual(['/auto-hub', '/hub-market', '/publicar', '/servicios', '/social-hub']);
     });
 
-    it('el panel de administracion solo sale para quien modera', () => {
+    it('el panel de administración solo sale para quien modera', () => {
       const { fixture, c, el } = montar();
       c.toggleSheet('cuenta');
       fixture.detectChanges();
@@ -189,7 +189,7 @@ describe('MobileTabBar', () => {
       expect(el.querySelector('a[href="/admin"]')).not.toBeNull();
     });
 
-    it('muestra el vehiculo elegido y al tocarlo abre el selector', () => {
+    it('muestra el vehículo elegido y al tocarlo abre el selector', () => {
       const { fixture, c, el } = montar();
       c.toggleSheet('cuenta');
       fixture.detectChanges();
@@ -200,7 +200,7 @@ describe('MobileTabBar', () => {
       expect(c.sheet()).toBeNull();
     });
 
-    it('Salir cierra la sesion, cierra la hoja, avisa y vuelve al inicio', () => {
+    it('Salir cierra la sesión, cierra la hoja, avisa y vuelve al inicio', () => {
       user.set(BASE);
       const { c } = montar();
       const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
@@ -210,7 +210,7 @@ describe('MobileTabBar', () => {
 
       expect(logout).toHaveBeenCalled();
       expect(c.sheet()).toBeNull();
-      expect(toast.show).toHaveBeenCalledWith('Sesion cerrada.');
+      expect(toast.show).toHaveBeenCalledWith('Sesión cerrada.');
       expect(navigate).toHaveBeenCalledWith('/');
     });
   });
@@ -226,7 +226,7 @@ describe('MobileTabBar', () => {
       expect(c.sheet()).toBeNull();
     });
 
-    it('muestra el contador solo si hay articulos', () => {
+    it('muestra el contador solo si hay artículos', () => {
       const { fixture, el } = montar();
       expect(el.querySelector('.tabs__count')).toBeNull();
 

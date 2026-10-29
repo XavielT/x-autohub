@@ -11,7 +11,7 @@
   @if (!query()) {
     <p class="bus__hint">Escribe el nombre de una pieza, una marca o un SKU.</p>
   } @else if (isLoading()) {
-    <p class="bus__hint">Buscando…</p>
+    <app-skeleton variant="product-card" [count]="4" label="Buscando…" />
   } @else {
     <section class="bus__section" aria-labelledby="bus-store">
       <h2 id="bus-store" class="bus__h2">En la tienda <span>{{ results().storeTotal }}</span></h2>

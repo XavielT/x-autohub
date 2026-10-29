@@ -423,7 +423,7 @@ export class HubMarketService {
     if (this.supabase.shouldUseMockData()) {
       if (decision === 'rechazado' && (cleanReason?.length ?? 0) < 10) {
         return throwError(
-          () => new Error('Explica en al menos 10 caracteres por que se rechaza.'),
+          () => new Error('Explica en al menos 10 caracteres por qué se rechaza.'),
         );
       }
 

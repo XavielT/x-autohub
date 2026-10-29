@@ -75,7 +75,7 @@ export function fitsVehicle(
       f.makeId === vehicle.makeId &&
       // Sin modelo elegido basta con la marca; con modelo, el fitment es de toda
       // la marca (modelId nulo) o de ese modelo.
-      (vehicle.modelId === undefined || f.modelId === null || f.modelId === vehicle.modelId) &&
+      (vehicle.modelId == null || f.modelId === null || f.modelId === vehicle.modelId) &&
       (vehicle.year === undefined || f.yearFrom === null || f.yearFrom <= vehicle.year) &&
       (vehicle.year === undefined || f.yearTo === null || f.yearTo >= vehicle.year),
   );

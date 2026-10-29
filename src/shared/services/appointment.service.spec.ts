@@ -110,14 +110,14 @@ describe('AppointmentService (mock)', () => {
       await firstValueFrom(service.book(input({ contactPhone: '809-555-0002' })));
 
       expect(await errorOf(service.book(input({ contactPhone: '809-555-0003' })))).toBe(
-        'Esa hora ya no esta disponible. Elige otra.',
+        'Esa hora ya no está disponible. Elige otra.',
       );
       const slots = await firstValueFrom(service.getSlots(4, MONDAY));
       expect(slots.map((s) => localTime(s.at))).not.toContain('09:00');
     });
 
     it('rechaza una hora que ya pasó, una que no es franja y un día cerrado', async () => {
-      const unavailable = 'Esa hora ya no esta disponible. Elige otra.';
+      const unavailable = 'Esa hora ya no está disponible. Elige otra.';
 
       expect(await errorOf(service.book(input({ scheduledAt: new Date('2026-10-22T14:00:00Z') })))).toBe(unavailable);
       expect(await errorOf(service.book(input({ scheduledAt: slotInstant(MONDAY, '09:30') })))).toBe(unavailable);
@@ -125,13 +125,13 @@ describe('AppointmentService (mock)', () => {
     });
 
     it('rechaza un servicio que no existe', async () => {
-      expect(await errorOf(service.book(input({ serviceId: 99999 })))).toBe('Esa hora ya no esta disponible. Elige otra.');
+      expect(await errorOf(service.book(input({ serviceId: 99999 })))).toBe('Esa hora ya no está disponible. Elige otra.');
     });
 
     it('pide nombre y un teléfono válido, con los mensajes de la base', async () => {
       expect(await errorOf(service.book(input({ contactName: '  ' })))).toBe('Escribe tu nombre.');
       expect(await errorOf(service.book(input({ contactPhone: '12345' })))).toBe(
-        'Escribe un telefono valido: lo usamos para confirmar tu cita.',
+        'Escribe un teléfono válido: lo usamos para confirmar tu cita.',
       );
     });
 
@@ -142,7 +142,7 @@ describe('AppointmentService (mock)', () => {
 
       expect(
         await errorOf(service.book(input({ scheduledAt: slotInstant(MONDAY, '11:00'), contactPhone: '+1 809 555 0134' }))),
-      ).toBe('Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas.');
+      ).toBe('Ya tienes 3 citas abiertas con este teléfono. Escríbenos por WhatsApp para cambiarlas.');
     });
 
     it('sobrevive a una recarga', async () => {
@@ -206,7 +206,7 @@ describe('AppointmentService (mock)', () => {
       const soon = await firstValueFrom(service.book(input({ scheduledAt: slotInstant('2026-10-23', '09:00') })));
 
       expect(await errorOf(service.cancel(soon.id))).toBe(
-        'Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp.',
+        'Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.',
       );
     });
 

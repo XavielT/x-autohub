@@ -31,10 +31,10 @@ export const adminGuard: CanActivateFn = async (_route, state) => {
   }
 
   if (auth.isLoggedIn()) {
-    toast.show('Esa seccion es solo para administradores.', 'error');
+    toast.show('Esa sección es solo para administradores.', 'error');
     return router.createUrlTree(['/']);
   }
 
-  toast.show('Inicia sesion para continuar.', 'error');
+  toast.show('Inicia sesión para continuar.', 'error');
   return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };

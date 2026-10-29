@@ -12,22 +12,26 @@
   </header>
 
   @if (isLoading()) {
-    <p class="srv__state" role="status">Cargando los servicios…</p>
+    <app-skeleton variant="service-card" [count]="6" label="Cargando los servicios…" />
   } @else if (hasError() && !online.isOnline()) {
     <app-offline-state (retry)="loadServices()" />
   } @else if (hasError()) {
     <p class="srv__state" role="alert">No pudimos cargar los servicios. Revisa tu conexión e inténtalo otra vez.</p>
   } @else {
-    @for (group of groups(); track group.category) {
-      <section class="srv__section" [attr.aria-labelledby]="'cat-' + group.category">
-        <h2 class="srv__h2" [id]="'cat-' + group.category">{{ group.label }}</h2>
-        <ul class="srv__grid">
-          @for (service of group.services; track service.id) {
-            <li><app-service-card [service]="service" /></li>
-          }
-        </ul>
-      </section>
-    }
+    <nav class="srv__chips" aria-label="Categorías de servicios">
+      <button type="button" class="srv__chip" [class.srv__chip--on]="selected() === null"
+              [attr.aria-pressed]="selected() === null" (click)="select(null)">Todos</button>
+      @for (chip of chips(); track chip.category) {
+        <button type="button" class="srv__chip" [class.srv__chip--on]="selected() === chip.category"
+                [attr.aria-pressed]="selected() === chip.category" (click)="select(chip.category)">{{ chip.label }}</button>
+      }
+    </nav>
+
+    <ul class="srv__grid">
+      @for (item of visible(); track item.service.id) {
+        <li><app-service-card [service]="item.service" [categoryLabel]="item.categoryLabel" /></li>
+      }
+    </ul>
 
     @if (works().length > 0) {
       <section class="srv__section" aria-labelledby="srv-works">

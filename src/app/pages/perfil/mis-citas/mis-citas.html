@@ -5,7 +5,7 @@
   </header>
 
   @if (isLoading()) {
-    <p class="citas__empty" role="status">Cargando tus citas…</p>
+    <app-skeleton variant="row" [count]="3" label="Cargando tus citas…" />
   } @else if (hasError()) {
     <p class="citas__empty" role="alert">No pudimos leer tus citas. Inténtalo más tarde.</p>
   } @else if (list().length === 0) {

@@ -64,7 +64,7 @@ export class Login {
     const c = this.form.controls;
     return [
       { key: 'email', label: 'Correo', invalid: c.email.invalid },
-      { key: 'password', label: 'Contrasena', invalid: c.password.invalid },
+      { key: 'password', label: 'Contraseña', invalid: c.password.invalid },
     ];
   }
 
@@ -88,7 +88,7 @@ export class Login {
       },
       error: (error: Error) => {
         this.isSubmitting.set(false);
-        this.errorMessage.set(error.message || 'No pudimos iniciar tu sesion.');
+        this.errorMessage.set(error.message || 'No pudimos iniciar tu sesión.');
       },
     });
   }

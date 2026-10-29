@@ -30,7 +30,7 @@ describe('AutoHub', () => {
     expect(pantalla().querySelector('.autohub__filters-panel')).not.toBeNull();
   });
 
-  it('un filtro reduce el listado, el boton cuenta cuantos hay y limpiar los quita', () => {
+  it('un filtro reduce el listado, el boton cuenta cuántos hay y limpiar los quita', () => {
     const total = component.filteredAutos().length;
     expect(total).toBeGreaterThan(1);
 

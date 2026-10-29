@@ -1,23 +1,23 @@
 <section class="adm-mod">
   <header class="adm-mod__head">
     <div>
-      <h2 class="adm-mod__title">Moderacion</h2>
+      <h2 class="adm-mod__title">Moderación</h2>
       <p class="adm-mod__lead">
         @if (isLoading()) {
           Cargando la cola...
         } @else {
-          {{ items().length }} publicacion(es) esperando revision
+          {{ items().length }} publicación(es) esperando revisión
         }
       </p>
     </div>
   </header>
 
   @if (isLoading()) {
-    <p class="adm-mod__empty">Cargando publicaciones...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando publicaciones…" />
   } @else if (items().length === 0) {
     <div class="adm-mod__empty adm-mod__empty--done">
       <p class="adm-mod__empty-title">No hay publicaciones pendientes.</p>
-      <p>Todo lo que la comunidad publico ya paso por revision.</p>
+      <p>Todo lo que la comunidad publicó ya pasó por revisión.</p>
     </div>
   } @else {
     <ul class="adm-mod__list">
@@ -55,7 +55,7 @@
                   · {{ item.createdAt | date:'d MMM y' }}
                   @if (waitingDays(item) > 0) {
                     <span class="adm-mod__waiting">
-                      Esperando {{ waitingDays(item) }} dia(s)
+                      Esperando {{ waitingDays(item) }} día(s)
                     </span>
                   }
                 }
@@ -95,17 +95,17 @@
                         name="reason"
                         data-field="reason"
                         rows="2"
-                        placeholder="Que tiene que corregir para volver a publicar"
+                        placeholder="Qué tiene que corregir para volver a publicar"
                         [class.is-invalid]="showReasonError"
                         [ngModel]="reason()"
                         (ngModelChange)="reason.set($event)"></textarea>
 
               @if (showReasonError) {
                 <span class="field-error">
-                  Explica en al menos {{ minReason }} caracteres por que se rechaza.
+                  Explica en al menos {{ minReason }} caracteres por qué se rechaza.
                 </span>
               } @else {
-                <span class="form-hint">Lo lee el vendedor en su perfil, asi que escribelo para el.</span>
+                <span class="form-hint">Lo lee el vendedor en su perfil, así que escríbelo para él.</span>
               }
 
               <button type="button" class="adm-mod__btn adm-mod__btn--warn"

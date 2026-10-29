@@ -7,7 +7,7 @@ import {
 } from './locations';
 
 describe('DO_LOCATIONS', () => {
-  it('trae las 31 provincias mas el Distrito Nacional', () => {
+  it('trae las 31 provincias más el Distrito Nacional', () => {
     expect(DO_LOCATIONS.length).toBe(32);
     expect(DO_LOCATIONS.some((l) => l.name === 'Distrito Nacional')).toBe(true);
   });
@@ -66,7 +66,7 @@ describe('filterLocations', () => {
     expect(filterLocations('macoris').map((l) => l.name)).toEqual(['San Pedro de Macorís']);
   });
 
-  it('con la busqueda vacia devuelve todo', () => {
+  it('con la búsqueda vacia devuelve todo', () => {
     expect(filterLocations('').length).toBe(32);
     expect(filterLocations('   ').length).toBe(32);
   });
@@ -98,7 +98,7 @@ describe('nearestLocation', () => {
     expect(nearestLocation(18.58, -68.4).name).toBe('La Altagracia');
   });
 
-  it('un clic en el mar devuelve la provincia mas cercana, no un error', () => {
+  it('un clic en el mar devuelve la provincia más cercana, no un error', () => {
     // Al sur de Barahona, mar adentro.
     expect(nearestLocation(17.7, -71.1).name).toBe('Barahona');
   });

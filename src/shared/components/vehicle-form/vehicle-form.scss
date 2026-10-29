@@ -11,26 +11,28 @@
     gap: 6px;
     font-size: 14px;
     color: var(--text-soft);
+    min-width: 0;
+  }
 
-    select {
-      font-family: var(--font-body);
-      // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
-      font-size: 16px;
-      min-height: 48px;
-      padding: 10px 12px;
-      color: var(--text-strong);
-      background-color: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 10px;
-      width: 100%;
-      box-sizing: border-box;
+  // El mensaje ocupa su propia fila debajo de la grilla: nunca empuja los campos.
+  &__text {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--text-strong);
+    background-color: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
 
-      &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 1px; }
-      &:disabled { opacity: 0.5; }
-    }
+    &::placeholder { color: var(--text-soft); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 1px; }
   }
 
   &__hint {
+    grid-column: 1 / -1;
     font-size: 12px;
     color: var(--text-soft);
   }

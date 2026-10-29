@@ -34,6 +34,9 @@ import {
   missingFieldsMessage,
 } from '../../../shared/forms/required-fields';
 
+import { AvatarEditor } from '../../../shared/components/avatar-editor/avatar-editor';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /** Cómo se dibuja el ciclo de vida de una publicación en /perfil, y qué botones lleva. */
 interface LifecycleView {
   label: string;
@@ -56,7 +59,7 @@ interface LifecycleView {
  */
 @Component({
   selector: 'app-perfil',
-  imports: [DatePipe, DecimalPipe, ReactiveFormsModule, RouterLink, HubMarketCard, LocationSelect, MiGaraje, MisFavoritos, MisCitas, Avisos],
+  imports: [Skeleton, Avatar, AvatarEditor, DatePipe, DecimalPipe, ReactiveFormsModule, RouterLink, HubMarketCard, LocationSelect, MiGaraje, MisFavoritos, MisCitas, Avisos],
   templateUrl: './perfil.html',
   styleUrl: './perfil.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

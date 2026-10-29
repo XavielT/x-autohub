@@ -24,6 +24,21 @@ describe('CatalogoCard', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  it('si la foto no carga o no existe, muestra el ícono de respaldo', async () => {
+    const fixture = TestBed.createComponent(CatalogoCard);
+    fixture.componentRef.setInput('hubPart', makeProduct({ id: 3, imgUrl: 'assets/imgs/x.jpg' }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.imageSrc()).toBe('assets/imgs/x.jpg');
+
+    fixture.componentInstance.imageFailed.set(true);
+    expect(fixture.componentInstance.imageSrc()).toBe('assets/icons/part-placeholder.svg');
+
+    const sinFoto = TestBed.createComponent(CatalogoCard);
+    sinFoto.componentRef.setInput('hubPart', makeProduct({ id: 4, imgUrl: '' }));
+    await sinFoto.whenStable();
+    expect(sinFoto.componentInstance.imageSrc()).toBe('assets/icons/part-placeholder.svg');
+  });
+
   describe('con opciones', () => {
     async function montar(over: Parameters<typeof makeProduct>[0] = {}) {
       const fixture = TestBed.createComponent(CatalogoCard);

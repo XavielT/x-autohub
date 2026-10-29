@@ -8,13 +8,15 @@ import { MobileTabBar } from '../shared/components/mobile-tab-bar/mobile-tab-bar
 import { InstallPrompt } from '../shared/components/install-prompt/install-prompt';
 import { UpdateToast } from '../shared/components/update-toast/update-toast';
 import { VehiclePickerModal } from '../shared/components/vehicle-picker-modal/vehicle-picker-modal';
+import { RouteProgress } from '../shared/components/route-progress/route-progress';
+import { WhatsNewModal } from '../shared/components/whats-new-modal/whats-new-modal';
 import { VehiclePickerService } from '../shared/services/vehicle-picker.service';
 
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, Navbar, Footer, CartModal, Toast, MobileTabBar, VehiclePickerModal, InstallPrompt, UpdateToast],
+  imports: [RouterOutlet, Navbar, Footer, CartModal, Toast, MobileTabBar, VehiclePickerModal, InstallPrompt, UpdateToast, WhatsNewModal, RouteProgress],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

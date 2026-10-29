@@ -9,7 +9,7 @@ const fit = (over: Partial<ProductFitmentModel> = {}): ProductFitmentModel => ({
 const corolla2015 = { makeId: 1, modelId: 1, year: 2015 };
 
 describe('compatibilityOf', () => {
-  it('un universal sirve siempre, con o sin vehiculo y con o sin fitments', () => {
+  it('un universal sirve siempre, con o sin vehículo y con o sin fitments', () => {
     const p = makeProduct({ fitmentType: 'universal' });
 
     expect(compatibilityOf(p, [], null).kind).toBe('universal');
@@ -23,13 +23,13 @@ describe('compatibilityOf', () => {
     expect(compatibilityOf(p, [], null).kind).toBe('consult');
   });
 
-  it('especifico con fitments y sin vehiculo elegido muestra la lista', () => {
+  it('especifico con fitments y sin vehículo elegido muestra la lista', () => {
     const p = makeProduct({ fitmentType: 'specific' });
 
     expect(compatibilityOf(p, [fit()], null).kind).toBe('list');
   });
 
-  it('con vehiculo: compatible si un fitment lo cubre, incompatible si ninguno', () => {
+  it('con vehículo: compatible si un fitment lo cubre, incompatible si ninguno', () => {
     const p = makeProduct({ fitmentType: 'specific' });
 
     expect(compatibilityOf(p, [fit()], corolla2015).kind).toBe('compatible');

@@ -13,7 +13,7 @@ const cat = (id: number, parentId: number | null, name: string, sortOrder: numbe
 });
 
 describe('buildCategoryTree', () => {
-  it('cuelga cada hija de su categoria, todo en orden', () => {
+  it('cuelga cada hija de su categoría, todo en orden', () => {
     const tree = buildCategoryTree([
       cat(3, 1, 'Pastillas', 20),
       cat(2, 1, 'Discos', 10),
@@ -26,18 +26,18 @@ describe('buildCategoryTree', () => {
     expect(tree[0].children).toEqual([]);
   });
 
-  it('con el mismo orden desempata por nombre, en espanol', () => {
-    const tree = buildCategoryTree([cat(1, null, 'Zapatas', 10), cat(2, null, 'Álbum', 10), cat(3, null, 'Baterias', 10)]);
-    expect(tree.map((n) => n.name)).toEqual(['Álbum', 'Baterias', 'Zapatas']);
+  it('con el mismo orden desempata por nombre, en español', () => {
+    const tree = buildCategoryTree([cat(1, null, 'Zapatas', 10), cat(2, null, 'Álbum', 10), cat(3, null, 'Baterías', 10)]);
+    expect(tree.map((n) => n.name)).toEqual(['Álbum', 'Baterías', 'Zapatas']);
   });
 
-  it('una hija cuyo padre no esta en la lista se descarta: no aparece suelta en la raiz', () => {
+  it('una hija cuyo padre no está en la lista se descarta: no aparece suelta en la raiz', () => {
     const tree = buildCategoryTree([cat(2, 99, 'Huerfana', 10), cat(1, null, 'Frenos', 10)]);
     expect(tree.map((n) => n.name)).toEqual(['Frenos']);
     expect(tree[0].children).toEqual([]);
   });
 
-  it('una lista vacia da un arbol vacio', () => {
+  it('una lista vacia da un arbol vacío', () => {
     expect(buildCategoryTree([])).toEqual([]);
   });
 
@@ -49,7 +49,7 @@ describe('buildCategoryTree', () => {
 });
 
 describe('slugify', () => {
-  it('quita acentos, pasa a minusculas y separa con guiones', () => {
+  it('quita acentos, pasa a minúsculas y separa con guiones', () => {
     expect(slugify('Disco ventilado GTR 355mm')).toBe('disco-ventilado-gtr-355mm');
     expect(slugify('Mercedes-Benz')).toBe('mercedes-benz');
     expect(slugify('Citroën')).toBe('citroen');

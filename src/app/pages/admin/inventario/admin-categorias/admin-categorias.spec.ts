@@ -16,7 +16,7 @@ describe('AdminCategorias', () => {
   const nombres = (el: HTMLElement) =>
     Array.from(el.querySelectorAll<HTMLInputElement>('.cat__name')).map((i) => i.value);
 
-  it('lista las 12 categorias de primer nivel, en orden', () => {
+  it('lista las 12 categorías de primer nivel, en orden', () => {
     const { el } = montar();
     const lista = nombres(el);
 
@@ -25,7 +25,7 @@ describe('AdminCategorias', () => {
     expect(lista[11]).toBe('Herramientas y emergencia');
   });
 
-  it('agrega una subcategoria dentro de una de primer nivel y la muestra colgada', () => {
+  it('agrega una subcategoría dentro de una de primer nivel y la muestra colgada', () => {
     const { fixture, c, el } = montar();
     const frenos = c.categories().find((x) => x.slug === 'frenos')!;
     c.newName.set('Discos y pastillas');
@@ -42,7 +42,7 @@ describe('AdminCategorias', () => {
 
   it('la nueva queda al final de sus hermanas', () => {
     const { c } = montar();
-    c.newName.set('Ultima');
+    c.newName.set('Última');
     c.add();
 
     const ultima = c.categories().find((x) => x.slug === 'ultima')!;
@@ -56,7 +56,7 @@ describe('AdminCategorias', () => {
     c.add();
 
     expect(c.categories().length).toBe(12);
-    expect(show).toHaveBeenCalledWith('Escribe el nombre de la categoria.', 'error');
+    expect(show).toHaveBeenCalledWith('Escribe el nombre de la categoría.', 'error');
   });
 
   it('un nombre repetido da el error de la base, sin duplicar', () => {
@@ -68,7 +68,7 @@ describe('AdminCategorias', () => {
     expect(show).toHaveBeenCalledWith('Ese registro ya existe.', 'error');
   });
 
-  it('renombra al salir del campo, y un nombre vacio se revierte', () => {
+  it('renombra al salir del campo, y un nombre vacío se revierte', () => {
     const { fixture, c, el } = montar();
     const frenos = c.categories().find((x) => x.slug === 'frenos')!;
     const input = Array.from(el.querySelectorAll<HTMLInputElement>('.cat__name')).find((i) => i.value === 'Frenos')!;
@@ -81,10 +81,10 @@ describe('AdminCategorias', () => {
     input.value = '   ';
     c.rename({ ...frenos, name: 'Frenos y discos' }, { target: input } as unknown as Event);
     expect(input.value).toBe('Frenos y discos');
-    expect(show).toHaveBeenCalledWith('El nombre no puede quedar vacio.', 'error');
+    expect(show).toHaveBeenCalledWith('El nombre no puede quedar vacío.', 'error');
   });
 
-  it('oculta y vuelve a mostrar una categoria', () => {
+  it('oculta y vuelve a mostrar una categoría', () => {
     const { c } = montar();
     const frenos = c.categories().find((x) => x.slug === 'frenos')!;
 
@@ -95,7 +95,7 @@ describe('AdminCategorias', () => {
     expect(c.categories().find((x) => x.id === frenos.id)?.isActive).toBe(true);
   });
 
-  it('sube y baja entre hermanas, y la primera no sube ni la ultima baja', () => {
+  it('sube y baja entre hermanas, y la primera no sube ni la última baja', () => {
     const { c, fixture, el } = montar();
     const primera = c.categories().find((x) => x.slug === 'accesorios-interior')!;
 

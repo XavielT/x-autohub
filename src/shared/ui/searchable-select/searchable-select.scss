@@ -1,0 +1,103 @@
+.ss {
+  position: relative;
+  width: 100%;
+  font-family: var(--font-body);
+
+  &__input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 10px 36px 10px 12px;
+    // 16px: debajo de eso Safari en iPhone hace zoom al enfocar el campo.
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--text-strong);
+    background-color: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+
+    &::placeholder { color: var(--text-soft); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 1px; }
+    &:disabled { opacity: 0.5; }
+  }
+
+  &--invalid &__input { border-color: #ff6b6b; }
+
+  &__chevron {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -6px;
+    border-right: 2px solid var(--text-soft);
+    border-bottom: 2px solid var(--text-soft);
+    transform: rotate(45deg);
+    pointer-events: none;
+    transition: transform 0.15s ease;
+  }
+  &--open &__chevron { transform: rotate(225deg); margin-top: -2px; }
+
+  &__backdrop { display: none; }
+
+  &__list {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    // 8 filas visibles de 40px; el resto con scroll.
+    max-height: 328px;
+    overflow-y: auto;
+    background-color: var(--main);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  }
+
+  &__option {
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text-strong);
+    cursor: pointer;
+
+    &--active { background-color: rgba(255, 170, 0, 0.18); color: var(--Hub); }
+    &[aria-selected='true'] { font-weight: 700; }
+  }
+
+  &__empty {
+    padding: 12px;
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+}
+
+// En el teléfono la lista sube desde abajo como una hoja, sobre un fondo oscuro.
+@media (max-width: 640px) {
+  .ss {
+    &__backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 29;
+      background: rgba(0, 0, 0, 0.55);
+    }
+    &__list {
+      position: fixed;
+      z-index: 30;
+      left: 0;
+      right: 0;
+      top: auto;
+      bottom: 0;
+      max-height: 55vh;
+      border-radius: 16px 16px 0 0;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+    }
+  }
+}

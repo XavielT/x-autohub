@@ -1,0 +1,68 @@
+<span class="sk__sr">{{ label() }}</span>
+
+@for (i of items(); track i) {
+  @switch (variant()) {
+    @case ('product-card') {
+      <div class="sk__card" aria-hidden="true">
+        <div class="sk__block sk__img sk__img--square"></div>
+        <div class="sk__block sk__line sk__line--sm w40"></div>
+        <div class="sk__block sk__line"></div>
+        <div class="sk__block sk__line w70"></div>
+        <div class="sk__block sk__line sk__line--lg w50"></div>
+      </div>
+    }
+    @case ('vehicle-card') {
+      <div class="sk__card" aria-hidden="true">
+        <div class="sk__block sk__img"></div>
+        <div class="sk__block sk__line"></div>
+        <div class="sk__block sk__line w60"></div>
+        <div class="sk__block sk__line sk__line--lg w50"></div>
+        <div class="sk__cols"><div class="sk__block sk__line"></div><div class="sk__block sk__line"></div><div class="sk__block sk__line"></div></div>
+      </div>
+    }
+    @case ('service-card') {
+      <div class="sk__card" aria-hidden="true">
+        <div class="sk__block sk__line sk__line--sm w30"></div>
+        <div class="sk__head"><div class="sk__block sk__dot"></div><div class="sk__block sk__line w70"></div></div>
+        <div class="sk__block sk__line"></div>
+        <div class="sk__block sk__line w80"></div>
+        <div class="sk__block sk__line w50"></div>
+        <div class="sk__block sk__btn"></div>
+      </div>
+    }
+    @case ('row') {
+      <div class="sk__row" aria-hidden="true">
+        <div class="sk__block sk__thumb"></div>
+        <div class="sk__grow"><div class="sk__block sk__line w70"></div><div class="sk__block sk__line sk__line--sm w40"></div></div>
+      </div>
+    }
+    @case ('detail') {
+      <div class="sk__detail" aria-hidden="true">
+        <div class="sk__block sk__img sk__img--tall"></div>
+        <div class="sk__side">
+          <div class="sk__block sk__line sk__line--lg w80"></div>
+          <div class="sk__block sk__line w40"></div>
+          <div class="sk__block sk__line sk__line--lg w50"></div>
+          <div class="sk__block sk__line"></div>
+          <div class="sk__block sk__line"></div>
+          <div class="sk__block sk__line w60"></div>
+          <div class="sk__block sk__btn"></div>
+        </div>
+      </div>
+    }
+    @case ('profile-header') {
+      <div class="sk__profile" aria-hidden="true">
+        <div class="sk__block sk__avatar"></div>
+        <div class="sk__grow"><div class="sk__block sk__line sk__line--lg w50"></div><div class="sk__block sk__line w30"></div></div>
+      </div>
+    }
+    @case ('post') {
+      <div class="sk__card" aria-hidden="true">
+        <div class="sk__head"><div class="sk__block sk__dot"></div><div class="sk__block sk__line w40"></div></div>
+        <div class="sk__block sk__line"></div>
+        <div class="sk__block sk__line w80"></div>
+        <div class="sk__block sk__img"></div>
+      </div>
+    }
+  }
+}

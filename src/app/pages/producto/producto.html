@@ -155,7 +155,7 @@
       </section>
     }
   } @else if (isLoading()) {
-    <p class="prod__state">Cargando el producto…</p>
+    <app-skeleton variant="detail" label="Cargando el producto…" />
   } @else {
     <div class="prod__state prod__state--missing">
       <h1>Upss, producto no encontrado</h1>

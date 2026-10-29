@@ -12,13 +12,13 @@ import { PublicationNotice } from '../../../shared/ui/publication-notice/publica
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
-import { ExpandableText } from '../../../shared/ui/expandable-text/expandable-text';
-import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
-import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
+import { VehicleDetail } from '../../../shared/components/vehicle-detail/vehicle-detail';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
+import { relatedVehicles } from '../../../shared/utils/related-vehicles';
 
 @Component({
   selector: 'app-car-details',
-  imports: [PublicationNotice, CarCard, RouterLink, DecimalPipe, TestBadge, ImageGallery, ExpandableText],
+  imports: [PublicationNotice, CarCard, RouterLink, VehicleDetail, Skeleton],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +43,18 @@ export class CarDetails implements OnInit {
   readonly images = signal<string[]>([]);
   readonly isLoading = signal(true);
 
+  /** Las especificaciones de la ficha; `VehicleDetail` oculta las que no tienen dato. */
+  readonly specs = computed(() => {
+    const s = this.car()?.vehicleSpecs;
+    return [
+      { label: 'Año', value: s?.year },
+      { label: 'Kilometraje', value: s?.mileage != null ? `${s.mileage.toLocaleString('es-DO')} km` : null },
+      { label: 'HP', value: s?.hp },
+      { label: '0-100 km/h', value: s?.zeroTo100 != null ? `${s.zeroTo100} s` : null },
+      { label: 'Velocidad máxima', value: s?.topSpeed != null ? `${s.topSpeed} km/h` : null },
+    ];
+  });
+
   /**
    * Enlace de WhatsApp al vendedor, o cadena vacía si no dejó teléfono.
    *
@@ -54,7 +66,7 @@ export class CarDetails implements OnInit {
     if (!car?.contactPhone || !isLive(car)) return '';
     return buildWaLink(
       car.contactPhone,
-      `Hola! Vi tu publicacion "${car.title}" en X AutoHub y me interesa.`,
+      `Hola! Vi tu publicación "${car.title}" en X AutoHub y me interesa.`,
     );
   });
 
@@ -71,7 +83,14 @@ export class CarDetails implements OnInit {
           this.car.set(car);
           this.images.set(car?.images ?? []);
           this.applySeo(car);
-          this.relatedVehicles.set(related.filter((v) => v.id !== id).slice(0, 4));
+          this.relatedVehicles.set(
+            car
+              ? relatedVehicles(
+                  { id: car.id, price: car.price, brand: car.vehicleSpecs?.brand },
+                  related.map((v) => Object.assign(v, { brand: v.vehicleSpecs?.brand })),
+                )
+              : [],
+          );
           this.isLoading.set(false);
         },
         error: () => this.isLoading.set(false),

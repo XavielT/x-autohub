@@ -7,9 +7,9 @@ import { ToastService } from '../../shared/services/toast.service';
 
 /** Mensajes en español para los códigos que el usuario puede provocar. */
 const MESSAGES: Record<number, string> = {
-  0: 'Sin conexion con el servidor. Revisa tu internet.',
+  0: 'Sin conexión con el servidor. Revisa tu internet.',
   400: 'Los datos enviados no son validos.',
-  401: 'Tu sesion expiro. Vuelve a iniciar sesion.',
+  401: 'Tu sesión expiró. Vuelve a iniciar sesión.',
   403: 'No tienes permiso para hacer esto.',
   404: 'No encontramos lo que buscabas.',
   409: 'Ese registro ya existe.',
@@ -43,7 +43,7 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: unknown) => {
       const status = (error as { status?: number })?.status ?? 0;
-      const message = MESSAGES[status] ?? 'Algo salio mal. Intenta de nuevo.';
+      const message = MESSAGES[status] ?? 'Algo salió mal. Intenta de nuevo.';
       toast.show(message, 'error');
 
       // El token ya no sirve: limpiar la sesión y mandar al login, guardando

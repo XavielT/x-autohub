@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HubMarketItemModel } from '../../models/hub-market-item.model';
-import { TestBadge } from '../../ui/test-badge/test-badge';
-import { InfoBadge } from '../../ui/info-badge/info-badge';
+import { CarCard } from '../car-card/car-card';
+import { VehicleCard } from '../vehicle-card/vehicle-card';
 
+/**
+ * Una publicación de Hub Market. Un vehículo usa la tarjeta con especificaciones
+ * (`app-car-card`); una pieza o un accesorio, la misma tarjeta en su variante cuadrada
+ * y sin especificaciones.
+ */
 @Component({
   selector: 'app-hub-market-card',
-  imports: [RouterLink, CommonModule, NgOptimizedImage, TestBadge, InfoBadge],
+  imports: [CarCard, VehicleCard],
   templateUrl: './hub-market-card.html',
-  styleUrls: ['./hub-market-card.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HubMarketCard {
@@ -17,30 +19,20 @@ export class HubMarketCard {
   /** Marca la imagen como LCP (carga con prioridad); solo para las primeras tarjetas de la lista. */
   readonly priority = input(false);
 
-  readonly itemLink = computed<string[]>(() => {
-    const item = this.item();
+  readonly isVehicle = computed(() => this.item().category === 'vehiculos');
 
+  readonly itemLink = computed<string>(() => {
+    const item = this.item();
     switch (item.category) {
       case 'vehiculos':
-        return ['/car-details', item.id.toString()];
+        return `/car-details/${item.id}`;
       case 'piezas':
       case 'accesorios':
-        return ['/hub-market-part-details', item.id.toString()];
+        return `/hub-market-part-details/${item.id}`;
       default:
-        return ['/hub-market'];
+        return '/hub-market';
     }
   });
-
-  /**
-   * true cuando la imagen es una data URL.
-   *
-   * `NgOptimizedImage` las rechaza y **lanza** (NG02952), lo que abortaba el
-   * render de la tarjeta completa: quedaba una caja vacía sin título ni precio.
-   * Pasa en modo simulado, donde `StorageService` devuelve data URLs en vez de
-   * subir a Storage, así que cualquier publicación recién hecha se veía en blanco
-   * tanto aquí como en Hub Market.
-   */
-  readonly isDataUrl = computed(() => this.item().images[0]?.startsWith('data:') ?? false);
 
   readonly displayCategory = computed(() => {
     switch (this.item().category) {
@@ -51,7 +43,9 @@ export class HubMarketCard {
       case 'accesorios':
         return 'Accesorio';
       default:
-        return 'Item';
+        return 'Artículo';
     }
   });
+
+  readonly meta = computed(() => `Por ${this.item().sellerName} · ${this.item().location}`);
 }

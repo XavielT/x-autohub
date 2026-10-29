@@ -1,0 +1,116 @@
+.vcard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background-color: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  // Escala 1.02 sin tapar a las vecinas: la sombra no se sale de la tarjeta.
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  &:hover { transform: scale(1.02); border-color: var(--Hub); }
+  &:focus-within { border-color: var(--Hub); }
+
+  &__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 16 / 10;
+    background-color: #1c1c1c;
+    overflow: hidden;
+  }
+  &--square &__media { aspect-ratio: 1 / 1; }
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+
+    &--fallback { object-fit: contain; padding: 22%; opacity: 0.35; }
+  }
+
+  &__badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--main);
+    background-color: var(--Hub);
+    border-radius: 999px;
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+  }
+
+  &__title-link { color: inherit; text-decoration: none; }
+
+  &__name {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #fff;
+    // Dos líneas como máximo: un nombre largo no empuja el precio.
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.5em;
+  }
+  &__title-link:hover &__name { color: var(--Hub); }
+
+  &__sub,
+  &__meta {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+  &__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+  &__price {
+    margin: 4px 0 0;
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 22px;
+    font-weight: 800;
+    white-space: nowrap;
+    color: var(--Hub);
+  }
+
+  &__specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: auto 0 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__spec {
+    min-width: 0;
+    text-align: center;
+
+    dt { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.04em; }
+    dd { margin: 2px 0 0; font-size: 14px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vcard { transition: none; &:hover { transform: none; } }
+}

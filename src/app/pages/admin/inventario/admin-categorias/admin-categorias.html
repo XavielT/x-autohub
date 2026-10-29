@@ -1,7 +1,7 @@
 <section class="cat">
   <form class="cat__add" (ngSubmit)="add()">
     <label class="cat__field">
-      <span>Nueva categoria</span>
+      <span>Nueva categoría</span>
       <input type="text" name="name" placeholder="Discos y pastillas" maxlength="80"
              [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
     </label>
@@ -20,9 +20,9 @@
   </form>
 
   @if (isLoading()) {
-    <p class="cat__empty">Cargando categorias...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando categorías…" />
   } @else if (tree().length === 0) {
-    <p class="cat__empty">No hay categorias. Agrega la primera arriba.</p>
+    <p class="cat__empty">No hay categorías. Agrega la primera arriba.</p>
   } @else {
     <ul class="cat__tree">
       @for (root of tree(); track root.id) {

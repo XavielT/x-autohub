@@ -249,7 +249,7 @@ describe('PushService', () => {
     });
 
     it('enableForGuest (pedido): si la base lo rechaza, no queda activo y se dice por qué', async () => {
-      rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'Este pedido es de una cuenta: inicia sesion y activa los avisos desde tu perfil.' } });
+      rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'Este pedido es de una cuenta: inicia sesión y activa los avisos desde tu perfil.' } });
       const service = montar();
 
       const result = await service.enableForGuest({ kind: 'order', id: ORDER });
@@ -300,7 +300,7 @@ describe('PushService', () => {
       beforeEach(() => localStorage.removeItem('xah.appointmentPush'));
       afterEach(() => localStorage.removeItem('xah.appointmentPush'));
 
-      it('registra el dispositivo en esa cita, por su propia funcion, y lo anota aparte de los pedidos', async () => {
+      it('registra el dispositivo en esa cita, por su propia función, y lo anota aparte de los pedidos', async () => {
         const service = montar();
 
         const result = await service.enableForGuest(target);

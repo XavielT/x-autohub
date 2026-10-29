@@ -41,13 +41,13 @@ describe('authGuard', () => {
   const run = (guard: typeof authGuard) =>
     TestBed.runInInjectionContext(() => guard(route, state));
 
-  it('deja pasar cuando la sesion se restaura despues de la navegacion', async () => {
+  it('deja pasar cuando la sesión se restaura después de la navegación', async () => {
     provideAuth({ restoresTo: 'user' });
 
     await expect(run(authGuard)).resolves.toBe(true);
   });
 
-  it('redirige a /login con returnUrl cuando de verdad no hay sesion', async () => {
+  it('redirige a /login con returnUrl cuando de verdad no hay sesión', async () => {
     provideAuth({ restoresTo: 'nobody' });
 
     const result = await run(authGuard);
@@ -56,7 +56,7 @@ describe('authGuard', () => {
     expect((result as UrlTree).toString()).toBe('/login?returnUrl=%2Fpublicar');
   });
 
-  it('guestGuard saca de /login a quien ya tiene sesion, aun restaurada tarde', async () => {
+  it('guestGuard saca de /login a quien ya tiene sesión, aun restaurada tarde', async () => {
     provideAuth({ restoresTo: 'user' });
 
     const result = await run(guestGuard);
@@ -65,7 +65,7 @@ describe('authGuard', () => {
     expect((result as UrlTree).toString()).toBe('/');
   });
 
-  it('guestGuard deja ver /login a quien no tiene sesion', async () => {
+  it('guestGuard deja ver /login a quien no tiene sesión', async () => {
     provideAuth({ restoresTo: 'nobody' });
 
     await expect(run(guestGuard)).resolves.toBe(true);

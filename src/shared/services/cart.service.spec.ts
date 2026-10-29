@@ -109,7 +109,7 @@ describe('CartService', () => {
   });
 
   describe('sobrevivir a una recarga', () => {
-    it('lo agregado sigue ahi en la instancia siguiente', async () => {
+    it('lo agregado sigue ahí en la instancia siguiente', async () => {
       const cart = montar();
       cart.addToCart(pieza(1, 12950));
       cart.addToCart(pieza(1, 12950));
@@ -127,7 +127,7 @@ describe('CartService', () => {
       expect(recargado.totalPrice()).toBe(12950 * 2 + 2850);
     });
 
-    it('un carrito vacio no deja basura en el navegador', async () => {
+    it('un carrito vacío no deja basura en el navegador', async () => {
       const cart = montar();
       cart.addToCart(pieza(1, 12950));
       await asentar();
@@ -140,7 +140,7 @@ describe('CartService', () => {
       expect(montar().items()).toEqual([]);
     });
 
-    it('quitar una pieza tambien se guarda', async () => {
+    it('quitar una pieza también se guarda', async () => {
       const cart = montar();
       cart.addToCart(pieza(1, 12950));
       cart.addToCart(pieza(2, 2850));
@@ -154,7 +154,7 @@ describe('CartService', () => {
   });
 
   describe('poner al dia lo guardado', () => {
-    it('el precio sale del catalogo, no del navegador', async () => {
+    it('el precio sale del catálogo, no del navegador', async () => {
       // El precio subio en el panel mientras el carrito esperaba guardado.
       sembrar([{ part: pieza(1, 2850, 'Nombre viejo'), quantity: 2, variant: null }]);
 
@@ -169,7 +169,7 @@ describe('CartService', () => {
       expect(cart.totalPrice()).toBe(6200);
     });
 
-    it('la pieza que ya no esta en el catalogo se cae del carrito', async () => {
+    it('la pieza que ya no está en el catálogo se cae del carrito', async () => {
       sembrar([
         { part: pieza(1, 12950), quantity: 1, variant: null },
         { part: pieza(99, 500), quantity: 1, variant: null },
@@ -184,7 +184,7 @@ describe('CartService', () => {
       expect(guardado()?.map((i) => i.part.id)).toEqual([1]);
     });
 
-    it('si el catalogo no responde, el carrito se queda como estaba', async () => {
+    it('si el catálogo no responde, el carrito se queda como estaba', async () => {
       sembrar([{ part: pieza(1, 2850), quantity: 3, variant: null }]);
 
       const cart = montar();
@@ -197,14 +197,14 @@ describe('CartService', () => {
       expect(cart.items()[0].quantity).toBe(3);
     });
 
-    it('no molesta al catalogo si no hay nada guardado', async () => {
+    it('no molesta al catálogo si no hay nada guardado', async () => {
       montar();
       await asentar();
 
       expect(parts.llamadas).toBe(0);
     });
 
-    it('espera a que la sesion este lista antes de reconciliar', async () => {
+    it('espera a que la sesión este lista antes de reconciliar', async () => {
       // La visibilidad del contenido de prueba depende de la sesion, y con
       // Supabase se restaura de forma asincrona: reconciliar antes le quitaria
       // su pieza marcada a un usuario de prueba que acaba de recargar.
@@ -226,7 +226,7 @@ describe('CartService', () => {
       expect(montar().items()).toEqual([]);
     });
 
-    it('una version que no es la de hoy', () => {
+    it('una versión que no es la de hoy', () => {
       sembrar([{ part: pieza(1, 12950), quantity: 1, variant: null }], 99);
       expect(montar().items()).toEqual([]);
     });

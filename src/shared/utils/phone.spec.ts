@@ -10,39 +10,39 @@ import {
 describe('digitsOnly', () => {
   it('deja solo los digitos', () => {
     expect(digitsOnly('+1 (809) 555-0134')).toBe('18095550134');
-    expect(digitsOnly('sin numeros')).toBe('');
+    expect(digitsOnly('sin números')).toBe('');
   });
 });
 
 describe('normalizeDrPhone', () => {
-  it('acepta las tres formas en que se escribe el mismo numero', () => {
+  it('acepta las tres formas en que se escribe el mismo número', () => {
     expect(normalizeDrPhone('809 555 0134')).toBe('8095550134');
     expect(normalizeDrPhone('8095550134')).toBe('8095550134');
     expect(normalizeDrPhone('+18095550134')).toBe('8095550134');
   });
 
-  it('tolera guiones, parentesis y espacios de mas', () => {
+  it('tolera guiones, parentesis y espacios de más', () => {
     expect(normalizeDrPhone('(809) 555-0134')).toBe('8095550134');
     expect(normalizeDrPhone('  809-555-0134  ')).toBe('8095550134');
     expect(normalizeDrPhone('+1 809-555-0134')).toBe('8095550134');
   });
 
-  it('acepta los tres codigos de area dominicanos', () => {
+  it('acepta los tres códigos de area dominicanos', () => {
     expect(normalizeDrPhone('8295550134')).toBe('8295550134');
     expect(normalizeDrPhone('8495550134')).toBe('8495550134');
   });
 
-  it('rechaza lo que no es un telefono', () => {
+  it('rechaza lo que no es un teléfono', () => {
     expect(normalizeDrPhone('')).toBeNull();
     expect(normalizeDrPhone('123')).toBeNull();
-    expect(normalizeDrPhone('no es un telefono')).toBeNull();
+    expect(normalizeDrPhone('no es un teléfono')).toBeNull();
     // Nueve digitos: uno de menos.
     expect(normalizeDrPhone('809555013')).toBeNull();
     // Doce digitos sin un codigo de pais que los explique.
     expect(normalizeDrPhone('809555013412')).toBeNull();
   });
 
-  it('rechaza codigos de area y de central invalidos en el NANP', () => {
+  it('rechaza códigos de area y de central invalidos en el NANP', () => {
     expect(normalizeDrPhone('0095550134')).toBeNull();
     expect(normalizeDrPhone('1095550134')).toBeNull();
     // Central que empieza en 1.
@@ -60,7 +60,7 @@ describe('isValidDrPhone', () => {
 });
 
 describe('formatDrPhone', () => {
-  it('separa el numero para leerlo', () => {
+  it('separa el número para leerlo', () => {
     expect(formatDrPhone('8095550134')).toBe('809-555-0134');
     expect(formatDrPhone('+1 809 555 0134')).toBe('809-555-0134');
   });
@@ -72,18 +72,18 @@ describe('formatDrPhone', () => {
 });
 
 describe('drPhoneValidator', () => {
-  it('deja pasar el campo vacio: el telefono es opcional', () => {
+  it('deja pasar el campo vacío: el teléfono es opcional', () => {
     expect(drPhoneValidator(new FormControl(''))).toBeNull();
     expect(drPhoneValidator(new FormControl('   '))).toBeNull();
     expect(drPhoneValidator(new FormControl(null))).toBeNull();
   });
 
-  it('deja pasar un telefono valido', () => {
+  it('deja pasar un teléfono válido', () => {
     expect(drPhoneValidator(new FormControl('809 555 0134'))).toBeNull();
     expect(drPhoneValidator(new FormControl('+18095550134'))).toBeNull();
   });
 
-  it('marca el error cuando hay algo escrito que no es un telefono', () => {
+  it('marca el error cuando hay algo escrito que no es un teléfono', () => {
     expect(drPhoneValidator(new FormControl('12345'))).toEqual({ phone: true });
     expect(drPhoneValidator(new FormControl('mi celular'))).toEqual({ phone: true });
   });

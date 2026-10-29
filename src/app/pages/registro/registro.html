@@ -3,7 +3,7 @@
     <app-logo-hub class="auth__aside-logo" />
     <h2 class="auth__aside-title">
       Unete a la <span>comunidad</span><br />
-      de autos mas activa del pais
+      de autos más activa del país
     </h2>
     <p class="auth__aside-text">
       Crear tu cuenta es gratis. Publica lo que quieras vender, sigue clubes y enterate de cada
@@ -11,7 +11,7 @@
     </p>
     <ul class="auth__aside-perks">
       <li class="auth__aside-perk">Publicaciones ilimitadas en Hub Market</li>
-      <li class="auth__aside-perk">Guarda vehiculos y piezas favoritas</li>
+      <li class="auth__aside-perk">Guarda vehículos y piezas favoritas</li>
       <li class="auth__aside-perk">Acceso al Club X AutoHub</li>
     </ul>
   </aside>
@@ -20,7 +20,7 @@
     <div class="auth__card">
       @if (confirmationEmail(); as pendingEmail) {
         <h1 class="auth__heading">Revisa tu correo</h1>
-        <p class="auth__subheading">Ya casi estas dentro.</p>
+        <p class="auth__subheading">Ya casi estás dentro.</p>
 
         <div class="auth__done" role="status">
           <p class="auth__done-lead">
@@ -32,7 +32,7 @@
           </p>
         </div>
 
-        <p class="auth__meta">Ya lo confirmaste? <a routerLink="/login">Inicia sesion</a></p>
+        <p class="auth__meta">Ya lo confirmaste? <a routerLink="/login">Inicia sesión</a></p>
       } @else {
         <h1 class="auth__heading">Crear cuenta</h1>
         <p class="auth__subheading">Solo toma un minuto.</p>
@@ -53,7 +53,7 @@
               type="text"
               formControlName="displayName"
               autocomplete="name"
-              placeholder="Como quieres que te vean"
+              placeholder="Cómo quieres que te vean"
               [class.is-invalid]="showError('displayName')"
             />
             @if (showError('displayName')) {
@@ -72,13 +72,13 @@
               [class.is-invalid]="showError('email')"
             />
             @if (showError('email')) {
-              <span class="auth__error">Ingresa un correo valido.</span>
+              <span class="auth__error">Ingresa un correo válido.</span>
             }
           </div>
 
           <div class="auth__row">
             <div class="auth__field">
-              <label for="reg-phone">Telefono <span aria-hidden="true">(opcional)</span></label>
+              <label for="reg-phone">Teléfono <span aria-hidden="true">(opcional)</span></label>
               <input
                 id="reg-phone"
                 type="tel"
@@ -100,48 +100,48 @@
 
           <div class="auth__field">
             <label for="reg-password"
-              >Contrasena<span class="req" aria-hidden="true">*</span></label
+              >Contraseña<span class="req" aria-hidden="true">*</span></label
             >
             <input
               id="reg-password"
               type="password"
               formControlName="password"
               autocomplete="new-password"
-              placeholder="Minimo 6 caracteres"
+              placeholder="Mínimo 6 caracteres"
               [class.is-invalid]="showError('password')"
             />
             @if (showError('password')) {
-              <span class="auth__error">La contrasena debe tener al menos 6 caracteres.</span>
+              <span class="auth__error">La contraseña debe tener al menos 6 caracteres.</span>
             }
           </div>
 
           <div class="auth__field">
             <label for="reg-confirm"
-              >Confirmar contrasena<span class="req" aria-hidden="true">*</span></label
+              >Confirmar contraseña<span class="req" aria-hidden="true">*</span></label
             >
             <input
               id="reg-confirm"
               type="password"
               formControlName="confirmPassword"
               autocomplete="new-password"
-              placeholder="Repite tu contrasena"
+              placeholder="Repite tu contraseña"
               [class.is-invalid]="showMismatch"
             />
             @if (showMismatch) {
-              <span class="auth__error">Las contrasenas no coinciden.</span>
+              <span class="auth__error">Las contraseñas no coinciden.</span>
             }
           </div>
 
-          <button class="auth__submit" type="submit" [disabled]="isSubmitting()">
+          <button class="auth__submit" type="submit" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
             {{ isSubmitting() ? 'Creando cuenta...' : 'Crear cuenta' }}
           </button>
         </form>
 
-        <p class="auth__meta">Ya tienes cuenta? <a routerLink="/login">Inicia sesion</a></p>
+        <p class="auth__meta">Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
 
         <p class="auth__hint">
           Al crear tu cuenta aceptas los
-          <a routerLink="/terminos-condiciones">terminos y condiciones</a>.
+          <a routerLink="/terminos-condiciones">términos y condiciones</a>.
           @if (isDemoMode) {
             Registro de demostracion: los datos se guardan solo en este navegador.
           }

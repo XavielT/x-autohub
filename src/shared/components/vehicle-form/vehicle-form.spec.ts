@@ -24,12 +24,11 @@ describe('VehicleForm', () => {
 
   it('arranca con las 35 marcas y el resto bloqueado', async () => {
     const { fixture, c, el } = montar();
-    // ngModel aplica [disabled] en una microtarea.
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(c.makes().length).toBe(35);
-    const [make, model, year] = Array.from(el.querySelectorAll('select'));
+    const [make, model, year] = Array.from(el.querySelectorAll('input'));
     expect(make.disabled).toBe(false);
     expect(model.disabled).toBe(true);
     expect(year.disabled).toBe(true);
@@ -56,17 +55,34 @@ describe('VehicleForm', () => {
     expect(c.models().every((m) => m.makeId === honda.id)).toBe(true);
   });
 
-  it('una marca sin modelos lo dice y manda a escribir por WhatsApp', () => {
+  it('una marca sin modelos pide escribirlo, sin mandar a WhatsApp', () => {
     const { fixture, c, el } = montar();
 
     c.onMakeChange(subaru.id);
     fixture.detectChanges();
 
     expect(c.models()).toEqual([]);
-    expect(el.textContent).toContain('Todavía no tenemos modelos de esta marca');
+    expect(c.freeModel()).toBe(true);
+    expect(el.querySelector('input[name=modelText]')).not.toBeNull();
+    expect(el.querySelector('.vf__hint')?.textContent).toContain('Aún no tenemos los modelos de esta marca; escríbelo tú.');
+    expect(el.textContent).not.toContain('WhatsApp');
   });
 
-  it('el boton se habilita solo con marca, modelo y ano, y emite el vehiculo', () => {
+  it('con el modelo escrito a mano emite modelId nulo y el texto', () => {
+    const { fixture, c, chosen } = montar();
+    c.onMakeChange(subaru.id);
+    expect(c.isComplete()).toBe(false);
+
+    c.onModelTextChange('  Impreza ');
+    c.year.set(2012);
+    fixture.detectChanges();
+    expect(c.isComplete()).toBe(true);
+
+    c.submit();
+    expect(chosen).toEqual([{ makeId: subaru.id, modelId: null, modelText: 'Impreza', year: 2012 }]);
+  });
+
+  it('el boton se habilita solo con marca, modelo y año, y emite el vehículo', () => {
     const { fixture, c, el, chosen } = montar();
     const submit = () => el.querySelector<HTMLButtonElement>('.vf__submit')!;
 
@@ -90,16 +106,16 @@ describe('VehicleForm', () => {
     expect(chosen).toEqual([]);
   });
 
-  it('ofrece anos desde el que viene hasta 1980', () => {
+  it('ofrece años desde el que viene hasta 1990', () => {
     const { c } = montar();
     const next = new Date().getFullYear() + 1;
 
     expect(c.years[0]).toBe(next);
-    expect(c.years[c.years.length - 1]).toBe(1980);
-    expect(c.years.length).toBe(next - 1980 + 1);
+    expect(c.years[c.years.length - 1]).toBe(1990);
+    expect(c.years.length).toBe(next - 1990 + 1);
   });
 
-  it('empieza con el vehiculo que ya estaba elegido', () => {
+  it('empieza con el vehículo que ya estaba elegido', () => {
     TestBed.inject(VehicleService).select({ makeId: toyota.id, modelId: corolla.id, year: 2015 });
 
     const { c } = montar();
@@ -110,12 +126,12 @@ describe('VehicleForm', () => {
     expect(c.isComplete()).toBe(true);
   });
 
-  it('los id de los selectores llevan el prefijo, para poder tenerlo dos veces en la pagina', () => {
+  it('los id de los selectores llevan el prefijo, para poder tenerlo dos veces en la página', () => {
     const fixture = TestBed.createComponent(VehicleForm);
     fixture.componentRef.setInput('idPrefix', 'hvp');
     fixture.detectChanges();
 
-    const ids = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('select')).map((s) => s.id);
+    const ids = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('input')).map((s) => s.id);
     expect(ids).toEqual(['hvp-make', 'hvp-model', 'hvp-year']);
   });
 });

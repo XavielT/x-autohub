@@ -1,0 +1,17 @@
+@if (open()) {
+  <div class="lb" role="dialog" aria-modal="true" aria-label="Foto ampliada" (click)="close()">
+    <button type="button" class="lb__close" aria-label="Cerrar" (click)="close()">&times;</button>
+    @if (hasMany()) {
+      <span class="lb__count" aria-live="polite">{{ index() + 1 }} / {{ count() }}</span>
+      <button type="button" class="lb__nav lb__nav--prev" aria-label="Foto anterior"
+              (click)="$event.stopPropagation(); step(-1)">&#8249;</button>
+    }
+    <img class="lb__img" [src]="current()" [alt]="alt()"
+         (click)="$event.stopPropagation()" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp($event)"
+         draggable="false" />
+    @if (hasMany()) {
+      <button type="button" class="lb__nav lb__nav--next" aria-label="Foto siguiente"
+              (click)="$event.stopPropagation(); step(1)">&#8250;</button>
+    }
+  </div>
+}

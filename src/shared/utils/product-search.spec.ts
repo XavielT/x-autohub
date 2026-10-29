@@ -66,7 +66,7 @@ describe('searchProductsInMemory', () => {
       expect(search({ query: 'zztes' }).total).toBe(6);
     });
 
-    it("sin acentos: 'bateria' encuentra 'Batería', y al reves", () => {
+    it("sin acentos: 'batería' encuentra 'Batería', y al reves", () => {
       expect(names(search({ query: 'zztest bateria' }).items)).toEqual(['ZZTEST Batería bajo pedido']);
       expect(names(search({ query: 'BATERÍA' }).items)).toEqual(['ZZTEST Batería bajo pedido']);
     });
@@ -118,7 +118,7 @@ describe('searchProductsInMemory', () => {
       expect(names(r.items)).toEqual(['ZZTEST Universal', 'ZZTEST Toyota', 'ZZTEST Batería bajo pedido']);
     });
 
-    it('los limites del rango de anos cuentan: 2010 y 2020 si, 2009 y 2021 no', () => {
+    it('los límites del rango de años cuentan: 2010 y 2020 si, 2009 y 2021 no', () => {
       const params = { query: 'zztest corolla', makeId: TOYOTA, modelId: COROLLA };
       expect(search({ ...params, year: 2010 }).total).toBe(1);
       expect(search({ ...params, year: 2020 }).total).toBe(1);
@@ -148,13 +148,13 @@ describe('searchProductsInMemory', () => {
       ).toBe(1);
     });
 
-    it('un especifico sin fitments no sale en ninguna busqueda por vehiculo', () => {
+    it('un especifico sin fitments no sale en ninguna búsqueda por vehículo', () => {
       for (const params of [{ makeId: TOYOTA }, { makeId: HONDA }, { makeId: TOYOTA, modelId: COROLLA, year: 2015 }]) {
         expect(names(search({ query: 'zztest', ...params }).items)).not.toContain('ZZTEST Sin fitments');
       }
     });
 
-    it('sin vehiculo, el especifico sin fitments si aparece (no se filtra nada)', () => {
+    it('sin vehículo, el especifico sin fitments si aparece (no se filtra nada)', () => {
       expect(names(search({ query: 'zztest' }).items)).toContain('ZZTEST Sin fitments');
     });
   });
@@ -166,7 +166,7 @@ describe('searchProductsInMemory', () => {
       expect(names(r.items)).not.toContain('ZZTEST Batería bajo pedido');
     });
 
-    it('en stock exige inventario: un articulo de stock con cero existencias queda fuera', () => {
+    it('en stock exige inventario: un artículo de stock con cero existencias queda fuera', () => {
       const agotado = makeProduct({ id: 1, name: 'Agotado', stock: 0 });
       expect(search({ inStockOnly: true }, [agotado]).total).toBe(0);
     });
@@ -185,7 +185,7 @@ describe('searchProductsInMemory', () => {
     const sinCategoria = makeProduct({ id: 4, name: 'Suelto', categoryId: null });
     const all = [frenos, discos, motor, sinCategoria];
 
-    it('una categoria incluye los productos de sus hijas', () => {
+    it('una categoría incluye los productos de sus hijas', () => {
       expect(names(search({ categorySlug: 'frenos', sort: 'price_asc' }, all).items).sort()).toEqual([
         'Disco',
         'Disco ventilado',
@@ -221,7 +221,7 @@ describe('searchProductsInMemory', () => {
       expect(ids('newest')).toEqual([2, 3, 1, 4]);
     });
 
-    it('relevancia sin texto: los destacados primero, despues los mas vendidos', () => {
+    it('relevancia sin texto: los destacados primero, después los más vendidos', () => {
       expect(ids('relevance')).toEqual([4, 2, 3, 1]);
     });
 
@@ -237,7 +237,7 @@ describe('searchProductsInMemory', () => {
       expect(search({ sort: 'inventado' as never }, lista).items.map((p) => p.id)).toEqual([4, 2, 3, 1]);
     });
 
-    it('pagina con limit y offset, y el total no depende de la pagina', () => {
+    it('página con limit y offset, y el total no depende de la página', () => {
       const primera = search({ sort: 'price_asc', limit: 2, offset: 0 }, lista);
       const segunda = search({ sort: 'price_asc', limit: 2, offset: 2 }, lista);
       expect(primera.items.map((p) => p.id)).toEqual([2, 3]);
@@ -246,13 +246,13 @@ describe('searchProductsInMemory', () => {
       expect(segunda.total).toBe(4);
     });
 
-    it('un offset pasado el final devuelve una pagina vacia, con el total correcto', () => {
+    it('un offset pasado el final devuelve una página vacia, con el total correcto', () => {
       const r = search({ limit: 2, offset: 10 }, lista);
       expect(r.items).toEqual([]);
       expect(r.total).toBe(4);
     });
 
-    it('el limite se acota entre 1 y 100, con 24 por defecto', () => {
+    it('el límite se acota entre 1 y 100, con 24 por defecto', () => {
       const muchos = Array.from({ length: 150 }, (_, i) => makeProduct({ id: i + 1 }));
       expect(search({}, muchos).items.length).toBe(24);
       expect(search({ limit: 1000 }, muchos).items.length).toBe(100);
@@ -263,15 +263,15 @@ describe('searchProductsInMemory', () => {
 });
 
 describe('fitsVehicle', () => {
-  it('sin vehiculo elegido todo sirve', () => {
+  it('sin vehículo elegido todo sirve', () => {
     expect(fitsVehicle(NO_FITMENTS, FITMENTS, {})).toBe(true);
   });
 
-  it('un universal sirve para cualquier vehiculo', () => {
+  it('un universal sirve para cualquier vehículo', () => {
     expect(fitsVehicle(UNIVERSAL, FITMENTS, { makeId: 99, modelId: 99, year: 1980 })).toBe(true);
   });
 
-  it('un especifico sin fitments nunca sirve cuando hay vehiculo', () => {
+  it('un especifico sin fitments nunca sirve cuando hay vehículo', () => {
     expect(fitsVehicle(NO_FITMENTS, FITMENTS, { makeId: TOYOTA })).toBe(false);
   });
 

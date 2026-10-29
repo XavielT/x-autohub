@@ -40,20 +40,20 @@ describe('HubMarketPartDetails', () => {
     expect(componente).toBeTruthy();
   });
 
-  it('contacta por WhatsApp con el numero del vendedor', async () => {
+  it('contacta por WhatsApp con el número del vendedor', async () => {
     const { fixture, componente } = montar();
     await fixture.whenStable();
 
     expect(componente.waLink()).toBe(
       'https://wa.me/18295550187?text=' +
-        encodeURIComponent('Hola! Vi tu publicacion "Discos Brembo GTR" en X AutoHub y me interesa.'),
+        encodeURIComponent('Hola! Vi tu publicación "Discos Brembo GTR" en X AutoHub y me interesa.'),
     );
 
     const enlace = (fixture.nativeElement as HTMLElement).querySelector('a.whatsapp-btn');
     expect(enlace!.getAttribute('href')).toBe(componente.waLink());
   });
 
-  it('ya no queda ningun mailto: el de antes abria el correo sin destinatario', async () => {
+  it('ya no queda ningún mailto: el de antes abria el correo sin destinatario', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
 
@@ -61,7 +61,7 @@ describe('HubMarketPartDetails', () => {
     expect(enlaces.length).toBe(0);
   });
 
-  it('sin telefono no hay boton, pero el resto de la pagina sigue en pie', async () => {
+  it('sin teléfono no hay boton, pero el resto de la página sigue en pie', async () => {
     const { fixture } = montar({ ...PIEZA, contactPhone: undefined });
     await fixture.whenStable();
 

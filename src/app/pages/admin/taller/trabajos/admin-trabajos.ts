@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
@@ -41,7 +42,7 @@ const toDraft = (w: ServiceWorkModel): WorkDraft => ({
  */
 @Component({
   selector: 'app-admin-trabajos',
-  imports: [DatePipe],
+  imports: [DatePipe, Skeleton],
   templateUrl: './admin-trabajos.html',
   styleUrl: './admin-trabajos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

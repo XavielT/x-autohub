@@ -18,9 +18,9 @@ export interface SeoPage {
 
 const DEFAULT_TITLE = 'X AutoHub — Todo lo que tu carro necesita';
 const DEFAULT_DESCRIPTION =
-  'Accesorios y piezas para tu carro, con taller propio, en Republica Dominicana. Encuentra lo que le sirve a tu vehiculo, instalalo con nosotros y mira ademas vehiculos y la comunidad automotriz.';
-const DEFAULT_SOCIAL_DESCRIPTION = 'Accesorios, piezas y taller en Republica Dominicana. Elige tu vehiculo y mira lo que le sirve.';
-const DEFAULT_IMAGE = 'icon-512.png';
+  'Accesorios y piezas para tu carro, con taller propio, en República Dominicana. Encuentra lo que le sirve a tu vehículo, instálalo con nosotros y mira además vehículos y la comunidad automotriz.';
+const DEFAULT_SOCIAL_DESCRIPTION = 'Accesorios, piezas y taller en República Dominicana. Elige tu vehículo y mira lo que le sirve.';
+const DEFAULT_IMAGE = 'og-default.jpg';
 
 /**
  * El título, la descripción y las etiquetas de redes de cada página.

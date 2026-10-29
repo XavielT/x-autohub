@@ -9,6 +9,8 @@ export interface ReleaseModel {
   releasedAt: Date;
   title: string;
   summary: string;
+  /** Resumen para quien usa el sitio, en español llano. Si falta, se usa `summary`. */
+  userSummary?: string;
   /** Los puntos del changelog, en orden. */
   changes: string[];
   /** En false se puede redactar sin que el público la vea. */
@@ -21,6 +23,7 @@ export interface ReleaseDraft {
   releasedAt: string;
   title: string;
   summary: string;
+  userSummary?: string;
   changes: string[];
   isPublished: boolean;
 }

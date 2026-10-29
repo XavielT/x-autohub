@@ -1,6 +1,6 @@
 <div class="fit">
   @if (fitments().length === 0) {
-    <p class="fit__empty">Sin vehiculos cargados. En la ficha dira "Consultar compatibilidad".</p>
+    <p class="fit__empty">Sin vehículos cargados. En la ficha dirá "Consultar compatibilidad".</p>
   } @else {
     <ul class="fit__list">
       @for (f of fitments(); track $index) {
@@ -24,7 +24,7 @@
       </datalist>
     </label>
     <label class="fit__field">
-      <span>Modelo <small>(vacio = toda la marca)</small></span>
+      <span>Modelo <small>(vacío = toda la marca)</small></span>
       <input type="text" list="fit-models" autocomplete="off" placeholder="Corolla"
              [disabled]="!selectedMake()"
              [ngModel]="modelName()" (ngModelChange)="modelName.set($event)"
@@ -34,13 +34,13 @@
       </datalist>
     </label>
     <label class="fit__field">
-      <span>Desde <small>(ano)</small></span>
+      <span>Desde <small>(año)</small></span>
       <input type="number" inputmode="numeric" min="1900" max="2100" placeholder="2010"
              [ngModel]="yearFrom()" (ngModelChange)="yearFrom.set(parseYear($event))"
              [ngModelOptions]="{ standalone: true }" />
     </label>
     <label class="fit__field">
-      <span>Hasta <small>(ano)</small></span>
+      <span>Hasta <small>(año)</small></span>
       <input type="number" inputmode="numeric" min="1900" max="2100" placeholder="2020"
              [ngModel]="yearTo()" (ngModelChange)="yearTo.set(parseYear($event))"
              [ngModelOptions]="{ standalone: true }" />
@@ -49,5 +49,5 @@
 
   @if (error()) { <p class="fit__error" role="alert">{{ error() }}</p> }
 
-  <button type="button" class="fit__add-btn" (click)="add()">+ Agregar vehiculo</button>
+  <button type="button" class="fit__add-btn" (click)="add()">+ Agregar vehículo</button>
 </div>

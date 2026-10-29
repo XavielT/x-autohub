@@ -43,7 +43,7 @@ export class CouponService {
     contactEmail?: string,
   ): Observable<CouponValidation> {
     if (this.supabase.shouldUseMockData()) {
-      if (!(subtotal >= 0)) return throwError(() => new Error('El subtotal no es valido.'));
+      if (!(subtotal >= 0)) return throwError(() => new Error('El subtotal no es válido.'));
       try {
         const { coupon, discount } = this.resolveMock(code, subtotal, shippingPrice, contactEmail ?? null);
         return of({ code: coupon.code, type: coupon.type, discount, description: coupon.description });
@@ -62,7 +62,7 @@ export class CouponService {
     ).pipe(
       map((res) => {
         const row = unwrap(res)[0];
-        if (!row) throw new Error('Ese cupon no existe o ya no esta disponible.');
+        if (!row) throw new Error('Ese cupón no existe o ya no está disponible.');
         return toCouponValidation(row);
       }),
     );
@@ -79,7 +79,7 @@ export class CouponService {
     shipping: number,
     email: string | null,
   ): { coupon: CouponModel; discount: number } {
-    if (normalizeCouponCode(code) === '') throw new Error('Escribe el codigo del cupon.');
+    if (normalizeCouponCode(code) === '') throw new Error('Escribe el código del cupón.');
 
     const coupon = findCoupon(this.mockCoupons, code);
     const userId = this.auth.user()?.id ?? null;

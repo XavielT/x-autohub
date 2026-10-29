@@ -36,11 +36,47 @@
   &__section { margin-bottom: 36px; }
   &__h2 { margin: 0 0 14px; font-family: var(--font-brand); font-size: 1.3rem; }
 
+  // La fila de chips se queda arriba al hacer scroll. En móvil, scroll horizontal.
+  &__chips {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 8px;
+    margin: 0 -16px 18px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    background-color: var(--main);
+    border-bottom: 1px solid #2e2e2e;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  &__chip {
+    flex: none;
+    min-height: 40px;
+    padding: 0 16px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover { border-color: var(--Hub); }
+    &--on { color: var(--main); background-color: var(--Hub); border-color: var(--Hub); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+  }
+
+  // Una sola grilla: en móvil una columna; en pantalla ancha todas las tarjetas que quepan.
   &__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 16px;
-    margin: 0;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    align-items: stretch;
+    gap: 14px;
+    margin: 0 0 36px;
     padding: 0;
     list-style: none;
   }

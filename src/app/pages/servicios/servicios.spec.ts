@@ -37,21 +37,46 @@ describe('Servicios (/servicios)', () => {
     expect(buttons[1].getAttribute('href')).toBe('/servicios/agendar');
   });
 
-  it('el catálogo se agrupa por categoría, en el orden fijo, y cada servicio tiene su tarjeta', () => {
+  it('una sola grilla con todas las tarjetas, en el orden de las categorías', () => {
     const { el, c } = montar();
 
     expect(c.groups().map((g) => g.category)).toEqual([
       'instalacion', 'mantenimiento', 'mecanica', 'electrico', 'aire_acondicionado', 'diagnostico',
     ]);
+    expect(el.querySelectorAll('.srv__grid')).toHaveLength(1);
     expect(el.querySelectorAll('app-service-card')).toHaveLength(10);
-    expect(el.querySelector('#cat-mecanica')?.textContent).toContain('Mecánica ligera');
+    // Cada tarjeta lleva su categoría como etiqueta pequeña.
+    expect(el.querySelector('.scard__category')?.textContent).toContain('Instalación');
   });
 
-  it('una categoría sin servicios no sale', () => {
+  it('la fila de chips: Todos y una por categoría con servicios, con "Diagnóstico" corto', () => {
+    const { el } = montar();
+    const labels = Array.from(el.querySelectorAll('.srv__chip')).map((b) => b.textContent?.trim());
+
+    expect(labels).toEqual([
+      'Todos', 'Instalación', 'Mantenimiento', 'Mecánica ligera', 'Eléctrico', 'Aire acondicionado', 'Diagnóstico',
+    ]);
+  });
+
+  it('un chip filtra la grilla y "Todos" la devuelve completa', () => {
+    const { fixture, el, c } = montar();
+
+    c.select('mecanica');
+    fixture.detectChanges();
+    expect(el.querySelectorAll('app-service-card')).toHaveLength(2);
+    expect(el.querySelector('.srv__chip--on')?.textContent?.trim()).toBe('Mecánica ligera');
+
+    c.select(null);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('app-service-card')).toHaveLength(10);
+  });
+
+  it('una categoría sin servicios no tiene chip', () => {
     const { c } = montar();
     c.services.set(SERVICES_MOCK.filter((s) => s.category === 'mecanica'));
 
     expect(c.groups().map((g) => g.category)).toEqual(['mecanica']);
+    expect(c.chips().map((x) => x.category)).toEqual(['mecanica']);
   });
 
   it('sin trabajos publicados no se pinta la sección', () => {

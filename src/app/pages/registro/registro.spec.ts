@@ -50,7 +50,7 @@ describe('Registro', () => {
 
   // El aviso de "confirma tu correo" reemplaza al formulario: es el resultado
   // de la pagina, no un mensaje al margen. Ver la BITACORA del 27/08/2026.
-  it('cambia el formulario por el aviso de confirmacion', async () => {
+  it('cambia el formulario por el aviso de confirmación', async () => {
     const fixture = TestBed.createComponent(Registro);
     await fixture.whenStable();
 

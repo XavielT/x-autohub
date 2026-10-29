@@ -48,7 +48,7 @@ describe('LocationSelect como ControlValueAccessor', () => {
     expect(select.isOpen()).toBe(false);
   });
 
-  it('el control obligatorio queda valido en cuanto se elige', async () => {
+  it('el control obligatorio queda válido en cuanto se elige', async () => {
     const { host, select } = await montar();
     expect(host.control.invalid).toBe(true);
 
@@ -57,7 +57,7 @@ describe('LocationSelect como ControlValueAccessor', () => {
     expect(host.control.valid).toBe(true);
   });
 
-  it('conserva un valor que no esta en la lista, en vez de vaciarlo', async () => {
+  it('conserva un valor que no está en la lista, en vez de vaciarlo', async () => {
     // Es el caso de los datos que ya existen: "Santo Domingo Este" y "Punta Cana"
     // estan hoy en la base. Si el control los descartara al abrir un formulario
     // de edicion, guardar un cambio de precio borraria la ubicacion.
@@ -71,7 +71,7 @@ describe('LocationSelect como ControlValueAccessor', () => {
     expect(host.control.value).toBe('Santo Domingo Este');
   });
 
-  it('trata null como vacio y no revienta', async () => {
+  it('trata null como vacío y no revienta', async () => {
     const { select } = await montar();
 
     select.writeValue(null);

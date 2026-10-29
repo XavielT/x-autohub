@@ -51,6 +51,6 @@ export class VehiclePickerModal {
   clear(): void {
     this.vehicles.clear();
     this.picker.close();
-    this.toast.show('Quitamos tu vehiculo.');
+    this.toast.show('Quitamos tu vehículo.');
   }
 }

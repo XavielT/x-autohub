@@ -17,6 +17,7 @@ import {
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { GuestAvisos } from '../../../shared/components/guest-avisos/guest-avisos';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
 /**
@@ -34,7 +35,7 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
  */
 @Component({
   selector: 'app-pedido',
-  imports: [DatePipe, DecimalPipe, RouterLink, GuestAvisos],
+  imports: [Skeleton, DatePipe, DecimalPipe, RouterLink, GuestAvisos],
   templateUrl: './pedido.html',
   styleUrl: './pedido.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

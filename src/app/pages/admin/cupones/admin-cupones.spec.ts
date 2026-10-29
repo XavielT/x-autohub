@@ -136,7 +136,7 @@ describe('AdminCupones (/admin/cupones)', () => {
       c.save();
       await settle(fixture);
 
-      expect(toast.show).toHaveBeenCalledWith('Ya hay un cupon con ese codigo.', 'error');
+      expect(toast.show).toHaveBeenCalledWith('Ya hay un cupón con ese código.', 'error');
       expect(c.draft()).not.toBeNull();
     });
   });

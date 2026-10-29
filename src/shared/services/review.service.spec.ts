@@ -66,7 +66,7 @@ describe('ReviewService (mock)', () => {
       expect(list.map((r) => r.id)).toEqual([2, 1, 3]); // 2 y 1 verificadas (más nueva primero), luego la 3
     });
 
-    it('pagina con offset y límite', async () => {
+    it('página con offset y límite', async () => {
       const first = await firstValueFrom(service.getReviews('product', 1, 0, 2));
       const rest = await firstValueFrom(service.getReviews('product', 1, 2, 2));
 

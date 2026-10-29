@@ -1,18 +1,6 @@
-<div class="autohub-card">
-    <a class="autohub-card__imgLink" [routerLink]="['/auto-hub-details', autoHub().id]"><img class="autohub-card__img" [ngSrc]="autoHub().images[0]" [priority]="priority()" fill /></a>
-    <div class="autohub-card__info">
-        <a [routerLink]="['/auto-hub-details', autoHub().id]">
-            <div class="autohub-card__info-header">
-                <h3>{{ autoHub().brand }} {{ autoHub().model }} {{ autoHub().year }}</h3>
-                <h5>RD$ {{ autoHub().price | number: '1.0-0' }}</h5>
-            </div>
-        </a>
-        @if (autoHub().isTest) { <app-test-badge /> }
-        <div class="autohub-card__info-content">
-            <p>{{ autoHub().description }}</p>
-        </div>
-        <div class="autohub-card__location">
-            <img src="assets/icons/location-icon.svg" /><span>{{ autoHub().location }}</span>
-        </div>
-    </div>
-</div>
+<app-vehicle-card
+  [link]="'/auto-hub-details/' + autoHub().id" [image]="autoHub().images.at(0) ?? null"
+  [title]="autoHub().brand + ' ' + autoHub().model" [price]="autoHub().price"
+  [year]="autoHub().year" [mileage]="autoHub().mileage" [meta]="autoHub().location"
+  badge="Verificado por X AutoHub" [specs]="specs()" [isTest]="!!autoHub().isTest"
+  [priority]="priority()" />

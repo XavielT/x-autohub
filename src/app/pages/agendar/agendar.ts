@@ -27,7 +27,7 @@ import { ServiceCatalogService } from '../../../shared/services/service-catalog.
 import { SiteSettingsService } from '../../../shared/services/site-settings.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { VehiclePickerService } from '../../../shared/services/vehicle-picker.service';
-import { VehicleService } from '../../../shared/services/vehicle.service';
+import { VehicleService, sameVehicle } from '../../../shared/services/vehicle.service';
 import { WEEKDAY_HEADERS, buildMonth, monthHasBookableDay, shiftMonth } from '../../../shared/utils/calendar';
 import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { formatDuration } from '../../../shared/utils/format-duration';
@@ -36,6 +36,7 @@ import { isValidDrPhone, normalizeDrPhone } from '../../../shared/utils/phone';
 import { formatDay, formatTime, formatWhen, localDate, weekdayOf } from '../../../shared/utils/service-time';
 import { GuestAvisos } from '../../../shared/components/guest-avisos/guest-avisos';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 export type AgendarStep = 1 | 2 | 3;
 
 /** El mensaje con el que se avisa por WhatsApp de una cita ya agendada. */
@@ -64,7 +65,7 @@ export function appointmentWhatsAppMessage(
  */
 @Component({
   selector: 'app-agendar',
-  imports: [FormsModule, RouterLink, GuestAvisos],
+  imports: [Skeleton, FormsModule, RouterLink, GuestAvisos],
   templateUrl: './agendar.html',
   styleUrl: './agendar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -321,7 +322,7 @@ export class Agendar {
     return (
       this.vehicles
         .garage()
-        .find((v) => v.makeId === picked.makeId && v.modelId === picked.modelId && v.year === picked.year)?.id ?? null
+        .find((v) => sameVehicle(v, picked))?.id ?? null
     );
   }
 
@@ -382,7 +383,7 @@ export class Agendar {
 
           // Lo más común: la hora se llenó mientras se llenaba el formulario. Se vuelve a
           // las horas, ya actualizadas, en vez de dejar al cliente con un botón que no hace nada.
-          if (/hora ya no esta disponible/i.test(error.message)) {
+          if (/hora ya no est[aá] disponible/i.test(error.message)) {
             this.selectedSlot.set(null);
             if (this.selectedDate()) this.loadSlots(this.selectedDate()!);
             this.goTo(2);

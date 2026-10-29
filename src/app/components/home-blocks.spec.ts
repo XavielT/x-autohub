@@ -46,7 +46,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-categories', () => {
-    it('muestra una chip por cada categoria de primer nivel, con enlace a la tienda', async () => {
+    it('muestra una chip por cada categoría de primer nivel, con enlace a la tienda', async () => {
       const fixture = TestBed.createComponent(HomeCategories);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -57,11 +57,26 @@ describe('bloques del home', () => {
       expect(chips.length).toBe(12);
       expect(chips[0].textContent).toContain('Accesorios interior');
       expect(chips[0].getAttribute('href')).toBe('/tienda/c/accesorios-interior');
-      // El icono es la inicial: no hay assets de iconos de categoria.
-      expect(chips[0].querySelector('.hcat__icon')?.textContent?.trim()).toBe('A');
+      // El icono es un SVG por categoría (0041): la máscara apunta a su archivo.
+      const icon = chips[0].querySelector<HTMLElement>('.hcat__icon--svg');
+      expect(icon?.style.getPropertyValue('--icon')).toContain('assets/icons/categories/accesorios-interior.svg');
     });
 
-    it('sin categorias no pinta nada', () => {
+    it('una categoría sin icono cae a la inicial', () => {
+      TestBed.configureTestingModule({
+        providers: [{
+          provide: CategoryService,
+          useValue: { getTree: () => of([{ id: 1, parentId: null, slug: 'x', name: 'Zeta', icon: null, sortOrder: 1, isActive: true, children: [] }]) },
+        }],
+      });
+      const fixture = TestBed.createComponent(HomeCategories);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.hcat__icon')?.textContent?.trim()).toBe('Z');
+      expect(el.querySelector('.hcat__icon--svg')).toBeNull();
+    });
+
+    it('sin categorías no pinta nada', () => {
       TestBed.configureTestingModule({ providers: [{ provide: CategoryService, useValue: { getTree: () => of([]) } }] });
       const fixture = TestBed.createComponent(HomeCategories);
       fixture.detectChanges();
@@ -71,7 +86,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-vehicle-picker', () => {
-    it('sin vehiculo muestra el formulario', () => {
+    it('sin vehículo muestra el formulario', () => {
       const fixture = TestBed.createComponent(HomeVehiclePicker);
       fixture.detectChanges();
       const el = html(fixture);
@@ -80,7 +95,7 @@ describe('bloques del home', () => {
       expect(el.querySelector('.hvp__current')).toBeNull();
     });
 
-    it('elegir guarda el vehiculo, muestra cual es y ofrece ver la tienda o cambiarlo', async () => {
+    it('elegir guarda el vehículo, muestra cual es y ofrece ver la tienda o cambiarlo', async () => {
       const fixture = TestBed.createComponent(HomeVehiclePicker);
       fixture.detectChanges();
       const vehicles = TestBed.inject(VehicleService);
@@ -134,7 +149,7 @@ describe('bloques del home', () => {
     ['home-bestsellers', HomeBestsellers, 'getBestSellers', 'Más vendidos'],
     ['home-new-arrivals', HomeNewArrivals, 'getNewArrivals', 'Nuevos'],
   ] as const)('%s', (_name, component, method, title) => {
-    it('con productos pinta su seccion', async () => {
+    it('con productos pinta su sección', async () => {
       const fixture = TestBed.createComponent(component);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -173,7 +188,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-bestsellers y home-new-arrivals', () => {
-    it('muestran cuatro, los mas vendidos de mayor a menor', async () => {
+    it('muestran cuatro, los más vendidos de mayor a menor', async () => {
       const fixture = TestBed.createComponent(HomeBestsellers);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -193,7 +208,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-services-banner', () => {
-    it('tiene los dos botones y los servicios del catalogo', async () => {
+    it('tiene los dos botones y los servicios del catálogo', async () => {
       const fixture = TestBed.createComponent(HomeServicesBanner);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -233,7 +248,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-vehicles', () => {
-    it('separa Auto Hub de Hub Market y muestra los ultimos tres vehiculos', async () => {
+    it('separa Auto Hub de Hub Market y muestra los últimos tres vehículos', async () => {
       const fixture = TestBed.createComponent(HomeVehicles);
       fixture.detectChanges();
       await fixture.whenStable();
@@ -247,7 +262,7 @@ describe('bloques del home', () => {
       expect(el.querySelectorAll('app-car-card').length).toBe(3);
     });
 
-    it('sin vehiculos publicados deja solo las dos puertas', () => {
+    it('sin vehículos publicados deja solo las dos puertas', () => {
       TestBed.configureTestingModule({
         providers: [{ provide: HubMarketService, useValue: { getLatestVehicles: () => of([]) } }],
       });
@@ -261,7 +276,7 @@ describe('bloques del home', () => {
   });
 
   describe('home-community', () => {
-    it('es una tarjeta que lleva a /social-hub, y nada mas', () => {
+    it('es una tarjeta que lleva a /social-hub, y nada más', () => {
       const fixture = TestBed.createComponent(HomeCommunity);
       fixture.detectChanges();
       const el = html(fixture);
@@ -271,7 +286,7 @@ describe('bloques del home', () => {
     });
   });
 
-  describe('la pagina Home', () => {
+  describe('la página Home', () => {
     it('arma los diez bloques en el orden del plan', () => {
       const fixture = TestBed.createComponent(Home);
       fixture.detectChanges();

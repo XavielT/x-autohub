@@ -4,7 +4,7 @@ import { INSTALL_DISMISS_KEY } from '../../utils/pwa-env';
 
 const DAY = 24 * 60 * 60 * 1000;
 const UA_SAFARI_IPHONE =
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Versión/17.4 Mobile/15E148 Safari/604.1';
 const UA_CHROME_ANDROID =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36';
 

@@ -76,14 +76,14 @@ describe('Publicar', () => {
     expect(componente).toBeTruthy();
   });
 
-  it('precarga el telefono del perfil, para no hacerlo escribir de nuevo', async () => {
+  it('precarga el teléfono del perfil, para no hacerlo escribir de nuevo', async () => {
     const { fixture, componente } = montar();
     await fixture.whenStable();
 
     expect(componente.publishForm.controls.contactPhone.value).toBe('809-555-0101');
   });
 
-  it('deja el campo vacio si el perfil no tiene telefono', async () => {
+  it('deja el campo vacío si el perfil no tiene teléfono', async () => {
     const { fixture, componente } = montar({ user: { ...USUARIO, phone: undefined } });
     await fixture.whenStable();
 
@@ -93,7 +93,7 @@ describe('Publicar', () => {
   // Con Supabase la sesion se restaura de forma asincrona, asi que al construirse
   // el componente `auth.user()` todavia puede ser null. Estas dos pruebas son las
   // que justifican que la precarga sea un `effect` y no un valor inicial.
-  it('precarga tambien cuando la sesion se restaura despues de abrir la pagina', async () => {
+  it('precarga también cuando la sesión se restaura después de abrir la página', async () => {
     const { fixture, componente, user } = montar({ user: null });
     await fixture.whenStable();
     expect(componente.publishForm.controls.contactPhone.value).toBe('');
@@ -116,7 +116,7 @@ describe('Publicar', () => {
     expect(componente.publishForm.controls.contactPhone.value).toBe('829 555 0187');
   });
 
-  it('el telefono es opcional: sin el la publicacion sale igual', async () => {
+  it('el teléfono es opcional: sin el la publicación sale igual', async () => {
     const { fixture, componente, publish } = montar({ user: { ...USUARIO, phone: undefined } });
     await fixture.whenStable();
 
@@ -128,7 +128,7 @@ describe('Publicar', () => {
     expect(publish.mock.calls[0][0].contactPhone).toBeUndefined();
   });
 
-  it('guarda el telefono normalizado, no como lo escribieron', async () => {
+  it('guarda el teléfono normalizado, no como lo escribieron', async () => {
     const { fixture, componente, publish } = montar();
     await fixture.whenStable();
 
@@ -140,7 +140,7 @@ describe('Publicar', () => {
     expect(publish.mock.calls[0][0].contactPhone).toBe('8095550134');
   });
 
-  it('no publica con un telefono invalido, y dice por que', async () => {
+  it('no publica con un teléfono inválido, y dice por que', async () => {
     const { fixture, componente, publish, show } = montar();
     await fixture.whenStable();
 
@@ -150,12 +150,12 @@ describe('Publicar', () => {
     await fixture.whenStable();
 
     expect(publish).not.toHaveBeenCalled();
-    expect(show).toHaveBeenCalledWith('Escribe un telefono valido, ej. 809 555 0134.', 'error');
+    expect(show).toHaveBeenCalledWith('Escribe un teléfono válido, ej. 809 555 0134.', 'error');
   });
 
   // --- Moderacion (fase 5) --------------------------------------------------
 
-  it('a un usuario normal le avisa que su publicacion espera aprobacion', async () => {
+  it('a un usuario normal le avisa que su publicación espera aprobación', async () => {
     const { fixture, componente, publish, show, navigate } = montar();
     await fixture.whenStable();
 
@@ -166,13 +166,13 @@ describe('Publicar', () => {
     // El cuarto argumento es `canModerate`: false para un usuario normal.
     expect(publish.mock.calls[0][3]).toBe(false);
     expect(show).toHaveBeenCalledWith(
-      'Tu publicacion fue enviada y sera visible cuando un moderador la apruebe.',
+      'Recibimos tu publicación. La revisa un moderador y te aparecerá como "Pendiente" en tu perfil hasta que se apruebe.',
     );
     // A /perfil, que es donde puede verla con su distintivo "Pendiente".
     expect(navigate).toHaveBeenCalledWith(['/perfil']);
   });
 
-  it('a un moderador le confirma que ya esta publicada, y lo lleva a verla', async () => {
+  it('a un moderador le confirma que ya está publicada, y lo lleva a verla', async () => {
     const { fixture, componente, publish, show, navigate } = montar({
       user: { ...USUARIO, role: 'moderador' },
     });
@@ -183,11 +183,11 @@ describe('Publicar', () => {
     await fixture.whenStable();
 
     expect(publish.mock.calls[0][3]).toBe(true);
-    expect(show).toHaveBeenCalledWith('Tu publicacion ya esta en Hub Market.');
+    expect(show).toHaveBeenCalledWith('Publicada. Como moderador, tu publicación no necesita aprobación y ya está en Hub Market.');
     expect(navigate).not.toHaveBeenCalledWith(['/perfil']);
   });
 
-  it('un admin tambien publica directo: canModerate no es solo el moderador', async () => {
+  it('un admin también publica directo: canModerate no es solo el moderador', async () => {
     const { fixture, componente, publish } = montar({
       user: { ...USUARIO, role: 'admin', isAdmin: true },
     });
@@ -211,7 +211,7 @@ describe('Publicar', () => {
 
     expect(componente.showError('contactPhone')).toBe(true);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Escribe un telefono valido, ej. 809 555 0134.',
+      'Escribe un teléfono válido, ej. 809 555 0134.',
     );
   });
 });

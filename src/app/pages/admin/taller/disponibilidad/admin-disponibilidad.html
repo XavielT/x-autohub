@@ -17,7 +17,7 @@
   }
 
   @if (isLoading()) {
-    <p class="tl__empty">Cargando el horario...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando el horario…" />
   } @else {
     <ul class="tl__list">
       @for (d of days(); track d.weekday) {

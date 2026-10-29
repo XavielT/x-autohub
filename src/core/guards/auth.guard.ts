@@ -22,7 +22,7 @@ export const authGuard: CanActivateFn = async (_route, state) => {
     return true;
   }
 
-  toast.show('Inicia sesion para continuar.', 'error');
+  toast.show('Inicia sesión para continuar.', 'error');
   return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };
 

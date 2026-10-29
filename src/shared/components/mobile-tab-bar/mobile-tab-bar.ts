@@ -1,3 +1,4 @@
+import { Avatar } from '../../ui/avatar/avatar';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -26,7 +27,7 @@ type Tab = 'inicio' | 'categorias' | 'buscar' | 'carrito' | 'cuenta';
  */
 @Component({
   selector: 'app-mobile-tab-bar',
-  imports: [RouterLink],
+  imports: [RouterLink, Avatar],
   templateUrl: './mobile-tab-bar.html',
   styleUrl: './mobile-tab-bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,7 +114,7 @@ export class MobileTabBar {
   logout(): void {
     this.auth.logout();
     this.closeSheet();
-    this.toast.show('Sesion cerrada.');
+    this.toast.show('Sesión cerrada.');
     void this.router.navigateByUrl('/');
   }
 }

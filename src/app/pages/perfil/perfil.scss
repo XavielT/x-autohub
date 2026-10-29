@@ -39,30 +39,9 @@
     align-items: flex-start;
   }
 
-  &__avatar {
-    width: 78px;
-    height: 78px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    overflow: hidden;
-    background-color: var(--Hub);
-    display: flex;
-    align-items: center;
-    justify-content: center;
 
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
 
-  &__initial {
-    font-family: var(--font-brand);
-    font-size: 32px;
-    font-weight: 700;
-    color: #1a1a1a;
-  }
+
 
   &__identity {
     flex: 1;
@@ -255,7 +234,8 @@
   // auto-fit y no un numero fijo: en un telefono una tarjeta de 70px no sirve.
   &__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: stretch;
     gap: 18px;
   }
 

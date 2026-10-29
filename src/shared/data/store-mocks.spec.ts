@@ -15,11 +15,11 @@ import { SERVICES_MOCK } from './service.mock';
  */
 describe('mocks de la tienda', () => {
   describe('productos', () => {
-    it('hay uno por cada pieza del catalogo anterior', () => {
+    it('hay uno por cada pieza del catálogo anterior', () => {
       expect(HUB_PART_MOCK.length).toBe(36);
     });
 
-    it('cada slug y cada sku es unico, con la forma que genera la base', () => {
+    it('cada slug y cada sku es único, con la forma que genera la base', () => {
       const slugs = new Set(HUB_PART_MOCK.map((p) => p.slug));
       const skus = new Set(HUB_PART_MOCK.map((p) => p.sku));
       expect(slugs.size).toBe(HUB_PART_MOCK.length);
@@ -38,7 +38,7 @@ describe('mocks de la tienda', () => {
       for (const p of conOferta) expect(p.compareAtPrice as number).toBeGreaterThan(p.price);
     });
 
-    it('un articulo bajo pedido dice cuanto tarda, y uno de stock no', () => {
+    it('un artículo bajo pedido dice cuanto tarda, y uno de stock no', () => {
       const bajoPedido = HUB_PART_MOCK.filter((p) => p.fulfillment === 'on_order');
       expect(bajoPedido.length).toBeGreaterThan(0);
       for (const p of bajoPedido) expect(p.leadTimeDays).toBeGreaterThan(0);
@@ -84,13 +84,13 @@ describe('mocks de la tienda', () => {
       expect(new Set(PRODUCT_CATEGORIES_MOCK.map((c) => c.slug)).size).toBe(12);
     });
 
-    it('las 17 categorias de texto de antes se mapean, y ninguna a una categoria que no existe', () => {
+    it('las 17 categorías de texto de antes se mapean, y ninguna a una categoría que no existe', () => {
       const slugs = new Set(PRODUCT_CATEGORIES_MOCK.map((c) => c.slug));
       expect(Object.keys(LEGACY_CATEGORY_TO_SLUG).length).toBe(17);
       for (const target of Object.values(LEGACY_CATEGORY_TO_SLUG)) expect(slugs.has(target)).toBe(true);
     });
 
-    it('cada producto esta clasificado en una categoria que existe', () => {
+    it('cada producto esta clasificado en una categoría que existe', () => {
       const ids = new Set(PRODUCT_CATEGORIES_MOCK.map((c) => c.id));
       for (const p of HUB_PART_MOCK) {
         expect(p.categoryId, p.name).not.toBeNull();
@@ -143,7 +143,7 @@ describe('mocks de la tienda', () => {
       expect(sinFitments.map((p) => p.id)).toEqual([1, 13]);
     });
 
-    it('no hay dos fitments identicos (el indice unico de la base los rechazaria)', () => {
+    it('no hay dos fitments identicos (el indice único de la base los rechazaria)', () => {
       const keys = PRODUCT_FITMENTS_MOCK.map((f) =>
         [f.productId, f.makeId, f.modelId ?? '', f.yearFrom ?? '', f.yearTo ?? ''].join('|'),
       );

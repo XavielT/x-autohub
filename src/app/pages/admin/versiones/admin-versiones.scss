@@ -191,7 +191,7 @@
 
     // Borrar una version no se deshace: lleva el rojo de los errores de
     // formulario (`--danger`), el unico rojo del sitio que significa "esto
-    // salio mal", y no el ambar de las demas acciones.
+    // salió mal", y no el ambar de las demas acciones.
     //
     // Las dos reglas van anidadas aqui, y no como `&__danger` al nivel de
     // arriba, porque asi le ganan en especificidad al `button` de la regla

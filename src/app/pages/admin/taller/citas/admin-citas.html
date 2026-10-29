@@ -15,7 +15,7 @@
   </div>
 
   @if (isLoading() && appointments().length === 0) {
-    <p class="tl__empty">Cargando las citas...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando las citas…" />
   } @else if (days().length === 0) {
     <p class="tl__empty">
       @switch (range()) {

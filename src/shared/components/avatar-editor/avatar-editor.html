@@ -1,0 +1,50 @@
+@if (user(); as u) {
+  <section class="ae" aria-label="Foto de perfil">
+    @if (file()) {
+      <div class="ae__crop">
+        <div class="ae__view" [style.width.px]="view" [style.height.px]="view"
+             (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
+             (pointerup)="onPointerUp()" (pointercancel)="onPointerUp()">
+          <img class="ae__img" [src]="previewUrl()" alt="Vista previa de tu foto" [style]="imgStyle()" draggable="false" />
+        </div>
+        <label class="ae__zoom">
+          <span>Acercar</span>
+          <input type="range" min="1" max="3" step="0.05" [value]="zoom()" (input)="onZoom($event)" />
+        </label>
+        <p class="ae__hint">Arrastra la foto para acomodarla. Se guarda como un cuadrado.</p>
+        <div class="ae__actions">
+          <button type="button" class="ae__btn ae__btn--primary" [disabled]="isSaving()" (click)="saveCrop()">
+            {{ isSaving() ? 'Guardando…' : 'Guardar foto' }}
+          </button>
+          <button type="button" class="ae__btn" [disabled]="isSaving()" (click)="cancelCrop()">Cancelar</button>
+        </div>
+      </div>
+    } @else {
+      <div class="ae__current">
+        <app-avatar [avatarUrl]="u.avatarUrl" [name]="u.displayName" [size]="72" [alt]="'Foto de ' + u.displayName" />
+        <div class="ae__actions">
+          <label class="ae__btn ae__btn--primary">
+            Subir foto
+            <input class="ae__file" type="file" accept="image/jpeg,image/png,image/webp" (change)="onPick($event)" />
+          </label>
+          @if (u.avatarUrl) {
+            <button type="button" class="ae__btn" [disabled]="isSaving()" (click)="remove()">Quitar foto</button>
+          }
+        </div>
+      </div>
+
+      <p class="ae__label">O elige un avatar</p>
+      <ul class="ae__grid">
+        @for (avatar of avatars; track avatar.id) {
+          <li>
+            <button type="button" class="ae__choice" [class.ae__choice--on]="u.avatarUrl === avatar.url"
+                    [disabled]="isSaving()" [attr.aria-label]="'Avatar: ' + avatar.label"
+                    [attr.aria-pressed]="u.avatarUrl === avatar.url" (click)="chooseSite(avatar.url)">
+              <img [src]="avatar.url" alt="" width="56" height="56" loading="lazy" />
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

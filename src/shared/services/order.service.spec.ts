@@ -110,7 +110,7 @@ describe('OrderService (mock)', () => {
         'De "Disco" solo quedan 1 y pediste 3. Ajusta la cantidad.',
       );
       expect(await errorOf(service.create(PAYLOAD, [line({ id: 1, name: 'Disco', stock: 0 })]))).toBe(
-        'Se agoto "Disco". Quitala del carrito para continuar.',
+        'Se agoto "Disco". Quítala del carrito para continuar.',
       );
     });
 
@@ -126,14 +126,14 @@ describe('OrderService (mock)', () => {
 
       it('sin elegir opción se rechaza, diciendo el producto (como la base)', async () => {
         expect(await errorOf(service.create(PAYLOAD, [conOpcion(null)]))).toBe(
-          'Elige una opcion de "Alfombras" antes de comprarlo.',
+          'Elige una opción de "Alfombras" antes de comprarlo.',
         );
       });
 
       it('una opción en un producto que no las tiene se rechaza', async () => {
         expect(
           await errorOf(service.create(PAYLOAD, [{ ...conOpcion(opcion(1, 'Negro', 5)), part: makeProduct({ id: 8, name: 'Alfombras' }) }])),
-        ).toBe('La opcion elegida de "Alfombras" ya no esta disponible.');
+        ).toBe('La opción elegida de "Alfombras" ya no está disponible.');
       });
 
       it('el stock que cuenta es el de la opción, y el mensaje la nombra', async () => {
@@ -141,7 +141,7 @@ describe('OrderService (mock)', () => {
           'De "Alfombras (Negro)" solo quedan 2 y pediste 3. Ajusta la cantidad.',
         );
         expect(await errorOf(service.create(PAYLOAD, [conOpcion(opcion(1, 'Negro', 0))]))).toBe(
-          'Se agoto "Alfombras (Negro)". Quitala del carrito para continuar.',
+          'Se agoto "Alfombras (Negro)". Quítala del carrito para continuar.',
         );
       });
 
@@ -172,7 +172,7 @@ describe('OrderService (mock)', () => {
     it('un carrito vacío o un envío inventado se rechazan', async () => {
       expect(await errorOf(service.create(PAYLOAD, []))).toBe('Un pedido necesita al menos una pieza.');
       expect(await errorOf(service.create({ ...PAYLOAD, shippingOptionId: 'volando' }, [line({ id: 1 })]))).toBe(
-        'Metodo de envio no valido.',
+        'Método de envío no válido.',
       );
     });
 
@@ -301,14 +301,14 @@ describe('OrderService (mock)', () => {
       const before = (await firstValueFrom(service.getMyOrders())).length;
 
       expect(await errorOf(service.create(withCoupon('NOEXISTE'), [line({ id: 1, price: 1000 })]))).toBe(
-        'Ese cupon no existe o ya no esta disponible.',
+        'Ese cupón no existe o ya no está disponible.',
       );
       expect((await firstValueFrom(service.getMyOrders())).length).toBe(before);
     });
 
     it('la compra mínima se exige al crear el pedido, aunque el checkout no la haya probado', async () => {
       expect(await errorOf(service.create(withCoupon('DESCUENTO500'), [line({ id: 1, price: 1000 })]))).toBe(
-        'Este cupon pide una compra de al menos RD$ 3,000.',
+        'Este cupón pide una compra de al menos RD$ 3,000.',
       );
     });
 
@@ -336,13 +336,13 @@ describe('OrderService (mock)', () => {
             line({ id: 1, price: 2500 }),
           ]),
         ),
-      ).toBe('Este cupon no aplica a tu pedido.');
+      ).toBe('Este cupón no aplica a tu pedido.');
     });
 
     it('un cupón de un uso por cliente: el mismo correo no lo repite, otro sí', async () => {
       await firstValueFrom(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]));
 
-      expect(await errorOf(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupon.');
+      expect(await errorOf(service.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupón.');
       expect(
         (await firstValueFrom(service.create(withCoupon('BIENVENIDO10', { contactEmail: 'otro@b.c' }), [line({ id: 1, price: 1000 })]))).discount,
       ).toBe(100);
@@ -355,7 +355,7 @@ describe('OrderService (mock)', () => {
       TestBed.configureTestingModule({ providers: [{ provide: AuthService, useValue: { user } }] });
       const recargado = TestBed.inject(OrderService);
 
-      expect(await errorOf(recargado.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupon.');
+      expect(await errorOf(recargado.create(withCoupon('BIENVENIDO10'), [line({ id: 1, price: 1000 })]))).toBe('Ya usaste este cupón.');
     });
 
     it('el stock se valida antes que el cupón, como en la base', async () => {

@@ -4,22 +4,20 @@
 
       <!-- Encabezado -->
       <section class="perfil__card perfil__header">
-        <div class="perfil__avatar" aria-hidden="true">
-          @if (u.avatarUrl) {
-            <img [src]="u.avatarUrl" [alt]="'Foto de ' + u.displayName" />
-          } @else {
-            <span class="perfil__initial">{{ initial() }}</span>
-          }
-        </div>
+        @if (!isEditing()) {
+          <app-avatar [avatarUrl]="u.avatarUrl" [name]="u.displayName" [size]="78" [alt]="'Foto de ' + u.displayName" />
+        }
 
         @if (isEditing()) {
           <form class="perfil__form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+            <app-avatar-editor />
+
             <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
 
             <label class="perfil__field">
               <span>Nombre<span class="req" aria-hidden="true">*</span></span>
               <input id="displayName" type="text" formControlName="displayName" required
-                     placeholder="Como quieres que te vean"
+                     placeholder="Cómo quieres que te vean"
                      [class.is-invalid]="showError('displayName')" />
               @if (showError('displayName')) {
                 <span class="field-error">Escribe al menos 2 caracteres.</span>
@@ -27,18 +25,18 @@
             </label>
 
             <label class="perfil__field">
-              <span>Telefono <small>(opcional)</small></span>
+              <span>Teléfono <small>(opcional)</small></span>
               <input type="tel" formControlName="phone" placeholder="809 000 0000" />
             </label>
 
             <label class="perfil__field">
-              <span>Ubicacion <small>(opcional)</small></span>
+              <span>Ubicación <small>(opcional)</small></span>
               <app-location-select formControlName="location" inputId="location"
                                    placeholder="Elige tu provincia" />
             </label>
 
             <div class="perfil__actions">
-              <button type="submit" class="perfil__save" [disabled]="isSaving()">
+              <button type="submit" class="perfil__save" [disabled]="isSaving()" [attr.aria-busy]="isSaving()">
                 {{ isSaving() ? 'Guardando...' : 'Guardar cambios' }}
               </button>
               <button type="button" class="perfil__cancel" (click)="cancelEdit()">Cancelar</button>
@@ -62,11 +60,11 @@
               <dt>Correo</dt>
               <dd>{{ u.email }}</dd>
 
-              <dt>Telefono</dt>
-              <dd>{{ u.phone || 'Sin telefono' }}</dd>
+              <dt>Teléfono</dt>
+              <dd>{{ u.phone || 'Sin teléfono' }}</dd>
 
-              <dt>Ubicacion</dt>
-              <dd>{{ u.location || 'Sin ubicacion' }}</dd>
+              <dt>Ubicación</dt>
+              <dd>{{ u.location || 'Sin ubicación' }}</dd>
             </dl>
 
             <p class="perfil__since">Miembro desde {{ u.createdAt | date: 'd MMMM y' }}</p>
@@ -104,11 +102,11 @@
         </header>
 
         @if (isLoadingPublications()) {
-          <p class="perfil__empty">Cargando tus publicaciones...</p>
+          <app-skeleton variant="vehicle-card" [count]="2" label="Cargando tus publicaciones…" />
         } @else if (publications().length === 0) {
           <div class="perfil__empty perfil__empty--cta">
-            <p>Todavia no has publicado nada en Hub Market.</p>
-            <a routerLink="/publicar" class="perfil__cta">Publicar mi primer articulo</a>
+            <p>Todavía no has publicado nada en Hub Market.</p>
+            <a routerLink="/publicar" class="perfil__cta">Publicar mi primer artículo</a>
           </div>
         } @else {
           <!--
@@ -170,10 +168,10 @@
         <h2 class="perfil__section-title">Mis pedidos</h2>
 
         @if (isLoadingOrders()) {
-          <p class="perfil__empty">Cargando tu actividad...</p>
+          <app-skeleton variant="row" [count]="3" label="Cargando tu actividad…" />
         } @else if (myOrders().length === 0) {
           <div class="perfil__empty perfil__empty--cta">
-            <p>Todavia no tienes pedidos.</p>
+            <p>Todavía no tienes pedidos.</p>
             <a routerLink="/tienda" class="perfil__cta">Ver la tienda</a>
           </div>
         } @else {
@@ -186,7 +184,7 @@
                   <span class="perfil__order-date">{{ order.createdAt | date: 'd MMM y' }}</span>
                 </a>
                 <span class="perfil__order-items">
-                  {{ order.itemCount }} articulo{{ order.itemCount === 1 ? '' : 's' }}
+                  {{ order.itemCount }} artículo{{ order.itemCount === 1 ? '' : 's' }}
                 </span>
                 <span class="perfil__order-total">RD$ {{ order.total | number: '1.0-0' }}</span>
                 <span class="perfil__order-status" [attr.data-status]="order.status">
@@ -199,7 +197,7 @@
             }
           </ul>
           <p class="perfil__note">
-            Las compras hechas sin cuenta no aparecen aqui: no quedan asociadas a ningun perfil.
+            Las compras hechas sin cuenta no aparecen aquí: no quedan asociadas a ningún perfil.
           </p>
         }
       </section>

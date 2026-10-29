@@ -4,7 +4,7 @@
   </nav>
 
   @switch (state()) {
-    @case ('loading') { <p class="svc__state" role="status">Cargando el servicio…</p> }
+    @case ('loading') { <app-skeleton variant="detail" label="Cargando el servicio…" /> }
 
     @case ('missing') {
       <div class="svc__state">

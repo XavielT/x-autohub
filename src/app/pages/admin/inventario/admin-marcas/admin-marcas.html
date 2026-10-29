@@ -8,8 +8,26 @@
     <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()">Agregar marca</button>
   </form>
 
+  @if (unmatched().length > 0) {
+    <div class="mk__card mk__unmatched">
+      <h3>Modelos escritos por usuarios</h3>
+      <p class="mk__hint">Su marca no tenía el modelo y lo escribieron. «Crear modelo» lo agrega al catálogo y actualiza esos garajes.</p>
+      <ul class="mk__models">
+        @for (u of unmatched(); track unmatchedKey(u)) {
+          <li class="mk__model">
+            <span>{{ u.makeName }} · {{ u.modelText }} <small>({{ u.vehicles }})</small></span>
+            <button type="button" class="mk__btn mk__btn--primary" (click)="createFromText(u)"
+                    [disabled]="creatingKey() !== null">
+              {{ creatingKey() === unmatchedKey(u) ? 'Creando…' : 'Crear modelo' }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
   @if (isLoading()) {
-    <p class="mk__empty">Cargando marcas...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando marcas…" />
   } @else {
     <div class="mk__card">
       <label class="mk__field">
@@ -36,7 +54,7 @@
         @if (isLoadingModels()) {
           <p class="mk__hint">Cargando modelos...</p>
         } @else if (models().length === 0) {
-          <p class="mk__hint">{{ make.name }} todavia no tiene modelos. Agrega el primero arriba.</p>
+          <p class="mk__hint">{{ make.name }} todavía no tiene modelos. Agrega el primero arriba.</p>
         } @else {
           <ul class="mk__models">
             @for (model of models(); track model.id) {

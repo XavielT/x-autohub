@@ -1,4 +1,12 @@
 <section class="hsearch" aria-labelledby="hsearch-title">
+  <img class="hsearch__poster" src="assets/imgs/hero-poster.jpg" alt="" aria-hidden="true">
+  @if (showVideo) {
+    <video class="hsearch__video" autoplay muted loop playsinline preload="metadata"
+           poster="assets/imgs/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+      <source src="assets/videos/citroen-c3-flying.mp4" type="video/mp4">
+    </video>
+  }
+  <div class="hsearch__overlay"></div>
   <div class="hsearch__inner">
     <h1 id="hsearch-title" class="hsearch__title">Todo lo que <span>tu carro</span> necesita</h1>
     <p class="hsearch__lead">Accesorios, piezas y taller, en RD.</p>

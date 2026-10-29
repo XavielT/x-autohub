@@ -34,7 +34,7 @@ describe('Footer', () => {
     expect(titles).toEqual(['Tienda', 'Servicios', 'Vehículos', 'Comunidad', 'Cuenta']);
   });
 
-  it('la columna Tienda lista las 12 categorias de primer nivel y el enlace a toda la tienda', async () => {
+  it('la columna Tienda lista las 12 categorías de primer nivel y el enlace a toda la tienda', async () => {
     const { el } = await montar();
     const tienda = links(el, 'Tienda');
 
@@ -43,12 +43,12 @@ describe('Footer', () => {
     expect(tienda[12]).toBe('/tienda');
   });
 
-  it('Vehiculos agrupa Auto Hub, Hub Market y Publicar', async () => {
+  it('Vehículos agrupa Auto Hub, Hub Market y Publicar', async () => {
     const { el } = await montar();
-    expect(links(el, 'Vehiculos')).toEqual(['/auto-hub', '/hub-market', '/publicar']);
+    expect(links(el, 'Vehículos')).toEqual(['/auto-hub', '/hub-market', '/publicar']);
   });
 
-  it('la linea de contacto trae el WhatsApp 809-953-9782 con su enlace', async () => {
+  it('la línea de contacto trae el WhatsApp 809-953-9782 con su enlace', async () => {
     const { el } = await montar();
     const link = el.querySelector('.footer__contact a') as HTMLAnchorElement;
 
@@ -67,7 +67,7 @@ describe('Footer', () => {
     expect(links(el, 'Servicios')).toContain('/servicios');
   });
 
-  it('la columna Cuenta cambia con la sesion', async () => {
+  it('la columna Cuenta cambia con la sesión', async () => {
     const guest = await montar();
     expect(links(guest.el, 'Cuenta')).toEqual(['/login', '/registro']);
 
@@ -83,7 +83,7 @@ describe('Footer', () => {
     expect(links(logged.el, 'Cuenta')).toEqual(['/perfil']);
   });
 
-  it('conserva Terminos y condiciones y las redes', async () => {
+  it('conserva Términos y condiciones y las redes', async () => {
     const { el } = await montar();
 
     expect(el.querySelector('.footer__legal a')?.getAttribute('href')).toBe('/terminos-condiciones');
@@ -92,12 +92,12 @@ describe('Footer', () => {
 });
 
 describe('contacto de la tienda', () => {
-  it('el numero es uno solo: 809-953-9782', () => {
+  it('el número es uno solo: 809-953-9782', () => {
     expect(STORE_PHONE).toBe('8099539782');
     expect(STORE_PHONE_DISPLAY).toBe('809-953-9782');
   });
 
-  it('el enlace de WhatsApp lleva el codigo de pais y el mensaje codificado', () => {
+  it('el enlace de WhatsApp lleva el código de país y el mensaje codificado', () => {
     expect(storeWhatsAppLink()).toBe('https://wa.me/18099539782?text=Hola%20X%20AutoHub');
     expect(storeWhatsAppLink('Quiero cotizar & más')).toBe(
       'https://wa.me/18099539782?text=Quiero%20cotizar%20%26%20m%C3%A1s',

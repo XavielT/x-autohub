@@ -102,7 +102,7 @@ export class FitmentEditor implements OnInit {
   add(): void {
     const make = this.selectedMake();
     if (!make) {
-      this.error.set('Elige una marca de la lista. Si no esta, agregala en "Marcas y modelos".');
+      this.error.set('Elige una marca de la lista. Si no está, agrégala en "Marcas y modelos".');
       return;
     }
 
@@ -111,7 +111,7 @@ export class FitmentEditor implements OnInit {
     if (typedModel) {
       const model = this.modelsOfSelected().find((m) => slugify(m.name) === typedModel);
       if (!model) {
-        this.error.set(`${make.name} no tiene ese modelo. Agregalo en "Marcas y modelos" o deja el campo vacio.`);
+        this.error.set(`${make.name} no tiene ese modelo. Agregalo en "Marcas y modelos" o deja el campo vacío.`);
         return;
       }
       modelId = model.id;
@@ -121,12 +121,12 @@ export class FitmentEditor implements OnInit {
     const to = this.yearTo();
     for (const year of [from, to]) {
       if (year !== null && (!Number.isInteger(year) || year < MIN_YEAR || year > MAX_YEAR)) {
-        this.error.set(`Los anos van entre ${MIN_YEAR} y ${MAX_YEAR}.`);
+        this.error.set(`Los años van entre ${MIN_YEAR} y ${MAX_YEAR}.`);
         return;
       }
     }
     if (from !== null && to !== null && from > to) {
-      this.error.set('El ano inicial no puede ser mayor que el final.');
+      this.error.set('El año inicial no puede ser mayor que el final.');
       return;
     }
 
@@ -139,7 +139,7 @@ export class FitmentEditor implements OnInit {
         f.yearTo === next.yearTo,
     );
     if (exists) {
-      this.error.set('Esa compatibilidad ya esta en la lista.');
+      this.error.set('Esa compatibilidad ya está en la lista.');
       return;
     }
 

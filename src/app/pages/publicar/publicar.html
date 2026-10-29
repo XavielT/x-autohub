@@ -5,50 +5,21 @@
     <form [formGroup]="publishForm" (ngSubmit)="onSubmit()" class="publicar-form" novalidate>
       <p class="form-legend">Los campos marcados con <span class="req">*</span> son obligatorios.</p>
 
-      <!-- Image Upload Section -->
+      <!-- Fotos -->
       <div class="form-group">
         <label class="form-label">
-          Imagen del Artículo<span class="req" aria-hidden="true">*</span>
+          Fotos del artículo<span class="req" aria-hidden="true">*</span>
         </label>
         <!--
           `data-field` es lo que usa el helper de foco para llegar aquí, y
           `tabindex="-1"` lo hace enfocable: no es un control, así que sin eso
           `focus()` no haría nada.
         -->
-        <div class="image-upload"
-             data-field="images"
-             tabindex="-1"
-             [class.drag-over]="isDragOver()"
-             [class.is-invalid]="showImagesError"
-             (dragover)="onDragOver($event)"
-             (dragleave)="onDragLeave($event)"
-             (drop)="onDrop($event)">
-          <div class="image-upload__content">
-            <div class="image-upload__icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="var(--main-ultra-light)"/>
-              </svg>
-            </div>
-            <p class="image-upload__text">Arrastra imágenes aquí o <span class="image-upload__link">haz click para seleccionar</span></p>
-            <input type="file" accept="image/*" (change)="onFileSelected($event)" class="image-upload__input" multiple>
-          </div>
+        <div data-field="images" tabindex="-1">
+          <app-image-uploader [(files)]="selectedFiles" [invalid]="showImagesError" />
         </div>
         @if (showImagesError) {
-          <span class="field-error">Agrega al menos una imagen.</span>
-        }
-
-        @if (imagePreviews().length > 0) {
-          <div class="image-preview-grid">
-            @for (preview of imagePreviews(); track preview; let idx = $index) {
-              <div class="image-preview-item">
-                <img [src]="preview" alt="Vista previa {{ idx + 1 }}" class="image-preview__img">
-                <button type="button" (click)="removeImage(idx)" class="image-preview__remove"
-                        aria-label="Quitar imagen">
-                  ×
-                </button>
-              </div>
-            }
-          </div>
+          <span class="field-error">Agrega al menos una foto.</span>
         }
       </div>
 
@@ -57,15 +28,13 @@
         <label for="category" class="form-label">
           Categoría<span class="req" aria-hidden="true">*</span>
         </label>
-        <select id="category" formControlName="category" class="form-input" required
-                [class.is-invalid]="showError('category')">
-          <option value="">Seleccionar categoría</option>
-          @for (cat of categories; track cat.value) {
-            <option [value]="cat.value">{{cat.label}}</option>
-          }
-        </select>
+        <app-searchable-select inputId="category" [options]="categories"
+                               [value]="publishForm.controls.category.value || null"
+                               (valueChange)="setCategory($event)"
+                               placeholder="Seleccionar categoría"
+                               [invalid]="showError('category')" />
         @if (showError('category')) {
-          <span class="field-error">Selecciona una categoria.</span>
+          <span class="field-error">Selecciona una categoría.</span>
         }
       </div>
 
@@ -76,7 +45,7 @@
         <input type="text" id="title" formControlName="title" class="form-input" required
                [class.is-invalid]="showError('title')">
         @if (showError('title')) {
-          <span class="field-error">Escribe un titulo.</span>
+          <span class="field-error">Escribe un título.</span>
         }
       </div>
 
@@ -87,7 +56,7 @@
         <textarea id="description" formControlName="description" class="form-input form-textarea"
                   required [class.is-invalid]="showError('description')"></textarea>
         @if (showError('description')) {
-          <span class="field-error">Describe lo que estas publicando.</span>
+          <span class="field-error">Describe lo que estás publicando.</span>
         }
       </div>
 
@@ -112,20 +81,20 @@
           inputId="location"
           [invalid]="showError('location')" />
         @if (showError('location')) {
-          <span class="field-error">Selecciona una ubicacion.</span>
+          <span class="field-error">Selecciona una ubicación.</span>
         }
       </div>
 
       <div class="form-group">
-        <label for="contactPhone" class="form-label">Telefono de contacto (WhatsApp)</label>
+        <label for="contactPhone" class="form-label">Teléfono de contacto (WhatsApp)</label>
         <input type="tel" id="contactPhone" formControlName="contactPhone" class="form-input"
                placeholder="809 555 0134" autocomplete="tel"
                [class.is-invalid]="showError('contactPhone')">
         @if (showError('contactPhone')) {
-          <span class="field-error">Escribe un telefono valido, ej. 809 555 0134.</span>
+          <span class="field-error">Escribe un teléfono válido, ej. 809 555 0134.</span>
         } @else {
           <span class="form-hint">
-            Opcional. Si lo pones, tu publicacion muestra un boton para escribirte por WhatsApp.
+            Opcional. Si lo pones, tu publicación muestra un boton para escribirte por WhatsApp.
           </span>
         }
       </div>
@@ -139,7 +108,7 @@
             <input type="number" id="year" formControlName="year" class="form-input" required
                    [class.is-invalid]="showError('year')">
             @if (showError('year')) {
-              <span class="field-error">Indica el ano del vehiculo.</span>
+              <span class="field-error">Indica el año del vehículo.</span>
             }
           </div>
           <div class="form-group">
@@ -188,7 +157,7 @@
         sin imágenes, lo que hacía imposible enviar para enterarse de qué faltaba:
         el usuario se quedaba mirando un botón muerto sin explicación.
       -->
-      <button type="submit" [disabled]="isSubmitting()" class="publicar-submit">
+      <button type="submit" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()" class="publicar-submit">
         {{ isSubmitting() ? 'Publicando...' : 'Publicar Artículo' }}
       </button>
     </form>

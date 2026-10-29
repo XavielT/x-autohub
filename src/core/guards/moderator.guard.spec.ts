@@ -65,7 +65,7 @@ describe('acceso al panel por rol', () => {
       await expect(runModerator()).resolves.toBe(true);
     });
 
-    it('NO entra a una seccion de admin: lo frena el guard del hijo', async () => {
+    it('NO entra a una sección de admin: lo frena el guard del hijo', async () => {
       provideAuth('moderador');
 
       const result = await runAdmin();
@@ -82,7 +82,7 @@ describe('acceso al panel por rol', () => {
       await expect(runModerator()).resolves.toBe(true);
     });
 
-    it('entra tambien a las secciones de admin', async () => {
+    it('entra también a las secciones de admin', async () => {
       provideAuth('admin');
 
       await expect(runAdmin()).resolves.toBe(true);
@@ -99,7 +99,7 @@ describe('acceso al panel por rol', () => {
       expect((result as UrlTree).toString()).toBe('/');
     });
 
-    it('tampoco a una seccion de admin', async () => {
+    it('tampoco a una sección de admin', async () => {
       provideAuth('user');
 
       const result = await runAdmin();
@@ -109,7 +109,7 @@ describe('acceso al panel por rol', () => {
     });
   });
 
-  describe('sin sesion', () => {
+  describe('sin sesión', () => {
     it('va al login con returnUrl, no a la raiz', async () => {
       provideAuth('anonimo');
 
@@ -123,7 +123,7 @@ describe('acceso al panel por rol', () => {
     });
   });
 
-  it('decide despues de que la sesion se restaure, no antes', async () => {
+  it('decide después de que la sesión se restaure, no antes', async () => {
     // Con un retraso mayor: si el guard resolviera sincronicamente, veria
     // `canModerate() === false` y rebotaria a un moderador con sesion valida.
     provideAuth('moderador', 30);

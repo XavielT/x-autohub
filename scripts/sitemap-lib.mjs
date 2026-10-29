@@ -16,6 +16,7 @@ export const STATIC_ROUTES = [
   { path: '/auto-hub', priority: '0.5', changefreq: 'weekly' },
   { path: '/hub-market', priority: '0.5', changefreq: 'daily' },
   { path: '/social-hub', priority: '0.3', changefreq: 'weekly' },
+  { path: '/novedades', priority: '0.3', changefreq: 'weekly' },
   { path: '/terminos-condiciones', priority: '0.2', changefreq: 'yearly' },
 ];
 

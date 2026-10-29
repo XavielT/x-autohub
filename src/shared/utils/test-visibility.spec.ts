@@ -24,7 +24,7 @@ describe('test-visibility', () => {
   const admin: UserModel = { ...base, role: 'admin', isAdmin: true };
 
   describe('canSeeTestItems', () => {
-    it('sin sesion, no', () => {
+    it('sin sesión, no', () => {
       expect(canSeeTestItems(null)).toBe(false);
       expect(canSeeTestItems(undefined)).toBe(false);
     });

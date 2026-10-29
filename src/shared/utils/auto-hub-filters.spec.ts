@@ -34,13 +34,13 @@ describe('filterAutoHub', () => {
     expect(ids(filterAutoHub(LISTA, { ...EMPTY_AUTO_HUB_FILTERS, traction: 'fwd' }))).toEqual([1, 3]);
   });
 
-  it('los rangos incluyen el limite', () => {
+  it('los rangos incluyen el límite', () => {
     expect(ids(filterAutoHub(LISTA, { ...EMPTY_AUTO_HUB_FILTERS, maxPrice: 500000 }))).toEqual([1, 3]);
     expect(ids(filterAutoHub(LISTA, { ...EMPTY_AUTO_HUB_FILTERS, minYear: 2015 }))).toEqual([1, 2]);
     expect(ids(filterAutoHub(LISTA, { ...EMPTY_AUTO_HUB_FILTERS, maxMileage: 90000 }))).toEqual([1, 2]);
   });
 
-  it('un numero vacio, cero o NaN no filtra', () => {
+  it('un número vacío, cero o NaN no filtra', () => {
     expect(filterAutoHub(LISTA, { ...EMPTY_AUTO_HUB_FILTERS, maxPrice: 0, minYear: NaN })).toHaveLength(3);
   });
 
@@ -59,7 +59,7 @@ describe('filterAutoHub', () => {
 });
 
 describe('activeAutoHubFilters', () => {
-  it('cuenta los filtros puestos, sin la busqueda ni el orden', () => {
+  it('cuenta los filtros puestos, sin la búsqueda ni el orden', () => {
     expect(activeAutoHubFilters(EMPTY_AUTO_HUB_FILTERS)).toBe(0);
     expect(activeAutoHubFilters({ ...EMPTY_AUTO_HUB_FILTERS, query: 'x', sort: 'km-asc', fuel: 'diesel', maxPrice: 5 })).toBe(2);
   });
@@ -80,12 +80,12 @@ describe('filtros en la URL', () => {
     expect(leer(autoHubFiltersToParams(f))).toEqual(f);
   });
 
-  it('descarta lo que no es valido', () => {
+  it('descarta lo que no es válido', () => {
     const f = leer({ tipo: 'tanque', combustible: 'agua', traccion: 'x', precio: 'mucho', anio: '-5', km: '', orden: 'azar' });
     expect(f).toEqual(EMPTY_AUTO_HUB_FILTERS);
   });
 
-  it('recorta la busqueda de texto', () => {
+  it('recorta la búsqueda de texto', () => {
     expect(leer({ q: 'a'.repeat(200) }).query).toHaveLength(60);
   });
 });

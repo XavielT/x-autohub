@@ -1,0 +1,31 @@
+@if (pending(); as news) {
+  <div class="wn__backdrop" (click)="close()">
+    <section class="wn" role="dialog" aria-modal="true" aria-labelledby="wn-title" (click)="$event.stopPropagation()">
+      <h2 class="wn__heading" id="wn-title">Novedades</h2>
+
+      <div class="wn__list">
+        @for (release of news.releases; track release.version) {
+          <article class="wn__item">
+            <header class="wn__item-head">
+              <h3 class="wn__title">{{ release.title }}</h3>
+              <span class="wn__meta">v{{ release.version }} &middot; {{ release.releasedAt | date: 'd MMM y' }}</span>
+            </header>
+            <p class="wn__summary">{{ release.userSummary || release.summary }}</p>
+            @if (release.changes.length > 0) {
+              <ul class="wn__changes">
+                @for (change of changes(release.changes); track change) { <li>{{ change }}</li> }
+              </ul>
+            }
+          </article>
+        }
+      </div>
+
+      <footer class="wn__foot">
+        @if (news.hasMore) {
+          <a class="wn__all" routerLink="/novedades" (click)="close()">Ver todas las novedades</a>
+        }
+        <button type="button" class="wn__ok" (click)="close()">Entendido</button>
+      </footer>
+    </section>
+  </div>
+}

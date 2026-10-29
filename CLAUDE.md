@@ -52,6 +52,9 @@ Cada push a `main` lleva, en este orden:
 4. **Push con los tags**: `git push origin main --follow-tags`.
 5. **Entrada en la tabla `releases`** de Supabase, que es el historial que se ve
    en `/admin/versiones` y en el sitio. Misma versión y mismas notas que el tag.
+   La fila lleva también `user_summary`: una o dos frases en español llano, escritas para
+   quien usa el sitio y no para quien lo programa. Es lo que lee la modal de novedades y
+   `/novedades` (sin él, caen al `summary` técnico).
 6. **Despliegue**: `vercel --prod`.
 
 Antes de empujar, **verifica que cada commit compile por su cuenta**, no solo el
@@ -191,7 +194,7 @@ arréglalo antes de darlo por terminado.
 
 ```bash
 npm run build   # sin warnings ni errores
-npm test        # 141 archivos, 1508 pruebas, todo verde (cifra al 25/10/2026)
+npm test        # 160 archivos, 1627 pruebas, todo verde (cifra al 29/10/2026)
 ```
 
 Si algo falla, dilo con la salida real. No reportes éxito parcial como éxito.
@@ -205,6 +208,24 @@ Cosas que ya causaron un bug. No las repitas:
 - **Fotos como PNG.** Un JPEG de 350 KB se guardó como PNG de 12.5 MB. PNG solo
   para imágenes que de verdad usan transparencia. Borde largo máximo 1600px.
   Ver `brand/README.md`.
+- **La UI va con tildes y ñ.** Si un glifo no se ve, el problema es el subset de la fuente, no la palabra.
+  Revisado el 28/10/2026: todas las fuentes de `src/assets/fonts` traen `ñ á é í ó ú ü Ñ` y las vocales
+  acentuadas; **Gefika** (los títulos, `--font-heading`) no trae `¿` ni `¡`, que caen a la fuente de respaldo.
+  Gefika no se puede regenerar para sumarlos: un subset solo quita glifos, y el original no los tiene.
+  Cuidado al corregir cadenas en masa: `<?xml version=…>`, `acabo de` (verbo) y `publica` (verbo) no llevan
+  tilde, y `agendar.ts` compara el mensaje que lanza la base (`hora ya no est[aá] disponible`) — los
+  `raise exception` de las migraciones siguen sin tildes.
+- **Lo que cargan el mapa y los videos tiene que estar en la CSP.** `vercel.json` lista a mano los orígenes: `img-src` lleva
+  Supabase y `https://*.tile.openstreetmap.org` (los mosaicos del mapa de `/publicar`; sin eso el mapa sale gris), y `media-src`
+  lleva Supabase y `blob:` (los videos del feed y la vista previa del compositor). Un origen nuevo de imágenes o video que no
+  se sume ahí se bloquea sin error visible en la app.
+- **Los contadores de la comunidad los mueven triggers, no el navegador (0045).** `social_posts.likes` y `.comments` los
+  actualizan `social_post_likes_count()` y `social_post_comments_count()` (security definer); a `authenticated` se le quitó el
+  UPDATE de la tabla y solo conserva `text, image_url, tags, author_club, media`, así nadie se escribe sus propios me gusta.
+  Si agregas una columna editable a `social_posts`, hay que sumarla a ese `grant update (…)`.
+- **Una foto de perfil es una URL de Storage o la ruta de un avatar del sitio.** `profiles.avatar_url` guarda las dos
+  (`assets/avatars/rueda.svg` para los ocho del sitio); `app-avatar` pinta cualquiera de las dos y, sin valor, la inicial.
+  El bucket `avatars` (0003) pide la primera carpeta igual al uid y tope de 2 MB; el recorte de 512×512 JPEG pesa una fracción.
 - **Rutas de assets.** Usa siempre la forma relativa a la base (`assets/imgs/x.jpg`),
   nunca `/assets/...` ni `../../../assets/...`. Las otras dos se rompen si la app
   se sirve desde un sub-path.

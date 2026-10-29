@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { SelectedVehicle, VehicleMakeModel, VehicleModelModel } from '../../models/product.model';
 import { VehicleService } from '../../services/vehicle.service';
+import { SearchableSelect, SelectOption } from '../../ui/searchable-select/searchable-select';
 
 /** El año más viejo que se ofrece. Más atrás casi nada tiene piezas en RD. */
-const OLDEST_YEAR = 1980;
+const OLDEST_YEAR = 1990;
 
 /**
  * Los tres selectores del vehículo: marca → modelo → año.
@@ -18,7 +18,7 @@ const OLDEST_YEAR = 1980;
  */
 @Component({
   selector: 'app-vehicle-form',
-  imports: [FormsModule],
+  imports: [SearchableSelect],
   templateUrl: './vehicle-form.html',
   styleUrl: './vehicle-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,15 +40,34 @@ export class VehicleForm implements OnInit {
   readonly makeId = signal<number | null>(null);
   readonly modelId = signal<number | null>(null);
   readonly year = signal<number | null>(null);
+  /** El modelo escrito a mano, cuando la marca no tiene modelos cargados. */
+  readonly modelText = signal('');
 
-  /** De este año más uno (los modelos del año siguiente salen antes) hasta 1980. */
+  /** La marca está elegida, ya cargó, y no trae ningún modelo: el modelo se escribe. */
+  readonly freeModel = computed(
+    () => this.makeId() !== null && !this.isLoadingModels() && this.models().length === 0,
+  );
+  /** Hay modelo (elegido o escrito) y se puede pasar al año. */
+  readonly hasModel = computed(
+    () => this.modelId() !== null || (this.freeModel() && this.modelText().trim().length > 0),
+  );
+
+  /** De este año más uno (los modelos del año siguiente salen antes) hasta 1990. */
   readonly years: readonly number[] = Array.from(
     { length: new Date().getFullYear() + 1 - OLDEST_YEAR + 1 },
     (_, i) => new Date().getFullYear() + 1 - i,
   );
 
+  readonly makeOptions = computed<SelectOption[]>(() =>
+    this.makes().map((m) => ({ value: m.id, label: m.name })),
+  );
+  readonly modelOptions = computed<SelectOption[]>(() =>
+    this.models().map((m) => ({ value: m.id, label: m.name })),
+  );
+  readonly yearOptions: SelectOption[] = this.years.map((y) => ({ value: y, label: String(y) }));
+
   readonly isComplete = computed(
-    () => this.makeId() !== null && this.modelId() !== null && this.year() !== null,
+    () => this.makeId() !== null && this.hasModel() && this.year() !== null,
   );
 
   ngOnInit(): void {
@@ -58,16 +77,19 @@ export class VehicleForm implements OnInit {
     if (current) {
       this.makeId.set(current.makeId);
       this.year.set(current.year);
+      if (current.modelId === null) this.modelText.set(current.modelText ?? '');
       this.loadModels(current.makeId, current.modelId);
     }
   }
 
-  onMakeChange(value: number | null): void {
-    this.makeId.set(value);
+  onMakeChange(value: string | number | null): void {
+    const id = value === null ? null : Number(value);
+    this.makeId.set(id);
     // El modelo de otra marca no vale: se pierde al cambiar de marca.
     this.modelId.set(null);
+    this.modelText.set('');
     this.models.set([]);
-    if (value !== null) this.loadModels(value, null);
+    if (id !== null) this.loadModels(id, null);
   }
 
   private loadModels(makeId: number, preselect: number | null): void {
@@ -86,11 +108,29 @@ export class VehicleForm implements OnInit {
     });
   }
 
+  onModelChange(value: string | number | null): void {
+    this.modelId.set(value === null ? null : Number(value));
+  }
+
+  onModelTextChange(text: string): void {
+    this.modelText.set(text);
+    // Si borra el texto, el año vuelve a quedar bloqueado y sin valor.
+    if (!text.trim()) this.year.set(null);
+  }
+
+  onYearChange(value: string | number | null): void {
+    this.year.set(value === null ? null : Number(value));
+  }
+
   submit(): void {
     const makeId = this.makeId();
     const modelId = this.modelId();
     const year = this.year();
-    if (makeId === null || modelId === null || year === null) return;
-    this.chosen.emit({ makeId, modelId, year });
+    if (makeId === null || year === null || !this.hasModel()) return;
+    if (modelId !== null) {
+      this.chosen.emit({ makeId, modelId, year });
+    } else {
+      this.chosen.emit({ makeId, modelId: null, modelText: this.modelText().trim(), year });
+    }
   }
 }

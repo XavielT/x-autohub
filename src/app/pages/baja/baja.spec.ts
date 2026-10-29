@@ -64,7 +64,7 @@ describe('Baja', () => {
     expect((await montar()).componentInstance).toBeTruthy();
   });
 
-  it('NO da de baja al cargar: pide confirmacion', async () => {
+  it('NO da de baja al cargar: pide confirmación', async () => {
     const fixture = await montar();
 
     // Si esto se rompe, un prefetch del cliente de correo da de baja a alguien
@@ -75,7 +75,7 @@ describe('Baja', () => {
     expect(boton(fixture)?.textContent).toContain('darme de baja');
   });
 
-  it('al confirmar, manda el token y avisa que ya esta', async () => {
+  it('al confirmar, manda el token y avisa que ya está', async () => {
     const fixture = await montar();
 
     boton(fixture)!.click();
@@ -83,7 +83,7 @@ describe('Baja', () => {
 
     expect(subscriptions.llamadas).toEqual([TOKEN]);
     expect(fixture.componentInstance.estado()).toBe('listo');
-    expect(texto(fixture)).toContain('ya no recibiras mas correos');
+    expect(texto(fixture)).toContain('ya no recibirás más correos');
   });
 
   it('un token que no corresponde a nadie no es un error para el usuario', async () => {
@@ -106,7 +106,7 @@ describe('Baja', () => {
     expect(subscriptions.llamadas).toEqual([]);
   });
 
-  it('si la base falla, ofrece reintentar y no dice que quedo dado de baja', async () => {
+  it('si la base falla, ofrece reintentar y no dice que quedó dado de baja', async () => {
     const fixture = await montar();
     subscriptions.fail = true;
 
@@ -114,8 +114,8 @@ describe('Baja', () => {
     await fixture.whenStable();
 
     expect(fixture.componentInstance.estado()).toBe('error');
-    expect(texto(fixture)).toContain('Algo salio mal');
-    expect(texto(fixture)).not.toContain('ya no recibiras');
+    expect(texto(fixture)).toContain('Algo salió mal');
+    expect(texto(fixture)).not.toContain('ya no recibirás');
     expect(boton(fixture)?.textContent).toContain('Intentar de nuevo');
   });
 });

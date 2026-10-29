@@ -7,7 +7,7 @@
   </header>
 
   @if (isLoading()) {
-    <p class="favs__note">Cargando…</p>
+    <app-skeleton variant="product-card" [count]="4" />
   } @else if (hasError()) {
     <p class="favs__note">No pudimos cargar tus favoritos. <button type="button" class="favs__retry" (click)="load()">Reintentar</button></p>
   } @else if (items().length === 0) {

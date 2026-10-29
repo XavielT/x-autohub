@@ -91,7 +91,7 @@ describe('Reviews (el bloque de reseñas)', () => {
       expect(el.querySelector('.rv__count')?.textContent?.trim()).toBe('1 reseña');
     });
 
-    it('pagina: 10 por vez y "Ver más reseñas" con las que faltan', async () => {
+    it('página: 10 por vez y "Ver más reseñas" con las que faltan', async () => {
       const reviews = TestBed.inject(ReviewService);
       for (let i = 0; i < 11; i++) {
         user.set(person(`u-${i}`));

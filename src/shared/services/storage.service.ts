@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { PROOF_MAX_BYTES } from '../models/order.model';
+import { SocialMedia } from '../models/social-hub.model';
 
 /** Límites que espejean los del bucket (ver 0003_storage.sql). */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -30,7 +31,7 @@ export class StorageService {
   /** Valida un archivo antes de subirlo. Devuelve el error o null. */
   validate(file: File): string | null {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Solo se aceptan imagenes JPG, PNG o WebP.';
+      return 'Solo se aceptan imágenes JPG, PNG o WebP.';
     }
     if (file.size > MAX_FILE_BYTES) {
       return 'Cada imagen debe pesar menos de 5 MB.';
@@ -116,6 +117,23 @@ export class StorageService {
     return forkJoin(files.map((file) => this.uploadOne(file, userId, 'listings')));
   }
 
+  /**
+   * Sube las fotos y videos de una publicación del feed (bucket `social-media`, 0045) y devuelve
+   * su tipo y URL pública, en el orden en que llegaron. La primera carpeta es el uid.
+   */
+  uploadSocialMedia(files: File[], userId: string): Observable<SocialMedia[]> {
+    if (files.length === 0) return of([]);
+    const typeOf = (file: File): SocialMedia['type'] => (file.type.startsWith('video/') ? 'video' : 'image');
+
+    if (this.supabase.shouldUseMockData()) {
+      return forkJoin(files.map((file) => this.toDataUrl(file).pipe(map((url) => ({ type: typeOf(file), url })))));
+    }
+
+    return forkJoin(
+      files.map((file) => this.uploadOne(file, userId, 'social-media').pipe(map((url) => ({ type: typeOf(file), url })))),
+    );
+  }
+
   /** Sube el avatar del usuario y devuelve su URL pública. */
   uploadAvatar(file: File, userId: string): Observable<string> {
     if (this.supabase.shouldUseMockData()) {
@@ -181,7 +199,7 @@ export class StorageService {
 
     return from(this.supabase.db.storage.from('inventory').remove(paths)).pipe(
       map((res) => {
-        if (res.error) console.error('[storage] limpieza de imagenes', res.error);
+        if (res.error) console.error('[storage] limpieza de imágenes', res.error);
       }),
     );
   }
@@ -201,7 +219,7 @@ export class StorageService {
   private uploadOne(
     file: File,
     folder: string,
-    bucket: 'listings' | 'avatars' | 'inventory' | 'service-works',
+    bucket: 'listings' | 'avatars' | 'inventory' | 'service-works' | 'social-media',
   ): Observable<string> {
     const path = `${folder}/${this.uniqueName(file.name)}`;
 
@@ -214,7 +232,7 @@ export class StorageService {
       map((res) => {
         if (res.error) {
           console.error('[storage]', res.error);
-          throw new Error('No pudimos subir una de las imagenes. Intenta de nuevo.');
+          throw new Error('No pudimos subir uno de los archivos. Intenta de nuevo.');
         }
         return this.supabase.db.storage.from(bucket).getPublicUrl(res.data.path).data.publicUrl;
       }),

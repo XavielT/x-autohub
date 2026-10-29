@@ -94,14 +94,14 @@ describe('MisCitas (en el perfil)', () => {
 
   it('si la base lo rechaza, avisa con su mensaje y vuelve a leer lo que hay', () => {
     const { c } = montar([cita()]);
-    cancel.mockReturnValue(throwError(() => new Error('Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp.')));
+    cancel.mockReturnValue(throwError(() => new Error('Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.')));
     getMyAppointments.mockClear();
 
     c.cancel(c.list()[0]);
     c.cancel(c.list()[0]);
 
     expect(toast.show).toHaveBeenCalledWith(
-      'Solo se puede cancelar con mas de 24 horas de anticipacion. Escribenos por WhatsApp.',
+      'Solo se puede cancelar con más de 24 horas de anticipacion. Escríbenos por WhatsApp.',
       'error',
     );
     expect(getMyAppointments).toHaveBeenCalledTimes(1);

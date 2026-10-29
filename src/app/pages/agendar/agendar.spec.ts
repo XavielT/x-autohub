@@ -296,7 +296,7 @@ describe('Agendar (/servicios/agendar)', () => {
     });
 
     it('si la hora se llenó mientras se llenaba el formulario, vuelve a las horas y las recarga', () => {
-      book.mockReturnValue(throwError(() => new Error('Esa hora ya no esta disponible. Elige otra.')));
+      book.mockReturnValue(throwError(() => new Error('Esa hora ya no está disponible. Elige otra.')));
       const { c } = hastaDatos();
       c.contactName.set('Cliente');
       c.contactPhone.set('809-555-0134');
@@ -305,7 +305,7 @@ describe('Agendar (/servicios/agendar)', () => {
 
       c.confirm();
 
-      expect(toast.show).toHaveBeenCalledWith('Esa hora ya no esta disponible. Elige otra.', 'error');
+      expect(toast.show).toHaveBeenCalledWith('Esa hora ya no está disponible. Elige otra.', 'error');
       expect(c.step()).toBe(2);
       expect(c.selectedSlot()).toBeNull();
       expect(getSlots).toHaveBeenCalledWith(4, MONDAY);
@@ -313,7 +313,7 @@ describe('Agendar (/servicios/agendar)', () => {
     });
 
     it('otro error se avisa sin sacar a la persona del paso 3', () => {
-      book.mockReturnValue(throwError(() => new Error('Ya tienes 3 citas abiertas con este telefono. Escribenos por WhatsApp para cambiarlas.')));
+      book.mockReturnValue(throwError(() => new Error('Ya tienes 3 citas abiertas con este teléfono. Escríbenos por WhatsApp para cambiarlas.')));
       const { c } = hastaDatos();
       c.contactName.set('Cliente');
       c.contactPhone.set('809-555-0134');

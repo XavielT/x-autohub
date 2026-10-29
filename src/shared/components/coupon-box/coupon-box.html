@@ -15,7 +15,7 @@
         <input id="cpn-code" class="cpn__input" type="text" name="coupon" autocomplete="off" autocapitalize="characters"
                spellcheck="false" placeholder="Escribe el código" [value]="code()" (input)="setCode($event)"
                [attr.aria-invalid]="error() ? 'true' : null" [attr.aria-describedby]="error() ? 'cpn-error' : null" />
-        <button type="submit" class="cpn__apply" [disabled]="isChecking()">
+        <button type="submit" class="cpn__apply" [disabled]="isChecking()" [attr.aria-busy]="isChecking()">
           {{ isChecking() ? 'Probando…' : 'Aplicar' }}
         </button>
       </div>

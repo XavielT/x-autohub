@@ -86,7 +86,7 @@ describe('Perfil', () => {
 
   // --- Vendida y vencida (0030) -----------------------------------------------
 
-  describe('ciclo de vida de una publicacion', () => {
+  describe('ciclo de vida de una publicación', () => {
     const enDias = (dias: number) => new Date(Date.now() + dias * 24 * 60 * 60 * 1000 + 60_000).toISOString();
     const botones = (fixture: { nativeElement: unknown }) =>
       Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.perfil__life-btn')).map((b) => b.textContent?.trim());
@@ -99,7 +99,7 @@ describe('Perfil', () => {
       expect(botones(fixture)).toEqual(['Marcar como vendida']);
     });
 
-    it('a una semana de vencer ofrece tambien renovar', async () => {
+    it('a una semana de vencer ofrece también renovar', async () => {
       const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'aprobado', expiresAt: enDias(3) }] });
       await fixture.whenStable();
 
@@ -124,7 +124,7 @@ describe('Perfil', () => {
       expect(botones(fixture)).toEqual(['Volver a publicar']);
     });
 
-    it('una publicacion pendiente no muestra nada de esto', async () => {
+    it('una publicación pendiente no muestra nada de esto', async () => {
       const { fixture } = montar({ publicaciones: [{ ...PUBLICACION, status: 'pendiente', expiresAt: enDias(40) }] });
       await fixture.whenStable();
 
@@ -165,7 +165,7 @@ describe('Perfil', () => {
     });
   });
 
-  it('muestra los datos del usuario en sesion', async () => {
+  it('muestra los datos del usuario en sesión', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -177,11 +177,11 @@ describe('Perfil', () => {
     expect(texto).toContain('Verificado');
   });
 
-  it('dice "Sin telefono" cuando no hay, en vez de dejarlo en blanco', async () => {
+  it('dice "Sin teléfono" cuando no hay, en vez de dejarlo en blanco', async () => {
     const { fixture } = montar({ user: { ...USUARIO, phone: undefined } });
     await fixture.whenStable();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Sin telefono');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Sin teléfono');
   });
 
   // Dos pruebas y no una: `TestBed` no se puede reconfigurar despues de crear un
@@ -219,7 +219,7 @@ describe('Perfil', () => {
 
   // --- Estado de moderacion (fase 5) ----------------------------------------
 
-  it('marca "Pendiente" lo que todavia no se ha revisado', async () => {
+  it('marca "Pendiente" lo que todavía no se ha revisado', async () => {
     const { fixture } = montar({
       publicaciones: [{ ...PUBLICACION, status: 'pendiente' }],
     });
@@ -234,7 +234,7 @@ describe('Perfil', () => {
         {
           ...PUBLICACION,
           status: 'rechazado',
-          rejectionReason: 'Las fotos no dejan ver el vehiculo completo.',
+          rejectionReason: 'Las fotos no dejan ver el vehículo completo.',
         },
       ],
     });
@@ -242,7 +242,7 @@ describe('Perfil', () => {
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(texto).toContain('Rechazado');
-    expect(texto).toContain('Las fotos no dejan ver el vehiculo completo.');
+    expect(texto).toContain('Las fotos no dejan ver el vehículo completo.');
   });
 
   it('lo sembrado, sin status, se lee como aprobado y no como pendiente', async () => {
@@ -260,16 +260,16 @@ describe('Perfil', () => {
     await fixture.whenStable();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(texto).toContain('Todavia no has publicado nada');
-    expect(texto).toContain('Publicar mi primer articulo');
+    expect(texto).toContain('Todavía no has publicado nada');
+    expect(texto).toContain('Publicar mi primer artículo');
   });
 
-  it('lista la actividad con su estado en espanol', async () => {
+  it('lista la actividad con su estado en español', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
     const texto = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(texto).toContain('3 articulos');
+    expect(texto).toContain('3 artículos');
     expect(texto).toContain('28,750');
     expect(texto).toContain('Pagado');
     // El número que se le dice al cliente, no el uuid.
@@ -314,16 +314,16 @@ describe('Perfil', () => {
     await fixture.whenStable();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'sin cuenta no aparecen aqui',
+      'sin cuenta no aparecen aquí',
     );
   });
 
-  it('un articulo en singular no dice "articulos"', async () => {
+  it('un artículo en singular no dice "artículos"', async () => {
     const { fixture } = montar({ pedidos: [{ ...PEDIDO, itemCount: 1 }] });
     await fixture.whenStable();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('1 articulo');
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('1 articulos');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('1 artículo');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('1 artículos');
   });
 
   describe('edicion', () => {
@@ -340,7 +340,7 @@ describe('Perfil', () => {
       });
     });
 
-    it('no guarda con el nombre vacio y lo nombra en el aviso', async () => {
+    it('no guarda con el nombre vacío y lo nombra en el aviso', async () => {
       const { fixture, componente, updateProfile } = montar();
       await fixture.whenStable();
       componente.startEdit();
@@ -352,7 +352,7 @@ describe('Perfil', () => {
       expect(componente.isEditing()).toBe(true);
     });
 
-    it('guarda y cierra el modo edicion', async () => {
+    it('guarda y cierra el modo edición', async () => {
       const { fixture, componente, updateProfile } = montar();
       await fixture.whenStable();
       componente.startEdit();
@@ -369,7 +369,7 @@ describe('Perfil', () => {
       expect(componente.isEditing()).toBe(false);
     });
 
-    it('el nombre nuevo se refleja de inmediato, porque la senal es la de la sesion', async () => {
+    it('el nombre nuevo se refleja de inmediato, porque la senal es la de la sesión', async () => {
       const { fixture, componente } = montar();
       await fixture.whenStable();
       componente.startEdit();

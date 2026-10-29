@@ -54,7 +54,7 @@
           <button type="button" class="tienda__btn" (click)="retry()">Reintentar</button>
         </div>
       } @else if (isLoading() && items().length === 0) {
-        <div class="tienda__state"><h2>Cargando productos…</h2></div>
+        <app-skeleton variant="product-card" [count]="8" label="Cargando productos…" />
       } @else if (items().length === 0) {
         <div class="tienda__state">
           @if (useVehicle()) {

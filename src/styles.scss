@@ -145,9 +145,21 @@ body {
     /* IE / Edge antiguo */
     -ms-overflow-style: none;
 
+    // Sin esto, todo lo que no fija su propia fuente (la página de detalle de vehículo, por
+    // ejemplo) caía al serif del navegador. Los controles de formulario no heredan la fuente
+    // por defecto: se les pide aparte.
+    font-family: var(--font-body);
+
     margin: 0;
     min-height: 100vh;
     background-attachment: fixed;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
 }
 
 /*Making the navbar scroolling smooth*/
@@ -172,4 +184,40 @@ body {
 
 @media screen and (min-width: 1024px) {
     
+}
+// Las tarjetas de vehículo llenan su celda de la grilla: así una fila mide lo mismo.
+app-vehicle-card,
+app-car-card,
+app-autohub-card,
+app-hub-market-card {
+  display: block;
+  height: 100%;
+}
+
+// Un botón que espera al servidor: `[attr.aria-busy]="enCurso()"`. Muestra un spinner a la izquierda
+// del texto y no admite otro clic. Con `prefers-reduced-motion` el spinner no gira.
+button[aria-busy='true'] {
+  position: relative;
+  pointer-events: none;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.5em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-spin 0.7s linear infinite;
+  }
+}
+
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[aria-busy='true']::before { animation: none; }
 }

@@ -1,0 +1,19 @@
+.rp {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 400;
+  width: 0;
+  height: 2px;
+  background-color: var(--Hub);
+  opacity: 0;
+  pointer-events: none;
+
+  // Avanza rápido al principio y se frena: nunca llega a 100 % hasta que termina de verdad.
+  &--on { opacity: 1; width: 85%; transition: width 8s cubic-bezier(0.1, 0.8, 0.2, 1); }
+  &--done { width: 100%; opacity: 0; transition: width 0.15s ease, opacity 0.25s ease 0.1s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp, .rp--on, .rp--done { transition: none; }
+}

@@ -103,7 +103,7 @@ describe('Checkout', () => {
 
       expect(c.step()).toBe(1);
       expect(toast.show).toHaveBeenCalledWith(
-        'Te falta completar: Correo electronico, Nombre completo, Telefono, Provincia, Direccion.',
+        'Te falta completar: Correo electrónico, Nombre completo, Teléfono, Provincia, Dirección.',
         'error',
       );
       expect(el.querySelectorAll('.field-error').length).toBe(5);
@@ -285,13 +285,13 @@ describe('Checkout', () => {
       });
 
       it('si el cupón falla al confirmar, el pedido no se crea y el mensaje sale tal cual', () => {
-        create.mockReturnValue(throwError(() => new Error('Este cupon ya se agoto.')));
+        create.mockReturnValue(throwError(() => new Error('Este cupón ya se agoto.')));
         const { c } = hastaConfirmar();
         c.coupon.set(CUPON);
 
         c.submitOrder();
 
-        expect(toast.show).toHaveBeenCalledWith('Este cupon ya se agoto.', 'error');
+        expect(toast.show).toHaveBeenCalledWith('Este cupón ya se agoto.', 'error');
         expect(cart.clearCart).not.toHaveBeenCalled();
       });
     });

@@ -2,7 +2,7 @@
   <div class="tabs__overlay" (click)="closeSheet()"></div>
 
   <div class="tabs__sheet" role="dialog" aria-modal="true"
-       [attr.aria-label]="sheet() === 'categorias' ? 'Categorias de la tienda' : 'Mi cuenta y mas'">
+       [attr.aria-label]="sheet() === 'categorias' ? 'Categorías de la tienda' : 'Mi cuenta y más'">
     @if (sheet() === 'categorias') {
       <h3 class="tabs__sheet-title">Categorías</h3>
       <a class="tabs__all" routerLink="/tienda" (click)="go()">Ver toda la tienda →</a>
@@ -17,7 +17,7 @@
     } @else {
       @if (isLoggedIn()) {
         <a class="tabs__me" routerLink="/perfil" (click)="go()">
-          <span class="tabs__initial" aria-hidden="true">{{ user()?.displayName?.charAt(0) }}</span>
+          <app-avatar [avatarUrl]="user()?.avatarUrl" [name]="user()?.displayName ?? ''" [size]="40" />
           <span><strong>{{ user()?.displayName }}</strong><small>Ver mi perfil</small></span>
         </a>
       } @else {
@@ -50,7 +50,7 @@
   </div>
 }
 
-<nav class="tabs" aria-label="Navegacion del telefono">
+<nav class="tabs" aria-label="Navegación del teléfono">
   <a class="tabs__tab" routerLink="/" [class.is-active]="activeTab() === 'inicio'" (click)="go()">
     <img [src]="icon('inicio')" alt="" aria-hidden="true" />Inicio
   </a>
@@ -62,7 +62,7 @@
     <img [src]="icon('buscar')" [class.tabs__invert]="activeTab() !== 'buscar'" alt="" aria-hidden="true" />Buscar
   </a>
   <button type="button" class="tabs__tab" [class.is-active]="activeTab() === 'carrito'"
-          [attr.aria-label]="cartCount() > 0 ? 'Carrito, ' + cartCount() + ' articulos' : 'Carrito'"
+          [attr.aria-label]="cartCount() > 0 ? 'Carrito, ' + cartCount() + ' artículos' : 'Carrito'"
           (click)="openCart()">
     <span class="tabs__icon-wrap">
       <img [src]="icon('carrito')" alt="" aria-hidden="true" />

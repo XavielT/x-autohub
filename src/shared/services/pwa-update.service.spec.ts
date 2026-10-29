@@ -94,7 +94,7 @@ describe('PwaUpdateService', () => {
     expect(sw.checkForUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('un fallo de red al buscar no es un error', async () => {
+  it('un falló de red al buscar no es un error', async () => {
     const { service } = montar({ checkForUpdate: vi.fn().mockRejectedValue(new Error('offline')) });
 
     expect(await service.check()).toBe(false);

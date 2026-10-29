@@ -65,7 +65,7 @@ describe('AdminUsuarios', () => {
     );
   });
 
-  it('nombrar moderador no pide confirmacion: es un permiso acotado', async () => {
+  it('nombrar moderador no pide confirmación: es un permiso acotado', async () => {
     const { fixture, componente, setUserRole } = montar();
     await fixture.whenStable();
 
@@ -98,7 +98,7 @@ describe('AdminUsuarios', () => {
     expect(componente.users()[0].isAdmin).toBe(true);
   });
 
-  it('quitar permisos no pide confirmacion: es la accion reversible', async () => {
+  it('quitar permisos no pide confirmación: es la acción reversible', async () => {
     const admin: AdminUserModel = { ...OTRO, role: 'admin', isAdmin: true };
     const { fixture, componente, setUserRole } = montar([admin]);
     await fixture.whenStable();
@@ -119,7 +119,7 @@ describe('AdminUsuarios', () => {
     expect(setUserRole).not.toHaveBeenCalled();
   });
 
-  it('no ofrece cambiarse el rol a uno mismo: la funcion lo rechaza', async () => {
+  it('no ofrece cambiarse el rol a uno mismo: la función lo rechaza', async () => {
     const yoEnLaLista: AdminUserModel = {
       ...OTRO,
       id: YO.id,

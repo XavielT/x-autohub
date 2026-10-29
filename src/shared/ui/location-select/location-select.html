@@ -16,7 +16,7 @@
 
   @if (isOutsideList()) {
     <span class="loc__note">
-      Guardado como "{{ value() }}", que no esta en la lista. Elige una para actualizarlo.
+      Guardado como "{{ value() }}", que no está en la lista. Elige una para actualizarlo.
     </span>
   }
 
@@ -35,7 +35,7 @@
           [value]="query()"
           (input)="onQueryInput($event)"
           (keydown)="onSearchKeydown($event)"
-          aria-label="Buscar ubicacion" />
+          aria-label="Buscar ubicación" />
         <button type="button" class="loc__map-toggle" (click)="toggleMap()">
           {{ showMap() ? 'Ver lista' : 'Ver mapa' }}
         </button>
@@ -50,7 +50,7 @@
           componente crea el mapa en cuanto aparece, y lo destruye al cerrarlo.
         -->
         <div #mapHost class="loc__map"></div>
-        <p class="loc__hint">Toca un punto del mapa. Se guarda la provincia mas cercana.</p>
+        <p class="loc__hint">Toca un punto del mapa. Se guarda la provincia más cercana.</p>
       } @else {
         <ul class="loc__list" role="listbox" [attr.aria-activedescendant]="'loc-opt-' + activeIndex()">
           @for (option of options(); track option.name; let i = $index) {

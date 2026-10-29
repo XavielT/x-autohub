@@ -53,13 +53,13 @@ describe('servicios de la tienda (mock)', () => {
     const products = () => TestBed.inject(ProductService);
     const ids = (list: { id: number }[]) => list.map((p) => p.id);
 
-    it('sin filtros devuelve la primera pagina de 24 y el total de lo visible (35, sin la de prueba)', async () => {
+    it('sin filtros devuelve la primera página de 24 y el total de lo visible (35, sin la de prueba)', async () => {
       const r = await firstValueFrom(products().searchProducts());
       expect(r.items.length).toBe(24);
       expect(r.total).toBe(35);
     });
 
-    it('un admin ve ademas la pieza de prueba', async () => {
+    it('un admin ve además la pieza de prueba', async () => {
       user.set({ ...BASE, role: 'admin', isAdmin: true });
       const r = await firstValueFrom(products().searchProducts({ limit: 100 }));
       expect(r.total).toBe(36);
@@ -70,7 +70,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(ids(r.items)).toEqual([1]);
     });
 
-    it('con un vehiculo devuelve universales + compatibles, y deja fuera los especificos sin compatibilidad', async () => {
+    it('con un vehículo devuelve universales + compatibles, y deja fuera los especificos sin compatibilidad', async () => {
       const r = await firstValueFrom(
         products().searchProducts({
           makeId: make('toyota').id,
@@ -88,12 +88,12 @@ describe('servicios de la tienda (mock)', () => {
       expect(found).not.toContain(8); // alfombras: RAV4, no Corolla
     });
 
-    it('filtra por categoria, incluidas sus hijas', async () => {
+    it('filtra por categoría, incluidas sus hijas', async () => {
       const r = await firstValueFrom(products().searchProducts({ categorySlug: 'frenos', limit: 100 }));
       expect(ids(r.items).sort((a, b) => a - b)).toEqual([1, 11, 12]);
     });
 
-    it('getBySlug encuentra por la direccion web, y no la pieza de prueba para un anonimo', async () => {
+    it('getBySlug encuentra por la dirección web, y no la pieza de prueba para un anonimo', async () => {
       expect((await firstValueFrom(products().getBySlug('disco-ventilado-gtr-355mm-1')))?.id).toBe(1);
       expect(await firstValueFrom(products().getBySlug('no-existe'))).toBeUndefined();
       expect(await firstValueFrom(products().getBySlug('prueba-pieza-de-prueba-36'))).toBeUndefined();
@@ -134,7 +134,7 @@ describe('servicios de la tienda (mock)', () => {
   describe('CategoryService', () => {
     const categories = () => TestBed.inject(CategoryService);
 
-    it('lista las 12 categorias activas', async () => {
+    it('lista las 12 categorías activas', async () => {
       expect((await firstValueFrom(categories().getAll())).length).toBe(12);
     });
 
@@ -171,14 +171,14 @@ describe('servicios de la tienda (mock)', () => {
       expect(modelos.every((m) => m.makeId === make('toyota').id)).toBe(true);
     });
 
-    it('sin sesion, elegir un vehiculo lo deja en localStorage y en la senal', () => {
+    it('sin sesión, elegir un vehículo lo deja en localStorage y en la senal', () => {
       vehicles().select(corolla);
 
       expect(vehicles().selected()).toEqual(corolla);
       expect(JSON.parse(localStorage.getItem(GUEST_VEHICLE_KEY) as string)).toEqual(corolla);
     });
 
-    it('un vehiculo guardado de antes se lee al arrancar', () => {
+    it('un vehículo guardado de antes se lee al arrancar', () => {
       localStorage.setItem(GUEST_VEHICLE_KEY, JSON.stringify(civic));
       expect(vehicles().selected()).toEqual(civic);
     });
@@ -197,7 +197,7 @@ describe('servicios de la tienda (mock)', () => {
       }
     });
 
-    it('quitar el vehiculo lo borra de la senal y de localStorage', () => {
+    it('quitar el vehículo lo borra de la senal y de localStorage', () => {
       vehicles().select(corolla);
       vehicles().clear();
 
@@ -205,7 +205,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(localStorage.getItem(GUEST_VEHICLE_KEY)).toBeNull();
     });
 
-    it('con sesion, el vehiculo va al garaje como el de por defecto y no a localStorage', async () => {
+    it('con sesión, el vehículo va al garaje como el de por defecto y no a localStorage', async () => {
       user.set(BASE);
       TestBed.tick();
 
@@ -231,7 +231,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(garaje.find((v) => v.isDefault)).toMatchObject(corolla);
     });
 
-    it('quitar el vehiculo con sesion deja el garaje sin uno por defecto, pero no lo vacia', async () => {
+    it('quitar el vehículo con sesión deja el garaje sin uno por defecto, pero no lo vacia', async () => {
       user.set(BASE);
       TestBed.tick();
       vehicles().select(corolla);
@@ -244,7 +244,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(vehicles().selected()).toBeNull();
     });
 
-    it('al volver a iniciar sesion la senal recupera el vehiculo por defecto del garaje', async () => {
+    it('al volver a iniciar sesión la senal recupera el vehículo por defecto del garaje', async () => {
       user.set(BASE);
       TestBed.tick();
       vehicles().select(civic);
@@ -270,11 +270,11 @@ describe('servicios de la tienda (mock)', () => {
       expect(await firstValueFrom(vehicles().getGarage())).toEqual([]);
     });
 
-    it('sin sesion el garaje esta vacio', async () => {
+    it('sin sesión el garaje esta vacío', async () => {
       expect(await firstValueFrom(vehicles().getGarage())).toEqual([]);
     });
 
-    it('si el garaje esta vacio al iniciar sesion, se conserva lo que el visitante ya habia elegido', () => {
+    it('si el garaje esta vacío al iniciar sesión, se conserva lo que el visitante ya habia elegido', () => {
       vehicles().select(corolla); // como invitado
       user.set(BASE);
       TestBed.tick();
@@ -282,7 +282,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(vehicles().selected()).toEqual(corolla);
     });
 
-    it('al iniciar sesion con el garaje vacio, el vehiculo del invitado se migra al garaje y se borra del navegador', async () => {
+    it('al iniciar sesión con el garaje vacío, el vehículo del invitado se migra al garaje y se borra del navegador', async () => {
       vehicles().select(corolla); // como invitado
       user.set(BASE);
       TestBed.tick();
@@ -307,7 +307,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(vehicles().selected()).toEqual(corolla);
     });
 
-    it('cambiar el predeterminado mueve el vehiculo elegido; quitar el predeterminado lo deja sin elegido', async () => {
+    it('cambiar el predeterminado mueve el vehículo elegido; quitar el predeterminado lo deja sin elegido', async () => {
       user.set(BASE);
       TestBed.tick();
       await firstValueFrom(vehicles().addToGarage(corolla));
@@ -323,7 +323,28 @@ describe('servicios de la tienda (mock)', () => {
       expect(vehicles().selected()).toBeNull();
     });
 
-    it('sin sesion, las acciones del garaje no hacen nada', async () => {
+    it('un modelo escrito a mano se guarda sin modelId, no se duplica y es el de por defecto', async () => {
+      user.set(BASE);
+      TestBed.tick();
+      const escrito: SelectedVehicle = { makeId: make('subaru').id, modelId: null, modelText: 'Impreza', year: 2012 };
+
+      await firstValueFrom(vehicles().addToGarage(escrito));
+      await firstValueFrom(vehicles().addToGarage({ ...escrito, modelText: ' impreza ' }));
+
+      expect(vehicles().garage().length).toBe(1);
+      expect(vehicles().garage()[0]).toMatchObject({ modelId: null, modelText: 'Impreza', isDefault: true });
+      expect(vehicles().selected()).toEqual(escrito);
+    });
+
+    it('sin sesión, el modelo escrito a mano sobrevive en localStorage y da la etiqueta "Marca · Modelo"', () => {
+      vehicles().select({ makeId: make('subaru').id, modelId: null, modelText: 'Impreza', year: 2012 });
+      TestBed.tick();
+
+      expect(JSON.parse(localStorage.getItem(GUEST_VEHICLE_KEY) as string).modelText).toBe('Impreza');
+      expect(vehicles().selectedLabel()).toBe('Subaru · Impreza');
+    });
+
+    it('sin sesión, las acciones del garaje no hacen nada', async () => {
       await firstValueFrom(vehicles().addToGarage(corolla));
       await firstValueFrom(vehicles().setDefaultVehicle(1));
       await firstValueFrom(vehicles().removeFromGarage(1));
@@ -343,7 +364,7 @@ describe('servicios de la tienda (mock)', () => {
       }
     };
 
-    it('lista las categorias, incluidas las desactivadas', async () => {
+    it('lista las categorías, incluidas las desactivadas', async () => {
       const antes = await firstValueFrom(catalog().getCategories());
       expect(antes.length).toBe(12);
 
@@ -353,7 +374,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(despues.find((c) => c.id === antes[0].id)?.isActive).toBe(false);
     });
 
-    it('crea una categoria con su slug, y una subcategoria dentro de una de primer nivel', async () => {
+    it('crea una categoría con su slug, y una subcategoría dentro de una de primer nivel', async () => {
       const frenos = (await firstValueFrom(catalog().getCategories())).find((c) => c.slug === 'frenos')!;
       const hija = await firstValueFrom(
         catalog().createCategory({ name: 'Discos y pastillas', parentId: frenos.id, sortOrder: 10 }),
@@ -368,7 +389,7 @@ describe('servicios de la tienda (mock)', () => {
       const hija = await firstValueFrom(catalog().createCategory({ name: 'Discos', parentId: frenos.id, sortOrder: 10 }));
 
       expect(await errorOf(catalog().createCategory({ name: 'Ranurados', parentId: hija.id, sortOrder: 10 }))).toBe(
-        'Las categorias admiten dos niveles como maximo.',
+        'Las categorías admiten dos niveles como máximo.',
       );
     });
 
@@ -378,24 +399,24 @@ describe('servicios de la tienda (mock)', () => {
       );
     });
 
-    it('una categoria con hijas no puede pasar a ser hija', async () => {
+    it('una categoría con hijas no puede pasar a ser hija', async () => {
       const todas = await firstValueFrom(catalog().getCategories());
       const frenos = todas.find((c) => c.slug === 'frenos')!;
       const suspension = todas.find((c) => c.slug === 'suspension')!;
       await firstValueFrom(catalog().createCategory({ name: 'Discos', parentId: frenos.id, sortOrder: 10 }));
 
       expect(await errorOf(catalog().updateCategory(frenos.id, { parentId: suspension.id }))).toBe(
-        'Una categoria con subcategorias no puede ser subcategoria.',
+        'Una categoría con subcategorías no puede ser subcategoría.',
       );
     });
 
-    it('una categoria no puede ser su propia hija ni colgar de una hija', async () => {
+    it('una categoría no puede ser su propia hija ni colgar de una hija', async () => {
       const todas = await firstValueFrom(catalog().getCategories());
       const frenos = todas.find((c) => c.slug === 'frenos')!;
       const hija = await firstValueFrom(catalog().createCategory({ name: 'Discos', parentId: frenos.id, sortOrder: 10 }));
 
       expect(await errorOf(catalog().updateCategory(hija.id, { parentId: hija.id }))).toBe(
-        'Las categorias admiten dos niveles como maximo.',
+        'Las categorías admiten dos niveles como máximo.',
       );
     });
 
@@ -432,7 +453,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(await errorOf(catalog().createModel(marca.id, 'ELANTRA N'))).toBe('Ese registro ya existe.');
     });
 
-    it('un nombre sin letras ni numeros no se acepta', async () => {
+    it('un nombre sin letras ni números no se acepta', async () => {
       expect(await errorOf(catalog().createMake('!!!'))).toBe('La marca necesita un nombre.');
       expect(await errorOf(catalog().createModel(1, '---'))).toBe('El modelo necesita un nombre.');
     });
@@ -534,13 +555,13 @@ describe('servicios de la tienda (mock)', () => {
       expect(offers.every((p) => p.compareAtPrice !== null && p.compareAtPrice > p.price)).toBe(true);
     });
 
-    it('respeta el limite', async () => {
+    it('respeta el límite', async () => {
       expect((await firstValueFrom(products().getOffers(2))).length).toBe(2);
       expect((await firstValueFrom(products().getBestSellers(3))).length).toBe(3);
       expect((await firstValueFrom(products().getNewArrivals(5))).length).toBe(5);
     });
 
-    it('los mas vendidos van de mayor a menor y solo entran los que vendieron algo', async () => {
+    it('los más vendidos van de mayor a menor y solo entran los que vendieron algo', async () => {
       const best = await firstValueFrom(products().getBestSellers(100));
       const sold = best.map((p) => p.soldCount);
 
@@ -549,7 +570,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(best[0].id).toBe(4); // el aceite, con 210
     });
 
-    it('lo nuevo empieza por el ultimo que se cargo', async () => {
+    it('lo nuevo empieza por el último que se cargo', async () => {
       const fresh = await firstValueFrom(products().getNewArrivals(3));
       // Misma fecha en el mock: desempata el id mayor. La pieza 36 es de prueba y no se ve.
       expect(fresh.map((p) => p.id)).toEqual([35, 34, 33]);
@@ -564,7 +585,7 @@ describe('servicios de la tienda (mock)', () => {
   });
 
   describe('HubMarketService.getLatestVehicles', () => {
-    it('devuelve tres vehiculos aprobados, el mas reciente primero, sin las pendientes', async () => {
+    it('devuelve tres vehículos aprobados, el más reciente primero, sin las pendientes', async () => {
       const { HubMarketService } = await import('./hub-market.service');
       const latest = await firstValueFrom(TestBed.inject(HubMarketService).getLatestVehicles());
 
@@ -574,7 +595,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(dates).toEqual([...dates].sort().reverse());
     });
 
-    it('respeta el limite', async () => {
+    it('respeta el límite', async () => {
       const { HubMarketService } = await import('./hub-market.service');
       expect((await firstValueFrom(TestBed.inject(HubMarketService).getLatestVehicles(1))).length).toBe(1);
     });
@@ -583,18 +604,18 @@ describe('servicios de la tienda (mock)', () => {
   describe('VehicleService.selectedLabel', () => {
     const vehicles = () => TestBed.inject(VehicleService);
 
-    it('sin vehiculo no hay etiqueta', () => {
+    it('sin vehículo no hay etiqueta', () => {
       expect(vehicles().selectedLabel()).toBeNull();
     });
 
-    it('con vehiculo dice marca, modelo y ano', () => {
+    it('con vehículo dice marca, modelo y año', () => {
       vehicles().select({ makeId: make('toyota').id, modelId: model('toyota', 'corolla').id, year: 2015 });
       TestBed.tick();
 
       expect(vehicles().selectedLabel()).toBe('Toyota Corolla 2015');
     });
 
-    it('se actualiza al cambiar de vehiculo y se borra al quitarlo', () => {
+    it('se actualiza al cambiar de vehículo y se borra al quitarlo', () => {
       vehicles().select({ makeId: make('toyota').id, modelId: model('toyota', 'corolla').id, year: 2015 });
       TestBed.tick();
       vehicles().select({ makeId: make('honda').id, modelId: model('honda', 'civic').id, year: 2018 });
@@ -606,7 +627,7 @@ describe('servicios de la tienda (mock)', () => {
       expect(vehicles().selectedLabel()).toBeNull();
     });
 
-    it('un vehiculo guardado con ids que ya no existen deja la etiqueta nula, no "Marca 7"', () => {
+    it('un vehículo guardado con ids que ya no existen deja la etiqueta nula, no "Marca 7"', () => {
       localStorage.setItem(GUEST_VEHICLE_KEY, JSON.stringify({ makeId: 9999, modelId: 1, year: 2015 }));
       TestBed.tick();
       expect(vehicles().selectedLabel()).toBeNull();

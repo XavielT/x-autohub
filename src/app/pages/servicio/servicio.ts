@@ -16,6 +16,7 @@ import { storeWhatsAppLink } from '../../../shared/utils/contact';
 import { formatDuration } from '../../../shared/utils/format-duration';
 import { serviceJsonLd } from '../../../shared/utils/structured-data';
 
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
 /**
@@ -24,7 +25,7 @@ type LoadState = 'loading' | 'ready' | 'missing' | 'error';
  */
 @Component({
   selector: 'app-servicio',
-  imports: [DecimalPipe, RouterLink, ImageGallery, ServiceWorks, Reviews],
+  imports: [Skeleton, DecimalPipe, RouterLink, ImageGallery, ServiceWorks, Reviews],
   templateUrl: './servicio.html',
   styleUrl: './servicio.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

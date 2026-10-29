@@ -57,8 +57,8 @@ describe('ClubChannel', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('el mensaje de exito', () => {
-    it('no promete un correo cuando no se envio ninguno', async () => {
+  describe('el mensaje de éxito', () => {
+    it('no promete un correo cuando no se envío ninguno', async () => {
       subscriptions.result = { ok: true, alreadySubscribed: false, welcomeEmailSent: false };
 
       await suscribir();
@@ -94,7 +94,7 @@ describe('ClubChannel', () => {
   });
 
   describe('el resto', () => {
-    it('rechaza un correo invalido sin llamar al servicio', async () => {
+    it('rechaza un correo inválido sin llamar al servicio', async () => {
       const llamar = vi.spyOn(subscriptions, 'subscribe');
 
       await suscribir('no-es-un-correo');

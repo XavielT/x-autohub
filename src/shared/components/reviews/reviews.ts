@@ -14,6 +14,7 @@ import { AuthService } from '../../services/auth.service';
 import { ReviewService, validateReview } from '../../services/review.service';
 import { ToastService } from '../../services/toast.service';
 
+import { Skeleton } from '../../ui/skeleton/skeleton';
 /**
  * El bloque de reseñas de una ficha (producto o servicio): promedio, distribución
  * 5→1, la lista (las de compra verificada primero) y el formulario.
@@ -27,7 +28,7 @@ import { ToastService } from '../../services/toast.service';
  */
 @Component({
   selector: 'app-reviews',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [Skeleton, DatePipe, DecimalPipe, RouterLink],
   templateUrl: './reviews.html',
   styleUrl: './reviews.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

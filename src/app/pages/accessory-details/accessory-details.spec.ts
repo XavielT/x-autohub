@@ -30,7 +30,7 @@ describe('AccessoryDetails', () => {
     expect(montar().fixture.componentInstance).toBeTruthy();
   });
 
-  it('muestra la ficha completa con la galeria compartida y el precio en RD$', async () => {
+  it('muestra la ficha completa con la galería compartida y el precio en RD$', async () => {
     const { fixture, pantalla } = montar();
     await fixture.whenStable();
 
@@ -42,7 +42,7 @@ describe('AccessoryDetails', () => {
     expect(pantalla.querySelector('app-publication-notice')).toBeNull();
   });
 
-  it('una publicacion vendida avisa y quita WhatsApp, pero la ficha sigue abierta', async () => {
+  it('una publicación vendida avisa y quita WhatsApp, pero la ficha sigue abierta', async () => {
     const { fixture, pantalla } = montar({ ...ACCESORIO, soldAt: '2026-10-01T00:00:00Z' });
     await fixture.whenStable();
 
@@ -51,11 +51,11 @@ describe('AccessoryDetails', () => {
     expect(pantalla.querySelector('a.whatsapp-btn')).toBeNull();
   });
 
-  it('un id que no existe dice que no se encontro el articulo', async () => {
+  it('un id que no existe dice que no se encontro el artículo', async () => {
     const { fixture, pantalla } = montar(null);
     await fixture.whenStable();
 
-    expect(pantalla.textContent).toContain('Articulo no encontrado');
+    expect(pantalla.textContent).toContain('Artículo no encontrado');
     expect(pantalla.querySelector('h1')).toBeNull();
   });
 });

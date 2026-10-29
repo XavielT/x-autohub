@@ -13,9 +13,11 @@ import {
   AUTO_HUB_PARAM_KEYS, activeAutoHubFilters, autoHubFiltersFromParams, autoHubFiltersToParams, filterAutoHub,
 } from '../../../shared/utils/auto-hub-filters';
 
+import { SearchableSelect, SelectOption } from '../../../shared/ui/searchable-select/searchable-select';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 @Component({
   selector: 'app-auto-hub',
-  imports: [FormsModule, AutohubCard, OfflineState],
+  imports: [Skeleton, FormsModule, AutohubCard, OfflineState, SearchableSelect],
   templateUrl: './auto-hub.html',
   styleUrl: './auto-hub.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +69,16 @@ export class AutoHub implements OnInit {
   protected readonly tractionOptions = Object.entries(TRACTION_LABELS);
   protected readonly sortOptions = Object.entries(SORT_LABELS);
 
+  private static toSelect(entries: [string, string][], all?: string): SelectOption[] {
+    const options = entries.map(([value, label]) => ({ value, label }));
+    return all ? [{ value: '', label: all }, ...options] : options;
+  }
+
+  protected readonly chasisSelect = AutoHub.toSelect(this.chasisOptions, 'Todos');
+  protected readonly fuelSelect = AutoHub.toSelect(this.fuelOptions, 'Todos');
+  protected readonly tractionSelect = AutoHub.toSelect(this.tractionOptions, 'Todas');
+  protected readonly sortSelect = AutoHub.toSelect(this.sortOptions);
+
   /** Se recalcula solo cuando cambia el inventario o los filtros. */
   readonly filteredAutos = computed(() => filterAutoHub(this.allAutos(), this.filters()));
   readonly activeCount = computed(() => activeAutoHubFilters(this.filters()));
@@ -94,7 +106,7 @@ export class AutoHub implements OnInit {
   ngOnInit(): void {
     // El mismo título que la ruta; lo que aporta es la descripción y la vista previa al compartir el enlace.
     this.seo.set({
-      title: 'Auto Hub — Vehiculos verificados | X AutoHub',
+      title: 'Auto Hub — Vehículos verificados | X AutoHub',
       description:
         'Vehículos verificados por X AutoHub: revisados por el equipo, con fotos, precio y kilometraje. Mira el inventario en República Dominicana.',
       path: '/auto-hub',

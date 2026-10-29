@@ -1,0 +1,41 @@
+<article class="vcard" [class.vcard--square]="square()">
+  <a class="vcard__media" [routerLink]="routerLinkValue()" [attr.aria-label]="title()">
+    @if (image(); as src) {
+      @if (isDataUrl()) {
+        <img class="vcard__img" [src]="src" [alt]="title()" width="320" height="200" loading="lazy" (error)="onError($event)" />
+      } @else {
+        <img class="vcard__img" [ngSrc]="src" [alt]="title()" [priority]="priority()" fill (error)="onError($event)" />
+      }
+    } @else {
+      <img class="vcard__img vcard__img--fallback" src="assets/icons/auto-icon.svg" alt="" />
+    }
+    @if (badge()) { <span class="vcard__badge">{{ badge() }}</span> }
+  </a>
+
+  <div class="vcard__body">
+    <a class="vcard__title-link" [routerLink]="routerLinkValue()">
+      <h3 class="vcard__name">{{ title() }}</h3>
+    </a>
+    @if (year() !== null || mileage() !== null) {
+      <p class="vcard__sub">
+        @if (year() !== null) { <span>{{ year() }}</span> }
+        @if (year() !== null && mileage() !== null) { <span aria-hidden="true">&bull;</span> }
+        @if (mileage() !== null) { <span>{{ mileage() | number: '1.0-0' }} km</span> }
+      </p>
+    }
+    @if (meta()) { <p class="vcard__meta">{{ meta() }}</p> }
+    @if (isTest()) { <app-test-badge /> }
+    <p class="vcard__price">RD$ {{ price() | number: '1.0-0' }}</p>
+
+    @if (specs().length > 0) {
+      <dl class="vcard__specs">
+        @for (spec of specs(); track spec.label) {
+          <div class="vcard__spec">
+            <dt>{{ spec.label }}</dt>
+            <dd>{{ spec.value }}</dd>
+          </div>
+        }
+      </dl>
+    }
+  </div>
+</article>

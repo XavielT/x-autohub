@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { AdminCouponsService } from '../../../../shared/services/admin-coupons.service';
@@ -77,7 +78,7 @@ const STATUS_LABELS: Readonly<Record<CouponStatus, string>> = {
  */
 @Component({
   selector: 'app-admin-cupones',
-  imports: [DatePipe],
+  imports: [DatePipe, Skeleton],
   templateUrl: './admin-cupones.html',
   styleUrl: './admin-cupones.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

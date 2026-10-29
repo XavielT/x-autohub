@@ -35,6 +35,8 @@
           </div>
         </div>
       </div>
+    } @else if (isLoading()) {
+      <app-skeleton variant="detail" label="Cargando el artículo…" />
     } @else {
       <div class="hub-market-part-details__not-found">
         <h2 class="hub-market-part-details__not-found-title">Upss, Artículo no encontrado!</h2>
@@ -45,7 +47,7 @@
 
     <div class="hub-market-part-details__related-parts">
       <div class="hub-market-part-details__related-header">
-        <h3>Articulos Relacionados</h3>
+        <h3>Artículos Relacionados</h3>
       </div>
       <div class="hub-market-part-details__related-grid">
         @for (item of relatedParts(); track item.id) {

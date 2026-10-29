@@ -26,7 +26,7 @@
             <span class="hub-part-card__off">-{{ discount() }}%</span>
         }
         <a class="hub-part-card__image-link" [routerLink]="['/tienda', 'p', hubPart().slug]"><img class="hub-part-card__img"
-                [ngSrc]="hubPart().imgUrl" [priority]="priority()" [alt]="hubPart().name" fill /></a>
+                [ngSrc]="imageSrc()" [priority]="priority()" [alt]="hubPart().name" (error)="imageFailed.set(true)" fill /></a>
     </div>
     <div class="hub-part-card__middle">
         <div class="hub-part-card__middle-header">
@@ -64,7 +64,7 @@
             type="button"
             class="hub-part-card__cart-button"
             [disabled]="!availability().canBuy"
-            [attr.aria-label]="!availability().canBuy ? hubPart().name + ' esta agotado' : hubPart().hasVariants ? 'Elegir ' + variantNoun() + ' de ' + hubPart().name : 'Agregar ' + hubPart().name + ' al carrito'"
+            [attr.aria-label]="!availability().canBuy ? hubPart().name + ' está agotado' : hubPart().hasVariants ? 'Elegir ' + variantNoun() + ' de ' + hubPart().name : 'Agregar ' + hubPart().name + ' al carrito'"
             [attr.aria-expanded]="hubPart().hasVariants ? choosing() : null"
             (click)="addToCart()">
             <img src="assets/icons/cart-icon.svg" alt="" />

@@ -58,7 +58,7 @@
           <h2 class="agd__h2" data-step-heading tabindex="-1">1. ¿Qué necesitas?</h2>
 
           @if (isLoadingServices()) {
-            <p class="agd__muted" role="status">Cargando los servicios…</p>
+            <app-skeleton variant="row" [count]="4" label="Cargando los servicios…" />
           } @else {
             <ul class="agd__services">
               @for (s of services(); track s.id) {

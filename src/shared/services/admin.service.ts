@@ -667,7 +667,7 @@ export class AdminService {
   getVehicle(id: number): Observable<EditableVehicle> {
     if (this.supabase.shouldUseMockData()) {
       const v = this.mockVehicles.find((x) => x.id === id);
-      if (!v) return throwError(() => new Error('No encontramos ese vehiculo.'));
+      if (!v) return throwError(() => new Error('No encontramos ese vehículo.'));
       return of({
         ...v,
         color: '',

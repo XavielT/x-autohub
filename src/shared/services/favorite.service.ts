@@ -51,7 +51,7 @@ export class FavoriteService {
   toggle(partId: number): Observable<boolean> {
     const userId = this.auth.user()?.id;
     if (!userId) {
-      this.toast.show('Inicia sesion para guardar tus favoritos.', 'error');
+      this.toast.show('Inicia sesión para guardar tus favoritos.', 'error');
       return of(false);
     }
     if (this.pending.has(partId)) return of(this.isFavorite(partId));
@@ -81,7 +81,7 @@ export class FavoriteService {
           subscriber.next(adding);
           subscriber.complete();
         },
-        () => undo('No pudimos actualizar tus favoritos. Revisa tu conexion.'),
+        () => undo('No pudimos actualizar tus favoritos. Revisa tu conexión.'),
       );
     });
   }

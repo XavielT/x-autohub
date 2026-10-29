@@ -1,80 +1,25 @@
 @if (auto(); as auto) {
-    <div class="auto-hub-details">
-      <div class="auto-hub-details__body">
-  
-        <div class="auto-hub-details__media">
-          <app-image-gallery [images]="images()" [alt]="auto.model" />
+  <app-vehicle-detail
+    [images]="images()" [title]="auto.brand + ' ' + auto.model" [location]="auto.location" [price]="auto.price"
+    [specs]="specs()" [description]="auto.description" sellerName="X AutoHub" [contact]="contactDisplay()"
+    [waLink]="waLink()" [isTest]="!!auto.isTest">
+    @if (related().length > 0) {
+      <section related class="related" aria-labelledby="related-title">
+        <h2 class="related__title" id="related-title">Vehículos relacionados</h2>
+        <div class="related__grid">
+          @for (vehicle of related(); track vehicle.id) {
+            <app-autohub-card [autoHub]="vehicle" />
+          }
         </div>
-  
-        <div class="auto-hub-details__info">
-          <div class="auto-hub-details__info-top">
-            @if (auto.isTest) { <app-test-badge /> }
-            <h1 class="auto-hub-details__title">{{ auto.brand }} {{ auto.model }}</h1>
-            <div class="auto-hub-details__price">
-              <span>Precio</span>
-              <h2>RD$ {{ auto.price | number:'1.0-0' }}</h2>
-            </div>
-          </div>
-  
-          <div class="auto-hub-details__specs">
-            <div class="auto-hub-details__specs-grid">
-              <div class="auto-hub-details__spec-item">
-                <span>Año</span>
-                <strong>{{ auto.year }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Tipo de vehiculo</span>
-                <strong>{{ auto.chasisType }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Kilometraje</span>
-                <strong>{{ auto.mileage }} KM</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Puertas</span>
-                <strong>{{ auto.doors }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Traccion</span>
-                <strong>{{ auto.traction }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Combustible</span>
-                <strong>{{ auto.fuel }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Cilindros</span>
-                <strong>{{ auto.cylinders }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item">
-                <span>Ubicacion</span>
-                <strong>{{ auto.location }}</strong>
-              </div>
-              <div class="auto-hub-details__spec-item auto-hub-details__spec-item--contact">
-                <span>Contacto</span>
-                <strong>{{ contactDisplay() }}</strong>
-                @if (waLink(); as link) {
-                  <a class="whatsapp-btn" [href]="link" target="_blank" rel="noopener">
-                    <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
-                    Contactar por WhatsApp
-                  </a>
-                }
-              </div>
-            </div>
-          </div>
-  
-          <div class="auto-hub-details__description">
-            <h3>Descripción</h3>
-            <app-expandable-text [text]="auto.description" />
-          </div>
-        </div>
-  
-      </div>
-    </div>
-  } @else {
-    <div class="auto-hub-details__not-found">
-      <h2>Upss! Vehículo no encontrado</h2>
-      <span>Este articulo es inexistente o fue borrado.</span>
-      <img src="assets/icons/not-found-hub-icon.svg"/>
-    </div>
-  }
+      </section>
+    }
+  </app-vehicle-detail>
+} @else if (isLoading()) {
+  <app-skeleton variant="detail" label="Cargando el vehículo…" />
+} @else {
+  <div class="auto-hub-details__not-found">
+    <h2>¡Ups! Vehículo no encontrado</h2>
+    <span>Este vehículo ya no está disponible o fue borrado.</span>
+    <img src="assets/icons/not-found-hub-icon.svg" alt="" />
+  </div>
+}

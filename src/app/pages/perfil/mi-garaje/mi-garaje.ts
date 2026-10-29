@@ -5,6 +5,7 @@ import { ProfileVehicleModel, SelectedVehicle } from '../../../../shared/models/
 import { ToastService } from '../../../../shared/services/toast.service';
 import { VehicleService } from '../../../../shared/services/vehicle.service';
 
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 /** Una fila del garaje con el nombre del vehículo ya resuelto. */
 export interface GarageRow {
   vehicle: ProfileVehicleModel;
@@ -21,7 +22,7 @@ export interface GarageRow {
  */
 @Component({
   selector: 'app-mi-garaje',
-  imports: [VehicleForm],
+  imports: [Skeleton, VehicleForm],
   templateUrl: './mi-garaje.html',
   styleUrl: './mi-garaje.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,6 +71,10 @@ export class MiGaraje implements OnInit {
         this.rows.set(
           garage.map((vehicle) => {
             const make = makes.find((m) => m.id === vehicle.makeId)?.name ?? 'Marca';
+            // Modelo escrito a mano: "Toyota · Corolla 2015".
+            if (vehicle.modelId === null) {
+              return { vehicle, label: `${make} · ${vehicle.modelText ?? 'modelo'} ${vehicle.year}` };
+            }
             const model = allModels.find((m) => m.id === vehicle.modelId)?.name ?? 'modelo';
             return { vehicle, label: `${make} ${model} ${vehicle.year}` };
           }),

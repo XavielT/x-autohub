@@ -54,10 +54,10 @@ describe('Contenido de prueba (mock)', () => {
 
   const ids = (list: { id: number }[]) => list.map((i) => i.id);
 
-  describe('catalogo de piezas', () => {
+  describe('catálogo de piezas', () => {
     const parts = () => TestBed.inject(ProductService);
 
-    it('sin sesion la pieza de prueba no sale ni en la lista ni por id', async () => {
+    it('sin sesión la pieza de prueba no sale ni en la lista ni por id', async () => {
       expect(ids(await firstValueFrom(parts().getAll()))).not.toContain(PIEZA_PRUEBA);
       expect(await firstValueFrom(parts().getById(PIEZA_PRUEBA))).toBeUndefined();
     });
@@ -69,7 +69,7 @@ describe('Contenido de prueba (mock)', () => {
       expect(await firstValueFrom(parts().getById(PIEZA_PRUEBA))).toBeUndefined();
     });
 
-    it('tampoco entre los relacionados de su propia categoria', async () => {
+    it('tampoco entre los relacionados de su propia categoría', async () => {
       user.set(NORMAL);
       const prueba = HUB_PART_MOCK.find((p) => p.id === PIEZA_PRUEBA)!;
       const hermana = HUB_PART_MOCK.find((p) => !p.isTest && p.categoryId === prueba.categoryId)!;
@@ -99,7 +99,7 @@ describe('Contenido de prueba (mock)', () => {
   describe('Auto Hub', () => {
     const autos = () => TestBed.inject(AutoHubService);
 
-    it('el vehiculo de prueba no sale para un usuario normal', async () => {
+    it('el vehículo de prueba no sale para un usuario normal', async () => {
       user.set(NORMAL);
 
       expect(ids(await firstValueFrom(autos().getAll()))).not.toContain(VEHICULO_PRUEBA);
@@ -133,7 +133,7 @@ describe('Contenido de prueba (mock)', () => {
   describe('Hub Market', () => {
     const market = () => TestBed.inject(HubMarketService);
 
-    it('la publicacion de prueba esta aprobada y aun asi no se ve', async () => {
+    it('la publicación de prueba esta aprobada y aun así no se ve', async () => {
       user.set(NORMAL);
       const service = market();
 
@@ -157,7 +157,7 @@ describe('Contenido de prueba (mock)', () => {
      * pasa a ser de prueba tiene que desaparecer de la sección destacada, no
      * solo del listado. Es el camino que no pasa por `getAll()`.
      */
-    it('marcar un destacado como prueba lo saca de la seccion del home', async () => {
+    it('marcar un destacado como prueba lo saca de la sección del home', async () => {
       const service = market();
 
       user.set(MODERADOR);

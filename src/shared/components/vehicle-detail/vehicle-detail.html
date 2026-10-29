@@ -1,0 +1,74 @@
+<div class="vd">
+  <ng-content select="[notice]" />
+
+  <div class="vd__body">
+    <div class="vd__media">
+      <app-image-gallery [images]="images()" [alt]="title()" />
+    </div>
+
+    <div class="vd__info">
+      <div class="vd__top">
+        <div class="vd__heading">
+          @if (isTest()) { <app-test-badge /> }
+          <h1 class="vd__title">{{ title() }}</h1>
+          @if (location()) {
+            <p class="vd__location">
+              <img src="assets/icons/location-icon.svg" alt="" aria-hidden="true" width="16" height="16" />
+              {{ location() }}
+            </p>
+          }
+        </div>
+        <div class="vd__price">
+          <span>Precio</span>
+          <strong>RD$ {{ price() | number: '1.0-0' }}</strong>
+        </div>
+      </div>
+
+      @if (visibleSpecs().length > 0) {
+        <dl class="vd__specs">
+          @for (spec of visibleSpecs(); track spec.label) {
+            <div class="vd__spec">
+              <dt>{{ spec.label }}</dt>
+              <dd>{{ spec.value }}</dd>
+            </div>
+          }
+        </dl>
+      }
+
+      @if (description()) {
+        <section class="vd__description">
+          <h2>Descripción</h2>
+          <app-expandable-text [text]="description()" />
+        </section>
+      }
+
+      <section class="vd__seller">
+        <span class="vd__avatar" aria-hidden="true">{{ initial() }}</span>
+        <div class="vd__seller-info">
+          <span class="vd__seller-label">Vendedor</span>
+          <strong>{{ sellerName() }}</strong>
+          @if (contact()) { <span class="vd__contact">{{ contact() }}</span> }
+        </div>
+        <div class="vd__actions">
+          @if (waLink()) {
+            <a class="vd__wa whatsapp-btn" [href]="waLink()" target="_blank" rel="noopener">
+              <img src="assets/icons/whatsapp-w-icon.svg" alt="" aria-hidden="true" />
+              Contactar por WhatsApp
+            </a>
+          }
+          <button type="button" class="vd__share" (click)="share()">Compartir</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <ng-content select="[related]" />
+
+  <!-- Solo en el teléfono: el precio y el contacto siempre a mano. -->
+  <div class="vd__bar">
+    <strong class="vd__bar-price">RD$ {{ price() | number: '1.0-0' }}</strong>
+    @if (waLink()) {
+      <a class="vd__wa whatsapp-btn" [href]="waLink()" target="_blank" rel="noopener">WhatsApp</a>
+    }
+  </div>
+</div>

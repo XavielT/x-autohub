@@ -1,36 +1,35 @@
 <form class="vf" (ngSubmit)="submit()">
-  <label class="vf__field" [for]="idPrefix() + '-make'">
-    <span>Marca</span>
-    <select [id]="idPrefix() + '-make'" name="make" [ngModel]="makeId()"
-            (ngModelChange)="onMakeChange($event)">
-      <option [ngValue]="null">Elige la marca</option>
-      @for (m of makes(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
-    </select>
-  </label>
+  <div class="vf__field">
+    <label [for]="idPrefix() + '-make'">Marca</label>
+    <app-searchable-select [inputId]="idPrefix() + '-make'" [options]="makeOptions()"
+      [value]="makeId()" (valueChange)="onMakeChange($event)" placeholder="Elige la marca" />
+  </div>
 
-  <label class="vf__field" [for]="idPrefix() + '-model'">
-    <span>Modelo</span>
-    <select [id]="idPrefix() + '-model'" name="model" [ngModel]="modelId()"
-            (ngModelChange)="modelId.set($event)"
-            [disabled]="makeId() === null || isLoadingModels()">
-      <option [ngValue]="null">
-        {{ makeId() === null ? 'Primero la marca' : (isLoadingModels() ? 'Cargando…' : 'Elige el modelo') }}
-      </option>
-      @for (m of models(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
-    </select>
-    @if (makeId() !== null && !isLoadingModels() && models().length === 0) {
-      <small class="vf__hint">Todavía no tenemos modelos de esta marca. Escríbenos por WhatsApp.</small>
+  <div class="vf__field">
+    <label [for]="idPrefix() + '-model'">Modelo</label>
+    @if (freeModel()) {
+      <input class="vf__text" type="text" maxlength="60" autocomplete="off"
+        [id]="idPrefix() + '-model'" name="modelText" [value]="modelText()"
+        (input)="onModelTextChange($any($event.target).value)"
+        placeholder="Escribe el modelo, ej. Corolla" />
+    } @else {
+      <app-searchable-select [inputId]="idPrefix() + '-model'" [options]="modelOptions()"
+        [value]="modelId()" (valueChange)="onModelChange($event)"
+        [disabled]="makeId() === null || isLoadingModels()"
+        [placeholder]="makeId() === null ? 'Primero la marca' : (isLoadingModels() ? 'Cargando…' : 'Elige el modelo')" />
     }
-  </label>
+  </div>
 
-  <label class="vf__field" [for]="idPrefix() + '-year'">
-    <span>Año</span>
-    <select [id]="idPrefix() + '-year'" name="year" [ngModel]="year()"
-            (ngModelChange)="year.set($event)" [disabled]="modelId() === null">
-      <option [ngValue]="null">{{ modelId() === null ? 'Primero el modelo' : 'Elige el año' }}</option>
-      @for (y of years; track y) { <option [ngValue]="y">{{ y }}</option> }
-    </select>
-  </label>
+  <div class="vf__field">
+    <label [for]="idPrefix() + '-year'">Año</label>
+    <app-searchable-select [inputId]="idPrefix() + '-year'" [options]="yearOptions"
+      [value]="year()" (valueChange)="onYearChange($event)" [disabled]="!hasModel()"
+      [placeholder]="!hasModel() ? 'Primero el modelo' : 'Elige el año'" />
+  </div>
 
   <button type="submit" class="vf__submit" [disabled]="!isComplete()">{{ submitLabel() }}</button>
+
+  @if (freeModel()) {
+    <small class="vf__hint">Aún no tenemos los modelos de esta marca; escríbelo tú.</small>
+  }
 </form>

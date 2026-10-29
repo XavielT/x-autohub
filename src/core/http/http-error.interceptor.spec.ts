@@ -86,7 +86,7 @@ describe('httpErrorInterceptor', () => {
     http.get('/api/catalogo').subscribe({ error: () => undefined });
     httpMock.expectOne('/api/catalogo').flush('boom', { status: 500, statusText: 'Server Error' });
 
-    expect(toast.toasts().at(-1)?.message).toBe('Algo salio mal. Intenta de nuevo.');
+    expect(toast.toasts().at(-1)?.message).toBe('Algo salió mal. Intenta de nuevo.');
     expect(navigate).not.toHaveBeenCalled();
     expect(auth.isLoggedIn()).toBe(true);
   });

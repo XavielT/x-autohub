@@ -16,7 +16,7 @@ import { HubMarketItemModel } from '../models/hub-market-item.model';
  * (migración 0012), que estas pruebas no pueden ejecutar; aquí se comprueba que
  * el servicio no lo contradiga por su lado.
  */
-describe('HubMarketService — moderacion (mock)', () => {
+describe('HubMarketService — moderación (mock)', () => {
   let service: HubMarketService;
 
   beforeEach(() => {
@@ -77,7 +77,7 @@ describe('HubMarketService — moderacion (mock)', () => {
     });
   });
 
-  describe('cola de revision', () => {
+  describe('cola de revisión', () => {
     it('solo trae lo pendiente', async () => {
       await publicar('Pendiente 1');
       await publicar('Aprobada ya', true);
@@ -100,7 +100,7 @@ describe('HubMarketService — moderacion (mock)', () => {
       expect(cola.map((i) => i.id).sort()).toEqual([a.id, b.id].sort());
     });
 
-    it('atiende por antiguedad: primero lo que lleva mas tiempo esperando', async () => {
+    it('atiende por antiguedad: primero lo que lleva más tiempo esperando', async () => {
       // Se mueve el reloj en vez de tocar el servicio: `publish` sella
       // `createdAt` con `new Date()`, asi que esta es la forma de darles fechas
       // distintas sin agregarle a la produccion un metodo que solo usan las
@@ -150,12 +150,12 @@ describe('HubMarketService — moderacion (mock)', () => {
       const creada = await publicar('Turbo Garrett');
 
       await firstValueFrom(
-        service.moderate(creada.id, 'rechazado', 'Las fotos no dejan ver el vehiculo.'),
+        service.moderate(creada.id, 'rechazado', 'Las fotos no dejan ver el vehículo.'),
       );
       const item = await firstValueFrom(service.getById(creada.id));
 
       expect(item?.status).toBe('rechazado');
-      expect(item?.rejectionReason).toBe('Las fotos no dejan ver el vehiculo.');
+      expect(item?.rejectionReason).toBe('Las fotos no dejan ver el vehículo.');
       expect(await titulos()).not.toContain('Turbo Garrett');
     });
 

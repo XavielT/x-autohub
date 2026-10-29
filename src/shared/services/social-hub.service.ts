@@ -70,7 +70,7 @@ export class SocialHubService {
    */
   publishPost(
     post: Pick<SocialPostModel, 'text' | 'tags'> &
-      Partial<Pick<SocialPostModel, 'imageUrl' | 'authorClub'>>,
+      Partial<Pick<SocialPostModel, 'imageUrl' | 'media' | 'authorClub'>>,
     authorId: string,
     authorName: string,
   ): Observable<SocialPostModel> {
@@ -82,6 +82,7 @@ export class SocialHubService {
         createdAt: new Date().toISOString(),
         text: post.text,
         imageUrl: post.imageUrl,
+        media: post.media ?? [],
         tags: post.tags,
         likes: 0,
         comments: 0,
@@ -99,6 +100,7 @@ export class SocialHubService {
           author_club: post.authorClub ?? null,
           text: post.text,
           image_url: post.imageUrl ?? null,
+          media: post.media ?? [],
           tags: post.tags,
         })
         .select(POST_SELECT)

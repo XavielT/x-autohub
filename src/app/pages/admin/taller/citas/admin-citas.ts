@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AdminServicesService } from '../../../../../shared/services/admin-services.service';
 import { ToastService } from '../../../../../shared/services/toast.service';
@@ -43,7 +44,7 @@ interface AppointmentAction {
  */
 @Component({
   selector: 'app-admin-citas',
-  imports: [],
+  imports: [Skeleton],
   templateUrl: './admin-citas.html',
   styleUrl: './admin-citas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

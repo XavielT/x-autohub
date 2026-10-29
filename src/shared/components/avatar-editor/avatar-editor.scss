@@ -1,0 +1,83 @@
+.ae {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 14px;
+
+  &__current { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  &__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    cursor: pointer;
+
+    &--primary { color: var(--main); background-color: var(--Hub); border-color: var(--Hub); }
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  &__btn { position: relative; }
+
+  &__label { margin: 4px 0 0; font-size: 13px; color: var(--text-soft); }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 10px;
+    max-width: 380px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__choice {
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+
+    img { width: 100%; height: auto; display: block; }
+    &--on { border-color: var(--Hub); }
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__crop { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+
+  &__view {
+    position: relative;
+    max-width: 100%;
+    overflow: hidden;
+    background-color: #000;
+    border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  &__img { position: absolute; max-width: none; pointer-events: none; }
+
+  &__zoom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+
+    input { width: 200px; accent-color: var(--Hub); }
+  }
+
+  &__hint { margin: 0; font-size: 13px; color: var(--text-soft); }
+}

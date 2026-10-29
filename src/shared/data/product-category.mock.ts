@@ -5,8 +5,8 @@ import { ProductCategoryModel } from '../models/product.model';
  * `supabase/migrations/0017_store_catalog.sql`, en el mismo orden. Las hijas las
  * crea el admin, así que el mock no trae ninguna.
  *
- * El `icon` queda nulo: hoy no hay assets de categorías y no se referencia uno
- * que no existe (TODO de la fase 2, cuando se decida la iconografía).
+ * El `icon` es el slug, como lo deja la migración 0041: el archivo es
+ * `assets/icons/categories/<slug>.svg`.
  */
 const FIRST_LEVEL: readonly [slug: string, name: string][] = [
   ['accesorios-interior', 'Accesorios interior'],
@@ -29,7 +29,7 @@ export const PRODUCT_CATEGORIES_MOCK: ProductCategoryModel[] = FIRST_LEVEL.map(
     parentId: null,
     slug,
     name,
-    icon: null,
+    icon: slug,
     sortOrder: (index + 1) * 10,
     isActive: true,
   }),

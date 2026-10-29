@@ -3,23 +3,23 @@
     <div>
       <h2 class="adm-rel__title">Historial de versiones</h2>
       <p class="adm-rel__lead">
-        Lo que se publica aqui es visible para cualquiera. Los borradores solo los ves tu.
+        Lo que se publica aquí es visible para cualquiera. Los borradores solo los ves tú.
       </p>
     </div>
     @if (editingId() === null) {
-      <button type="button" class="adm-rel__new" (click)="startCreate()">+ Nueva version</button>
+      <button type="button" class="adm-rel__new" (click)="startCreate()">+ Nueva versión</button>
     }
   </header>
 
   @if (editingId() !== null) {
     <form class="adm-rel__form" (ngSubmit)="save()">
       <h3 class="adm-rel__form-title">
-        {{ editingId() === 0 ? 'Nueva version' : 'Editar version' }}
+        {{ editingId() === 0 ? 'Nueva versión' : 'Editar versión' }}
       </h3>
 
       <div class="adm-rel__row">
         <label class="adm-rel__field">
-          <span>Version</span>
+          <span>Versión</span>
           <input type="text" name="version" placeholder="0.2.0" inputmode="decimal"
                  [ngModel]="version()" (ngModelChange)="version.set($event)" />
         </label>
@@ -31,21 +31,28 @@
       </div>
 
       <label class="adm-rel__field">
-        <span>Titulo</span>
-        <input type="text" name="title" placeholder="Que trae esta version, en una linea"
+        <span>Título</span>
+        <input type="text" name="title" placeholder="Qué trae esta versión, en una línea"
                [ngModel]="title()" (ngModelChange)="title.set($event)" />
       </label>
 
       <label class="adm-rel__field">
         <span>Resumen</span>
-        <textarea name="summary" rows="2" placeholder="Un parrafo corto explicando el cambio"
+        <textarea name="summary" rows="2" placeholder="Un párrafo corto explicando el cambio"
                   [ngModel]="summary()" (ngModelChange)="summary.set($event)"></textarea>
       </label>
 
       <label class="adm-rel__field">
-        <span>Cambios <small>(una linea por punto)</small></span>
+        <span>Resumen para usuarios <small>(lo que lee quien usa el sitio, en llano y sin tecnicismos)</small></span>
+        <textarea name="userSummary" rows="2" maxlength="280"
+                  placeholder="Ahora puedes guardar productos con el corazón"
+                  [ngModel]="userSummary()" (ngModelChange)="userSummary.set($event)"></textarea>
+      </label>
+
+      <label class="adm-rel__field">
+        <span>Cambios <small>(una línea por punto)</small></span>
         <textarea name="changes" rows="7"
-                  placeholder="Se agrego el panel de administracion&#10;Se corrigio el carrito al recargar"
+                  placeholder="Se agregó el panel de administración&#10;Se corrigió el carrito al recargar"
                   [ngModel]="changesText()" (ngModelChange)="changesText.set($event)"></textarea>
       </label>
 
@@ -65,9 +72,9 @@
   }
 
   @if (isLoading()) {
-    <p class="adm-rel__empty">Cargando versiones...</p>
+    <app-skeleton variant="row" [count]="4" label="Cargando versiones…" />
   } @else if (items().length === 0) {
-    <p class="adm-rel__empty">Todavia no hay ninguna version registrada.</p>
+    <p class="adm-rel__empty">Todavía no hay ninguna versión registrada.</p>
   } @else {
     <ol class="adm-rel__list">
       @for (item of items(); track item.id) {
@@ -105,7 +112,7 @@
 
           @if (expandedId() === item.id) {
             @if (item.changes.length === 0) {
-              <p class="adm-rel__item-summary">Esta version no tiene puntos de cambio.</p>
+              <p class="adm-rel__item-summary">Esta versión no tiene puntos de cambio.</p>
             } @else {
               <ul class="adm-rel__changes">
                 @for (change of item.changes; track change) {

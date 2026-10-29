@@ -49,7 +49,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
   {
     id: 103,
     title: 'Citroen C3',
-    description: 'Uso diario, mantenimiento al dia y pintura reciente.',
+    description: 'Uso diario, mantenimiento al día y pintura reciente.',
     images: ['assets/imgs/citroen-c3.jpg'],
     price: 5000,
     location: 'La Romana',
@@ -84,7 +84,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
   {
     id: 202,
     title: 'Disco Brembo GTR (Unidad)',
-    description: 'Unidad individual, ideal para reemplazo rapido.',
+    description: 'Unidad individual, ideal para reemplazo rápido.',
     images: ['assets/imgs/hub-parts/disco-brembo-gtr-3.jpg'],
     price: 180,
     location: 'Bani',
@@ -108,7 +108,7 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
   {
     id: 104,
     title: 'Volkswagen Amarok',
-    description: 'Uso diario, mantenimiento al dia y pintura reciente.',
+    description: 'Uso diario, mantenimiento al día y pintura reciente.',
     images: ['assets/imgs/amarok.jpeg'],
     price: 847000,
     location: 'Neiba',
@@ -132,8 +132,8 @@ export const HUB_MARKET_ITEMS_MOCK: HubMarketItemModel[] = [
   // usuarios de prueba. Ver shared/utils/test-visibility.ts.
   {
     id: 105,
-    title: 'PRUEBA - Publicacion de prueba',
-    description: 'Publicacion de prueba del equipo de X AutoHub. No esta a la venta.',
+    title: 'PRUEBA - Publicación de prueba',
+    description: 'Publicación de prueba del equipo de X AutoHub. No está a la venta.',
     images: ['assets/imgs/catalog/accesorios.jpg'],
     price: 100,
     location: 'Santo Domingo',

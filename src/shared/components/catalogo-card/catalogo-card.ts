@@ -42,6 +42,12 @@ export class CatalogoCard {
   /** Hay vehículo elegido y este producto le sirve. Quien pinta la lista lo decide. */
   readonly compatible = input(false);
 
+  /** La foto no cargó (enlace roto o sin red): se muestra un ícono y la tarjeta conserva su forma. */
+  readonly imageFailed = signal(false);
+  readonly imageSrc = computed(() =>
+    this.imageFailed() || !this.hubPart().imgUrl ? 'assets/icons/part-placeholder.svg' : this.hubPart().imgUrl,
+  );
+
   readonly availability = computed(() => availabilityOf(this.hubPart()));
 
   /** Porcentaje de descuento redondeado; 0 si no hay oferta. */
@@ -113,7 +119,7 @@ export class CatalogoCard {
       this.cartService.addToCart(hubPart);
       this.toastService.show(`${hubPart.name} agregado al carrito`);
     } catch {
-      this.toastService.show('No se pudo agregar el articulo', 'error');
+      this.toastService.show('No se pudo agregar el artículo', 'error');
     }
   }
 }

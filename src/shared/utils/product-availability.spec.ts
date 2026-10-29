@@ -16,7 +16,7 @@ describe('availabilityOf', () => {
     expect(a.canBuy).toBe(false);
   });
 
-  it('bajo pedido nunca esta agotado, aunque el stock sea cero, y dice en cuantos dias llega', () => {
+  it('bajo pedido nunca esta agotado, aunque el stock sea cero, y dice en cuántos días llega', () => {
     const a = availabilityOf(makeProduct({ fulfillment: 'on_order', stock: 0, leadTimeDays: 7 }));
 
     expect(a.kind).toBe('on_order');
@@ -52,7 +52,7 @@ describe('availabilityOf', () => {
     });
   });
 
-  it('un dia va en singular, y sin plazo no inventa uno', () => {
+  it('un día va en singular, y sin plazo no inventa uno', () => {
     expect(availabilityOf(makeProduct({ fulfillment: 'on_order', leadTimeDays: 1 })).label).toBe('Bajo pedido: llega en 1 día');
     expect(availabilityOf(makeProduct({ fulfillment: 'on_order', leadTimeDays: null })).label).toBe('Bajo pedido');
   });

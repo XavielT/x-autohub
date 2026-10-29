@@ -1,3 +1,4 @@
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,7 +22,7 @@ const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
  */
 @Component({
   selector: 'app-admin-versiones',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, Skeleton],
   templateUrl: './admin-versiones.html',
   styleUrl: './admin-versiones.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,7 @@ export class AdminVersiones implements OnInit {
   readonly releasedAt = signal('');
   readonly title = signal('');
   readonly summary = signal('');
+  readonly userSummary = signal('');
   readonly changesText = signal('');
   readonly isPublished = signal(true);
 
@@ -74,6 +76,7 @@ export class AdminVersiones implements OnInit {
     this.releasedAt.set(new Date().toISOString().slice(0, 10));
     this.title.set('');
     this.summary.set('');
+    this.userSummary.set('');
     this.changesText.set('');
     this.isPublished.set(true);
   }
@@ -84,6 +87,7 @@ export class AdminVersiones implements OnInit {
     this.releasedAt.set(item.releasedAt.toISOString().slice(0, 10));
     this.title.set(item.title);
     this.summary.set(item.summary);
+    this.userSummary.set(item.userSummary ?? '');
     this.changesText.set(item.changes.join('\n'));
     this.isPublished.set(item.isPublished);
   }
@@ -97,11 +101,11 @@ export class AdminVersiones implements OnInit {
     const title = this.title().trim();
 
     if (!VERSION_PATTERN.test(version)) {
-      this.toast.show('La version tiene que ser tres numeros: 1.2.3', 'error');
+      this.toast.show('La versión tiene que ser tres números: 1.2.3', 'error');
       return;
     }
     if (!title) {
-      this.toast.show('Ponle un titulo a la version.', 'error');
+      this.toast.show('Ponle un título a la versión.', 'error');
       return;
     }
 
@@ -110,6 +114,7 @@ export class AdminVersiones implements OnInit {
       releasedAt: this.releasedAt(),
       title,
       summary: this.summary().trim(),
+      userSummary: this.userSummary().trim() || undefined,
       // Una linea por punto; se descartan las vacias para que un salto de mas no
       // se convierta en un elemento en blanco.
       changes: this.changesText()
@@ -127,7 +132,7 @@ export class AdminVersiones implements OnInit {
       next: () => {
         this.isSaving.set(false);
         this.editingId.set(null);
-        this.toast.show(id && id > 0 ? 'Version actualizada.' : 'Version publicada.');
+        this.toast.show(id && id > 0 ? 'Versión actualizada.' : 'Versión publicada.');
         this.load();
       },
       error: (error: Error) => {

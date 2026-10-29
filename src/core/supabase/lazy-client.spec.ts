@@ -21,7 +21,7 @@ function fakeClient() {
         async getSession() { return { data: { session: 'S' } }; },
         onAuthStateChange(cb: () => void) { cb(); return { data: { subscription: 'sub' } }; },
       },
-      failing() { return Promise.reject(new Error('fallo de red')); },
+      failing() { return Promise.reject(new Error('falló de red')); },
     },
   };
 }
@@ -66,9 +66,9 @@ describe('createLazyClient', () => {
     const f = fakeClient();
     const db = createLazyClient(async () => f.client);
     // `Promise.resolve`: vitest llama a lo que sea una función (el objetivo del proxy lo es) antes de mirar si es una promesa.
-    await expect(Promise.resolve(db.failing())).rejects.toThrow('fallo de red');
+    await expect(Promise.resolve(db.failing())).rejects.toThrow('falló de red');
     const visto = await new Promise((resolve) => db.failing().then(() => resolve('ok'), (e: Error) => resolve(e.message)));
-    expect(visto).toBe('fallo de red');
+    expect(visto).toBe('falló de red');
   });
 
   it('si la carga del módulo falla, quien espera recibe el error', async () => {

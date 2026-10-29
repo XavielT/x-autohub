@@ -130,7 +130,7 @@ export class AdminPublicar implements OnInit {
       next: (result) => {
         this.isSending.set(false);
         if (result === 'requested') {
-          this.toast.show('Publicacion pedida. En unos minutos se ven los cambios en el sitio.');
+          this.toast.show('Publicación pedida. En unos minutos se ven los cambios en el sitio.');
           // Se vigila el despliegue nuevo hasta que termine.
           this.stopWatching();
           this.watchSince = Date.now();
@@ -139,7 +139,7 @@ export class AdminPublicar implements OnInit {
         } else if (result === 'too_soon') {
           this.toast.show('Ya se pidio hace un momento. Espera un minuto y vuelve a intentar.', 'error');
         } else {
-          this.toast.show('Falta cargar el enlace de publicacion en Supabase (vercel_deploy_hook).', 'error');
+          this.toast.show('Falta cargar el enlace de publicación en Supabase (vercel_deploy_hook).', 'error');
         }
         this.load();
       },

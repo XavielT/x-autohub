@@ -52,7 +52,7 @@ describe('SeoService', () => {
   it('sin imagen usa la del sitio, y el tipo por defecto es website', () => {
     seo.set({ title: 'x', description: 'y', path: '/tienda' });
 
-    expect(content('meta[property="og:image"]')).toBe('https://xautohubrd.com/icon-512.png');
+    expect(content('meta[property="og:image"]')).toBe('https://xautohubrd.com/og-default.jpg');
     expect(content('meta[property="og:type"]')).toBe('website');
   });
 
@@ -66,7 +66,7 @@ describe('SeoService', () => {
     expect(canonical()).toBe('https://xautohubrd.com/tienda/p/dos');
   });
 
-  it('noindex pone la etiqueta robots, y la siguiente pagina (o reset) la quita', () => {
+  it('noindex pone la etiqueta robots, y la siguiente página (o reset) la quita', () => {
     seo.set({ title: 'Vendida', description: 'x', path: '/car-details/1', noindex: true });
     expect(content('meta[name="robots"]')).toBe('noindex');
 
@@ -91,7 +91,7 @@ describe('SeoService', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('X AutoHub — Todo lo que tu carro necesita');
     expect(content('meta[property="og:title"]')).toBe('X AutoHub — Todo lo que tu carro necesita');
     expect(content('meta[property="og:type"]')).toBe('website');
-    expect(content('meta[property="og:image"]')).toBe('https://xautohubrd.com/icon-512.png');
+    expect(content('meta[property="og:image"]')).toBe('https://xautohubrd.com/og-default.jpg');
     expect(canonical()).toBeUndefined();
     expect(TestBed.inject(Meta).getTag('name="twitter:title"')).toBeNull();
   });
