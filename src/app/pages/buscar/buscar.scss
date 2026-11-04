@@ -83,3 +83,16 @@
 @media (max-width: 900px) {
   .bus { padding: 16px 16px 40px; }
 }
+
+// --- "Entendí: …" (migración 0054) ------------------------------------------------------------------------
+.bus__understood {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+.bus__understood-label { color: var(--text-soft); }
+.bus__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; li { padding: 3px 10px; border-radius: 12px; border: 1px solid var(--Hub); color: var(--Hub); } }
+.bus__understood-link { color: var(--Hub); text-decoration: underline; }

@@ -82,3 +82,18 @@
     &:hover { filter: brightness(1.08); }
   }
 }
+
+// --- Solicitud guardada (migración 0055) ---------------------------------------------------------------------
+.cot__code { font-family: var(--font-brand); color: var(--Hub); letter-spacing: 0.04em; }
+.cot__safety {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e0a030;
+  border-radius: 10px;
+  background: rgba(224, 160, 48, 0.1);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cot__files { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+// El honeypot sale de la pantalla sin `display: none` (algunos bots lo detectan): fuera de la vista y sin foco.
+.cot__trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }

@@ -8,8 +8,10 @@ export interface QuoteInput {
   phone: string;
   /** Si pidió cotizar un servicio concreto. */
   serviceTitle?: string | null;
-  /** Cuántas fotos dijo que tiene (no se suben: se le pide mandarlas por WhatsApp). */
+  /** Cuántas fotos tiene. Con `code`, ya están subidas a la solicitud; sin él, se le pide mandarlas por el chat. */
   photos?: number;
+  /** El código de la solicitud guardada (`XAH-C-0007`), si ya existe. */
+  code?: string | null;
 }
 
 /**
@@ -27,11 +29,13 @@ export function quoteMessage(input: QuoteInput): string {
       : 'Hola X AutoHub, quiero cotizar un servicio.',
   ];
 
+  if (input.code) lines.push(`Solicitud: ${input.code}`);
   if (input.vehicle.trim()) lines.push(`Vehículo: ${input.vehicle.trim()}`);
   if (input.details.trim()) lines.push(`Qué necesito: ${input.details.trim()}`);
   if (input.phone.trim()) lines.push(`Mi teléfono: ${input.phone.trim()}`);
   if (input.photos && input.photos > 0) {
-    lines.push(`Te mando ${input.photos === 1 ? 'una foto' : `${input.photos} fotos`} por aquí.`);
+    const n = input.photos === 1 ? 'una foto' : `${input.photos} fotos`;
+    lines.push(input.code ? `Ya subí ${n} a la solicitud.` : `Te mando ${n} por aquí.`);
   }
 
   return lines.join('\n');

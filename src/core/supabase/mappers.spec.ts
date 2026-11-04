@@ -481,7 +481,18 @@ describe('mappers', () => {
         }),
       ).toEqual({
         id: 3, userId: 'u-1', makeId: 1, modelId: 2, modelText: null, year: 2015, nickname: 'El diario', isDefault: true,
+        // Migración 0058: sin kilometraje y con los recordatorios apagados por defecto.
+        odometerKm: null, maintenanceReminders: false,
       });
+    });
+
+    it('toProfileVehicle trae el kilometraje y los recordatorios cuando el garaje los pide', () => {
+      expect(
+        toProfileVehicle({
+          id: 5, user_id: 'u-1', make_id: 1, model_id: 2, model_text: null, year: 2015, nickname: null, is_default: false,
+          created_at: '2026-01-01T00:00:00Z', odometer_km: 74000, maintenance_reminders: true,
+        }),
+      ).toMatchObject({ odometerKm: 74000, maintenanceReminders: true });
     });
 
     it('toProfileVehicle con el modelo escrito a mano', () => {

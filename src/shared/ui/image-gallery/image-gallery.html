@@ -5,7 +5,7 @@
     }
 
     <button type="button" class="gal__main" aria-label="Ampliar la foto" (click)="openZoom()">
-      <img class="gal__img" [src]="current()" [alt]="alt()" />
+      <img class="gal__img" [src]="current()" [alt]="currentAlt()" />
       <span class="gal__zoom-hint" aria-hidden="true">Toca para ampliar</span>
     </button>
 
@@ -35,7 +35,7 @@
         <button type="button" class="gal__nav gal__nav--prev" aria-label="Foto anterior"
                 (click)="$event.stopPropagation(); step(-1)">&#8249;</button>
       }
-      <img class="gal__zoom-img" [src]="current()" [alt]="alt()" (click)="$event.stopPropagation()" />
+      <img class="gal__zoom-img" [src]="current()" [alt]="currentAlt()" (click)="$event.stopPropagation()" />
       @if (hasMany()) {
         <button type="button" class="gal__nav gal__nav--next" aria-label="Foto siguiente"
                 (click)="$event.stopPropagation(); step(1)">&#8250;</button>

@@ -326,6 +326,17 @@ export class AdminCatalogService {
     );
   }
 
+  /**
+   * "Asignar": un modelo escrito a mano ("Corola") es una errata o una variante de uno que ya existe. Pasa los garajes que lo escribieron a ese modelo y
+   * devuelve cuántos movió (migración 0054, la propuesta de `ai-match-models`).
+   */
+  assignModelFromText(makeId: number, text: string, modelId: number): Observable<number> {
+    if (this.supabase.shouldUseMockData()) return of(this.vehicles.mockAdopt(makeId, text, modelId));
+    return from(this.supabase.db.rpc('admin_assign_vehicle_model', { p_make_id: makeId, p_model_text: text, p_model_id: modelId })).pipe(
+      map((res) => Number(unwrap(res))),
+    );
+  }
+
   // --- Compatibilidad ------------------------------------------------------------------
 
   /** La compatibilidad de un producto, tal como la edita el formulario. */

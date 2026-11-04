@@ -1,0 +1,130 @@
+// Sección de IA de /admin/ajustes. Misma métrica que las otras tarjetas de ajustes: tarjeta de `--main-light`,
+// radio 14px y los tokens de texto del panel.
+
+.adm-ia {
+  display: block;
+  background-color: var(--main-light);
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 620px;
+  margin-top: 16px;
+  font-family: var(--font-body);
+
+  &__title { font-family: var(--font-brand); font-size: 19px; margin: 0; }
+  &__text { margin: 8px 0 16px; font-size: 14px; line-height: 1.5; color: var(--text-soft); }
+
+  &__warn {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--Hub);
+    border-radius: 10px;
+    background-color: var(--Hub-translucid);
+    font-size: 14px;
+  }
+
+  &__budget {
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--Hub-translucid);
+
+    &--aviso, &--sin_publico, &--apagado { border-color: var(--Hub); background-color: var(--Hub-translucid); }
+  }
+
+  &__budget-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; font-size: 14px; strong { font-size: 20px; } }
+
+  &__meter {
+    height: 8px;
+    margin: 8px 0;
+    border-radius: 4px;
+    background-color: var(--Hub-translucid);
+    overflow: hidden;
+
+    span { display: block; height: 100%; background-color: var(--Hub); }
+  }
+
+  &__tier { margin: 0; font-size: 14px; }
+  &__sub { margin: 6px 0 0; font-size: 13px; color: var(--text-soft); }
+
+  &__master {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+
+  &__features {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+    span { display: flex; flex-direction: column; }
+    small { color: var(--text-soft); font-size: 13px; line-height: 1.4; }
+    input { margin-top: 3px; }
+  }
+
+  &__caps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+    margin-bottom: 18px;
+
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-soft); }
+    input { padding: 9px 10px; border-radius: 8px; border: 1px solid var(--Hub-translucid); font: inherit; }
+  }
+
+  &__save {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 10px;
+    background-color: var(--Hub);
+    color: #1a1a1a;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__sub-title { margin: 18px 0 8px; font-size: 15px; }
+  &__empty { margin: 0; font-size: 13px; color: var(--text-soft); }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--Hub-translucid); }
+  }
+
+  &__days {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+
+    li { display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: center; }
+  }
+
+  &__bar {
+    height: 6px;
+    border-radius: 3px;
+    background-color: var(--Hub-translucid);
+    overflow: hidden;
+
+    span { display: block; height: 100%; background-color: var(--Hub); }
+  }
+
+  &__amount { color: var(--text-soft); white-space: nowrap; }
+
+  &__errors { list-style: none; margin: 0; padding: 0; font-size: 13px; display: flex; flex-direction: column; gap: 4px; code { word-break: break-all; } }
+}

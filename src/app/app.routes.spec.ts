@@ -121,7 +121,7 @@ describe('rutas de la tienda', () => {
     expect(taller.canActivate).toEqual([adminGuard]);
 
     const pestañas = (taller.children ?? []).filter((child) => child.path);
-    expect(pestañas.map((p) => p.path)).toEqual(['citas', 'servicios', 'disponibilidad', 'trabajos']);
+    expect(pestañas.map((p) => p.path)).toEqual(['citas', 'solicitudes', 'guias', 'servicios', 'disponibilidad', 'trabajos']);
     for (const pestaña of pestañas) {
       expect(pestaña.canActivate, `La pestaña '${pestaña.path}' del taller no declara adminGuard`).toEqual([adminGuard]);
     }

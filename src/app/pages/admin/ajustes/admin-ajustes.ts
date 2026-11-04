@@ -2,6 +2,10 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BankAccount } from '../../../../shared/models/order.model';
+import { OUTSIDE_DR_MESSAGE } from '../../../../shared/models/maps.model';
+import { MapsService } from '../../../../shared/services/maps.service';
+import { googleMapsUrl } from '../../../../shared/utils/maps-link';
+import { AdminIaPanel } from './admin-ia-panel';
 
 /** Una cuenta mientras se edita: los campos son texto libre hasta que se guarda. */
 interface AccountDraft {
@@ -28,7 +32,7 @@ const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', ty
  */
 @Component({
   selector: 'app-admin-ajustes',
-  imports: [],
+  imports: [AdminIaPanel],
   templateUrl: './admin-ajustes.html',
   styleUrl: './admin-ajustes.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +40,7 @@ const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', ty
 export class AdminAjustes implements OnInit {
   private readonly settings = inject(SiteSettingsService);
   private readonly toast = inject(ToastService);
+  private readonly maps = inject(MapsService);
 
   readonly accounts = signal<AccountDraft[]>([]);
   readonly isSavingAccounts = signal(false);
@@ -44,6 +49,12 @@ export class AdminAjustes implements OnInit {
   /** El valor de retiro que hay guardado todavía es el de ejemplo. */
   readonly pickupIsExample = signal(false);
   readonly isSavingPickup = signal(false);
+
+  /** Dónde queda el taller en el mapa (lo que "Cómo llegar" y los datos estructurados usan). `null` = solo el texto. */
+  readonly pickupPoint = signal<{ lat: number; lng: number; placeId?: string } | null>(null);
+  readonly isLocatingPickup = signal(false);
+  readonly pickupNote = signal('');
+  readonly pickupMapsUrl = computed(() => googleMapsUrl(this.pickupPoint(), this.pickupAddress()));
 
   /** Mientras todas las cuentas guardadas sean de ejemplo, el sitio no muestra ninguna. */
   readonly onlyExampleAccounts = computed(
@@ -61,6 +72,7 @@ export class AdminAjustes implements OnInit {
         this.pickupAddress.set(pickup?.address ?? '');
         this.pickupHours.set(pickup?.hours ?? '');
         this.pickupIsExample.set(pickup?.isExample ?? false);
+        this.pickupPoint.set(pickup?.lat !== undefined && pickup.lng !== undefined ? { lat: pickup.lat, lng: pickup.lng, placeId: pickup.placeId } : null);
       },
       error: () => this.toast.show('No pudimos leer la dirección de retiro.', 'error'),
     });
@@ -111,6 +123,33 @@ export class AdminAjustes implements OnInit {
   setPickupField(field: 'address' | 'hours', event: Event): void {
     const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value;
     (field === 'address' ? this.pickupAddress : this.pickupHours).set(value);
+    // Si la dirección cambia, el punto guardado ya no es de ella: hay que volver a ubicarla.
+    if (field === 'address' && this.pickupPoint()) {
+      this.pickupPoint.set(null);
+      this.pickupNote.set('Cambiaste la dirección: vuelve a ubicarla en el mapa.');
+    }
+  }
+
+  /** Busca la dirección escrita con Google (edge `maps-geocode`) y guarda el punto en el borrador; se publica al "Guardar la dirección". */
+  locatePickup(): void {
+    if (this.isLocatingPickup()) return;
+    this.pickupNote.set('');
+    this.isLocatingPickup.set(true);
+
+    this.maps.search(this.pickupAddress()).subscribe((lookup) => {
+      this.isLocatingPickup.set(false);
+      if (lookup.kind === 'found') {
+        this.pickupPoint.set({ lat: lookup.point.lat, lng: lookup.point.lng, placeId: lookup.point.placeId ?? undefined });
+        this.pickupNote.set(lookup.point.confidence === 'alta' ? '' : 'El punto es aproximado: compruébalo en Google Maps antes de guardar.');
+      } else {
+        this.pickupNote.set(lookup.kind === 'outside' ? OUTSIDE_DR_MESSAGE : 'No encontramos esa dirección (o el servicio de mapas no está disponible). Se guarda solo el texto.');
+      }
+    });
+  }
+
+  clearPickupPoint(): void {
+    this.pickupPoint.set(null);
+    this.pickupNote.set('');
   }
 
   savePickup(): void {
@@ -122,7 +161,8 @@ export class AdminAjustes implements OnInit {
     }
 
     this.isSavingPickup.set(true);
-    this.settings.setPickupAddress({ address: this.pickupAddress(), hours: this.pickupHours() }).subscribe({
+    const point = this.pickupPoint();
+    this.settings.setPickupAddress({ address: this.pickupAddress(), hours: this.pickupHours(), lat: point?.lat, lng: point?.lng, placeId: point?.placeId }).subscribe({
       next: () => {
         this.isSavingPickup.set(false);
         this.pickupIsExample.set(false);

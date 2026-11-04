@@ -5,6 +5,7 @@
       <p class="adm-inv__lead">
         Tienda, Auto Hub y noticias, más las categorías y los vehículos de la tienda. Hub Market no se administra aquí: lo publica la comunidad.
       </p>
+      <p class="adm-inv__lead"><a routerLink="/admin/inventario/cargar-ia">Cargar piezas con IA (fotos) →</a></p>
     </div>
     @if (!isCreating() && tab() !== 'categorias' && tab() !== 'marcas') {
       <button type="button" class="adm-inv__new" (click)="startCreate()">
@@ -135,12 +136,36 @@
               <input type="text" formControlName="sku" placeholder="XAH-000123" />
             </label>
             <label class="adm-inv__field">
+              <span>Número de parte <small>(el de fábrica, como está impreso)</small></span>
+              <input type="text" formControlName="partNumber" placeholder="04465-02220" />
+            </label>
+            <label class="adm-inv__field">
+              <span>Equivalencias <small>(separadas por coma)</small></span>
+              <input type="text" formControlName="crossRefs" placeholder="C-110, GDB3469" />
+            </label>
+            <label class="adm-inv__field">
               <span>Dirección web (slug) <small>(vacío = automática)</small></span>
               <input type="text" formControlName="slug" placeholder="disco-ventilado-gtr-355mm" />
               @if (showError('part', 'slug')) {
                 <small class="adm-inv__err">Solo minúsculas, números y guiones.</small>
               }
             </label>
+            @if (editingId() !== null) {
+              <label class="adm-inv__field adm-inv__field--full">
+                <span>Título para buscadores <small>(máx. 60; vacío = lo propone la IA o se usa el nombre)</small></span>
+                <input type="text" formControlName="seoTitle" maxlength="60" />
+              </label>
+              <label class="adm-inv__field adm-inv__field--full">
+                <span>Descripción para buscadores <small>(máx. 155)</small></span>
+                <input type="text" formControlName="seoDescription" maxlength="155" />
+              </label>
+              <div class="adm-inv__field adm-inv__field--full">
+                <button type="button" class="adm-inv__new" [disabled]="isSuggestingSeo()" (click)="suggestSeo()">
+                  {{ isSuggestingSeo() ? 'Pensando…' : 'Sugerir SEO con IA' }}
+                </button>
+                <small>Solo llena lo que esté vacío (también el texto alterno de las fotos y hasta 3 preguntas frecuentes). Lo que escribas tú no se pisa.</small>
+              </div>
+            }
             <label class="adm-inv__field adm-inv__field--full">
               <span>Descripción corta <small>(la que sale en las tarjetas)</small></span>
               <input type="text" formControlName="shortDescription" maxlength="160"

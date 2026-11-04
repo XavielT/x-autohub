@@ -39,6 +39,9 @@ export interface ServiceModel {
   /** "Desde RD$ X". `null` = a cotizar: el precio lo pone el taller, no el código. */
   priceFrom: number | null;
   durationMinutes: number;
+  /** SEO del servicio (migración 0057), si alguien o la IA lo llenó. */
+  seoTitle?: string | null;
+  seoDescription?: string | null;
   /** Si se puede agendar. Uno que no se agenda se cotiza por WhatsApp. */
   isBookable: boolean;
   images: string[];

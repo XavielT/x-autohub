@@ -99,6 +99,16 @@ export class Producto {
     return p ? (p.images?.length ? p.images : [p.imgUrl]) : [];
   });
 
+  /** Texto alterno propio por foto, por su dirección (el de la IA o el de una persona, migración 0057). Una foto sin texto propio usa el nombre del producto. */
+  readonly altMap = computed(() => {
+    const p = this.product();
+    const alts = p?.imageAlts ?? [];
+    return Object.fromEntries((p?.images ?? []).flatMap((src, i) => (alts[i]?.trim() ? [[src, alts[i].trim()] as [string, string]] : [])));
+  });
+
+  /** Las preguntas frecuentes de la ficha: hechas solo con datos de la ficha (migración 0057). */
+  readonly faq = computed(() => this.product()?.faq ?? []);
+
   /** La opción elegida, o `null` si no hay o el producto no tiene. */
   readonly selectedVariant = computed(
     () => this.variants().find((v) => v.id === this.selectedVariantId()) ?? null,
@@ -244,8 +254,9 @@ export class Producto {
     }
     const text = (product.shortDescription || product.description).trim();
     this.seo.set({
-      title: `${product.name} | X AutoHub`,
-      description: text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text,
+      // El SEO escrito (por una persona, o por la IA en campos vacíos) manda; si no hay, lo de siempre.
+      title: product.seoTitle?.trim() || `${product.name} | X AutoHub`,
+      description: product.seoDescription?.trim() || (text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text),
       path: `/tienda/p/${product.slug}`,
       image: product.images?.[0] || product.imgUrl,
       type: 'product',

@@ -52,6 +52,9 @@
         <h3>Ubicación</h3>
         @if (pickup(); as p) {
           <p>{{ p.address }}</p>
+          @if (directionsUrl(); as link) {
+            <p><a [href]="link" target="_blank" rel="noopener noreferrer">Cómo llegar</a></p>
+          }
         } @else {
           <p>Te confirmamos la dirección por WhatsApp al agendar.</p>
         }

@@ -8,6 +8,7 @@ import {
   REVIEW_COMMENT_MAX,
   ReviewModel,
   ReviewStats,
+  ReviewSummary,
   ReviewTarget,
 } from '../../models/review.model';
 import { AuthService } from '../../services/auth.service';
@@ -51,6 +52,8 @@ export class Reviews {
 
   readonly stats = signal<ReviewStats>(EMPTY_REVIEW_STATS);
   readonly list = signal<ReviewModel[]>([]);
+  /** El resumen generado con IA (migración 0057), si hay. */
+  readonly aiSummary = signal<ReviewSummary | null>(null);
   readonly mine = signal<ReviewModel | null>(null);
   readonly isLoading = signal(true);
   readonly hasError = signal(false);
@@ -123,6 +126,14 @@ export class Reviews {
         this.hasError.set(true);
         this.isLoading.set(false);
       },
+    });
+
+    // El resumen de IA es un extra: si no llega (o no hay), el bloque queda como siempre.
+    this.reviews.getSummary(target, id).subscribe({
+      next: (summary) => {
+        if (run === this.loadId) this.aiSummary.set(summary);
+      },
+      error: () => undefined,
     });
 
     this.loadMine();

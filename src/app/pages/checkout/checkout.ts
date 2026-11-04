@@ -13,10 +13,13 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { CouponBox } from '../../../shared/components/coupon-box/coupon-box';
 import { CartService, StockIssue } from '../../../shared/services/cart.service';
 import { CheckoutOptionsService } from '../../../shared/services/checkout-options.service';
 import { OrderService } from '../../../shared/services/order.service';
+import { MapsService } from '../../../shared/services/maps.service';
+import { AddressSuggestion, GeoPoint, OUTSIDE_DR_MESSAGE } from '../../../shared/models/maps.model';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SiteSettingsService } from '../../../shared/services/site-settings.service';
@@ -38,6 +41,9 @@ import { normalizeDrPhone } from '../../../shared/utils/phone';
 import { availabilityOf } from '../../../shared/utils/product-availability';
 
 export type CheckoutStep = 1 | 2 | 3;
+
+/** Lo que se espera tras la última tecla antes de pedir sugerencias (cada petición cuesta). */
+const SUGGEST_DEBOUNCE_MS = 350;
 
 /** Dónde se recuerdan los datos del último pedido (nunca la nota ni el carrito). */
 export const CHECKOUT_MEMORY_KEY = 'x-autohub.checkout';
@@ -77,6 +83,7 @@ export class Checkout implements OnInit {
   readonly cartService = inject(CartService);
   private readonly checkoutOptions = inject(CheckoutOptionsService);
   private readonly orderService = inject(OrderService);
+  private readonly maps = inject(MapsService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly settings = inject(SiteSettingsService);
@@ -113,6 +120,14 @@ export class Checkout implements OnInit {
   readonly province = signal('');
   readonly postalCode = signal('');
   readonly orderNotes = signal('');
+
+  /** Autocompletar de la dirección: sugerencias de Google (vía `maps-autocomplete`), el punto elegido y un aviso si cae fuera de RD. */
+  readonly suggestions = signal<AddressSuggestion[]>([]);
+  readonly geo = signal<GeoPoint | null>(null);
+  readonly addressNotice = signal<string | null>(null);
+  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Descarta la respuesta de una búsqueda vieja si ya se escribió otra cosa. */
+  private suggestSeq = 0;
 
   /** Las opciones de envío que corresponden a la entrega elegida (el retiro tiene la suya). */
   readonly visibleShippingOptions = computed(() =>
@@ -192,6 +207,78 @@ export class Checkout implements OnInit {
     if (visible.length && !visible.some((o) => o.id === this.selectedShippingId())) {
       this.selectedShippingId.set(visible[0].id);
     }
+  }
+
+  // --- Dirección con sugerencias ----------------------------------------------
+  //
+  // Todo esto es una ayuda: sin sugerencias (modo simulado, tope de Maps alcanzado, red caída) el campo funciona como un
+  // campo de texto y el pedido sale igual. Al escribir se descarta el punto anterior: ya no corresponde al texto.
+
+  onAddressInput(value: string): void {
+    this.addressLine1.set(value);
+    this.geo.set(null);
+    this.addressNotice.set(null);
+    this.clearSuggestTimer();
+
+    const seq = ++this.suggestSeq;
+    if (value.trim().length < 3) {
+      this.suggestions.set([]);
+      return;
+    }
+
+    this.suggestTimer = setTimeout(() => {
+      this.maps.suggest(value).subscribe((list) => {
+        if (seq === this.suggestSeq) this.suggestions.set(list);
+      });
+    }, SUGGEST_DEBOUNCE_MS);
+  }
+
+  closeSuggestions(): void {
+    this.clearSuggestTimer();
+    this.suggestSeq++;
+    this.suggestions.set([]);
+  }
+
+  pickSuggestion(suggestion: AddressSuggestion): void {
+    this.addressLine1.set(suggestion.text);
+    this.closeSuggestions();
+
+    this.maps.place(suggestion.placeId).subscribe((lookup) => {
+      if (lookup.kind === 'outside') {
+        this.addressNotice.set(OUTSIDE_DR_MESSAGE);
+        return;
+      }
+      if (lookup.kind !== 'found') return;
+
+      const point = lookup.point;
+      this.geo.set(point);
+      // Solo se completa lo que está vacío o lo que Google conoce con certeza: nunca se pisa lo que la persona ya escribió.
+      if (point.province && this.provinces.includes(point.province)) this.province.set(point.province);
+      if (!this.city().trim()) this.city.set(point.sector ?? point.municipality ?? '');
+    });
+  }
+
+  private clearSuggestTimer(): void {
+    if (this.suggestTimer !== null) clearTimeout(this.suggestTimer);
+    this.suggestTimer = null;
+  }
+
+  /**
+   * Con el pedido ya creado se anotan sus coordenadas, **sin esperar y sin avisar si falla**. Si la persona eligió una
+   * sugerencia ya hay punto; si escribió a mano, la IA intenta entender la dirección informal ("al lado del colmado…") y
+   * ubicarla. Sin punto, el pedido queda como siempre.
+   */
+  private attachGeo(orderId: string, payload: CheckoutSubmitPayload): void {
+    const known = this.geo();
+    const text = [payload.addressLine1, payload.city, payload.province].filter(Boolean).join(', ');
+    const point$ = known ? of(known) : this.maps.normalize(text).pipe(map((n) => n?.point ?? null));
+
+    point$
+      .pipe(
+        switchMap((point) => (point ? this.orderService.setGeo(orderId, point) : of(false))),
+        catchError(() => of(false)),
+      )
+      .subscribe();
   }
 
   fixIssue(issue: StockIssue): void {
@@ -329,6 +416,7 @@ export class Checkout implements OnInit {
       next: (order) => {
         this.isSubmitting.set(false);
         this.remember();
+        if (shipping) this.attachGeo(order.id, payload);
         this.cartService.clearCart();
 
         this.toast.show(

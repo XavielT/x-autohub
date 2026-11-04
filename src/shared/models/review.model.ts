@@ -5,6 +5,15 @@
 /** A qué se refiere una reseña. */
 export type ReviewTarget = 'product' | 'service';
 
+/** El resumen de las reseñas VERIFICADAS, escrito por la IA (migración 0057). Siempre se rotula como tal. */
+export interface ReviewSummary {
+  summary: string;
+  pros: string[];
+  cons: string[];
+  /** De cuántas reseñas verificadas salió. */
+  basedOn: number;
+}
+
 export interface ReviewModel {
   id: number;
   target: ReviewTarget;
@@ -15,6 +24,8 @@ export interface ReviewModel {
   /** De 1 a 5. */
   rating: number;
   comment: string;
+  /** La IA lo ocultó por riesgo alto: el autor lo ve "en revisión" y el público no (migración 0053). */
+  inReview?: boolean;
   /**
    * Postgres la calcula al insertar: un pedido entregado con ese producto, o una cita
    * hecha con ese servicio. Quien escribe la reseña no la puede pedir.

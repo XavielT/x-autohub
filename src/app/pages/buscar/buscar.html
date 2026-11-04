@@ -8,6 +8,19 @@
     <app-search-box class="bus__box" variant="hero" idPrefix="buscar" />
   </header>
 
+  @if (results().understood; as u) {
+    <div class="bus__understood" role="status">
+      @if (chips().length > 0) {
+        <span class="bus__understood-label">Entendí:</span>
+        <ul class="bus__chips">@for (c of chips(); track c) { <li>{{ c }}</li> }</ul>
+        <a class="bus__understood-link" routerLink="/buscar" [queryParams]="{ q: query(), ia: 0 }">Buscar sin filtros</a>
+      }
+      @if (u.intent === 'servicio') {
+        <span>¿Buscas un servicio del taller? <a routerLink="/servicios/cotizar">Pide una cotización</a>.</span>
+      }
+    </div>
+  }
+
   @if (!query()) {
     <p class="bus__hint">Escribe el nombre de una pieza, una marca o un SKU.</p>
   } @else if (isLoading()) {

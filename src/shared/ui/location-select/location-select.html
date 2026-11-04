@@ -30,7 +30,7 @@
         <input
           type="text"
           class="loc__search"
-          placeholder="Buscar provincia..."
+          [placeholder]="showMap() ? 'Buscar dirección o lugar y Enter...' : 'Buscar provincia...'"
           autocomplete="off"
           [value]="query()"
           (input)="onQueryInput($event)"
@@ -50,6 +50,9 @@
           componente crea el mapa en cuanto aparece, y lo destruye al cerrarlo.
         -->
         <div #mapHost class="loc__map"></div>
+        @if (searchNote()) {
+          <p class="loc__hint" role="status">{{ searchNote() }}</p>
+        }
         <p class="loc__hint">Toca un punto del mapa. Se guarda la provincia más cercana.</p>
       } @else {
         <ul class="loc__list" role="listbox" [attr.aria-activedescendant]="'loc-opt-' + activeIndex()">

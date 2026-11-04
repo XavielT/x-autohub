@@ -78,6 +78,13 @@ export interface NewPartDraft {
   slug: string;
   /** Vacío = lo genera la base (`XAH-000123`). */
   sku: string;
+  /** Número de parte del fabricante (migración 0051). Vacío o ausente = no se conoce. */
+  partNumber?: string;
+  /** Equivalencias impresas en la pieza o la caja, una por elemento. */
+  crossRefs?: string[];
+  /** SEO de la ficha (migración 0057). Ausente = no se toca; vacío = se borra. Escribirlo a mano lo marca como 'humano': la IA ya no lo pisa. */
+  seoTitle?: string;
+  seoDescription?: string;
   name: string;
   brand: string;
   shortDescription: string;

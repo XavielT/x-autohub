@@ -99,3 +99,6 @@
     &--danger:hover:not(:disabled) { color: var(--danger-text); border-color: var(--danger-text); }
   }
 }
+
+.garage__item { flex-wrap: wrap; }
+.garage__panel { flex: 1 1 100%; }

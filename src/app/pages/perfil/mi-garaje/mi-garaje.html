@@ -30,6 +30,9 @@
             }
           </div>
           <div class="garage__actions">
+            <button type="button" class="garage__btn" [attr.aria-expanded]="maintenanceId() === row.vehicle.id" (click)="toggleMaintenance(row)">
+              Mantenimiento
+            </button>
             @if (!row.vehicle.isDefault) {
               <button type="button" class="garage__btn" [disabled]="busyId() === row.vehicle.id" (click)="makeDefault(row)">
                 Usar este
@@ -40,6 +43,9 @@
               Quitar
             </button>
           </div>
+          @if (maintenanceId() === row.vehicle.id) {
+            <div class="garage__panel"><app-mantenimiento [vehicle]="row.vehicle" [label]="row.label" /></div>
+          }
         </li>
       }
     </ul>

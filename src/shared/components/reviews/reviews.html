@@ -26,6 +26,15 @@
       </ul>
     </div>
 
+    @if (aiSummary(); as s) {
+      <section class="rv__ai" aria-label="Resumen de las reseñas">
+        <p class="rv__ai-label">Resumen generado con IA a partir de {{ s.basedOn }} reseñas verificadas</p>
+        <p>{{ s.summary }}</p>
+        @if (s.pros.length > 0) { <p class="rv__ai-list"><strong>Lo que más gusta:</strong> {{ s.pros.join(' · ') }}</p> }
+        @if (s.cons.length > 0) { <p class="rv__ai-list"><strong>Lo que menos gusta:</strong> {{ s.cons.join(' · ') }}</p> }
+      </section>
+    }
+
     <ul class="rv__list">
       @for (r of list(); track r.id) {
         <li class="rv__item">
@@ -35,6 +44,7 @@
             @if (r.isVerifiedPurchase) { <span class="rv__badge">Compra verificada</span> }
             <time class="rv__date" [attr.datetime]="r.createdAt.toISOString()">{{ r.createdAt | date:'d MMM y' }}</time>
           </div>
+          @if (r.inReview) { <p class="rv__review" role="status">En revisión: solo tú la ves hasta que un moderador la revise. No cuenta en el promedio.</p> }
           @if (r.comment) { <p class="rv__comment">{{ r.comment }}</p> }
           @if (canDelete(r)) {
             <button type="button" class="rv__delete" [class.is-confirm]="confirmingId() === r.id" (click)="remove(r)">

@@ -10,6 +10,8 @@ import {
 } from '../../../../../shared/utils/appointment-rules';
 import { addDays, formatDay, formatTime, localDate } from '../../../../../shared/utils/service-time';
 import { buildWaLink } from '../../../../../shared/utils/whatsapp';
+import { WaDraft } from '../../../../../shared/components/wa-draft/wa-draft';
+import { appointmentReplyDraft } from '../../../../../shared/utils/reply-templates';
 
 export type AgendaRange = 'pending' | 'today' | 'week' | 'upcoming' | 'past';
 
@@ -44,7 +46,7 @@ interface AppointmentAction {
  */
 @Component({
   selector: 'app-admin-citas',
-  imports: [Skeleton],
+  imports: [Skeleton, WaDraft],
   templateUrl: './admin-citas.html',
   styleUrl: './admin-citas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -176,6 +178,11 @@ export class AdminCitas implements OnInit {
 
   isConfirming(a: AdminAppointmentModel, action: AppointmentAction): boolean {
     return this.confirmCancelId() === `${a.id}:${action.to}`;
+  }
+
+  /** La plantilla sin IA para responderle al cliente (respaldo del borrador de la IA), según el estado de la cita. */
+  appointmentFallback(a: AdminAppointmentModel): string {
+    return appointmentReplyDraft({ name: a.contactName, number: a.number, service: a.serviceTitle, when: `${formatDay(a.scheduledAt)}, ${formatTime(a.scheduledAt)}`, status: a.status });
   }
 
   /** Para escribirle al cliente por su cita, con el número ya puesto. */

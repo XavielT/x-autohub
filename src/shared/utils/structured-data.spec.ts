@@ -1,4 +1,4 @@
-import { SITE_URL, absoluteUrl, autoHubJsonLd, hubMarketJsonLd, productJsonLd, serializeJsonLd, serviceJsonLd } from './structured-data';
+import { SITE_URL, absoluteUrl, autoHubJsonLd, hubMarketJsonLd, productJsonLd, serializeJsonLd, serviceJsonLd, workshopJsonLd } from './structured-data';
 import { AUTO_HUB_MOCK } from '../data/auto-hub.mock';
 import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
 import { HubMarketItemModel } from '../models/hub-market-item.model';
@@ -25,6 +25,14 @@ describe('structured-data', () => {
 
   describe('productJsonLd', () => {
     const product = makeProduct({ id: 7, slug: 'disco-7', sku: 'XAH-000007', name: 'Disco GTR', brand: 'Brembo', price: 12950, imgUrl: 'assets/imgs/d.jpg', shortDescription: 'Disco ventilado' });
+
+    it('lleva el número de parte como mpn, y sin él no inventa uno (migración 0051)', () => {
+      const withPart = productJsonLd({ ...product, partNumber: '04465-02220' }, { availability: availabilityOf(product), stats: null });
+      const without = productJsonLd({ ...product, partNumber: null }, { availability: availabilityOf(product), stats: null });
+
+      expect(withPart['mpn']).toBe('04465-02220');
+      expect('mpn' in without).toBe(false);
+    });
 
     it('trae nombre, sku, marca, imagen absoluta y la oferta en DOP', () => {
       const ld = productJsonLd(product, { availability: availabilityOf(product), stats: null });
@@ -100,6 +108,39 @@ describe('structured-data', () => {
     it('aggregateRating solo con reseñas reales', () => {
       expect(serviceJsonLd(quote, { stats: null })).not.toHaveProperty('aggregateRating');
       expect(serviceJsonLd(quote, { stats: STATS })['aggregateRating']).toMatchObject({ ratingValue: 4.3, reviewCount: 3 });
+    });
+  });
+
+  describe('workshopJsonLd', () => {
+    const rule = (weekday: number, opensAt = '08:00:00', closesAt = '17:00:00', isExample = false) => ({ id: weekday, weekday, opensAt, closesAt, slotMinutes: 60, capacity: 1, isExample });
+    const base = { address: 'Av. Churchill 1, Santo Domingo', hours: '', isExample: false };
+
+    it('declara el taller como AutoRepair y AutoPartsStore con su dirección en RD', () => {
+      const ld = workshopJsonLd(base, []);
+      expect(ld).toMatchObject({
+        '@type': ['AutoRepair', 'AutoPartsStore'],
+        name: 'X AutoHub',
+        telephone: '+18099539782',
+        address: { '@type': 'PostalAddress', streetAddress: base.address, addressCountry: 'DO' },
+      });
+    });
+
+    it('sin coordenadas cargadas no inventa un geo; con ellas, sí', () => {
+      expect(workshopJsonLd(base, [])).not.toHaveProperty('geo');
+      expect(workshopJsonLd({ ...base, lat: 18.4861, lng: -69.9312 }, [])['geo']).toEqual({ '@type': 'GeoCoordinates', latitude: 18.4861, longitude: -69.9312 });
+    });
+
+    it('el horario sale de las reglas de disponibilidad, con las horas en HH:mm y los días de schema.org', () => {
+      const ld = workshopJsonLd(base, [rule(1), rule(6, '08:00:00', '13:00:00')]);
+      expect(ld['openingHoursSpecification']).toEqual([
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: 'https://schema.org/Monday', opens: '08:00', closes: '17:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: 'https://schema.org/Saturday', opens: '08:00', closes: '13:00' },
+      ]);
+    });
+
+    it('las reglas de ejemplo no se declaran, y sin reglas no hay horario', () => {
+      expect(workshopJsonLd(base, [rule(1, '08:00', '17:00', true)])).not.toHaveProperty('openingHoursSpecification');
+      expect(workshopJsonLd(base, [])).not.toHaveProperty('openingHoursSpecification');
     });
   });
 

@@ -8,6 +8,8 @@
     <button type="submit" class="mk__btn mk__btn--primary" [disabled]="isSaving()" [attr.aria-busy]="isSaving()">Agregar marca</button>
   </form>
 
+  <app-ia-sugerencias (changed)="reloadUnmatched()" />
+
   @if (unmatched().length > 0) {
     <div class="mk__card mk__unmatched">
       <h3>Modelos escritos por usuarios</h3>

@@ -21,7 +21,7 @@
     </div>
   } @else {
     <ul class="adm-mod__list">
-      @for (item of items(); track item.id) {
+      @for (item of ordered(); track item.id) {
         <li class="adm-mod__item">
           <div class="adm-mod__row">
             <a class="adm-mod__thumb" [routerLink]="item.detailRoute ?? '/hub-market'"
@@ -62,6 +62,26 @@
               </p>
 
               <p class="adm-mod__desc">{{ item.description }}</p>
+
+              @if (suggestions()[item.id]; as s) {
+                <div class="adm-mod__ia" [attr.data-risk]="s.risk">
+                  <p class="adm-mod__ia-head">
+                    <strong>IA: riesgo {{ s.risk }}</strong> · sugiere {{ s.suggested }}
+                    <small>(solo sugiere: tú decides)</small>
+                  </p>
+                  @if (s.categories.length > 0) {
+                    <ul class="adm-mod__chips">@for (c of s.categories; track c) { <li>{{ categoryLabel(c) }}</li> }</ul>
+                  }
+                  <p class="adm-mod__ia-reason">{{ s.reasons }}</p>
+                  @if (s.priceContext?.outlier) {
+                    <p class="adm-mod__ia-reason">
+                      El precio está {{ s.priceContext?.direction === 'muy_bajo' ? 'muy por debajo' : 'muy por encima' }} de publicaciones parecidas
+                      (mediana: RD$ {{ s.priceContext?.median | number:'1.0-0' }}).
+                    </p>
+                  }
+                  <button type="button" class="adm-mod__btn" (click)="applySuggestion(item)">Aplicar sugerencia</button>
+                </div>
+              }
             </div>
 
             <div class="adm-mod__tools">
@@ -115,6 +135,33 @@
               </button>
             </div>
           }
+        </li>
+      }
+    </ul>
+  }
+
+  @if (hidden().length > 0) {
+    <h3 class="adm-mod__subtitle">Ocultado por la IA ({{ hidden().length }})</h3>
+    <p class="adm-mod__lead">
+      Contenido de la comunidad con riesgo alto y confianza alta. Su autor lo ve "en revisión"; el público no. No se borra nada: restáuralo con un toque
+      si fue un error.
+    </p>
+    <ul class="adm-mod__list">
+      @for (h of hidden(); track h.targetType + h.targetId) {
+        <li class="adm-mod__item">
+          <div class="adm-mod__row">
+            <div class="adm-mod__info">
+              <div class="adm-mod__name-row">
+                <span class="adm-mod__tag">{{ targetLabels[h.targetType] }}</span>
+                @for (c of h.categories; track c) { <span class="adm-mod__tag adm-mod__tag--test">{{ categoryLabel(c) }}</span> }
+              </div>
+              <p class="adm-mod__desc">{{ h.preview }}</p>
+              @if (h.reasons) { <p class="adm-mod__meta">{{ h.reasons }}</p> }
+            </div>
+            <div class="adm-mod__tools">
+              <button type="button" class="adm-mod__btn adm-mod__btn--ok" [disabled]="restoringKey() !== null" (click)="restore(h)">Restaurar</button>
+            </div>
+          </div>
         </li>
       }
     </ul>

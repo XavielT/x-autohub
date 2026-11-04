@@ -35,7 +35,15 @@ describe('quote-message', () => {
     expect(quoteMessage({ vehicle: '  Civic  ', details: ' falla ', phone: '' })).toContain('Vehículo: Civic');
   });
 
-  it('las fotos no viajan: el mensaje solo dice cuántas va a mandar por el chat', () => {
+  it('con el código de la solicitud, el mensaje lo lleva y dice que las fotos ya están subidas', () => {
+    const msg = quoteMessage({ vehicle: 'Civic', details: 'x', phone: '', photos: 2, code: 'XAH-C-0007' });
+
+    expect(msg).toContain('Solicitud: XAH-C-0007');
+    expect(msg).toContain('Ya subí 2 fotos a la solicitud.');
+    expect(msg).not.toContain('Te mando');
+  });
+
+  it('sin código, las fotos no viajan: el mensaje solo dice cuántas va a mandar por el chat', () => {
     expect(quoteMessage({ vehicle: '', details: 'x', phone: '', photos: 1 })).toContain('Te mando una foto por aquí.');
     expect(quoteMessage({ vehicle: '', details: 'x', phone: '', photos: 3 })).toContain('Te mando 3 fotos por aquí.');
     expect(quoteMessage({ vehicle: '', details: 'x', phone: '', photos: 0 })).not.toContain('foto');

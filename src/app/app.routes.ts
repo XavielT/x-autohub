@@ -230,6 +230,19 @@ export const routes: Routes = [
             loadComponent: () => import('./pages/admin/taller/citas/admin-citas').then((m) => m.AdminCitas),
           },
           {
+            path: 'solicitudes',
+            title: `Solicitudes de cotización | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () =>
+              import('./pages/admin/taller/solicitudes/admin-solicitudes').then((m) => m.AdminSolicitudes),
+          },
+          {
+            path: 'guias',
+            title: `Guías de mantenimiento | ${BRAND}`,
+            canActivate: [adminGuard],
+            loadComponent: () => import('./pages/admin/taller/guias/admin-guias').then((m) => m.AdminGuias),
+          },
+          {
             path: 'servicios',
             title: `Servicios del taller | ${BRAND}`,
             canActivate: [adminGuard],
@@ -264,6 +277,13 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./pages/admin/inventario/admin-inventario').then((m) => m.AdminInventario),
+      },
+      {
+        path: 'inventario/cargar-ia',
+        title: `Cargar con IA | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./pages/admin/inventario/cargar-ia/admin-cargar-ia').then((m) => m.AdminCargarIa),
       },
       {
         path: 'usuarios',

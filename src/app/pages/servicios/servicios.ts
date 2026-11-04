@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { ServiceCard } from '../../../shared/components/service-card/service-card';
@@ -12,12 +12,15 @@ import {
   ServiceWorkModel,
 } from '../../../shared/models/service.model';
 import { PickupAddress } from '../../../shared/models/order.model';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
 import { SeoService } from '../../../shared/services/seo.service';
 import { OnlineService } from '../../../shared/services/online.service';
 import { ServiceCatalogService } from '../../../shared/services/service-catalog.service';
 import { SiteSettingsService } from '../../../shared/services/site-settings.service';
 import { STORE_PHONE_DISPLAY, storeWhatsAppLink } from '../../../shared/utils/contact';
 import { summarizeHours } from '../../../shared/utils/hours';
+import { googleMapsDirectionsUrl } from '../../../shared/utils/maps-link';
+import { workshopJsonLd } from '../../../shared/utils/structured-data';
 
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 interface CategoryGroup {
@@ -92,8 +95,26 @@ export class Servicios implements OnInit {
 
   private readonly seo = inject(SeoService);
 
+  private readonly jsonLd = inject(JsonLdService);
+
+  /** "Cómo llegar": las coordenadas del taller si se cargaron, y si no, la dirección escrita. Es solo un enlace a Maps. */
+  readonly directionsUrl = computed(() => {
+    const p = this.pickup();
+    return p ? googleMapsDirectionsUrl(p, p.address) : null;
+  });
+
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.seo.reset());
+    inject(DestroyRef).onDestroy(() => {
+      this.seo.reset();
+      this.jsonLd.set('workshop', null);
+    });
+
+    // Los datos estructurados del taller salen cuando hay una dirección real; el horario se suma cuando llega.
+    effect(() => {
+      const pickup = this.pickup();
+      const rules = this.rules();
+      untracked(() => this.jsonLd.set('workshop', pickup ? workshopJsonLd(pickup, rules) : null));
+    });
   }
 
   ngOnInit(): void {

@@ -22,6 +22,20 @@ export interface ProductModel {
   categoryId: number | null;
   slug: string;
   sku: string;
+  /**
+   * Número de parte del fabricante (migración 0051). Solo viene cuando se pide la ficha completa: las listas salen de
+   * `search_products()`, que no lo trae.
+   */
+  partNumber?: string | null;
+  /** Equivalencias impresas en la pieza o la caja. Mismo caso que `partNumber`. */
+  crossRefs?: string[];
+  /** SEO de la ficha (migración 0057): lo escribe una persona o la IA en campos vacíos. Mismo caso que `partNumber`: solo con la ficha completa. */
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  /** Texto alterno por foto, paralelo a `images`. */
+  imageAlts?: string[];
+  /** Hasta 3 preguntas frecuentes hechas solo con datos de la ficha. */
+  faq?: { q: string; a: string }[];
   name: string;
   brand: string;
   shortDescription: string;
@@ -143,6 +157,10 @@ export interface ProfileVehicleModel {
   year: number;
   nickname: string | null;
   isDefault: boolean;
+  /** Kilometraje que dijo la persona (migración 0058). */
+  odometerKm?: number | null;
+  /** ¿Quiere recordatorios de mantenimiento de este vehículo? Nacen apagados. */
+  maintenanceReminders?: boolean;
 }
 
 /**

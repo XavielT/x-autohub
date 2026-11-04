@@ -1,0 +1,197 @@
+<section class="ia">
+  <header class="ia__head">
+    <div>
+      <h2 class="ia__title">Cargar con IA</h2>
+      <p class="ia__lead">
+        Sube las fotos de una pieza (frente, etiqueta, caja) o una lista de proveedor, y el sistema llena la ficha. Tú
+        revisas y apruebas: la IA no publica nada por su cuenta.
+      </p>
+    </div>
+    <a class="ia__back" routerLink="/admin/inventario">← Inventario</a>
+  </header>
+
+  @if (!available) {
+    <p class="ia__warn" role="status">El catálogo asistido necesita la base real: en modo de prueba no está disponible.</p>
+  } @else {
+    <!-- 1. Subir -->
+    <article class="ia__card">
+      <h3 class="ia__card-title">1. Subir fotos</h3>
+
+      <div class="ia__kind" role="radiogroup" aria-label="Qué vas a subir">
+        <label><input type="radio" name="kind" [checked]="kind() === 'article'" (change)="kind.set('article')" /> Fotos de artículos</label>
+        <label><input type="radio" name="kind" [checked]="kind() === 'list'" (change)="kind.set('list')" /> Lista de proveedor o factura</label>
+      </div>
+
+      <div class="ia__pick">
+        <label class="ia__btn">
+          Elegir fotos o PDF
+          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple hidden (change)="onPick($event)" />
+        </label>
+        <label class="ia__btn ia__btn--ghost">
+          Tomar foto
+          <input type="file" accept="image/*" capture="environment" hidden (change)="onPick($event)" />
+        </label>
+        <span class="ia__count">{{ files().length }} / {{ maxFiles }}</span>
+      </div>
+
+      @if (files().length > 0) {
+        <ul class="ia__thumbs">
+          @for (file of files(); track $index; let i = $index) {
+            <li>
+              @if (previews()[i]) {
+                <img [src]="previews()[i]" [alt]="'Foto ' + (i + 1)" width="96" height="96" />
+              } @else {
+                <span class="ia__pdf">PDF</span>
+              }
+              @if (kind() === 'article' && files().length > 1) {
+                <label class="ia__group">Artículo <input type="number" min="1" [max]="maxFiles" [value]="groupOf()[i]" (change)="setGroup(i, $event)" /></label>
+              }
+              <button type="button" class="ia__x" (click)="removeFile(i)" [attr.aria-label]="'Quitar la foto ' + (i + 1)">×</button>
+            </li>
+          }
+        </ul>
+
+        <p class="ia__hint">
+          {{ kind() === 'list' ? 'Se leerá un borrador por renglón.' : groupCount() + ' artículo(s) en este lote.' }}
+        </p>
+        <div class="ia__row">
+          @if (kind() === 'article' && files().length > 1) {
+            <button type="button" class="ia__btn ia__btn--ghost" [disabled]="isGrouping()" (click)="groupWithAi()">
+              {{ isGrouping() ? 'Agrupando…' : 'Agrupar con IA' }}
+            </button>
+          }
+          <button type="button" class="ia__btn ia__btn--main" [disabled]="isBusy()" [attr.aria-busy]="isBusy()" (click)="process()">
+            {{ isBusy() ? 'Subiendo…' : 'Leer con IA' }}
+          </button>
+        </div>
+      }
+    </article>
+
+    <!-- 2. Estado -->
+    @if (working()) {
+      <p class="ia__status" role="status">La IA está leyendo. Puedes quedarte aquí: la lista se actualiza sola.</p>
+    }
+
+    <!-- 3. Revisión -->
+    <h3 class="ia__card-title">Por revisar ({{ drafts().length }})</h3>
+    @if (drafts().length === 0) {
+      <p class="ia__empty">No hay borradores. Sube fotos para empezar.</p>
+    }
+
+    @for (d of ordered(); track d.id) {
+      <article class="ia__draft" [class.ia__draft--failed]="d.status === 'failed'">
+        @if (d.status === 'queued' || d.status === 'processing') {
+          <p class="ia__status">{{ d.status === 'queued' ? 'En cola…' : 'Leyendo…' }}</p>
+        } @else if (d.status === 'failed') {
+          <p class="ia__fail">{{ d.error || 'No se pudo leer.' }}</p>
+          <div class="ia__row">
+            <button type="button" class="ia__btn ia__btn--ghost" (click)="reread(d)">Reintentar</button>
+            <button type="button" class="ia__btn ia__btn--ghost" (click)="discard(d)">Descartar</button>
+          </div>
+        } @else if (edit(d); as e) {
+          <div class="ia__photos">
+            @for (path of d.sourcePaths; track path; let i = $index) {
+              <label class="ia__photo" [class.ia__photo--off]="!e.photoIndices.includes(i)">
+                @if (urls()[path]) { <img [src]="urls()[path]" [alt]="'Foto de origen ' + (i + 1)" width="88" height="88" /> } @else { <span class="ia__pdf">·</span> }
+                @if (d.sourceKind === 'article') {
+                  <input type="checkbox" [checked]="e.photoIndices.includes(i)" (change)="togglePhoto(d.id, i)" />
+                  <small>{{ e.photoIndices.includes(i) ? 'Se publica' : 'No se publica' }}</small>
+                }
+              </label>
+            }
+          </div>
+
+          @if (d.duplicateOf !== null) {
+            <p class="ia__dup" role="alert">
+              Posible duplicado del producto #{{ d.duplicateOf }}.
+              <label><input type="checkbox" [checked]="e.duplicateConfirmed" (change)="confirmDuplicate(d.id, $event)" /> Es otro artículo</label>
+            </p>
+          }
+
+          <div class="ia__fields">
+            <label class="ia__field">
+              <span>{{ labels['name'] }} @if (chip(d, 'name'); as c) { <em class="ia__chip" [attr.data-level]="c.level">{{ c.text }}</em> }</span>
+              <input type="text" [value]="e.name" (input)="setText(d.id, 'name', $event)" />
+            </label>
+            <label class="ia__field">
+              <span>{{ labels['brand'] }} @if (chip(d, 'brand'); as c) { <em class="ia__chip" [attr.data-level]="c.level">{{ c.text }}</em> }</span>
+              <input type="text" [value]="e.brand" (input)="setText(d.id, 'brand', $event)" />
+            </label>
+            <label class="ia__field">
+              <span>{{ labels['part_number'] }} @if (chip(d, 'part_number'); as c) { <em class="ia__chip" [attr.data-level]="c.level">{{ c.text }}</em> }</span>
+              <input type="text" [value]="e.partNumber" (input)="setText(d.id, 'partNumber', $event)" />
+            </label>
+            <label class="ia__field">
+              <span>{{ labels['category_id'] }} @if (chip(d, 'category_id'); as c) { <em class="ia__chip" [attr.data-level]="c.level">{{ c.text }}</em> }</span>
+              <select [value]="e.categoryId ?? ''" (change)="setCategory(d.id, $event)">
+                <option value="">Elige una categoría</option>
+                @for (c of categories(); track c.id) { <option [value]="c.id" [selected]="c.id === e.categoryId">{{ c.name }}</option> }
+              </select>
+              @if (d.fields['category_proposal']?.value; as proposal) { <small>La IA propone una categoría nueva: «{{ proposal }}». No se crea sola.</small> }
+            </label>
+            <label class="ia__field" [class.ia__field--missing]="isMissing(d, 'price') && !e.price">
+              <span>{{ labels['price'] }} (RD$) @if (isMissing(d, 'price') && !e.price) { <em class="ia__chip" data-level="falta">falta</em> }</span>
+              <input type="number" min="0" inputmode="decimal" [value]="e.price" (input)="setText(d.id, 'price', $event)" />
+            </label>
+            <label class="ia__field" [class.ia__field--missing]="isMissing(d, 'stock') && !e.stock">
+              <span>{{ labels['stock'] }} @if (isMissing(d, 'stock') && !e.stock) { <em class="ia__chip" data-level="falta">falta</em> }</span>
+              <input type="number" min="0" inputmode="numeric" [value]="e.stock" (input)="setText(d.id, 'stock', $event)" />
+            </label>
+            <label class="ia__field ia__field--wide">
+              <span>{{ labels['short_description'] }}</span>
+              <input type="text" maxlength="160" [value]="e.shortDescription" (input)="setText(d.id, 'shortDescription', $event)" />
+            </label>
+            <label class="ia__field ia__field--wide">
+              <span>{{ labels['description'] }}</span>
+              <textarea rows="3" [value]="e.description" (input)="setText(d.id, 'description', $event)"></textarea>
+            </label>
+            <label class="ia__field ia__field--wide">
+              <span>{{ labels['specs'] }} <small>(una por línea, «Clave: valor»)</small></span>
+              <textarea rows="3" [value]="e.specsText" (input)="setText(d.id, 'specsText', $event)"></textarea>
+            </label>
+            <label class="ia__field ia__field--wide">
+              <span>Alias de búsqueda <small>(separados por coma)</small></span>
+              <input type="text" [value]="e.aliasesText" (input)="setText(d.id, 'aliasesText', $event)" />
+            </label>
+          </div>
+
+          @if (e.crossRefs.length > 0) {
+            <fieldset class="ia__checks">
+              <legend>{{ labels['cross_refs'] }}</legend>
+              @for (r of e.crossRefs; track $index; let i = $index) {
+                <label><input type="checkbox" [checked]="r.on" (change)="toggleRef(d.id, i)" /> {{ r.value }} @if (r.unverified) { <em class="ia__chip" data-level="baja">sin verificar</em> }</label>
+              }
+            </fieldset>
+          }
+
+          <fieldset class="ia__checks">
+            <legend>{{ labels['fitments'] }} · {{ e.fitmentType === 'universal' ? 'Universal' : 'Por modelo' }}</legend>
+            @for (f of e.fitments; track $index; let i = $index) {
+              <label>
+                <input type="checkbox" [checked]="f.selected" (change)="toggleFitment(d.id, i)" /> {{ fitmentLabel(f) }}
+                @if (f.verify) { <em class="ia__chip" data-level="baja">verificar</em> } @else { <em class="ia__chip" data-level="alta">impresa en la caja</em> }
+              </label>
+            } @empty {
+              <small>La IA no propuso compatibilidades.</small>
+            }
+            @for (u of d.unmatched; track $index) {
+              <small class="ia__unmatched">No encontré en la base: {{ u.text }}</small>
+            }
+          </fieldset>
+
+          <div class="ia__actions">
+            <button type="button" class="ia__btn ia__btn--main" [disabled]="!canApprove(d) || approving() === d.id" (click)="approve(d, false)">
+              {{ approving() === d.id ? 'Creando…' : 'Aprobar y crear' }}
+            </button>
+            <button type="button" class="ia__btn" [disabled]="!canApprove(d) || !canPublish(d) || approving() === d.id" (click)="approve(d, true)">Aprobar y publicar</button>
+            <button type="button" class="ia__btn ia__btn--ghost" (click)="discard(d)">Descartar</button>
+          </div>
+          <div class="ia__reread">
+            <input type="text" maxlength="300" placeholder="Pista para otra lectura (ej.: el número está en la caja)" [value]="e.hint" (input)="setText(d.id, 'hint', $event)" />
+            <button type="button" class="ia__btn ia__btn--ghost" (click)="reread(d)">Pedir otra lectura</button>
+          </div>
+        }
+      </article>
+    }
+  }
+</section>

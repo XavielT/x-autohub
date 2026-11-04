@@ -1,4 +1,5 @@
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
+import { IaSugerencias } from './ia-sugerencias';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminCatalogService } from '../../../../../shared/services/admin-catalog.service';
@@ -20,7 +21,7 @@ import { UnmatchedVehicleModel, VehicleMakeModel, VehicleModelModel } from '../.
  */
 @Component({
   selector: 'app-admin-marcas',
-  imports: [FormsModule, Skeleton],
+  imports: [FormsModule, Skeleton, IaSugerencias],
   templateUrl: './admin-marcas.html',
   styleUrl: './admin-marcas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,6 +74,11 @@ export class AdminMarcas implements OnInit {
         this.toast.show(e.message, 'error');
       },
     });
+  }
+
+  /** La IA asignó o creó un modelo: la lista de "sin modelo" se vuelve a leer. */
+  reloadUnmatched(): void {
+    this.catalog.getUnmatchedModels().subscribe({ next: (list) => this.unmatched.set(list), error: () => undefined });
   }
 
   ngOnInit(): void {

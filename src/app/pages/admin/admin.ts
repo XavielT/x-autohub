@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../shared/services/auth.service';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { AdminPublicar } from './publicar/admin-publicar';
+import { AdminHoy } from './hoy/admin-hoy';
 
 interface AdminSection {
   path: string;
@@ -26,7 +27,7 @@ interface AdminSection {
  */
 @Component({
   selector: 'app-admin',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminPublicar],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminPublicar, AdminHoy],
   templateUrl: './admin.html',
   styleUrl: './admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

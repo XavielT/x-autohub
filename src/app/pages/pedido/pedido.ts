@@ -86,7 +86,7 @@ export class Pedido {
 
   readonly whatsappLink = computed(() => {
     const order = this.order();
-    return order ? orderWhatsAppLink(order.orderNumber, order.total) : storeWhatsAppLink();
+    return order ? orderWhatsAppLink(order.orderNumber, order.total, { items: order.items, fulfillment: order.fulfillment }) : storeWhatsAppLink();
   });
 
   /** Para escribir a la tienda por una duda, con el número de pedido. */

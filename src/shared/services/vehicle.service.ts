@@ -157,7 +157,7 @@ export class VehicleService {
     return from(
       this.supabase.db
         .from('profile_vehicles')
-        .select('id, user_id, make_id, model_id, model_text, year, nickname, is_default, created_at')
+        .select('id, user_id, make_id, model_id, model_text, year, nickname, is_default, created_at, odometer_km, maintenance_reminders')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true }),
     ).pipe(map((res) => unwrap(res).map(toProfileVehicle)));

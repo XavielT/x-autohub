@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, map, of } from 'rxjs';
+import { SiteSettingsService } from '../../services/site-settings.service';
+import { googleMapsDirectionsUrl } from '../../utils/maps-link';
 import { LogoHub } from '../logo-hub/logo-hub';
 import { AuthService } from '../../services/auth.service';
 import { CategoryService } from '../../services/category.service';
@@ -19,6 +22,15 @@ export class Footer {
   readonly isLoggedIn = inject(AuthService).isLoggedIn;
   /** Las categorías de primer nivel: la columna "Tienda". */
   readonly categoryTree = toSignal(this.categories.getTree(), { initialValue: [] });
+
+  /** La dirección real del taller (nunca la de ejemplo) y el enlace "Cómo llegar". Si no se puede leer, el footer sigue sin ella. */
+  readonly workshop = toSignal(
+    inject(SiteSettingsService).getPickupAddress().pipe(
+      map((a) => (a && !a.isExample ? { address: a.address, directionsUrl: googleMapsDirectionsUrl(a, a.address) } : null)),
+      catchError(() => of(null)),
+    ),
+    { initialValue: null },
+  );
 
   readonly phone = STORE_PHONE_DISPLAY;
   readonly whatsappLink = storeWhatsAppLink('Hola X AutoHub');

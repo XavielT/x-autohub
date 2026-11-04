@@ -38,6 +38,21 @@ describe('AdminPedidos', () => {
     expect([...el.querySelectorAll('.adm-ord__ref')].map((e) => e.textContent)).toContain('#1004');
   });
 
+  it('los comprobantes que la IA vio coincidir van primero (la IA solo anota: el estado no cambia)', async () => {
+    const { c } = await montar();
+    const base = { flags: [], reason: null, read: { amount: null, currency: null, originBank: null, destBank: null, destLast4: null, date: null, time: null }, referenceLast4: null, createdAt: new Date() };
+    const before = order(c, 1004).status;
+
+    c.proofChecks.set({ [order(c, 1004).id]: { ...base, orderId: order(c, 1004).id, verdict: 'revisar' } });
+    const sinCoincidencia = c.filtered().map((o) => o.orderNumber);
+    c.proofChecks.set({ [order(c, 1001).id]: { ...base, orderId: order(c, 1001).id, verdict: 'coincide' } });
+
+    // 1001 está esperando el pago: sube al principio. 1004 con "revisar" no cambia de lugar.
+    expect(c.filtered()[0].orderNumber).toBe(1001);
+    expect(sinCoincidencia[0]).toBe(c.orders()[0].orderNumber);
+    expect(order(c, 1004).status).toBe(before);
+  });
+
   it('el pedido con comprobante pendiente se destaca', async () => {
     const { el } = await montar();
 

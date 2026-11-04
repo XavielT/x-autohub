@@ -1,0 +1,31 @@
+.gui {
+  font-family: var(--font-body);
+  max-width: 820px;
+
+  &__head { margin-bottom: 14px; }
+  &__title { font-family: var(--font-brand); font-size: 22px; margin: 0; }
+  &__lead { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); line-height: 1.5; }
+  &__empty { font-size: 14px; color: var(--text-soft); }
+
+  &__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  &__item { background-color: var(--main-light); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  &__name { margin: 0; font-size: 16px; small { font-weight: 400; color: var(--text-soft); } }
+  &__items { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; em { color: var(--text-soft); } }
+  &__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  &__btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid var(--Hub);
+    background: transparent;
+    color: var(--Hub);
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &--main { background: var(--Hub); color: #1a1a1a; }
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+}

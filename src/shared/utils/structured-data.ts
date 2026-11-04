@@ -3,7 +3,8 @@ import { HubMarketItemModel } from '../models/hub-market-item.model';
 import { ProductModel } from '../models/product.model';
 import { autoHubPath, hubMarketPath } from './community-seo';
 import { ReviewStats } from '../models/review.model';
-import { SERVICE_CATEGORY_LABELS, ServiceModel } from '../models/service.model';
+import { PickupAddress } from '../models/order.model';
+import { AvailabilityRule, SERVICE_CATEGORY_LABELS, ServiceModel } from '../models/service.model';
 import { Availability } from './product-availability';
 import { STORE_PHONE } from './contact';
 
@@ -67,6 +68,8 @@ export function productJsonLd(product: ProductModel, options: ProductLdOptions):
     '@type': 'Product',
     name: product.name,
     sku: product.sku,
+    // El número de parte del fabricante (migración 0051). `compact` quita lo vacío.
+    mpn: product.partNumber || undefined,
     brand: { '@type': 'Brand', name: product.brand },
     image: images,
     description: description || undefined,
@@ -114,6 +117,38 @@ export function serviceJsonLd(service: ServiceModel, options: ServiceLdOptions):
         ? undefined
         : { '@type': 'Offer', url, priceCurrency: 'DOP', price: service.priceFrom.toFixed(2) },
     aggregateRating: aggregateRating(options.stats),
+  });
+}
+
+const SCHEMA_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/**
+ * JSON-LD del taller (`AutoRepair` + `AutoPartsStore`) con su dirección, coordenadas y horario. Solo sale con una dirección **real**
+ * (nunca la de ejemplo): `geo` solo si se cargaron coordenadas, y `openingHoursSpecification` solo con las franjas de
+ * `service_availability` (las horas ya vienen `HH:mm`; un día sin regla es un día cerrado y no se declara). Sin teléfono de vendedor
+ * ajeno: es el de la tienda.
+ */
+export function workshopJsonLd(pickup: PickupAddress, rules: readonly AvailabilityRule[]): Record<string, unknown> {
+  const hours = rules
+    .filter((r) => !r.isExample && SCHEMA_WEEKDAYS[r.weekday] !== undefined)
+    .map((r) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `${SCHEMA}/${SCHEMA_WEEKDAYS[r.weekday]}`,
+      opens: r.opensAt.slice(0, 5),
+      closes: r.closesAt.slice(0, 5),
+    }));
+
+  return compact({
+    '@context': SCHEMA,
+    '@type': ['AutoRepair', 'AutoPartsStore'],
+    '@id': `${SITE_URL}/#taller`,
+    name: 'X AutoHub',
+    url: SITE_URL,
+    telephone: `+1${STORE_PHONE}`,
+    address: { '@type': 'PostalAddress', streetAddress: pickup.address, addressCountry: 'DO' },
+    geo: typeof pickup.lat === 'number' && typeof pickup.lng === 'number' ? { '@type': 'GeoCoordinates', latitude: pickup.lat, longitude: pickup.lng } : undefined,
+    openingHoursSpecification: hours.length > 0 ? hours : undefined,
+    areaServed: { '@type': 'Country', name: 'República Dominicana' },
   });
 }
 

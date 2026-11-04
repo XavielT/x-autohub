@@ -59,11 +59,34 @@ export class SiteSettingsService {
     return this.getSetting(PICKUP_ADDRESS_KEY).pipe(map(toPickupAddress));
   }
 
-  setPickupAddress(value: { address: string; hours: string }): Observable<void> {
+  /** Las coordenadas y el `placeId` son opcionales: sin ellas se guarda solo el texto (el check de la 0059 exige que, si hay, sean números válidos). */
+  setPickupAddress(value: { address: string; hours: string; lat?: number; lng?: number; placeId?: string }): Observable<void> {
+    const hasPoint = typeof value.lat === 'number' && typeof value.lng === 'number';
     return this.setSetting(PICKUP_ADDRESS_KEY, {
       address: value.address.trim(),
       hours: value.hours.trim(),
+      ...(hasPoint ? { lat: value.lat, lng: value.lng } : {}),
+      ...(hasPoint && value.placeId ? { place_id: value.placeId } : {}),
     });
+  }
+
+  /**
+   * Los interruptores y topes de la IA (migración 0050): `ai_*` y `maps_monthly_cap_usd`. Se leen en público; se escriben
+   * con `set_site_setting()` (solo admin).
+   */
+  getAiSettings(): Observable<Record<string, SettingValue>> {
+    if (this.supabase.shouldUseMockData()) {
+      const all = this.readMockSettings();
+      return of(Object.fromEntries(Object.entries(all).filter(([key]) => isAiKey(key))));
+    }
+
+    return from(
+      this.supabase.db.from('site_settings').select('key, value').or('key.like.ai_*,key.eq.maps_monthly_cap_usd'),
+    ).pipe(map((res) => Object.fromEntries(unwrap(res).map((row) => [row.key, row.value]))));
+  }
+
+  setAiSetting(key: string, value: boolean | number): Observable<void> {
+    return this.setSetting(key, value);
   }
 
   // --- Genérico por dentro -------------------------------------------------
@@ -153,6 +176,8 @@ export class SiteSettingsService {
   }
 }
 
+const isAiKey = (key: string): boolean => key.startsWith('ai_') || key === 'maps_monthly_cap_usd';
+
 /** Un objeto JSON con claves de texto, o `null`. */
 function asRecord(value: SettingValue): Record<string, SettingValue> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : null;
@@ -196,5 +221,16 @@ export function toPickupAddress(value: SettingValue): PickupAddress | null {
   const address = text(record['address']);
   if (!address) return null;
 
-  return { address, hours: text(record['hours']), isExample: record['is_example'] === true };
+  const lat = record['lat'];
+  const lng = record['lng'];
+  const placeId = text(record['place_id']);
+  const hasPoint = typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng);
+
+  return {
+    address,
+    hours: text(record['hours']),
+    isExample: record['is_example'] === true,
+    ...(hasPoint ? { lat, lng } : {}),
+    ...(hasPoint && placeId ? { placeId } : {}),
+  };
 }

@@ -1,0 +1,124 @@
+<article class="adm-ia">
+  <h3 class="adm-ia__title">Inteligencia artificial</h3>
+  <p class="adm-ia__text">
+    La IA propone y rellena; una persona revisa y aprueba. Nunca cambia estados de pedido, confirma pagos, toca precios o
+    stock, aprueba publicaciones ni manda mensajes.
+  </p>
+
+  @if (loadFailed()) {
+    <p class="adm-ia__warn" role="status">No pudimos leer todo el estado de la IA. Recarga la página.</p>
+  }
+
+  @if (overview(); as o) {
+    <div class="adm-ia__budget" [class]="'adm-ia__budget adm-ia__budget--' + o.budget.tier">
+      <div class="adm-ia__budget-head">
+        <strong>US$ {{ o.budget.spentUsd | number: '1.2-2' }}</strong>
+        <span>de US$ {{ o.budget.capUsd | number: '1.0-0' }} este mes ({{ o.budget.pct | number: '1.0-0' }} %)</span>
+      </div>
+      <div class="adm-ia__meter" role="img" [attr.aria-label]="'Gasto del mes: ' + (o.budget.pct | number: '1.0-0') + ' % del tope'">
+        <span [style.width.%]="o.budget.pct > 100 ? 100 : o.budget.pct"></span>
+      </div>
+      <p class="adm-ia__tier">{{ tierText() }}</p>
+      <p class="adm-ia__sub">
+        Abierto a visitantes: US$ {{ o.budget.publicSpentUsd | number: '1.2-2' }} (tope: 30 % del total).
+        Google Maps: US$ {{ o.maps.spentUsd | number: '1.2-2' }} de US$ {{ o.maps.capUsd | number: '1.0-0' }}.
+      </p>
+    </div>
+  }
+
+  <label class="adm-ia__master">
+    <input type="checkbox" [checked]="masterOn()" (change)="toggle('ai_enabled')" />
+    <span><strong>IA encendida</strong> (interruptor general)</span>
+  </label>
+
+  <ul class="adm-ia__features">
+    @for (f of features; track f.key) {
+      <li>
+        <label>
+          <input
+            type="checkbox"
+            [checked]="isOn('ai_feature_' + f.key)"
+            [disabled]="!masterOn()"
+            (change)="toggle('ai_feature_' + f.key)"
+          />
+          <span><strong>{{ f.label }}</strong><small>{{ f.hint }}</small></span>
+        </label>
+      </li>
+    }
+  </ul>
+
+  <div class="adm-ia__caps">
+    <label>
+      Tope mensual de IA (US$)
+      <input type="number" min="0" step="1" inputmode="decimal" [value]="capDraft()" (input)="setDraft('ai', $event)" />
+    </label>
+    <label>
+      Tope mensual de Google Maps (US$)
+      <input type="number" min="0" step="1" inputmode="decimal" [value]="mapsCapDraft()" (input)="setDraft('maps', $event)" />
+    </label>
+    <button type="button" class="adm-ia__save" [disabled]="isSavingCap()" [attr.aria-busy]="isSavingCap()" (click)="saveCaps()">
+      {{ isSavingCap() ? 'Guardando…' : 'Guardar topes' }}
+    </button>
+  </div>
+
+  @if (overview(); as o) {
+    <h4 class="adm-ia__sub-title">Gasto del mes por función</h4>
+    @if (o.byFeature.length === 0) {
+      <p class="adm-ia__empty">Todavía no hay llamadas este mes.</p>
+    } @else {
+      <table class="adm-ia__table">
+        <thead><tr><th>Función</th><th>Llamadas</th><th>Errores</th><th>US$</th></tr></thead>
+        <tbody>
+          @for (f of o.byFeature; track f.feature) {
+            <tr>
+              <td>{{ featureLabel(f.feature) }}</td>
+              <td>{{ f.calls }}</td>
+              <td>{{ f.errors }}</td>
+              <td>{{ f.costUsd | number: '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h4 class="adm-ia__sub-title">Últimos 30 días</h4>
+    @if (o.byDay.length === 0) {
+      <p class="adm-ia__empty">Sin movimiento.</p>
+    } @else {
+      <ul class="adm-ia__days">
+        @for (d of o.byDay; track d.day) {
+          <li>
+            <span class="adm-ia__day">{{ d.day | date: 'd MMM' }}</span>
+            <span class="adm-ia__bar"><span [style.width]="barWidth(d.costUsd)"></span></span>
+            <span class="adm-ia__amount">US$ {{ d.costUsd | number: '1.2-2' }} · {{ d.calls }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <h4 class="adm-ia__sub-title">Precisión del catálogo asistido</h4>
+    @if (accuracy().length === 0) {
+      <p class="adm-ia__empty">Todavía no hay borradores aprobados. Aquí verás, por campo, el % que la IA acertó sin que lo cambiaras.</p>
+    } @else {
+      <table class="adm-ia__table">
+        <thead><tr><th>Campo</th><th>Aprobados</th><th>Sin cambios</th><th>%</th></tr></thead>
+        <tbody>
+          @for (a of accuracy(); track a.field) {
+            <tr><td>{{ fieldLabel(a.field) }}</td><td>{{ a.total }}</td><td>{{ a.unchanged }}</td><td>{{ a.pct | number: '1.0-0' }} %</td></tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h4 class="adm-ia__sub-title">Últimos errores</h4>
+    @if (o.errors.length === 0) {
+      <p class="adm-ia__empty">Sin errores.</p>
+    } @else {
+      <ul class="adm-ia__errors">
+        @for (e of o.errors; track $index) {
+          <li>{{ e.createdAt | date: 'd MMM, h:mm a' }} · {{ featureLabel(e.feature) }} · <code>{{ e.errorCode }}</code></li>
+        }
+      </ul>
+    }
+  }
+</article>

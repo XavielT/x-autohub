@@ -1,0 +1,36 @@
+<section class="gui">
+  <header class="gui__head">
+    <h2 class="gui__title">Guías de mantenimiento por revisar</h2>
+    <p class="gui__lead">
+      Las arma la IA una vez por marca, modelo y años, y la ven todos los que tengan ese vehículo, rotuladas como "generada con IA". Solo traen intervalos y nombres de tareas.
+      Revísalas con el manual o con el mecánico y márcalas, o bórralas si están mal.
+    </p>
+  </header>
+
+  @if (isLoading()) {
+    <app-skeleton variant="row" [count]="3" label="Cargando guías…" />
+  } @else if (rows().length === 0) {
+    <p class="gui__empty">No hay guías por revisar.</p>
+  } @else {
+    <ul class="gui__list">
+      @for (row of rows(); track row.template.id) {
+        <li class="gui__item">
+          <h3 class="gui__name">{{ row.name }}@if (row.template.engineNote) { <small> · {{ row.template.engineNote }}</small> }</h3>
+          <ul class="gui__items">
+            @for (it of row.template.items; track it.key) {
+              <li>
+                <strong>{{ it.label }}</strong> — {{ interval(it) }}@if (it.severity === 'severo') { <em> (servicio severo)</em> }
+                @if (it.service_slug) { · taller: {{ it.service_slug }} }
+                @if (it.category_slug) { · tienda: {{ it.category_slug }} }
+              </li>
+            }
+          </ul>
+          <div class="gui__actions">
+            <button type="button" class="gui__btn gui__btn--main" [disabled]="busyId() !== null" (click)="review(row)">Marcar como revisada</button>
+            <button type="button" class="gui__btn" [disabled]="busyId() !== null" (click)="remove(row)">Borrar</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -54,10 +54,28 @@
       <label>Horario<input type="text" [value]="pickupHours()" (input)="setPickupField('hours', $event)" placeholder="Lunes a viernes, 8:00 a. m. a 5:00 p. m." /></label>
     </div>
 
+    <p class="adm-set__card-text" role="status">
+      @if (pickupPoint(); as p) {
+        Ubicación en el mapa: {{ p.lat.toFixed(5) }}, {{ p.lng.toFixed(5) }}.
+        @if (pickupMapsUrl(); as link) { <a [href]="link" target="_blank" rel="noopener noreferrer">Comprobar en Google Maps</a> }
+      } @else {
+        Sin ubicación en el mapa: "Cómo llegar" buscará el texto de la dirección.
+      }
+      @if (pickupNote()) { {{ pickupNote() }} }
+    </p>
+
     <div class="adm-set__row">
+      <button type="button" class="adm-set__secondary" [disabled]="isLocatingPickup() || pickupAddress().trim().length < 3" (click)="locatePickup()">
+        {{ isLocatingPickup() ? 'Buscando…' : 'Ubicar en el mapa' }}
+      </button>
+      @if (pickupPoint()) {
+        <button type="button" class="adm-set__secondary" (click)="clearPickupPoint()">Quitar ubicación</button>
+      }
       <button type="button" class="adm-set__primary" [disabled]="isSavingPickup()" [attr.aria-busy]="isSavingPickup()" (click)="savePickup()">
         {{ isSavingPickup() ? 'Guardando…' : 'Guardar la dirección' }}
       </button>
     </div>
   </article>
+
+  <app-admin-ia-panel />
 </section>

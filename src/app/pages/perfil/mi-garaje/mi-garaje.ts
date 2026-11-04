@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal, untracked } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { VehicleForm } from '../../../../shared/components/vehicle-form/vehicle-form';
+import { Mantenimiento } from './mantenimiento/mantenimiento';
 import { ProfileVehicleModel, SelectedVehicle } from '../../../../shared/models/product.model';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { VehicleService } from '../../../../shared/services/vehicle.service';
@@ -22,7 +23,7 @@ export interface GarageRow {
  */
 @Component({
   selector: 'app-mi-garaje',
-  imports: [Skeleton, VehicleForm],
+  imports: [Skeleton, VehicleForm, Mantenimiento],
   templateUrl: './mi-garaje.html',
   styleUrl: './mi-garaje.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +37,12 @@ export class MiGaraje implements OnInit {
   readonly isLoading = signal(true);
   readonly isAdding = signal(false);
   readonly busyId = signal<number | null>(null);
+  /** El vehículo cuya tarjeta de mantenimiento está abierta (migración 0058). */
+  readonly maintenanceId = signal<number | null>(null);
+
+  toggleMaintenance(row: GarageRow): void {
+    this.maintenanceId.update((id) => (id === row.vehicle.id ? null : row.vehicle.id));
+  }
 
   constructor() {
     // Los nombres de cada vehículo se resuelven cada vez que cambia el garaje.

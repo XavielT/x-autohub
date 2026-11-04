@@ -12,7 +12,7 @@ import { AVAILABILITY_MOCK, SERVICES_MOCK, WORKS_MOCK } from '../data/service.mo
  * ensancha a `string` (ver CLAUDE.md).
  */
 const SERVICE_COLUMNS =
-  'id, slug, icon, title, description, long_description, category, price_from, duration_minutes, is_bookable, images, sort_order, is_active';
+  'id, slug, icon, title, description, long_description, category, price_from, duration_minutes, is_bookable, images, seo_title, seo_description, sort_order, is_active';
 
 const WORK_COLUMNS =
   'id, service_id, title, description, before_image, after_image, vehicle_text, done_at, is_published, created_at';

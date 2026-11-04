@@ -79,6 +79,8 @@ export type ReviewRow = {
   comment: string;
   is_verified_purchase: boolean;
   created_at: string;
+  /** La IA lo ocultó por riesgo alto (migración 0053): solo su autor y los moderadores lo reciben; se muestra como "en revisión". */
+  hidden_by_ai?: boolean;
   /** Presente solo cuando el select incluye `profiles(display_name)`. */
   profiles?: { display_name: string } | null;
 }
@@ -125,6 +127,177 @@ export type PublicationStatusDb = 'pendiente' | 'aprobado' | 'rechazado';
  * tipo, que es correcto: Postgres no comprueba la forma del valor (lo hace un
  * `check` por clave).
  */
+export type AiUsageRow = {
+  id: number;
+  feature: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  images: number;
+  cost_usd: number;
+  ok: boolean;
+  error_code: string | null;
+  user_id: string | null;
+  ip_hash: string | null;
+  created_at: string;
+};
+
+export type VehicleMaintenanceItemRow = {
+  id: number;
+  profile_vehicle_id: number;
+  template_key: string | null;
+  label: string;
+  every_km: number | null;
+  every_months: number | null;
+  last_done_on: string | null;
+  last_done_km: number | null;
+  due_on: string | null;
+  due_km: number | null;
+  status: 'ok' | 'pronto' | 'vencido';
+  source: 'ia' | 'usuario' | 'taller';
+  category_slug: string | null;
+  service_slug: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VehicleMaintenanceTemplateRow = {
+  id: number;
+  make_id: number;
+  model_id: number;
+  year_from: number;
+  year_to: number;
+  engine_note: string | null;
+  items: { key: string; label: string; every_km: number | null; every_months: number | null; severity: 'normal' | 'severo'; category_slug: string | null; service_slug: string | null }[];
+  source: 'ia' | 'admin';
+  reviewed: boolean;
+  model: string | null;
+  created_at: string;
+};
+
+export type AiReviewSummaryRow = {
+  id: number;
+  target_type: 'product' | 'service';
+  target_id: number;
+  summary: string;
+  pros: string[];
+  cons: string[];
+  review_count_at: number;
+  generated_at: string;
+};
+
+export type AiDigestRow = {
+  id: number;
+  digest_date: string;
+  kind: 'diario' | 'lunes';
+  body_md: string;
+  metrics: Record<string, SettingValue>;
+  ai_generated: boolean;
+  created_at: string;
+};
+
+export type ServiceQuoteRequestRow = {
+  id: string;
+  request_number: number;
+  /** `XAH-C-0001`, generado por la base. */
+  code: string;
+  user_id: string | null;
+  contact_name: string;
+  /** Diez dígitos, sin código de país. */
+  contact_phone: string;
+  profile_vehicle_id: number | null;
+  vehicle_text: string | null;
+  service_id: number | null;
+  description: string;
+  photos: string[];
+  status: 'nueva' | 'vista' | 'respondida' | 'agendada' | 'cerrada' | 'spam';
+  ai_triage: {
+    services: { slug: string; title: string; price_from: number | null }[];
+    summary: string;
+    missing_info: string[];
+    checklist: string[];
+    checklist_note: string;
+    can_quote_without_inspection: boolean;
+  } | null;
+  urgency: 'normal' | 'pronto' | 'seguridad' | null;
+  handled_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AiModerationRow = {
+  id: number;
+  target_type: 'hub_market_item' | 'social_post' | 'social_comment' | 'review';
+  target_id: number;
+  risk: 'bajo' | 'medio' | 'alto';
+  categories: string[];
+  reasons: string;
+  suggested: 'aprobar' | 'revisar' | 'rechazar';
+  confidence: number;
+  auto_action: 'ninguna' | 'oculto';
+  price_context: { median?: number; outlier?: boolean; direction?: 'muy_bajo' | 'muy_alto' | null } | null;
+  model: string | null;
+  cost_usd: number;
+  restored_by: string | null;
+  restored_at: string | null;
+  created_at: string;
+};
+
+export type OrderProofCheckRow = {
+  id: number;
+  order_id: string;
+  proof_path: string;
+  extracted: {
+    amount?: number | null;
+    currency?: string | null;
+    origin_bank?: string | null;
+    dest_bank?: string | null;
+    dest_account_last4?: string | null;
+    date?: string | null;
+    time?: string | null;
+  };
+  verdict: 'coincide' | 'revisar' | 'ilegible' | 'no_es_comprobante';
+  flags: string[];
+  reason: string | null;
+  reference_hash: string | null;
+  reference_last4: string | null;
+  model: string | null;
+  cost_usd: number;
+  created_at: string;
+};
+
+export type AiProductDraftRow = {
+  id: string;
+  created_by: string | null;
+  status: 'queued' | 'processing' | 'ready' | 'failed' | 'approved' | 'rejected';
+  source_kind: 'article' | 'list';
+  source_paths: string[];
+  batch_id: string | null;
+  hint: string | null;
+  fields: Record<string, { value: SettingValue; confidence: 'alta' | 'media' | 'baja'; source: string }>;
+  unmatched: { text: string; printed: boolean }[];
+  duplicate_of: number | null;
+  duplicate_confirmed: boolean;
+  final_fields: Record<string, SettingValue> | null;
+  edited_fields: string[];
+  product_id: number | null;
+  model: string | null;
+  cost_usd: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewed_at: string | null;
+};
+
+/** Lo que devuelve `ai_admin_overview()` (jsonb, en snake_case). */
+export type AiOverviewPayload = {
+  budget: { spent_usd: number; cap_usd: number; pct: number; tier: string; public_spent_usd: number; public_ok: boolean };
+  maps: { spent_usd: number; cap_usd: number; pct: number; tier: string };
+  by_feature: { feature: string; calls: number; errors: number; cost_usd: number }[];
+  by_day: { day: string; calls: number; cost_usd: number }[];
+  errors: { feature: string; error_code: string | null; created_at: string }[];
+};
+
 export type SettingValue = string | number | boolean | null | SettingValue[] | { [key: string]: SettingValue };
 
 export type ProfileRow = {
@@ -234,6 +407,21 @@ export type HubPartRow = {
    * stock de las opciones y al comprar hay que elegir una.
    */
   has_variants: boolean;
+  // --- Migración 0051 (número de parte) ---
+  // Opcionales a propósito: `search_products()` devuelve columnas explícitas y no las trae (ver CLAUDE.md), así que solo
+  // existen en los `select` que las piden (la ficha y el formulario del panel).
+  /** Número de parte del fabricante, como está impreso. */
+  part_number?: string | null;
+  // --- Migración 0057 (SEO) --- Opcionales por lo mismo: `search_products()` no los trae.
+  seo_title?: string | null;
+  seo_description?: string | null;
+  /** Quién escribió el SEO: 'ia' (solo campos vacíos) o 'humano'. */
+  seo_source?: 'ia' | 'humano' | null;
+  /** Texto alterno por foto, paralelo a `images`. */
+  image_alts?: string[];
+  seo_faq?: { q: string; a: string }[];
+  /** Equivalencias impresas en la pieza o la caja, como se escribieron. */
+  cross_refs?: string[];
   /**
    * Columna generada para la búsqueda de texto. Solo la lee la base: no viene
    * en los `select` que piden columnas y no se escribe nunca.
@@ -356,6 +544,10 @@ export type ProfileVehicleRow = {
   nickname: string | null;
   is_default: boolean;
   created_at: string;
+  /** Migración 0058. Solo vienen si el select los pide (el garaje sí). */
+  odometer_km?: number | null;
+  odometer_updated_at?: string | null;
+  maintenance_reminders?: boolean;
 }
 
 /** Un producto guardado por una persona con cuenta (0038). */
@@ -443,6 +635,10 @@ export type ServiceRow = {
   is_bookable: boolean;
   images: string[];
   long_description: string;
+  /** Migración 0057. */
+  seo_title?: string | null;
+  seo_description?: string | null;
+  seo_source?: 'ia' | 'humano' | null;
 }
 
 /** Cuándo abre el taller. `weekday` 0 = domingo … 6 = sábado. Migración 0019. */
@@ -552,6 +748,8 @@ export type SocialPostRow = {
   likes: number;
   comments: number;
   created_at: string;
+  /** La IA lo ocultó por riesgo alto (migración 0053): solo su autor y los moderadores lo reciben; se muestra como "en revisión". */
+  hidden_by_ai?: boolean;
   /** Presente solo cuando el select incluye `profiles(display_name, is_verified)`. */
   profiles?: { display_name: string; is_verified: boolean } | null;
 }
@@ -563,6 +761,8 @@ export type SocialCommentRow = {
   author_id: string;
   text: string;
   created_at: string;
+  /** La IA lo ocultó por riesgo alto (migración 0053): solo su autor y los moderadores lo reciben; se muestra como "en revisión". */
+  hidden_by_ai?: boolean;
   profiles?: { display_name: string; avatar_url: string | null } | null;
 }
 
@@ -603,6 +803,18 @@ export type PaymentMethodRow = {
   is_active: boolean;
 }
 
+/** `orders.shipping_geo` (migración 0059). Solo lo que el check de la tabla acepta. */
+export type OrderGeo = {
+  lat: number;
+  lng: number;
+  place_id?: string | null;
+  formatted?: string | null;
+  province?: string | null;
+  municipality?: string | null;
+  sector?: string | null;
+  geo_confidence?: 'alta' | 'media' | 'baja';
+};
+
 export type OrderRow = {
   id: string;
   user_id: string | null;
@@ -640,6 +852,8 @@ export type OrderRow = {
   whatsapp_opened_at: string | null;
   wants_installation: boolean;
   updated_at: string;
+  /** Dónde se entrega, si la persona eligió una sugerencia de Google o la IA la ubicó (migración 0059). Lo escribe `set_order_geo()`, no el navegador directo. */
+  shipping_geo?: OrderGeo | null;
   /** Presente solo cuando el select incluye `order_items(...)`. */
   order_items?: OrderItemRow[] | null;
   /** Presente solo cuando el select incluye `order_status_history(...)`. */
@@ -1100,6 +1314,84 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      /**
+       * Una fila por llamada a Anthropic o Google (migración 0050). La escribe solo la Edge Function (service_role);
+       * un admin la lee. Desde el navegador no hay insert ni update.
+       */
+      /** Lectura de un comprobante por IA (migración 0052). La escribe la edge; un admin la lee. Solo anota. */
+      order_proof_checks: {
+        Row: OrderProofCheckRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /** Sugerencias de moderación de la IA (migración 0053). Las escribe la edge; moderadores y admins las leen. */
+      ai_moderation: {
+        Row: AiModerationRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
+       * Solicitudes de cotización del taller (migración 0055). No hay insert directo: se crean con `create_quote_request()`. El dueño ve las suyas y un
+       * admin todas; un admin solo cambia `status` y `handled_by`.
+       */
+      service_quote_requests: {
+        Row: ServiceQuoteRequestRow;
+        Insert: never;
+        Update: Partial<Pick<ServiceQuoteRequestRow, 'status' | 'handled_by'>>;
+        Relationships: [];
+      };
+      /** El resumen diario "Hoy en el negocio" (migración 0056). Lo escribe la edge; un admin lo lee. */
+      ai_digests: {
+        Row: AiDigestRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /** Resumen de las reseñas verificadas de un producto o servicio (migración 0057). Lectura pública; lo escribe la edge. */
+      ai_review_summaries: {
+        Row: AiReviewSummaryRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /** Lo que hay que hacerle a un vehículo del garaje y cuándo toca (migración 0058). Cada quien ve lo suyo. Las fechas y el estado los mueve la base. */
+      vehicle_maintenance_items: {
+        Row: VehicleMaintenanceItemRow;
+        Insert: Pick<VehicleMaintenanceItemRow, 'profile_vehicle_id' | 'label'> & Partial<Pick<VehicleMaintenanceItemRow, 'every_km' | 'every_months' | 'source'>>;
+        Update: Partial<Pick<VehicleMaintenanceItemRow, 'label' | 'every_km' | 'every_months'>>;
+        Relationships: [];
+      };
+      /** La guía general por marca, modelo y rango de años (migración 0058). Un admin la revisa. */
+      vehicle_maintenance_templates: {
+        Row: VehicleMaintenanceTemplateRow;
+        Insert: never;
+        Update: Partial<Pick<VehicleMaintenanceTemplateRow, 'reviewed' | 'items' | 'engine_note'>>;
+        Relationships: [];
+      };
+      ai_usage: {
+        Row: AiUsageRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
+       * Borradores de producto leídos por IA (migración 0051). Un admin los crea en cola, la edge los llena y un admin
+       * los aprueba (la base exige que un posible duplicado se confirme antes de aprobar).
+       */
+      ai_product_drafts: {
+        Row: AiProductDraftRow;
+        Insert: Pick<AiProductDraftRow, 'created_by' | 'source_paths'> &
+          Partial<Pick<AiProductDraftRow, 'source_kind' | 'batch_id' | 'hint'>>;
+        Update: Partial<
+          Pick<
+            AiProductDraftRow,
+            'status' | 'hint' | 'duplicate_confirmed' | 'final_fields' | 'edited_fields' | 'product_id'
+          >
+        >;
+        Relationships: [];
+      };
       shipping_options: {
         Row: ShippingOptionRow;
         Insert: ShippingOptionRow;
@@ -1330,6 +1622,87 @@ export type Database = {
           p_offset?: number;
         };
         Returns: SearchProductRow[];
+      };
+      /**
+       * Presupuesto de IA, gasto del mes por función y por día, y últimos errores (migración 0050). Solo admin, comprobado
+       * dentro de Postgres.
+       */
+      /** Lo que se esperaba de un pedido: total y cuentas de X AutoHub con 4 dígitos (migración 0052). Solo admin. */
+      admin_order_expected: {
+        Args: { p_order_id: string };
+        Returns: { total: number; accounts: { bank: string; last4: string }[] };
+      };
+      /** Las métricas del negocio de hoy: pedidos, ventas, stock, citas, solicitudes, moderación… (migración 0056). Solo admin. */
+      business_daily_metrics: {
+        Args: Record<string, never>;
+        Returns: Record<string, SettingValue>;
+      };
+      /** Crea una solicitud de cotización del taller (migración 0055). Abierta a visitantes; valida teléfono, honeypot, topes y fotos. */
+      create_quote_request: {
+        Args: {
+          p_name: string;
+          p_phone: string;
+          p_description: string;
+          p_vehicle_text?: string;
+          p_profile_vehicle_id?: number;
+          p_service_id?: number;
+          p_token?: string;
+          p_photos?: string[];
+          p_website?: string;
+        };
+        Returns: { id: string; code: string }[];
+      };
+      /** El dueño copia la guía general a su vehículo (migración 0058). Devuelve cuántos renglones copió. */
+      adopt_maintenance_template: { Args: { p_profile_vehicle_id: number }; Returns: number };
+      /** Actualiza el kilometraje y recalcula los estados (migración 0058). */
+      set_vehicle_odometer: { Args: { p_profile_vehicle_id: number; p_km: number }; Returns: undefined };
+      /** Anota las coordenadas de un pedido recién creado, sin dueño o con él (migración 0059). Devuelve false si no aplica; nunca lanza. */
+      set_order_geo: { Args: { p_order_id: string; p_geo: OrderGeo }; Returns: boolean };
+      /** "Registrar servicio hecho" (migración 0058). */
+      log_maintenance_done: { Args: { p_item_id: number; p_date?: string; p_km?: number }; Returns: undefined };
+      /** Prende o apaga los recordatorios de un vehículo (migración 0058). */
+      set_vehicle_reminders: { Args: { p_profile_vehicle_id: number; p_on: boolean }; Returns: undefined };
+      /** Anota una búsqueda, saneada en la base y sin quién la hizo (migración 0054). Abierta a visitantes. */
+      log_search: {
+        Args: { p_query: string; p_result_count: number; p_had_vehicle?: boolean };
+        Returns: undefined;
+      };
+      /** Las búsquedas sin resultado más repetidas (migración 0054). Solo admin. */
+      admin_search_gaps: {
+        Args: { p_days?: number; p_limit?: number };
+        Returns: { query_norm: string; searches: number; last_seen: string }[];
+      };
+      /** Pasa los garajes que escribieron un modelo a mano a un modelo que ya existe (migración 0054). Solo admin. */
+      admin_assign_vehicle_model: {
+        Args: { p_make_id: number; p_model_text: string; p_model_id: number };
+        Returns: number;
+      };
+      /** Restaura contenido que la IA ocultó (migración 0053). Moderador o admin. */
+      restore_hidden_content: {
+        Args: { p_target_type: string; p_target_id: number };
+        Returns: undefined;
+      };
+      /** Lo que la IA ocultó, con su motivo (migración 0053). Moderador o admin. */
+      ai_hidden_content: {
+        Args: Record<string, never>;
+        Returns: {
+          target_type: string;
+          target_id: number;
+          preview: string;
+          categories: string[];
+          reasons: string;
+          confidence: number | null;
+          hidden_at: string | null;
+        }[];
+      };
+      ai_admin_overview: {
+        Args: Record<string, never>;
+        Returns: AiOverviewPayload;
+      };
+      /** De los borradores aprobados: por campo, cuántas veces el humano lo dejó como lo propuso la IA (migración 0051). */
+      ai_catalog_accuracy: {
+        Args: Record<string, never>;
+        Returns: { field: string; total: number; unchanged: number; pct: number }[];
       };
       /**
        * Cambia un ajuste **existente**. Solo un admin, comprobado dentro de

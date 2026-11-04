@@ -1,5 +1,6 @@
 import { AliasEditor } from './alias-editor/alias-editor';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
+import { RouterLink } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
@@ -13,6 +14,7 @@ import {
 import { forkJoin, map, switchMap } from 'rxjs';
 import { AdminService } from '../../../../shared/services/admin.service';
 import { AdminCatalogService } from '../../../../shared/services/admin-catalog.service';
+import { AiCatalogService } from '../../../../shared/services/ai-catalog.service';
 import { ServiciosCardService } from '../../../../shared/services/servicios-card.service';
 import { StorageService } from '../../../../shared/services/storage.service';
 import { ToastService } from '../../../../shared/services/toast.service';
@@ -99,6 +101,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     AdminMarcas,
     AliasEditor,
     Skeleton,
+    RouterLink,
   ],
   templateUrl: './admin-inventario.html',
   styleUrl: './admin-inventario.scss',
@@ -107,6 +110,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
 export class AdminInventario implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly catalog = inject(AdminCatalogService);
+  private readonly catalogAi = inject(AiCatalogService);
   private readonly servicios = inject(ServiciosCardService);
   private readonly storage = inject(StorageService);
   private readonly toast = inject(ToastService);
@@ -124,12 +128,31 @@ export class AdminInventario implements OnInit {
 
   readonly isCreating = signal(false);
   readonly isSubmitting = signal(false);
+  readonly isSuggestingSeo = signal(false);
   /** Vistas previas en data URL, para ver lo que se va a subir antes de subirlo. */
   readonly previews = signal<string[]>([]);
   private selectedFiles: File[] = [];
 
   /** id del artículo que se está editando; null cuando se está creando uno. */
   readonly editingId = signal<number | null>(null);
+
+  /**
+   * "Sugerir SEO con IA" (migración 0057): la edge solo llena lo que esté VACÍO en la base (no pisa lo escrito por una persona). Después se vuelven a leer los
+   * dos campos del formulario para mostrar lo que quedó, sin tocar lo demás que se esté editando.
+   */
+  suggestSeo(): void {
+    const id = this.editingId();
+    if (id === null || this.isSuggestingSeo()) return;
+    this.isSuggestingSeo.set(true);
+    this.catalogAi.suggestSeo('product', id).subscribe((result) => {
+      this.isSuggestingSeo.set(false);
+      if (!result) return void this.toast.show('La IA no está disponible ahora.', 'error');
+      const wrote = Object.values(result.applied).some(Boolean);
+      if (result.applied['seo_title'] && !this.partForm.controls.seoTitle.value) this.partForm.controls.seoTitle.setValue(result.seoTitle);
+      if (result.applied['seo_description'] && !this.partForm.controls.seoDescription.value) this.partForm.controls.seoDescription.setValue(result.seoDescription);
+      this.toast.show(wrote ? 'Listo: llené lo que estaba vacío (título, descripción, texto alterno o preguntas).' : 'No había nada vacío que llenar: no toqué nada.');
+    });
+  }
   /** true mientras se pide la fila completa al abrir el formulario de edición. */
   readonly isLoadingOne = signal(false);
 
@@ -192,6 +215,12 @@ export class AdminInventario implements OnInit {
       // de garantizar que no choque con otro.
       slug: ['', Validators.pattern(/^([a-z0-9]+(-[a-z0-9]+)*)?$/)],
       sku: ['', Validators.maxLength(40)],
+      // Número de parte y equivalencias (migración 0051): lo que la gente busca. Las equivalencias van separadas por coma o línea.
+      partNumber: ['', Validators.maxLength(60)],
+      crossRefs: [''],
+      // SEO de la ficha (migración 0057): escrito a mano, la IA ya no lo pisa. Vacío = la IA puede proponerlo.
+      seoTitle: ['', Validators.maxLength(60)],
+      seoDescription: ['', Validators.maxLength(155)],
       shortDescription: ['', Validators.maxLength(160)],
       description: [''],
       price: [0, [Validators.required, Validators.min(0)]],
@@ -368,6 +397,10 @@ export class AdminInventario implements OnInit {
               categoryId: p.categoryId,
               slug: p.slug,
               sku: p.sku,
+              partNumber: p.partNumber ?? '',
+              crossRefs: (p.crossRefs ?? []).join(', '),
+              seoTitle: p.seoTitle ?? '',
+              seoDescription: p.seoDescription ?? '',
               shortDescription: p.shortDescription,
               description: p.description,
               price: p.price,
@@ -554,6 +587,10 @@ export class AdminInventario implements OnInit {
             categoryId: form.categoryId,
             slug: form.slug,
             sku: form.sku,
+            partNumber: form.partNumber,
+            crossRefs: form.crossRefs.split(/[,\n]/),
+            seoTitle: form.seoTitle,
+            seoDescription: form.seoDescription,
             name: form.name,
             brand: form.brand,
             shortDescription: form.shortDescription,

@@ -288,3 +288,24 @@
 
   &__history-note { color: var(--Hub); font-size: 13px; overflow-wrap: anywhere; }
 }
+
+// --- Lectura de IA del comprobante (migración 0052) -----------------------------------------------------------
+.adm-ord__ia { border: 1px solid var(--Hub-translucid); }
+.adm-ord__ia[data-verdict='coincide'] { border-color: #3fb27f; color: #6fd6a4; }
+.adm-ord__ia[data-verdict='revisar'] { border-color: #e0a030; color: #f0b848; }
+.adm-ord__ia[data-verdict='ilegible'], .adm-ord__ia[data-verdict='no_es_comprobante'] { color: var(--text-soft); }
+
+.adm-ord__ia-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--Hub-translucid);
+  border-radius: 10px;
+  overflow-x: auto;
+
+  h5 { margin: 0 0 8px; font-size: 14px; small { color: var(--text-soft); font-weight: 400; } }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--Hub-translucid); vertical-align: top; }
+  thead th { color: var(--text-soft); font-weight: 600; }
+}
+.adm-ord__acct { display: block; }
+.adm-ord__flags { margin: 0 0 8px; padding-left: 18px; font-size: 13px; color: #f0b848; }

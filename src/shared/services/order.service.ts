@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, from, map, of, switchMap, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { OrderGeo } from '../../core/supabase/database.types';
 import { toOrderView, toUserOrder } from '../../core/supabase/mappers';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { CheckoutSubmitPayload } from '../models/checkout.model';
+import { GeoPoint } from '../models/maps.model';
 import {
   CreatedOrder,
   OrderHistoryEntry,
@@ -108,6 +110,29 @@ export class OrderService {
           total: Number(order.total),
         };
       }),
+    );
+  }
+
+  /**
+   * Anota las coordenadas de entrega de un pedido que se acaba de crear. Va **aparte** de `create_order()` a propósito (cambiar su
+   * firma obligaría a retirar la anterior, ver `PGRST203`) y **nunca falla ni bloquea**: sin coordenadas el pedido es el mismo.
+   */
+  setGeo(orderId: string, point: GeoPoint): Observable<boolean> {
+    if (this.supabase.shouldUseMockData()) return of(false);
+
+    const geo: OrderGeo = {
+      lat: point.lat,
+      lng: point.lng,
+      place_id: point.placeId,
+      formatted: point.formatted,
+      province: point.province,
+      municipality: point.municipality,
+      sector: point.sector,
+      geo_confidence: point.confidence,
+    };
+    return from(this.supabase.db.rpc('set_order_geo', { p_order_id: orderId, p_geo: geo })).pipe(
+      map((res) => !res.error && res.data === true),
+      catchError(() => of(false)),
     );
   }
 

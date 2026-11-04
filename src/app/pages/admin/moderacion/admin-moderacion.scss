@@ -267,3 +267,24 @@
     width: 100%;
   }
 }
+
+// --- Lectura de IA (migración 0053) ---------------------------------------------------------------------------
+.adm-mod__subtitle { font-family: var(--font-brand); font-size: 18px; margin: 28px 0 4px; }
+
+.adm-mod__ia {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--Hub-translucid);
+  border-radius: 10px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+
+  &[data-risk='alto'] { border-color: rgba(229, 72, 77, 0.7); }
+  &[data-risk='medio'] { border-color: #e0a030; }
+  small { color: var(--text-soft); font-weight: 400; }
+}
+.adm-mod__ia-head, .adm-mod__ia-reason { margin: 0; }
+.adm-mod__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; li { padding: 2px 8px; border-radius: 10px; border: 1px solid var(--Hub-translucid); font-size: 12px; } }

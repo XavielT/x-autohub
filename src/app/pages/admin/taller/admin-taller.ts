@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 /**
- * El taller en el panel: cuatro pestañas — **Citas** (la agenda del día y de la
- * semana), **Servicios** (el catálogo), **Disponibilidad** (horario y cierres) y
+ * El taller en el panel: cinco pestañas — **Citas** (la agenda del día y de la
+ * semana), **Solicitudes** (las cotizaciones que piden desde la web, con triage de la IA), **Servicios** (el catálogo), **Disponibilidad** (horario y cierres) y
  * **Trabajos** (lo que se publica en /servicios).
  *
  * Es solo el marco con la navegación; cada pestaña es su propia ruta hija, cargada a
@@ -43,6 +43,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 export class AdminTaller {
   readonly tabs = [
     { path: 'citas', label: 'Citas' },
+    { path: 'solicitudes', label: 'Solicitudes' },
+    { path: 'guias', label: 'Guías' },
     { path: 'servicios', label: 'Servicios' },
     { path: 'disponibilidad', label: 'Disponibilidad' },
     { path: 'trabajos', label: 'Trabajos' },

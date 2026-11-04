@@ -196,3 +196,5 @@ $surface-line: #2e2e2e;
     &:disabled { opacity: 0.5; cursor: default; }
   }
 }
+
+.post__review { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--Hub); border-radius: 8px; font-size: 13px; color: var(--Hub); }

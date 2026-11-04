@@ -1,0 +1,57 @@
+<section class="hoy" aria-labelledby="hoy-title">
+  <header class="hoy__head">
+    <h2 id="hoy-title" class="hoy__title">Hoy en el negocio</h2>
+    @if (current(); as d) {
+      <span class="hoy__meta">
+        {{ d.date | date: 'EEEE d MMM' }} · {{ d.aiGenerated ? 'redactado con IA' : 'plantilla (sin IA)' }}
+      </span>
+    }
+  </header>
+
+  @if (!loaded()) {
+    <p class="hoy__muted">Cargando…</p>
+  } @else if (!current()) {
+    <p class="hoy__muted">Todavía no hay un resumen. Sale cada mañana a las 7:30 a. m.</p>
+  } @else {
+    <ul class="hoy__list">
+      @for (line of lines(); track $index) {
+        @switch (line.kind) {
+          @case ('heading') { <li class="hoy__heading">@for (p of line.parts; track $index) { {{ p.text }} }</li> }
+          @case ('numbered') {
+            <li class="hoy__priority">
+              @for (p of line.parts; track $index) {
+                @if (p.link) { <a [routerLink]="p.link">{{ p.text }}</a> } @else { {{ p.text }} }
+              }
+            </li>
+          }
+          @default {
+            <li>
+              @for (p of line.parts; track $index) {
+                @if (p.link) { <a [routerLink]="p.link">{{ p.text }}</a> } @else if (p.bold) { <strong>{{ p.text }}</strong> } @else { {{ p.text }} }
+              }
+            </li>
+          }
+        }
+      }
+    </ul>
+  }
+
+  <div class="hoy__actions">
+    <button type="button" class="hoy__btn" [disabled]="isGenerating()" [attr.aria-busy]="isGenerating()" (click)="generate()">
+      {{ isGenerating() ? 'Generando…' : 'Generar ahora' }}
+    </button>
+    @if (list().length > 1) {
+      <button type="button" class="hoy__btn hoy__btn--ghost" [attr.aria-expanded]="showHistory()" (click)="toggleHistory()">
+        {{ showHistory() ? 'Ocultar historial' : 'Ver historial' }}
+      </button>
+    }
+  </div>
+
+  @if (showHistory()) {
+    <ul class="hoy__history">
+      @for (d of list(); track d.id) {
+        <li><button type="button" class="hoy__day" [class.is-active]="current()?.id === d.id" (click)="open(d)">{{ d.date | date: 'd MMM' }}{{ d.kind === 'lunes' ? ' · lunes' : '' }}{{ d.aiGenerated ? '' : ' · plantilla' }}</button></li>
+      }
+    </ul>
+  }
+</section>

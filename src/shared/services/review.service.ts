@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of, throwError } from 'rxjs';
+import { Observable, catchError, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { toReview, toReviewStats } from '../../core/supabase/mappers';
 import { translateDbError, unwrap } from '../../core/supabase/supabase-error';
-import { EMPTY_REVIEW_STATS, REVIEWS_PAGE_SIZE, REVIEW_COMMENT_MAX, ReviewModel, ReviewStats, ReviewTarget } from '../models/review.model';
+import { EMPTY_REVIEW_STATS, REVIEWS_PAGE_SIZE, REVIEW_COMMENT_MAX, ReviewModel, ReviewStats, ReviewSummary, ReviewTarget } from '../models/review.model';
 import { REVIEWS_MOCK } from '../data/review.mock';
 import { AuthService } from './auth.service';
 
@@ -12,7 +12,7 @@ import { AuthService } from './auth.service';
  * (ver CLAUDE.md): el tipo de la fila sale de leerlo.
  */
 const REVIEW_COLUMNS =
-  'id, target_type, target_id, user_id, rating, comment, is_verified_purchase, created_at, profiles(display_name)';
+  'id, target_type, target_id, user_id, rating, comment, is_verified_purchase, created_at, hidden_by_ai, profiles(display_name)';
 
 const ALREADY_REVIEWED = 'Ya escribiste una reseña de esto. Si quieres cambiarla, bórrala y escribe otra.';
 
@@ -76,6 +76,23 @@ export class ReviewService {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1),
     ).pipe(map((res) => unwrap(res).map(toReview)));
+  }
+
+  /** El resumen generado con IA de las reseñas verificadas, o `null` si todavía no hay (hacen falta 3 verificadas). Nunca falla: es un extra. */
+  getSummary(target: ReviewTarget, targetId: number): Observable<ReviewSummary | null> {
+    if (this.supabase.shouldUseMockData()) return of(null);
+
+    return from(
+      this.supabase.db
+        .from('ai_review_summaries')
+        .select('summary, pros, cons, review_count_at')
+        .eq('target_type', target)
+        .eq('target_id', targetId)
+        .maybeSingle(),
+    ).pipe(
+      map((res) => (res.error || !res.data ? null : { summary: res.data.summary, pros: res.data.pros ?? [], cons: res.data.cons ?? [], basedOn: res.data.review_count_at })),
+      catchError(() => of(null)),
+    );
   }
 
   /** La reseña de quien tiene la sesión abierta, o `null` si no escribió ninguna (o no hay sesión). */

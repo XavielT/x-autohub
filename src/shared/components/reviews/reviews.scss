@@ -114,3 +114,9 @@
     &:disabled { opacity: 0.6; cursor: default; }
   }
 }
+
+.rv__review { margin: 0 0 6px; padding: 6px 10px; border: 1px solid var(--Hub); border-radius: 8px; font-size: 13px; color: var(--Hub); }
+
+.rv__ai { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--Hub-translucid); border-radius: 10px; font-size: 14px; line-height: 1.5; p { margin: 0 0 6px; } }
+.rv__ai-label { font-size: 12px; color: var(--text-soft); }
+.rv__ai-list { color: var(--text-soft); }

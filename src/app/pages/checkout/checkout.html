@@ -119,13 +119,27 @@
                     <input class="checkout__input" type="text" name="city" [ngModel]="city()" (ngModelChange)="city.set($event)"
                            autocomplete="address-level2" />
                   </label>
-                  <label class="checkout__label checkout__label--full">
-                    <span>Dirección<span class="req" aria-hidden="true">*</span></span>
-                    <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()"
-                           (ngModelChange)="addressLine1.set($event)" autocomplete="street-address"
-                           placeholder="Calle, número, referencia" required [class.is-invalid]="showError('addressLine1')" />
-                    @if (showError('addressLine1')) { <span class="field-error">Escribe la dirección de entrega.</span> }
-                  </label>
+                  <div class="checkout__address">
+                    <label class="checkout__label">
+                      <span>Dirección<span class="req" aria-hidden="true">*</span></span>
+                      <input class="checkout__input" type="text" name="addressLine1" [ngModel]="addressLine1()"
+                             (ngModelChange)="onAddressInput($event)" (blur)="closeSuggestions()" autocomplete="street-address"
+                             role="combobox" aria-autocomplete="list" aria-controls="address-suggestions"
+                             [attr.aria-expanded]="suggestions().length > 0"
+                             placeholder="Calle, número, referencia" required [class.is-invalid]="showError('addressLine1')" />
+                      @if (showError('addressLine1')) { <span class="field-error">Escribe la dirección de entrega.</span> }
+                    </label>
+                    @if (suggestions().length > 0) {
+                      <ul class="checkout__suggest" id="address-suggestions" role="listbox" aria-label="Sugerencias de dirección">
+                        @for (s of suggestions(); track s.placeId) {
+                          <!-- mousedown y no click: el blur del campo cierra la lista antes de que el click llegue -->
+                          <li role="option" [attr.aria-selected]="false" (mousedown)="$event.preventDefault(); pickSuggestion(s)">{{ s.text }}</li>
+                        }
+                      </ul>
+                    }
+                    @if (addressNotice(); as notice) { <span class="checkout__hint checkout__hint--warn">{{ notice }}</span> }
+                    @if (geo() && !addressNotice()) { <span class="checkout__hint">Ubicación confirmada en el mapa.</span> }
+                  </div>
                   <label class="checkout__label">
                     <span>Código postal <span class="checkout__optional">(opcional)</span></span>
                     <input class="checkout__input" type="text" name="postalCode" [ngModel]="postalCode()"

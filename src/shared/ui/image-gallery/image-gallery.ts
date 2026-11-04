@@ -25,6 +25,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, input, signal, un
 export class ImageGallery {
   readonly images = input.required<readonly string[]>();
   readonly alt = input('');
+  /** Texto alterno propio por foto (por su dirección), si lo hay (migración 0057). Sin él, vale `alt`. */
+  readonly altMap = input<Readonly<Record<string, string>>>({});
   /**
    * Una foto a la que saltar (la de la opción elegida). Si no está entre las de la galería, o es
    * nula, no hace nada: la galería se queda donde estaba.
@@ -35,6 +37,7 @@ export class ImageGallery {
   readonly isZoomed = signal(false);
 
   readonly current = computed(() => this.images()[this.index()] ?? '');
+  readonly currentAlt = computed(() => this.altMap()[this.current()] || this.alt());
   readonly hasMany = computed(() => this.images().length > 1);
 
   constructor() {

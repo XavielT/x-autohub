@@ -29,7 +29,7 @@ import { searchProductsInMemory } from '../utils/product-search';
 // Una sola cadena literal: supabase-js deduce el tipo de la fila leyendo el texto
 // del select, y una concatenación ('a' + 'b') se ensancha a `string` y lo rompe.
 const PRODUCT_COLUMNS =
-  'id, category_id, slug, sku, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at, has_variants, variant_label';
+  'id, category_id, slug, sku, part_number, cross_refs, seo_title, seo_description, image_alts, seo_faq, name, brand, short_description, img_url, images, stars_rating, price, compare_at_price, description, stock, is_active, is_test, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, sold_count, created_at, updated_at, has_variants, variant_label';
 
 /** Más reciente primero; a igual fecha, el de id mayor (el último que se cargó). */
 function newestFirst(a: ProductModel, b: ProductModel): number {

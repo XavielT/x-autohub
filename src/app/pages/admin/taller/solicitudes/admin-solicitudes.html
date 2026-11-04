@@ -1,0 +1,90 @@
+<section class="sol">
+  <header class="sol__head">
+    <h2 class="sol__title">Solicitudes de cotización</h2>
+    <p class="sol__lead">Lo que pidieron desde /servicios/cotizar, con fotos y un resumen de la IA para el mecánico. La IA nunca da precios.</p>
+  </header>
+
+  <div class="sol__filters" role="group" aria-label="Filtrar por estado">
+    <button type="button" class="sol__chip" [class.is-active]="filter() === 'activas'" (click)="setFilter('activas')">Activas</button>
+    @for (s of statuses; track s.value) {
+      <button type="button" class="sol__chip" [class.is-active]="filter() === s.value" (click)="setFilter(s.value)">
+        {{ s.label }} @if (counts()[s.value]) { <span>{{ counts()[s.value] }}</span> }
+      </button>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <app-skeleton variant="row" [count]="3" label="Cargando solicitudes…" />
+  } @else if (shown().length === 0) {
+    <p class="sol__empty">No hay solicitudes en este filtro.</p>
+  } @else {
+    <ul class="sol__list">
+      @for (r of shown(); track r.id) {
+        <li class="sol__item" [class.sol__item--safety]="r.urgency === 'seguridad'">
+          <div class="sol__top">
+            <strong class="sol__code">{{ r.code }}</strong>
+            <span class="sol__state" [attr.data-status]="r.status">{{ statusLabel(r.status) }}</span>
+            @if (r.urgency === 'seguridad') { <span class="sol__tag sol__tag--safety">Seguridad</span> }
+            @else if (r.urgency === 'pronto') { <span class="sol__tag">Pronto</span> }
+            <span class="sol__date">{{ r.createdAt | date: 'd MMM, h:mm a' }}</span>
+          </div>
+
+          <p class="sol__who">{{ r.name }} · {{ phoneText(r.phone) }}@if (r.vehicleText) { · {{ r.vehicleText }} }</p>
+          @if (serviceOf(r.serviceId); as s) {
+            <p class="sol__service">Pidió: <strong>{{ s.title }}</strong>@if (s.priceFrom !== null) { · desde RD$ {{ s.priceFrom | number: '1.0-0' }} }</p>
+          }
+          <p class="sol__desc">{{ r.description }}</p>
+
+          @if (r.photos.length > 0) {
+            <ul class="sol__photos">
+              @for (p of r.photos; track p; let i = $index) {
+                <li>
+                  @if (photoUrls()[p]; as url) {
+                    <a [href]="url" target="_blank" rel="noopener noreferrer"><img [src]="url" [alt]="'Foto ' + (i + 1) + ' de ' + r.code" width="88" height="88" loading="lazy" /></a>
+                  } @else { <span class="sol__nophoto">Foto {{ i + 1 }}</span> }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (r.triage; as t) {
+            <div class="sol__triage">
+              <h3>Lo que preparó la IA <small>(orientativo, no es un diagnóstico)</small></h3>
+              <p>{{ t.summary }}</p>
+              @if (t.services.length > 0) {
+                <p class="sol__muted">Servicios probables:
+                  @for (sv of t.services; track sv.slug; let last = $last) {
+                    <strong>{{ sv.title }}</strong>@if (sv.price_from !== null) { (desde RD$ {{ sv.price_from | number: '1.0-0' }}) }@if (!last) { , }
+                  }
+                </p>
+              }
+              @if (t.missing_info.length > 0) {
+                <p class="sol__muted">Falta preguntar:</p>
+                <ul>@for (m of t.missing_info; track m) { <li>{{ m }}</li> }</ul>
+              }
+              @if (t.checklist.length > 0) {
+                <p class="sol__muted">Revisión sugerida ({{ t.checklist_note }}):</p>
+                <ul>@for (c of t.checklist; track c) { <li>{{ c }}</li> }</ul>
+              }
+              <p class="sol__muted">{{ t.can_quote_without_inspection ? 'Se podría cotizar sin ver el vehículo.' : 'Conviene ver el vehículo antes de cotizar.' }}</p>
+            </div>
+          } @else {
+            <p class="sol__muted">Sin triage de la IA (todavía o no está disponible).</p>
+          }
+
+          @if (r.urgency === 'seguridad') { <p class="sol__safety">Al cliente se le mostró: «{{ safetyNote }}»</p> }
+
+          <div class="sol__actions">
+            <app-wa-draft kind="quote" [targetId]="r.id" [phone]="r.phone" [fallback]="replyFallback(r)" (opened)="markReplied(r)" />
+            <a class="sol__btn" [href]="scheduleLink(r)" target="_blank" rel="noopener noreferrer">Enviar enlace para agendar</a>
+          </div>
+          <div class="sol__flow" role="group" aria-label="Estado de la solicitud">
+            @for (s of statuses; track s.value) {
+              <button type="button" class="sol__step" [class.is-active]="r.status === s.value" [disabled]="savingId() !== null" (click)="setStatus(r, s.value)">{{ s.label }}</button>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

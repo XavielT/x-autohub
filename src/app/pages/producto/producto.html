@@ -9,13 +9,14 @@
     </nav>
 
     <div class="prod__top">
-      <app-image-gallery class="prod__gallery" [images]="gallery().images" [alt]="p.name"
+      <app-image-gallery class="prod__gallery" [images]="gallery().images" [alt]="p.name" [altMap]="altMap()"
                          [focus]="gallery().focus" />
 
       <div class="prod__info">
         <div class="prod__id">
           <span class="prod__brand">{{ p.brand }}</span>
           <span class="prod__sku">SKU {{ p.sku }}</span>
+          @if (p.partNumber) { <span class="prod__sku" data-test="part-number">Número de parte {{ p.partNumber }}</span> }
           @if (p.isTest) { <app-test-badge /> }
           <app-favorite-button class="prod__fav" [partId]="p.id" [label]="p.name" />
         </div>
@@ -137,6 +138,15 @@
             }
           </tbody>
         </table>
+      </section>
+    }
+
+    @if (faq().length > 0) {
+      <section class="prod__section" aria-labelledby="prod-faq">
+        <h2 id="prod-faq">Preguntas frecuentes</h2>
+        @for (item of faq(); track item.q) {
+          <details class="prod__faq"><summary>{{ item.q }}</summary><p>{{ item.a }}</p></details>
+        }
       </section>
     }
 

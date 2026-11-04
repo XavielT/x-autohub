@@ -84,8 +84,8 @@ export class Servicio {
           if (service) {
             const text = (service.description || service.longDescription).trim();
             this.seo.set({
-              title: `${service.title} — Taller | X AutoHub`,
-              description: text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text,
+              title: service.seoTitle?.trim() || `${service.title} — Taller | X AutoHub`,
+              description: service.seoDescription?.trim() || (text.length > 155 ? `${text.slice(0, 152).trimEnd()}…` : text),
               path: `/servicios/${service.slug}`,
               image: service.images[0],
             });

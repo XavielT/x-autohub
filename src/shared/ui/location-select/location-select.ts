@@ -11,7 +11,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import type { Map as LeafletMap } from 'leaflet';
+import type { CircleMarker, Map as LeafletMap } from 'leaflet';
+import { OUTSIDE_DR_MESSAGE } from '../../models/maps.model';
+import { MapsService } from '../../services/maps.service';
 import {
   DO_LOCATIONS,
   LocationOption,
@@ -90,6 +92,13 @@ export class LocationSelect implements ControlValueAccessor {
 
   private readonly mapHost = viewChild<ElementRef<HTMLElement>>('mapHost');
   private map: LeafletMap | null = null;
+  private leaflet: typeof import('leaflet/dist/leaflet-src.esm.js') | null = null;
+  private searchMarker: CircleMarker | null = null;
+
+  private readonly maps = inject(MapsService);
+  /** Resultado de buscar una dirección en el mapa ("no la encontramos", "fuera de RD"). Vacío si no hay nada que decir. */
+  readonly searchNote = signal('');
+  readonly isSearching = signal(false);
 
   // --- ControlValueAccessor ------------------------------------------------
 
@@ -188,6 +197,11 @@ export class LocationSelect implements ControlValueAccessor {
         break;
       case 'Enter': {
         event.preventDefault();
+        // Con el mapa abierto el buscador es de direcciones: Enter ubica el lugar, no elige una provincia de la lista.
+        if (this.showMap()) {
+          this.searchPlace();
+          break;
+        }
         const option = options[this.activeIndex()];
         if (option) this.select(option);
         break;
@@ -210,12 +224,43 @@ export class LocationSelect implements ControlValueAccessor {
 
   // --- Mapa ----------------------------------------------------------------
 
+  /**
+   * Busca una dirección o un lugar (Google, vía la edge `maps-geocode`) y centra el mapa ahí con un punto. **No elige nada**: la
+   * provincia se sigue guardando al tocar el mapa, así el valor sale siempre de la lista. Sin servicio de Maps no pasa nada.
+   */
+  searchPlace(): void {
+    const text = this.query().trim();
+    if (text.length < 3 || !this.map || this.isSearching()) return;
+
+    this.searchNote.set('');
+    this.isSearching.set(true);
+    this.maps.search(text).subscribe((lookup) => {
+      this.isSearching.set(false);
+      if (lookup.kind === 'outside') {
+        this.searchNote.set(OUTSIDE_DR_MESSAGE);
+        return;
+      }
+      if (lookup.kind !== 'found') {
+        this.searchNote.set('No encontramos ese lugar. Prueba con el sector o el municipio, o toca el mapa.');
+        return;
+      }
+      const { lat, lng } = lookup.point;
+      const map = this.map;
+      const L = this.leaflet;
+      if (!map || !L) return;
+      map.setView([lat, lng], 11);
+      this.searchMarker?.remove();
+      this.searchMarker = L.circleMarker([lat, lng], { radius: 9, color: '#ffffff', fillColor: '#ffb300', fillOpacity: 0.9, weight: 2 }).addTo(map);
+    });
+  }
+
   async toggleMap(): Promise<void> {
     if (this.showMap()) {
       this.showMap.set(false);
       this.destroyMap();
       return;
     }
+    this.searchNote.set('');
     this.mapError.set('');
     this.isMapLoading.set(true);
     this.showMap.set(true);
@@ -260,6 +305,7 @@ export class LocationSelect implements ControlValueAccessor {
       map.on('click', (event) => this.select(nearestLocation(event.latlng.lat, event.latlng.lng)));
 
       this.map = map;
+      this.leaflet = L;
       this.isMapLoading.set(false);
     } catch (error) {
       console.error('[location-select] no se pudo cargar el mapa', error);
@@ -292,5 +338,6 @@ export class LocationSelect implements ControlValueAccessor {
   private destroyMap(): void {
     this.map?.remove();
     this.map = null;
+    this.searchMarker = null;
   }
 }

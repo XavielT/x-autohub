@@ -1,4 +1,5 @@
 import { OrderStatus } from '../../core/supabase/database.types';
+import { GeoConfidence } from './maps.model';
 import { OrderFulfillment, OrderHistoryEntry } from './order.model';
 
 export interface AdminOrderItem {
@@ -27,6 +28,8 @@ export interface AdminOrderModel {
   fullName: string;
   addressLine1: string;
   city?: string;
+  /** El punto de entrega, si Google o la IA ubicaron la dirección (`orders.shipping_geo`). Solo sirve para abrir Maps. */
+  geo?: { lat: number; lng: number; placeId: string | null; confidence: GeoConfidence };
   shippingOptionId: string;
   paymentMethodId: string;
   orderNotes?: string;

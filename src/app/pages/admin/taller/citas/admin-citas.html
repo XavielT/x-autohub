@@ -78,7 +78,7 @@
             }
 
             @if (a.statusNote) { <p class="tl__sub">Nota: {{ a.statusNote }}</p> }
-            <p class="tl__sub"><a class="tl__link" [href]="whatsapp(a)" target="_blank" rel="noopener noreferrer">Escribirle por WhatsApp</a></p>
+            <app-wa-draft kind="appointment" [targetId]="a.id" [phone]="a.contactPhone" [fallback]="appointmentFallback(a)" />
           </li>
         }
       </ul>

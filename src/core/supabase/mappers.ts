@@ -149,6 +149,12 @@ export function toProduct(row: Omit<HubPartRow, 'search_vector' | 'stars_seed' |
     categoryId: row.category_id,
     slug: row.slug,
     sku: row.sku,
+    partNumber: row.part_number ?? null,
+    crossRefs: row.cross_refs ?? [],
+    seoTitle: row.seo_title ?? null,
+    seoDescription: row.seo_description ?? null,
+    imageAlts: row.image_alts ?? [],
+    faq: row.seo_faq ?? [],
     imgUrl: row.img_url,
     images: row.images?.length ? row.images : undefined,
     name: row.name,
@@ -247,6 +253,8 @@ export function toProfileVehicle(row: ProfileVehicleRow): ProfileVehicleModel {
     year: row.year,
     nickname: row.nickname,
     isDefault: row.is_default,
+    odometerKm: row.odometer_km ?? null,
+    maintenanceReminders: row.maintenance_reminders ?? false,
   };
 }
 
@@ -349,6 +357,8 @@ export function toService(row: ServiceRow): ServiceModel {
     durationMinutes: row.duration_minutes,
     isBookable: row.is_bookable,
     images: row.images ?? [],
+    seoTitle: row.seo_title ?? null,
+    seoDescription: row.seo_description ?? null,
     sortOrder: row.sort_order,
     isActive: row.is_active,
   };
@@ -459,6 +469,7 @@ export function toSocialPost(row: SocialPostRow): SocialPostModel {
     tags: row.tags ?? [],
     likes: row.likes,
     comments: row.comments,
+    inReview: row.hidden_by_ai === true,
   };
 }
 
@@ -471,6 +482,7 @@ export function toSocialComment(row: SocialCommentRow): SocialCommentModel {
     authorAvatarUrl: row.profiles?.avatar_url ?? undefined,
     text: row.text,
     createdAt: row.created_at,
+    inReview: row.hidden_by_ai === true,
   };
 }
 
@@ -583,6 +595,7 @@ export function toReview(row: ReviewRow): ReviewModel {
     comment: row.comment,
     isVerifiedPurchase: row.is_verified_purchase,
     createdAt: new Date(row.created_at),
+    inReview: row.hidden_by_ai === true,
   };
 }
 

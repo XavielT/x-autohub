@@ -1,0 +1,65 @@
+<div class="mnt">
+  <div class="mnt__odo">
+    <label>Kilometraje actual
+      <input type="text" inputmode="numeric" placeholder="Ej: 74000" [value]="odometer()" (input)="odometer.set($any($event.target).value)" />
+    </label>
+    <button type="button" class="mnt__btn" [disabled]="busy()" (click)="saveOdometer()">Guardar</button>
+  </div>
+
+  @if (isLoading()) {
+    <p class="mnt__muted">Cargando…</p>
+  } @else if (!hasGuide()) {
+    <p class="mnt__muted">Armamos una guía general con los servicios que suele pedir tu {{ label() }} (aceite, filtros, frenos, batería…). La confirmas con el manual o con el taller.</p>
+    <button type="button" class="mnt__btn mnt__btn--main" [disabled]="isBuilding()" [attr.aria-busy]="isBuilding()" (click)="build()">
+      {{ isBuilding() ? 'Armando la guía…' : 'Armar mi guía de mantenimiento' }}
+    </button>
+  } @else {
+    @if (showAiNote()) {
+      <p class="mnt__note" role="note" data-test="ai-note">Guía general generada con IA; confírmala con el manual de tu carro o con el taller.</p>
+    }
+
+    <ul class="mnt__list">
+      @for (item of items(); track item.id) {
+        <li class="mnt__item" [attr.data-status]="item.status">
+          <div class="mnt__row">
+            <strong>{{ item.label }}</strong>
+            <span class="mnt__badge" [attr.data-status]="item.status">{{ statusText(item) }}</span>
+          </div>
+          <p class="mnt__muted">
+            {{ interval(item) }}
+            @if (item.lastDoneOn) { · Último: {{ item.lastDoneOn | date: 'd MMM y' }}@if (item.lastDoneKm !== null) { a {{ item.lastDoneKm | number: '1.0-0' }} km } }
+            @if (item.dueOn) { · Próximo: {{ item.dueOn | date: 'd MMM y' }} }
+            @if (item.dueKm !== null) { · a los {{ item.dueKm | number: '1.0-0' }} km }
+            @if (item.source === 'taller') { · <em>registrado por el taller</em> }
+          </p>
+
+          <div class="mnt__actions">
+            <button type="button" class="mnt__btn" [attr.aria-expanded]="doingId() === item.id" (click)="startDone(item)">Registrar servicio hecho</button>
+            @if (item.categorySlug) {
+              <button type="button" class="mnt__btn" (click)="viewProducts(item)">Ver productos para esto</button>
+            }
+            @if (scheduleLink(item); as q) {
+              <a class="mnt__btn" routerLink="/servicios/agendar" [queryParams]="q">Agendar</a>
+            }
+            @if (item.source === 'usuario') {
+              <button type="button" class="mnt__btn mnt__btn--ghost" [attr.aria-label]="'Quitar ' + item.label" (click)="remove(item)">Quitar</button>
+            }
+          </div>
+
+          @if (doingId() === item.id) {
+            <div class="mnt__done">
+              <label>Fecha<input type="date" [max]="today" [value]="doneDate()" (input)="doneDate.set($any($event.target).value)" /></label>
+              <label>Kilometraje<input type="text" inputmode="numeric" [value]="doneKm()" (input)="doneKm.set($any($event.target).value)" /></label>
+              <button type="button" class="mnt__btn mnt__btn--main" [disabled]="busy()" (click)="confirmDone(item)">Guardar</button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    <label class="mnt__reminders">
+      <input type="checkbox" [checked]="reminders()" (change)="toggleReminders()" />
+      Avísame cuando algo esté por vencer (un aviso en este dispositivo, como mucho cada dos semanas)
+    </label>
+  }
+</div>

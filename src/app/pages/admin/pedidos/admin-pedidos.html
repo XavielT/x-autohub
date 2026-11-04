@@ -56,6 +56,9 @@
             @if (order.paymentMethodId === 'transfer' && order.status === 'awaiting_payment') {
               @if (order.proofPath) {
                 <span class="adm-ord__badge adm-ord__badge--ok">Con comprobante</span>
+                @if (proofChecks()[order.id]; as check) {
+                  <span class="adm-ord__badge adm-ord__ia" [attr.data-verdict]="check.verdict" title="Lectura asistida: solo anota, tú confirmas el pago">IA: {{ verdictLabels[check.verdict] }}</span>
+                }
               } @else {
                 <span class="adm-ord__badge adm-ord__badge--warn">Sin comprobante</span>
               }
@@ -116,18 +119,63 @@
                       {{ loadingProofId() === order.id ? 'Abriendo…' : 'Ver el comprobante' }}
                     </button>
                   }
+
+                  @if (order.proofPath) {
+                    <div class="adm-ord__ia-panel">
+                      <h5>Lectura de IA <small>(solo anota: tú decides)</small></h5>
+                      @if (proofChecks()[order.id]; as check) {
+                        <table>
+                          <thead><tr><th></th><th>Lo que leí</th><th>Lo que esperaba</th></tr></thead>
+                          <tbody>
+                            <tr>
+                              <th>Monto</th>
+                              <td>@if (check.read.amount !== null) { RD$ {{ check.read.amount | number:'1.2-2' }} } @else { — }</td>
+                              <td>@if (expected()[order.id]; as e) { RD$ {{ e.total | number:'1.2-2' }} } @else { — }</td>
+                            </tr>
+                            <tr>
+                              <th>Cuenta de destino</th>
+                              <td>{{ check.read.destBank || '—' }} @if (check.read.destLast4) { · …{{ check.read.destLast4 }} }</td>
+                              <td>@if (expected()[order.id]; as e) { @for (a of e.accounts; track $index) { <span class="adm-ord__acct">{{ a.bank }} …{{ a.last4 }}</span> } } @else { — }</td>
+                            </tr>
+                            <tr>
+                              <th>Fecha</th>
+                              <td>{{ check.read.date || '—' }} {{ check.read.time }}</td>
+                              <td>desde {{ order.createdAt | date:'d MMM' }}</td>
+                            </tr>
+                            <tr>
+                              <th>Referencia</th>
+                              <td>@if (check.referenceLast4) { …{{ check.referenceLast4 }} } @else { — }</td>
+                              <td>sin repetir en otro pedido</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        @if (check.reason) { <p class="adm-ord__muted">{{ check.reason }}</p> }
+                        @if (check.flags.length > 0) {
+                          <ul class="adm-ord__flags">@for (f of check.flags; track f) { <li>{{ flagLabel(f) }}</li> }</ul>
+                        }
+                      } @else {
+                        <p class="adm-ord__muted">Todavía no hay una lectura de este comprobante.</p>
+                      }
+                      <button type="button" class="adm-ord__action" [disabled]="rereadingId() !== null" (click)="reread(order)">
+                        {{ rereadingId() === order.id ? 'Leyendo…' : 'Releer' }}
+                      </button>
+                    </div>
+                  }
                 </div>
               }
 
               <div class="adm-ord__block">
                 <h4>Entrega</h4>
                 <p>{{ order.addressLine1 }}@if (order.city) {, {{ order.city }}}@if (order.province) {, {{ order.province }}}</p>
+                @if (mapsLink(order); as link) {
+                  <p class="adm-ord__muted"><a [href]="link" target="_blank" rel="noopener noreferrer">Abrir en Google Maps</a> ({{ geoLabel(order) }})</p>
+                }
                 <p class="adm-ord__muted">Envío: {{ order.shippingOptionId }}</p>
                 @if (order.orderNotes) {
                   <p class="adm-ord__muted">Notas del cliente: {{ order.orderNotes }}</p>
                 }
-                @if (customerWhatsApp(order); as wa) {
-                  <a class="adm-ord__link" [href]="wa" target="_blank" rel="noopener noreferrer">Escribirle por WhatsApp</a>
+                @if (order.contactPhone) {
+                  <app-wa-draft kind="order" [targetId]="order.id" [phone]="order.contactPhone" [fallback]="orderFallback(order)" />
                 }
               </div>
 

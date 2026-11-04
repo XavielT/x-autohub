@@ -72,7 +72,7 @@ function toAdminPart(r: AdminPartRow): AdminPartModel {
 /** Las columnas de la ficha completa que se edita en el formulario. */
 // Una sola cadena literal: ver PRODUCT_COLUMNS en product.service.ts.
 const EDITABLE_PART_COLUMNS =
-  'id, category_id, slug, sku, name, brand, short_description, img_url, images, price, compare_at_price, description, stock, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, is_active, is_test, variant_label';
+  'id, category_id, slug, sku, part_number, cross_refs, seo_title, seo_description, name, brand, short_description, img_url, images, price, compare_at_price, description, stock, is_featured, fulfillment, lead_time_days, fitment_type, installable, installation_service_id, specs, is_active, is_test, variant_label';
 
 /**
  * Lo que se escribe en `hub_parts` al crear o editar desde el formulario.
@@ -89,6 +89,12 @@ function partWriteRow(draft: NewPartDraft) {
     category_id: draft.categoryId,
     slug: draft.slug.trim(),
     sku: draft.sku.trim(),
+    // Vacío = nulo; las columnas normalizadas (`part_number_norm`, `cross_refs_norm`) las mantiene un trigger (0051).
+    part_number: draft.partNumber?.trim() || null,
+    cross_refs: (draft.crossRefs ?? []).map((r) => r.trim()).filter((r) => r !== ''),
+    // Solo si vienen: así un guardado que no los trae (la carga con IA, por ejemplo) no borra el SEO que ya escribió la IA o una persona.
+    ...(draft.seoTitle !== undefined && { seo_title: draft.seoTitle.trim() || null }),
+    ...(draft.seoDescription !== undefined && { seo_description: draft.seoDescription.trim() || null }),
     name: draft.name.trim(),
     brand: draft.brand.trim(),
     short_description: draft.shortDescription.trim(),
@@ -254,6 +260,9 @@ export class AdminService {
           fullName: row.full_name,
           addressLine1: row.address_line1,
           city: row.city ?? undefined,
+          geo: row.shipping_geo
+            ? { lat: row.shipping_geo.lat, lng: row.shipping_geo.lng, placeId: row.shipping_geo.place_id ?? null, confidence: row.shipping_geo.geo_confidence ?? 'baja' }
+            : undefined,
           shippingOptionId: row.shipping_option_id,
           paymentMethodId: row.payment_method_id,
           orderNotes: row.order_notes ?? undefined,
@@ -610,6 +619,10 @@ export class AdminService {
           categoryId: r.category_id,
           slug: r.slug,
           sku: r.sku,
+          partNumber: r.part_number ?? '',
+          crossRefs: r.cross_refs ?? [],
+          seoTitle: r.seo_title ?? '',
+          seoDescription: r.seo_description ?? '',
           name: r.name,
           brand: r.brand,
           shortDescription: r.short_description,

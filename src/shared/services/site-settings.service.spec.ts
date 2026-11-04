@@ -100,4 +100,14 @@ describe('toBankAccounts / toPickupAddress', () => {
     expect(toPickupAddress({ address: '  ', hours: 'x' })).toBeNull();
     expect(toPickupAddress({ address: 'Calle 1' })).toEqual({ address: 'Calle 1', hours: '', isExample: false });
   });
+
+  it('las coordenadas del taller solo cuentan si son las dos y son números (0059)', () => {
+    expect(toPickupAddress({ address: 'Calle 1', lat: 18.48, lng: -69.93, place_id: 'ChIJx' })).toEqual({
+      address: 'Calle 1', hours: '', isExample: false, lat: 18.48, lng: -69.93, placeId: 'ChIJx',
+    });
+    expect(toPickupAddress({ address: 'Calle 1', lat: 18.48 })).toEqual({ address: 'Calle 1', hours: '', isExample: false });
+    expect(toPickupAddress({ address: 'Calle 1', lat: 'norte', lng: 1 })).toEqual({ address: 'Calle 1', hours: '', isExample: false });
+    // Un place_id sin punto no se conserva: no tendría a qué acompañar.
+    expect(toPickupAddress({ address: 'Calle 1', place_id: 'ChIJx' })).toEqual({ address: 'Calle 1', hours: '', isExample: false });
+  });
 });

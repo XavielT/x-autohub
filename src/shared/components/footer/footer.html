@@ -47,6 +47,13 @@
         </nav>
     </div>
 
+    @if (workshop(); as w) {
+        <p class="footer__contact">
+            Taller: {{ w.address }}.
+            @if (w.directionsUrl) { <a [href]="w.directionsUrl" target="_blank" rel="noopener noreferrer">Cómo llegar</a> }
+        </p>
+    }
+
     <p class="footer__contact">
         ¿Dudas con una pieza o un servicio? Escríbenos por WhatsApp al
         <a [href]="whatsappLink" target="_blank" rel="noopener noreferrer">{{ phone }}</a>.

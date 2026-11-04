@@ -1,0 +1,45 @@
+.iasg {
+  display: block;
+  background-color: var(--main-light);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+  font-family: var(--font-body);
+
+  &__title { font-family: var(--font-brand); font-size: 17px; margin: 0; }
+  &__text { margin: 6px 0 12px; font-size: 14px; color: var(--text-soft); }
+  &__row { display: flex; flex-wrap: wrap; gap: 8px; }
+  &__sub { margin: 16px 0 8px; font-size: 15px; }
+
+  &__btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 8px;
+    border: 1px solid var(--Hub);
+    background: transparent;
+    color: var(--Hub);
+    font: inherit;
+    font-family: var(--font-brand);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &--ok { background-color: var(--Hub); color: #1a1a1a; }
+    &:disabled { opacity: 0.6; cursor: default; }
+  }
+
+  &__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  &__list li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--Hub-translucid);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  &__what small { display: block; color: var(--text-soft); }
+  &__acts { display: flex; gap: 8px; flex-wrap: wrap; }
+}

@@ -11,9 +11,11 @@ export interface SocialMedia {
 export interface SocialCommentModel {
   id: number;
   postId: number;
+  /** La IA lo ocultó por riesgo alto: el autor lo ve "en revisión" y el público no (migración 0053). */
   authorId: string;
   authorName: string;
   authorAvatarUrl?: string;
+  inReview?: boolean;
   text: string;
   createdAt: string;
 }
@@ -35,6 +37,8 @@ export interface SocialPostModel {
   tags: string[];
   likes: number;
   comments: number;
+  /** La IA lo ocultó por riesgo alto: el autor lo ve "en revisión" y el público no (migración 0053). */
+  inReview?: boolean;
 }
 
 /** Club o crew registrado en la plataforma. */

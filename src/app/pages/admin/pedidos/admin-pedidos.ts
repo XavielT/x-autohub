@@ -4,6 +4,10 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { AdminService } from '../../../../shared/services/admin.service';
 import { StorageService } from '../../../../shared/services/storage.service';
 import { ToastService } from '../../../../shared/services/toast.service';
+import { AiProofService } from '../../../../shared/services/ai-proof.service';
+import { WaDraft } from '../../../../shared/components/wa-draft/wa-draft';
+import { orderReplyDraft } from '../../../../shared/utils/reply-templates';
+import { PROOF_FLAG_LABELS, PROOF_VERDICT_LABELS, ProofCheck, ProofExpected } from '../../../../shared/models/ai.model';
 import {
   AdminOrderModel,
   ORDER_ACTION_LABELS,
@@ -12,6 +16,7 @@ import {
 import { OrderStatus } from '../../../../core/supabase/database.types';
 import { nextStatuses } from '../../../../shared/utils/order-status';
 import { buildWaLink } from '../../../../shared/utils/whatsapp';
+import { GEO_CONFIDENCE_LABEL, googleMapsUrl } from '../../../../shared/utils/maps-link';
 
 /** Un botón de transición: a qué estado lleva y cómo se llama. */
 interface OrderAction {
@@ -42,7 +47,7 @@ const PAYMENT_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-admin-pedidos',
-  imports: [DatePipe, DecimalPipe, Skeleton],
+  imports: [DatePipe, DecimalPipe, Skeleton, WaDraft],
   templateUrl: './admin-pedidos.html',
   styleUrl: './admin-pedidos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,6 +56,7 @@ export class AdminPedidos implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly storage = inject(StorageService);
   private readonly toast = inject(ToastService);
+  private readonly proofAi = inject(AiProofService);
 
   readonly orders = signal<AdminOrderModel[]>([]);
   readonly isLoading = signal(true);
@@ -65,13 +71,22 @@ export class AdminPedidos implements OnInit {
   /** Los enlaces firmados de los comprobantes que ya se pidieron (duran diez minutos). */
   readonly proofUrls = signal<Record<string, string>>({});
   readonly loadingProofId = signal<string | null>(null);
+  /** La lectura de IA de cada comprobante (migración 0052). Solo anota: confirmar el pago lo hace una persona. */
+  readonly proofChecks = signal<Record<string, ProofCheck>>({});
+  readonly expected = signal<Record<string, ProofExpected>>({});
+  readonly rereadingId = signal<string | null>(null);
+  readonly verdictLabels = PROOF_VERDICT_LABELS;
 
   readonly statuses = ORDER_STATUS_FLOW;
 
   readonly filtered = computed(() => {
     const filter = this.statusFilter();
     const all = this.orders();
-    return filter === 'all' ? all : all.filter((o) => o.status === filter);
+    const shown = filter === 'all' ? all : all.filter((o) => o.status === filter);
+    // Los comprobantes que coinciden van primero, para confirmarlos de un toque. El orden de los demás no cambia (sort estable).
+    const checks = this.proofChecks();
+    const rank = (o: AdminOrderModel) => (o.status === 'awaiting_payment' && checks[o.id]?.verdict === 'coincide' ? 0 : 1);
+    return [...shown].sort((a, b) => rank(a) - rank(b));
   });
 
   /** Cuántos hay de cada estado, para el número en cada filtro. */
@@ -108,6 +123,7 @@ export class AdminPedidos implements OnInit {
       next: (orders) => {
         this.orders.set(orders);
         this.isLoading.set(false);
+        this.loadProofChecks(orders);
       },
       error: (error: Error) => {
         this.isLoading.set(false);
@@ -118,6 +134,8 @@ export class AdminPedidos implements OnInit {
 
   toggleDetail(id: string): void {
     this.expandedId.set(this.expandedId() === id ? null : id);
+    const order = this.orders().find((o) => o.id === id);
+    if (order?.proofPath && this.expandedId() === id) this.loadExpected(order);
     this.confirmCancelId.set(null);
   }
 
@@ -182,6 +200,37 @@ export class AdminPedidos implements OnInit {
 
   // --- Comprobante -----------------------------------------------------------
 
+  private loadProofChecks(orders: AdminOrderModel[]): void {
+    const ids = orders.filter((o) => o.proofPath !== null).map((o) => o.id);
+    // Una lectura que no llega no estorba: el panel sigue como antes, sin insignia.
+    this.proofAi.getLatest(ids).subscribe({ next: (checks) => this.proofChecks.set(checks), error: () => undefined });
+  }
+
+  flagLabel(flag: string): string {
+    return PROOF_FLAG_LABELS[flag] ?? flag;
+  }
+
+  /** Lo que se esperaba del pedido, para ponerlo al lado de lo que leyó la IA. */
+  loadExpected(order: AdminOrderModel): void {
+    if (this.expected()[order.id]) return;
+    this.proofAi.getExpected(order.id).subscribe({
+      next: (e) => e && this.expected.update((all) => ({ ...all, [order.id]: e })),
+      error: () => undefined,
+    });
+  }
+
+  /** "Releer": pide otra lectura del comprobante y refresca la insignia. */
+  reread(order: AdminOrderModel): void {
+    if (this.rereadingId() !== null) return;
+    this.rereadingId.set(order.id);
+    this.proofAi.recheck(order.id).subscribe((ok) => {
+      this.rereadingId.set(null);
+      if (!ok) return void this.toast.show('La IA no está disponible ahora. Revisa el comprobante a mano.', 'error');
+      this.loadProofChecks(this.orders());
+      this.toast.show('Listo, volví a leer el comprobante.');
+    });
+  }
+
   isImageProof(path: string): boolean {
     return /\.(jpe?g|png|webp|heic)$/i.test(path);
   }
@@ -204,6 +253,23 @@ export class AdminPedidos implements OnInit {
         this.toast.show(error.message, 'error');
       },
     });
+  }
+
+  /** La plantilla sin IA para responderle al cliente (respaldo del borrador de la IA): según el estado, y pidiendo otro comprobante si el último salió ilegible. */
+  orderFallback(order: AdminOrderModel): string {
+    return orderReplyDraft({ name: order.fullName, orderNumber: order.orderNumber, status: order.status, proofUnreadable: this.proofChecks()[order.id]?.verdict === 'ilegible' });
+  }
+
+  /** "Abrir en Google Maps" de un pedido con envío: exacto si hay coordenadas, y si no, busca el texto de la dirección. Es solo un enlace, sin API. */
+  mapsLink(order: AdminOrderModel): string | null {
+    if (order.fulfillmentType !== 'shipping') return null;
+    const text = [order.addressLine1, order.city, order.province].filter(Boolean).join(', ');
+    return googleMapsUrl(order.geo ?? null, text);
+  }
+
+  /** Qué tan fiable es el punto, para que el admin sepa si confiar en él. */
+  geoLabel(order: AdminOrderModel): string {
+    return order.geo ? GEO_CONFIDENCE_LABEL[order.geo.confidence] : 'busca la dirección escrita';
   }
 
   /** Para escribirle al cliente por su pedido, con el número ya puesto. */

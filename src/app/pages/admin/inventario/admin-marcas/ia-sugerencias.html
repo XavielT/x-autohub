@@ -1,0 +1,58 @@
+<div class="iasg">
+  <h3 class="iasg__title">Propuestas de la IA</h3>
+  <p class="iasg__text">La IA solo propone. Cada fila se aplica con un clic tuyo; nada cambia solo.</p>
+
+  <div class="iasg__row">
+    <button type="button" class="iasg__btn" [disabled]="busy() !== null" (click)="loadModels()">
+      {{ busy() === 'models' ? 'Pensando…' : 'Proponer modelos' }}
+    </button>
+    <button type="button" class="iasg__btn" [disabled]="busy() !== null" (click)="loadAliases()">
+      {{ busy() === 'aliases' ? 'Pensando…' : 'Proponer alias de búsqueda' }}
+    </button>
+  </div>
+
+  @if (models(); as list) {
+    @if (list.length > 0) {
+      <h4 class="iasg__sub">Modelos escritos a mano</h4>
+      <ul class="iasg__list">
+        @for (p of list; track modelKey(p)) {
+          <li>
+            <span class="iasg__what">
+              <strong>{{ p.makeName }} «{{ p.modelText }}»</strong> ({{ p.vehicles }} garaje(s)) →
+              @if (p.canonical) { es <strong>{{ p.canonical.name }}</strong> (ya existe) } @else { crear <strong>{{ p.createName }}</strong> }
+              <small>confianza {{ p.confidence * 100 | number: '1.0-0' }} %</small>
+            </span>
+            <span class="iasg__acts">
+              <button type="button" class="iasg__btn iasg__btn--ok" [disabled]="applying() !== null" (click)="applyModel(p)">
+                {{ applying() === modelKey(p) ? 'Aplicando…' : p.canonical ? 'Asignar' : 'Crear' }}
+              </button>
+              <button type="button" class="iasg__btn" (click)="discardModel(p)">Descartar</button>
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  }
+
+  @if (aliases(); as list) {
+    @if (list.length > 0) {
+      <h4 class="iasg__sub">Alias para búsquedas sin resultado</h4>
+      <ul class="iasg__list">
+        @for (p of list; track aliasKey(p)) {
+          <li>
+            <span class="iasg__what">
+              Buscaron «{{ p.query }}» → alias <strong>{{ p.alias }}</strong> para <strong>{{ p.productName }}</strong>
+              <small>confianza {{ p.confidence * 100 | number: '1.0-0' }} %</small>
+            </span>
+            <span class="iasg__acts">
+              <button type="button" class="iasg__btn iasg__btn--ok" [disabled]="applying() !== null" (click)="applyAlias(p)">
+                {{ applying() === aliasKey(p) ? 'Agregando…' : 'Agregar alias' }}
+              </button>
+              <button type="button" class="iasg__btn" (click)="discardAlias(p)">Descartar</button>
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

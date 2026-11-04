@@ -1,60 +1,94 @@
 <div class="cot">
   <nav class="cot__crumb" aria-label="Navegación"><a routerLink="/servicios">← Servicios</a></nav>
 
-  <h1 class="cot__title">Cotizar por <span>WhatsApp</span></h1>
-  <p class="cot__lead">Cuéntanos qué necesitas y te armamos el mensaje. Se abre WhatsApp con todo escrito; tú solo lo envías.</p>
+  @if (sent(); as done) {
+    <h1 class="cot__title">Recibimos tu <span>solicitud</span></h1>
+    <p class="cot__lead">Tu código es <strong class="cot__code" data-test="code">{{ done.code }}</strong>. Guárdalo: con él te atendemos más rápido.</p>
 
-  <form class="cot__form" (ngSubmit)="send()" novalidate>
-    <label class="cot__label">
-      <span>¿Qué servicio?</span>
-      <select class="cot__input" name="service" [ngModel]="serviceSlug()" (ngModelChange)="serviceSlug.set($event)">
-        <option value="">Otro / no sé</option>
-        @for (s of services(); track s.id) { <option [value]="s.slug">{{ s.title }}</option> }
-      </select>
-    </label>
-
-    <label class="cot__label">
-      <span>Tu vehículo</span>
-      <input class="cot__input" type="text" name="vehicle" [ngModel]="vehicle()" (ngModelChange)="vehicle.set($event)"
-             placeholder="Ej: Toyota Corolla 2015" autocomplete="off" />
-    </label>
-    @if (pickedVehicle() && vehicle() !== pickedVehicle()) {
-      <button type="button" class="cot__link" (click)="vehicle.set(pickedVehicle() ?? '')">Usar mi vehículo: {{ pickedVehicle() }}</button>
-    } @else if (!pickedVehicle()) {
-      <button type="button" class="cot__link" (click)="pickVehicle()">Elegir marca, modelo y año</button>
+    @if (showSafetyNote()) {
+      <p class="cot__safety" role="note" data-test="safety">{{ safetyNote }}</p>
     }
 
-    <label class="cot__label">
-      <span>¿Qué le pasa o qué necesitas?<span class="req" aria-hidden="true">*</span></span>
-      <textarea class="cot__input cot__textarea" name="details" rows="4" required [ngModel]="details()"
-                (ngModelChange)="details.set($event)" [class.is-invalid]="submitted() && missingDetails()"
-                placeholder="Ej: hace un ruido al frenar y el pedal se siente blando"></textarea>
-      @if (submitted() && missingDetails()) { <span class="field-error">Cuéntanos qué necesitas.</span> }
-    </label>
-
-    <label class="cot__label">
-      <span>Tu teléfono <small>(opcional)</small></span>
-      <input class="cot__input" type="tel" name="phone" inputmode="tel" [ngModel]="phone()"
-             (ngModelChange)="phone.set($event)" placeholder="809-000-1234" autocomplete="tel"
-             [class.is-invalid]="phoneInvalid()" />
-      @if (phoneInvalid()) { <span class="field-error">Escribe un teléfono válido (809, 829 o 849…).</span> }
-    </label>
-
-    <div class="cot__label">
-      <span>Fotos <small>(opcional, hasta {{ maxPhotos }})</small></span>
-      <input class="cot__file" type="file" accept="image/*" multiple (change)="onPhotos($event)" aria-describedby="cot-photos-note" />
-      <p id="cot-photos-note" class="cot__note">
-        <strong>Las fotos no se suben aquí.</strong> Cuando se abra WhatsApp, adjúntalas al chat.
-        @if (photoCount() > 0) { Ya dijimos que mandas {{ photoCount() }} en el mensaje. }
-      </p>
-    </div>
-
     <section class="cot__preview" aria-labelledby="cot-preview">
-      <h2 id="cot-preview">Así queda tu mensaje</h2>
+      <h2 id="cot-preview">Escríbenos por WhatsApp para seguir la conversación</h2>
       <pre>{{ message() }}</pre>
     </section>
 
-    <button type="submit" class="cot__submit">Abrir WhatsApp con el mensaje</button>
-    <p class="cot__note">No guardamos lo que escribes aquí: esto solo redacta el mensaje.</p>
-  </form>
+    <button type="button" class="cot__submit" (click)="openWhatsApp()">Abrir WhatsApp con el mensaje</button>
+    <p class="cot__note">Ya tenemos tu solicitud{{ done.photos > 0 ? ' y tus fotos' : '' }}. La conversación sigue por WhatsApp.</p>
+  } @else {
+    <h1 class="cot__title">Cotizar <span>tu servicio</span></h1>
+    <p class="cot__lead">Cuéntanos qué necesitas y súbenos fotos si tienes. El taller la revisa y te escribe por WhatsApp.</p>
+
+    <form class="cot__form" (ngSubmit)="send()" novalidate>
+      <label class="cot__label">
+        <span>¿Qué servicio?</span>
+        <select class="cot__input" name="service" [ngModel]="serviceSlug()" (ngModelChange)="serviceSlug.set($event)">
+          <option value="">Otro / no sé</option>
+          @for (s of services(); track s.id) { <option [value]="s.slug">{{ s.title }}</option> }
+        </select>
+      </label>
+
+      <label class="cot__label">
+        <span>Tu nombre<span class="req" aria-hidden="true">*</span></span>
+        <input class="cot__input" type="text" name="name" autocomplete="name" maxlength="80" [ngModel]="name()" (ngModelChange)="name.set($event)"
+               [class.is-invalid]="submitted() && nameInvalid()" />
+        @if (submitted() && nameInvalid()) { <span class="field-error">Escribe tu nombre.</span> }
+      </label>
+
+      <label class="cot__label">
+        <span>Tu vehículo</span>
+        <input class="cot__input" type="text" name="vehicle" [ngModel]="vehicle()" (ngModelChange)="vehicle.set($event)"
+               placeholder="Ej: Toyota Corolla 2015" autocomplete="off" />
+      </label>
+      @if (pickedVehicle() && vehicle() !== pickedVehicle()) {
+        <button type="button" class="cot__link" (click)="vehicle.set(pickedVehicle() ?? '')">Usar mi vehículo: {{ pickedVehicle() }}</button>
+      } @else if (!pickedVehicle()) {
+        <button type="button" class="cot__link" (click)="pickVehicle()">Elegir marca, modelo y año</button>
+      }
+
+      <label class="cot__label">
+        <span>¿Qué le pasa o qué necesitas?<span class="req" aria-hidden="true">*</span></span>
+        <textarea class="cot__input cot__textarea" name="details" rows="4" required maxlength="1000" [ngModel]="details()"
+                  (ngModelChange)="details.set($event)" [class.is-invalid]="submitted() && missingDetails()"
+                  placeholder="Ej: hace un ruido al frenar y el pedal se siente blando"></textarea>
+        @if (submitted() && missingDetails()) { <span class="field-error">Cuéntanos qué necesitas (mínimo 5 letras).</span> }
+      </label>
+
+      @if (showSafetyNote()) {
+        <p class="cot__safety" role="note" data-test="safety">{{ safetyNote }}</p>
+      }
+
+      <label class="cot__label">
+        <span>Tu teléfono<span class="req" aria-hidden="true">*</span></span>
+        <input class="cot__input" type="tel" name="phone" inputmode="tel" [ngModel]="phone()"
+               (ngModelChange)="phone.set($event)" placeholder="809-000-1234" autocomplete="tel"
+               [class.is-invalid]="submitted() && phoneInvalid()" />
+        @if (submitted() && phoneInvalid()) { <span class="field-error">Escribe un teléfono válido (809, 829 o 849…).</span> }
+      </label>
+
+      <div class="cot__label">
+        <span>Fotos <small>(opcional, hasta {{ maxPhotos }})</small></span>
+        <input class="cot__file" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="onPhotos($event)" aria-describedby="cot-photos-note" />
+        @if (photos().length > 0) {
+          <ul class="cot__files">
+            @for (f of photos(); track $index; let i = $index) {
+              <li>{{ f.name }} <button type="button" class="cot__link" (click)="removePhoto(i)" [attr.aria-label]="'Quitar ' + f.name">Quitar</button></li>
+            }
+          </ul>
+        }
+        <p id="cot-photos-note" class="cot__note">Las fotos se suben de verdad y solo las ve el equipo del taller.</p>
+      </div>
+
+      <!-- Honeypot: una persona no lo ve ni lo llena; un bot sí. -->
+      <label class="cot__trap" aria-hidden="true">Sitio web
+        <input type="text" name="website" tabindex="-1" autocomplete="off" [ngModel]="website()" (ngModelChange)="website.set($event)" />
+      </label>
+
+      <button type="submit" class="cot__submit" [disabled]="isSending()" [attr.aria-busy]="isSending()">
+        {{ isSending() ? 'Enviando…' : 'Enviar la solicitud' }}
+      </button>
+      <p class="cot__note">Guardamos tu nombre, teléfono y lo que escribes para atender tu solicitud. Nada más.</p>
+    </form>
+  }
 </div>

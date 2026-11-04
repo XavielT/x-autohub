@@ -165,6 +165,20 @@ describe('acceptsProof', () => {
 });
 
 describe('WhatsApp del pedido', () => {
+  it('con los artículos y la entrega, sin IA (una plantilla basta)', () => {
+    const msg = orderWhatsAppMessage(1042, 12050, 'xautohubrd.com', { items: [{ name: 'Pastillas Brembo', quantity: 2 }, { name: 'Filtro de aceite', quantity: 1 }], fulfillment: 'pickup' });
+
+    expect(msg).toContain('• 2 × Pastillas Brembo');
+    expect(msg).toContain('• 1 × Filtro de aceite');
+    expect(msg).toContain('Entrega: retiro en el taller.');
+  });
+
+  it('con más de 5 artículos dice cuántos faltan', () => {
+    const items = Array.from({ length: 7 }, (_, i) => ({ name: `Pieza ${i + 1}`, quantity: 1 }));
+
+    expect(orderWhatsAppMessage(1, 100, undefined, { items })).toContain('…y 2 más');
+  });
+
   it('lleva el número de pedido y el monto', () => {
     const msg = orderWhatsAppMessage(1042, 12050);
 

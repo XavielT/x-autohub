@@ -135,11 +135,24 @@ export function acceptsProof(order: { status: OrderStatus; paymentMethodId: stri
  * existe en la base antes de abrirlo: así nunca se pierde aunque el cliente no
  * mande el mensaje.
  */
-export function orderWhatsAppMessage(orderNumber: number, total: number, origin = 'xautohubrd.com'): string {
+export function orderWhatsAppMessage(
+  orderNumber: number,
+  total: number,
+  origin = 'xautohubrd.com',
+  details: { items?: readonly { name: string; quantity: number }[]; fulfillment?: 'pickup' | 'shipping' } = {},
+): string {
   const amount = new Intl.NumberFormat('es-DO', { maximumFractionDigits: 0 }).format(total);
-  return `Hola, acabo de hacer el pedido #${orderNumber} por RD$ ${amount} en ${origin}. Quiero coordinar el pago y la entrega.`;
+  const lines = [`Hola, acabo de hacer el pedido #${orderNumber} por RD$ ${amount} en ${origin}. Quiero coordinar el pago y la entrega.`];
+  // Sin IA: una plantilla alcanza y no cuesta. Lleva los artículos (hasta 5) y cómo lo recibe.
+  const items = (details.items ?? []).slice(0, 5);
+  if (items.length > 0) {
+    lines.push('Artículos:', ...items.map((i) => `• ${i.quantity} × ${i.name}`));
+    if ((details.items?.length ?? 0) > items.length) lines.push(`• …y ${(details.items?.length ?? 0) - items.length} más`);
+  }
+  if (details.fulfillment) lines.push(`Entrega: ${details.fulfillment === 'pickup' ? 'retiro en el taller' : 'envío'}.`);
+  return lines.join('\n');
 }
 
-export function orderWhatsAppLink(orderNumber: number, total: number): string {
-  return storeWhatsAppLink(orderWhatsAppMessage(orderNumber, total));
+export function orderWhatsAppLink(orderNumber: number, total: number, details?: Parameters<typeof orderWhatsAppMessage>[3]): string {
+  return storeWhatsAppLink(orderWhatsAppMessage(orderNumber, total, undefined, details));
 }

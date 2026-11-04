@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
 
 /** El select de un comentario: el nombre y la foto salen del perfil (una sola clave foránea a `profiles`). */
-const COMMENT_SELECT = 'id, post_id, author_id, text, created_at, profiles(display_name, avatar_url)';
+const COMMENT_SELECT = 'id, post_id, author_id, text, created_at, hidden_by_ai, profiles(display_name, avatar_url)';
 
 /**
  * Me gusta y comentarios del feed de la comunidad (migración 0045).

@@ -81,6 +81,10 @@ export interface PickupAddress {
   address: string;
   hours: string;
   isExample: boolean;
+  /** Dónde queda el taller en el mapa (migración 0059). Opcionales: sin ellos "Cómo llegar" busca el texto de la dirección. */
+  lat?: number;
+  lng?: number;
+  placeId?: string;
 }
 
 /** Lo máximo que pesa un comprobante, igual que el límite del bucket. */

@@ -507,6 +507,47 @@
 
     &__select { appearance: auto; }
 
+    // El autocompletar de direcciones (Google Places, a través de una Edge Function). La lista flota bajo el campo.
+    &__address {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        @media (min-width: 560px) {
+            grid-column: 1 / -1;
+        }
+
+        .checkout__hint { margin: 0; }
+    }
+
+    &__suggest {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        margin: 4px 0 0;
+        padding: 4px;
+        list-style: none;
+        background-color: var(--main-light);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+        li {
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            color: #ffffff;
+            cursor: pointer;
+
+            &:hover { background-color: rgba(255, 255, 255, 0.08); }
+        }
+    }
+
+    &__hint--warn { color: #ffb86b; }
+
     &__pickup-address { margin: 0 0 6px; font-family: var(--font-body); font-size: 15px; color: #ffffff; line-height: 1.5; }
     &__pickup-hours { margin: 0 0 4px; font-family: var(--font-body); font-size: 13px; color: var(--main-ultra-light); }
 

@@ -1,0 +1,17 @@
+<div class="wad">
+  <button type="button" class="wad__btn wad__btn--wa" [attr.aria-expanded]="isOpen()" (click)="toggle()">{{ label() }}</button>
+
+  @if (isOpen()) {
+    <div class="wad__panel">
+      <label class="wad__label">
+        <span>Mensaje <small>{{ isThinking() ? '(la IA lo está redactando…)' : fromAi() ? '(borrador de la IA: revísalo antes de enviar)' : '(plantilla: edítala si quieres)' }}</small></span>
+        <textarea class="wad__text" rows="5" [value]="text()" (input)="edit($event)"></textarea>
+      </label>
+      <div class="wad__actions">
+        <a class="wad__btn wad__btn--wa" [href]="href()" target="_blank" rel="noopener noreferrer" (click)="opened.emit()">Abrir WhatsApp</a>
+        <button type="button" class="wad__btn" [disabled]="isThinking()" (click)="another()">Otra versión</button>
+      </div>
+      <p class="wad__note">No se manda nada solo: se abre WhatsApp con este texto y tú tocas "enviar".</p>
+    </div>
+  }
+</div>
