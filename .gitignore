@@ -56,3 +56,7 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Temporales del CLI de Supabase y configuración local de Claude Code (no son del proyecto)
+supabase/.temp/
+.claude/settings.local.json
