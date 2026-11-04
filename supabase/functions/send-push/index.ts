@@ -105,6 +105,8 @@ interface Notice {
   userId: string | null;
   /** Si es true, el aviso va a todos los admins y `userId` no se usa. */
   admins?: boolean;
+  /** Con `admins`: tambien los moderadores (`role = moderador`). */
+  moderators?: boolean;
   title: string;
   body: string;
   /** Ruta dentro del sitio a la que lleva tocar el aviso. */
@@ -196,6 +198,136 @@ async function orderNotice(supabaseUrl: string, serviceKey: string, id: string):
     title: `Pedido #${order.order_number}`,
     body,
     path: `/pedido/${id}`,
+  };
+}
+
+/**
+ * "Comprobante listo para confirmar" (migracion 0052): avisa a los admins que el ultimo comprobante de un pedido coincide con lo
+ * esperado. Vuelve a comprobar en la base que el pedido siga esperando el pago y que el ultimo veredicto sea "coincide": el secreto
+ * no sirve para avisar de otra cosa. Solo avisa; confirmar el pago sigue siendo de una persona.
+ */
+async function proofNotice(supabaseUrl: string, serviceKey: string, id: string): Promise<Notice | 'not-found' | 'no-message'> {
+  const orders = await rest<{ order_number: number; status: string }[]>(supabaseUrl, serviceKey, `orders?select=order_number,status&id=eq.${id}&limit=1`);
+  const order = orders?.[0];
+  if (!order) return 'not-found';
+  if (order.status !== 'awaiting_payment') return 'no-message';
+  const checks = await rest<{ verdict: string }[]>(supabaseUrl, serviceKey, `order_proof_checks?select=verdict&order_id=eq.${id}&order=created_at.desc&limit=1`);
+  if (checks?.[0]?.verdict !== 'coincide') return 'no-message';
+  return {
+    userId: null,
+    admins: true,
+    title: `Pedido #${order.order_number}: comprobante listo para confirmar`,
+    body: 'El comprobante coincide con el monto y la cuenta. Revísalo y confirma el pago.',
+    path: '/admin/pedidos',
+    tag: `proof-${id}`,
+  };
+}
+
+/**
+ * "La IA ocultó un contenido" (migración 0053): avisa a moderadores y admins. Vuelve a comprobar en la base que la sugerencia siga
+ * siendo una ocultación sin restaurar: el secreto no sirve para avisar de otra cosa.
+ */
+async function moderationNotice(supabaseUrl: string, serviceKey: string, id: number): Promise<Notice | 'not-found' | 'no-message'> {
+  const rows = await rest<{ target_type: string; auto_action: string; restored_at: string | null }[]>(
+    supabaseUrl,
+    serviceKey,
+    `ai_moderation?select=target_type,auto_action,restored_at&id=eq.${id}&limit=1`,
+  );
+  const row = rows?.[0];
+  if (!row) return 'not-found';
+  if (row.auto_action !== 'oculto' || row.restored_at) return 'no-message';
+  const what = row.target_type === 'social_comment' ? 'un comentario' : row.target_type === 'review' ? 'una reseña' : 'una publicación';
+  return {
+    userId: null,
+    admins: true,
+    moderators: true,
+    title: 'La IA ocultó contenido',
+    body: `Se ocultó ${what} por riesgo alto. Revísalo y restáuralo si fue un error.`,
+    path: '/admin/moderacion',
+    tag: `moderation-${id}`,
+  };
+}
+
+/**
+ * "Nueva solicitud de cotización" (migración 0055): avisa a los admins. Vuelve a comprobar en la base que la solicitud exista y siga `nueva`: el
+ * secreto no sirve para avisar de otra cosa. El aviso no lleva el nombre ni el teléfono del cliente.
+ */
+async function quoteNotice(supabaseUrl: string, serviceKey: string, id: string): Promise<Notice | 'not-found' | 'no-message'> {
+  const rows = await rest<{ code: string; status: string }[]>(supabaseUrl, serviceKey, `service_quote_requests?select=code,status&id=eq.${id}&limit=1`);
+  const row = rows?.[0];
+  if (!row) return 'not-found';
+  if (row.status !== 'nueva') return 'no-message';
+  return {
+    userId: null,
+    admins: true,
+    title: `Nueva solicitud de cotización ${row.code}`,
+    body: 'Entró una solicitud al taller. Ábrela para ver el caso y responder.',
+    path: '/admin/taller/solicitudes',
+    tag: `quote-${id}`,
+  };
+}
+
+/**
+ * "Hoy en el negocio" (migración 0056): avisa a los admins que el resumen de la mañana está listo. Lee el último de `ai_digests` y solo avisa si es de hace
+ * menos de 15 minutos (el secreto no sirve para repetir el aviso de uno viejo). El cuerpo del aviso es la primera línea del resumen.
+ */
+async function digestNotice(supabaseUrl: string, serviceKey: string): Promise<Notice | 'no-message'> {
+  const rows = await rest<{ body_md: string; created_at: string }[]>(supabaseUrl, serviceKey, 'ai_digests?select=body_md,created_at&order=created_at.desc&limit=1');
+  const digest = rows?.[0];
+  if (!digest || Date.now() - new Date(digest.created_at).getTime() > 15 * 60 * 1000) return 'no-message';
+  const first = digest.body_md.split('\n').find((line) => line.trim() !== '') ?? '';
+  return {
+    userId: null,
+    admins: true,
+    title: 'Hoy en el negocio',
+    body: first.replace(/^[-•\s]+/, '').replace(/\*\*/g, '').slice(0, 140) || 'Ya está listo el resumen de la mañana.',
+    path: '/admin',
+    tag: 'daily-digest',
+  };
+}
+
+/** El nombre de un vehiculo del garaje ("Toyota Corolla 2015"), o "tu vehículo" si no se pudo armar. */
+async function vehicleName(supabaseUrl: string, serviceKey: string, v: { make_id: number; model_id: number | null; model_text: string | null; year: number }): Promise<string> {
+  const make = (await rest<{ name: string }[]>(supabaseUrl, serviceKey, `vehicle_makes?select=name&id=eq.${v.make_id}&limit=1`))?.[0]?.name;
+  const model = v.model_id ? (await rest<{ name: string }[]>(supabaseUrl, serviceKey, `vehicle_models?select=name&id=eq.${v.model_id}&limit=1`))?.[0]?.name : v.model_text;
+  return [make, model, v.year].filter(Boolean).join(' ') || 'tu vehículo';
+}
+
+/**
+ * "Toca mantenimiento" (migracion 0058): el recordatorio de un vehiculo con los recordatorios prendidos. Vuelve a comprobar en la base que el dueño los haya prendido y
+ * que haya algun renglon "pronto" o "vencido": el secreto no sirve para escribirle a nadie por otra cosa.
+ */
+async function maintenanceReminderNotice(supabaseUrl: string, serviceKey: string, vehicleId: number): Promise<Notice | 'not-found' | 'no-message'> {
+  const vehicle = (await rest<{ user_id: string; make_id: number; model_id: number | null; model_text: string | null; year: number; maintenance_reminders: boolean }[]>(
+    supabaseUrl, serviceKey, `profile_vehicles?select=user_id,make_id,model_id,model_text,year,maintenance_reminders&id=eq.${vehicleId}&limit=1`))?.[0];
+  if (!vehicle) return 'not-found';
+  if (!vehicle.maintenance_reminders) return 'no-message';
+  const due = await rest<{ label: string }[]>(supabaseUrl, serviceKey, `vehicle_maintenance_items?select=label&profile_vehicle_id=eq.${vehicleId}&status=in.(pronto,vencido)&order=due_on.asc.nullslast&limit=3`);
+  if (!due || due.length === 0) return 'no-message';
+  return {
+    userId: vehicle.user_id,
+    title: 'Toca mantenimiento',
+    body: `${await vehicleName(supabaseUrl, serviceKey, vehicle)}: ${due.map((d) => d.label).join(', ')}.`,
+    path: '/perfil',
+    tag: `maintenance-${vehicleId}`,
+  };
+}
+
+/** "Registramos un servicio en tu guia" (migracion 0058): el taller marco una cita como hecha y coincidio con un renglon. Solo si fue hace menos de 30 minutos y de origen 'taller'. */
+async function maintenanceLoggedNotice(supabaseUrl: string, serviceKey: string, itemId: number): Promise<Notice | 'not-found' | 'no-message'> {
+  const item = (await rest<{ label: string; source: string; updated_at: string; profile_vehicle_id: number }[]>(
+    supabaseUrl, serviceKey, `vehicle_maintenance_items?select=label,source,updated_at,profile_vehicle_id&id=eq.${itemId}&limit=1`))?.[0];
+  if (!item) return 'not-found';
+  if (item.source !== 'taller' || Date.now() - new Date(item.updated_at).getTime() > 30 * 60 * 1000) return 'no-message';
+  const vehicle = (await rest<{ user_id: string; make_id: number; model_id: number | null; model_text: string | null; year: number }[]>(
+    supabaseUrl, serviceKey, `profile_vehicles?select=user_id,make_id,model_id,model_text,year&id=eq.${item.profile_vehicle_id}&limit=1`))?.[0];
+  if (!vehicle) return 'not-found';
+  return {
+    userId: vehicle.user_id,
+    title: 'Actualizamos tu guía de mantenimiento',
+    body: `Registramos «${item.label}» en la guía de ${await vehicleName(supabaseUrl, serviceKey, vehicle)}. Si no es correcto, puedes cambiarlo en tu perfil.`,
+    path: '/perfil',
+    tag: `maintenance-logged-${itemId}`,
   };
 }
 
@@ -375,12 +507,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const isListing = input.kind === 'listing';
   const isDeploy = input.kind === 'deploy';
   const isReminder = input.kind === 'appointment_reminder';
-  const idIsValid = isDeploy
+  const isProof = input.kind === 'proof_ready';
+  const isModeration = input.kind === 'moderation';
+  const isQuote = input.kind === 'quote_new';
+  const isDigest = input.kind === 'digest';
+  const isMaintenance = input.kind === 'maintenance_reminder' || input.kind === 'maintenance_logged';
+  const idIsValid = isDeploy || isDigest
     ? true
-    : isListing
+    : isListing || isModeration || isMaintenance
       ? typeof input.id === 'number' && Number.isSafeInteger(input.id) && input.id > 0
       : typeof input.id === 'string' && UUID.test(input.id);
-  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isReminder && !isListing && !isDeploy) || !idIsValid) {
+  if ((input.kind !== 'order' && input.kind !== 'appointment' && !isReminder && !isProof && !isModeration && !isQuote && !isDigest && !isMaintenance && !isListing && !isDeploy) || !idIsValid) {
     return refuse(400, 'bad-request');
   }
 
@@ -389,7 +526,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ? await deployNotice(supabaseUrl, serviceKey)
       : isListing
         ? await listingNotice(supabaseUrl, serviceKey, input.id as number)
-        : input.kind === 'order'
+        : isModeration
+          ? await moderationNotice(supabaseUrl, serviceKey, input.id as number)
+        : isMaintenance
+          ? input.kind === 'maintenance_logged'
+            ? await maintenanceLoggedNotice(supabaseUrl, serviceKey, input.id as number)
+            : await maintenanceReminderNotice(supabaseUrl, serviceKey, input.id as number)
+        : isDigest
+          ? await digestNotice(supabaseUrl, serviceKey)
+        : isQuote
+          ? await quoteNotice(supabaseUrl, serviceKey, input.id as string)
+        : isProof
+          ? await proofNotice(supabaseUrl, serviceKey, input.id as string)
+          : input.kind === 'order'
           ? await orderNotice(supabaseUrl, serviceKey, input.id as string)
           : await appointmentNotice(supabaseUrl, serviceKey, input.id as string, isReminder);
     if (notice === 'not-found') return refuse(404, 'not-found');
@@ -404,7 +553,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } else {
       let owners = notice.userId ? `eq.${notice.userId}` : '';
       if (notice.admins) {
-        const admins = await rest<{ id: string }[]>(supabaseUrl, serviceKey, 'profiles?select=id&role=eq.admin');
+        const roles = notice.moderators ? 'in.(admin,moderador)' : 'eq.admin';
+        const admins = await rest<{ id: string }[]>(supabaseUrl, serviceKey, `profiles?select=id&role=${roles}`);
         if (!admins || admins.length === 0) return refuse(200, 'no-devices');
         owners = `in.(${admins.map((a) => a.id).join(',')})`;
       }

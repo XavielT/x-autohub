@@ -2638,6 +2638,753 @@ apply supabase/migrations/0039_favorites_part_index.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "el indice de favorites.part_id existe" "1"   "select count(*) from pg_indexes where indexname = 'favorites_part_idx';"
 
+echo "→ IA: base comun (migracion 0050)"
+check "anon no lee ai_usage" 'ERROR:  permission denied for table ai_usage' "$(as_anon 'select count(*) from ai_usage;')"
+check "anon no lee ai_rate_limits" 'ERROR:  permission denied for table ai_rate_limits' "$(as_anon 'select count(*) from ai_rate_limits;')"
+check "anon no lee ai_query_cache" 'ERROR:  permission denied for table ai_query_cache' "$(as_anon 'select count(*) from ai_query_cache;')"
+check "un usuario normal no lee ai_query_cache" 'ERROR:  permission denied for table ai_query_cache' "$(as_user "$USER_A" 'select count(*) from ai_query_cache;')"
+check "un usuario normal no lee ai_rate_limits" 'ERROR:  permission denied for table ai_rate_limits' "$(as_user "$USER_A" 'select count(*) from ai_rate_limits;')"
+scalar "insert into ai_usage (feature, model, cost_usd) values ('search', 'haiku', 0.5);" >/dev/null
+check "un usuario normal ve 0 filas de ai_usage (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from ai_usage;')"
+check "un admin si lee ai_usage" "1" "$(as_user "$ADMIN" 'select count(*) from ai_usage;')"
+check "nadie escribe ai_usage por su cuenta (usuario)" 'ERROR:  permission denied for table ai_usage' \
+  "$(as_user "$USER_A" "insert into ai_usage (feature, model) values ('search', 'x');")"
+check "ni un admin escribe ai_usage desde el navegador" 'ERROR:  permission denied for table ai_usage' \
+  "$(as_user "$ADMIN" "insert into ai_usage (feature, model) values ('search', 'x');")"
+check "ni anon" 'ERROR:  permission denied for table ai_usage' "$(as_anon "insert into ai_usage (feature, model) values ('search', 'x');")"
+check "anon no invoca ai_budget_status" "$(denied ai_budget_status)" "$(as_anon 'select ai_budget_status();')"
+check "un admin tampoco: es de la edge (service_role)" "$(denied ai_budget_status)" "$(as_user "$ADMIN" 'select ai_budget_status();')"
+check "anon no invoca ai_rate_check" "$(denied ai_rate_check)" "$(as_anon "select ai_rate_check('k', 60, 5);")"
+check "un usuario no invoca ai_rate_check" "$(denied ai_rate_check)" "$(as_user "$USER_A" "select ai_rate_check('k', 60, 5);")"
+check "anon no invoca ai_admin_overview" "$(denied ai_admin_overview)" "$(as_anon 'select ai_admin_overview();')"
+check "un usuario normal recibe el rechazo de ai_admin_overview" "ERROR:  Solo un administrador puede ver el uso de la IA." "$(as_user "$USER_A" 'select ai_admin_overview();')"
+check "un admin recibe el resumen con el presupuesto" "true" "$(as_user "$ADMIN" "select (ai_admin_overview()->'budget'->>'cap_usd' = '25')::text;")"
+
+check "los ajustes de IA nacen: interruptor general, 11 funciones, auto-ocultar y dos topes" "15" \
+  "select count(*) from site_settings where key like 'ai\\_%' or key = 'maps_monthly_cap_usd';"
+check "anon lee los ajustes (interruptores, no secretos)" "true" "$(as_anon "select (value = 'true'::jsonb)::text from site_settings where key = 'ai_enabled';")"
+check "un typo en un interruptor se rechaza (debe ser booleano)" 'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_ai_valid"' \
+  "update site_settings set value = '\"si\"' where key = 'ai_feature_search';"
+check "un tope negativo se rechaza" 'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_ai_caps_valid"' \
+  "update site_settings set value = '-1' where key = 'ai_monthly_cap_usd';"
+check "un admin cambia el tope con set_site_setting" "40" \
+  "$(as_user "$ADMIN" "select value::text from set_site_setting('ai_monthly_cap_usd', '40');")"
+check "un usuario normal no" "ERROR:  Solo un administrador puede cambiar los ajustes del sitio." \
+  "$(as_user "$USER_A" "select set_site_setting('ai_monthly_cap_usd', '1');")"
+scalar "update site_settings set value = '25' where key = 'ai_monthly_cap_usd';" >/dev/null
+
+# El tope: gasto del mes contra el tope, con los cuatro tiers.
+scalar "delete from ai_usage;" >/dev/null
+check "sin gasto: ok y lo publico cabe" "ok|true" "set role service_role; select tier || '|' || public_ok::text from ai_budget_status('ai');"
+check "a 80 %: aviso" "aviso" "insert into ai_usage (feature, model, cost_usd) values ('catalog_ingest', 'sonnet', 20); set role service_role; select tier from ai_budget_status('ai');"
+check "a 90 %: sin_publico" "sin_publico" "insert into ai_usage (feature, model, cost_usd) values ('catalog_ingest', 'sonnet', 2.5); set role service_role; select tier from ai_budget_status('ai');"
+check "a 100 %: apagado" "apagado" "insert into ai_usage (feature, model, cost_usd) values ('catalog_ingest', 'sonnet', 2.5); set role service_role; select tier from ai_budget_status('ai');"
+scalar "delete from ai_usage;" >/dev/null
+check "lo publico (search) no pasa del 30 % aunque el total sea bajo" "ok|false" \
+  "insert into ai_usage (feature, model, cost_usd) values ('search', 'haiku', 8); set role service_role; select tier || '|' || public_ok::text from ai_budget_status('ai');"
+scalar "delete from ai_usage;" >/dev/null
+check "Maps cuenta aparte: un gasto maps_* no mueve el tope de IA" "ok|0" \
+  "insert into ai_usage (feature, model, cost_usd) values ('maps_geocode', 'google', 9); set role service_role; select tier || '|' || spent_usd::int from ai_budget_status('ai');"
+check "y mueve el suyo (9 de 10 = 90 %: sin_publico)" "sin_publico" "set role service_role; select tier from ai_budget_status('maps');"
+check "un gasto del mes pasado no cuenta" "0" \
+  "delete from ai_usage; insert into ai_usage (feature, model, cost_usd, created_at) values ('seo', 'haiku', 99, now() - interval '40 days'); set role service_role; select spent_usd::int from ai_budget_status('ai');"
+scalar "delete from ai_usage;" >/dev/null
+
+# El limite por ventana.
+check "ai_rate_check deja pasar hasta el maximo" "true|true|true" \
+  "set role service_role; select ai_rate_check('t1', 60, 3)::text || '|' || ai_rate_check('t1', 60, 3)::text || '|' || ai_rate_check('t1', 60, 3)::text;"
+check "y corta la cuarta" "false" "set role service_role; select ai_rate_check('t1', 60, 3)::text;"
+check "otra clave tiene su propia cuenta" "true" "set role service_role; select ai_rate_check('t2', 60, 3)::text;"
+check "una ventana nueva reinicia la cuenta" "true" \
+  "update ai_rate_limits set window_start = window_start - interval '2 minutes' where key = 't1'; set role service_role; select ai_rate_check('t1', 60, 3)::text;"
+check "un limite mal configurado es un error, no un pase libre" "ERROR:  Límite mal configurado." "set role service_role; select ai_rate_check('t3', 0, 3);"
+scalar "delete from ai_rate_limits;" >/dev/null
+
+check "la limpieza borra lo vencido y deja lo vigente" "1|1" \
+  "insert into ai_query_cache (key, value, expires_at) values ('viejo', '1', now() - interval '1 day'), ('vigente', '1', now() + interval '1 day'); insert into ai_rate_limits (key, window_start, count) values ('viejo', now() - interval '3 days', 1), ('nuevo', now(), 1); select ai_housekeeping(); select (select count(*) from ai_query_cache) || '|' || (select count(*) from ai_rate_limits);"
+check "el cron de limpieza esta programado, una sola vez" "1" "select count(*) from cron.job where jobname = 'ai-housekeeping' and command like '%ai_housekeeping%';"
+scalar "delete from ai_query_cache; delete from ai_rate_limits;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0050"
+apply supabase/migrations/0050_ai_core.sql upgrade
+apply supabase/migrations/0050_ai_core.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "los ajustes de IA siguen siendo 15 tras aplicarla otra vez" "15" \
+  "select count(*) from site_settings where key like 'ai\\_%' or key = 'maps_monthly_cap_usd';"
+
+echo "→ IA: numero de parte y borradores de producto (migracion 0051)"
+check "el numero se normaliza (sin guiones, espacios ni minusculas) y las equivalencias se limpian" "0446502220|{C110,TOY044650222}" \
+  "insert into hub_parts (name, brand, img_url, price, part_number, cross_refs) values ('QQ Pastillas Corolla', 'Toyota', 'x.jpg', 1500, ' 04465-02220 ', array['c-110','C110 ','toy 04465 0222 ','  ']); select part_number_norm || '|' || (select array_agg(x order by x) from unnest(cross_refs_norm) x)::text from hub_parts where name = 'QQ Pastillas Corolla';"
+check "el numero principal queda recortado, no cambiado" "04465-02220" "select part_number from hub_parts where name = 'QQ Pastillas Corolla';"
+check "un numero de un solo caracter se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_part_number_check"' \
+  "insert into hub_parts (name, brand, img_url, price, part_number) values ('QQ Mal numero', 'M', 'x.jpg', 100, 'A');"
+check "un numero en blanco queda nulo" "" \
+  "insert into hub_parts (name, brand, img_url, price, part_number) values ('QQ Sin numero', 'M', 'x.jpg', 100, '   '); select coalesce(part_number, '') from hub_parts where name = 'QQ Sin numero';"
+check "mas de 30 equivalencias se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_cross_refs_check"' \
+  "insert into hub_parts (name, brand, img_url, price, cross_refs) values ('QQ Muchas', 'M', 'x.jpg', 100, (select array_agg('R' || g) from generate_series(1, 31) g));"
+check "cambiar el numero re-normaliza" "ABC123" "update hub_parts set part_number = 'abc-123' where name = 'QQ Pastillas Corolla'; select part_number_norm from hub_parts where name = 'QQ Pastillas Corolla';"
+scalar "update hub_parts set part_number = '04465-02220' where name = 'QQ Pastillas Corolla';" >/dev/null
+
+check "buscar el numero exacto con guion lo encuentra de primero" "QQ Pastillas Corolla" "$(as_anon "select name from search_products(p_query => '04465-02220', p_limit => 1);")"
+check "con espacios en vez de guion tambien" "QQ Pastillas Corolla" "$(as_anon "select name from search_products(p_query => '04465 02220', p_limit => 1);")"
+check "sin separadores tambien" "QQ Pastillas Corolla" "$(as_anon "select name from search_products(p_query => '0446502220', p_limit => 1);")"
+check "una equivalencia tambien encuentra la pieza" "QQ Pastillas Corolla" "$(as_anon "select name from search_products(p_query => 'c-110', p_limit => 1);")"
+check "el numero exacto le gana a un texto que tambien coincide" "QQ Pastillas Corolla" \
+  "insert into hub_parts (name, brand, img_url, price, short_description) values ('QQ Otro con 0446502220 en el texto', 'M', 'x.jpg', 100, '0446502220'); $(as_anon "select name from search_products(p_query => '0446502220', p_limit => 1);")"
+check "suggest_products sugiere por numero de parte" "QQ Pastillas Corolla" "$(as_anon "select name from suggest_products('04465-02220', 1);")"
+check "la busqueda de texto de antes sigue igual: sin consulta, devuelve todo lo visible" "true" \
+  "$(as_anon 'select ((select total_count from search_products(p_limit => 1)) = (select count(*) from hub_parts))::text;')"
+check "search_products sigue siendo security invoker" "false" "select prosecdef::text from pg_proc where proname = 'search_products';"
+scalar "delete from hub_parts where name like 'QQ Otro con%';" >/dev/null
+
+check "ai_find_duplicate_product: mismo numero y marca" "$(scalar "select id from hub_parts where name = 'QQ Pastillas Corolla';" | tail -1)" \
+  "set role service_role; select ai_find_duplicate_product('Otro nombre', 'toyota', 'C 110');"
+check "otra marca con el mismo numero no es duplicado" "" \
+  "set role service_role; select coalesce(ai_find_duplicate_product('Otro nombre', 'Brembo', '04465-02220')::text, '');"
+check "por nombre parecido y misma marca" "$(scalar "select id from hub_parts where name = 'QQ Pastillas Corolla';" | tail -1)" \
+  "set role service_role; select ai_find_duplicate_product('QQ Pastillas Corolla', 'Toyota', null);"
+check "un nombre distinto no es duplicado" "" \
+  "set role service_role; select coalesce(ai_find_duplicate_product('Faro trasero LED universal', 'Toyota', null)::text, '');"
+check "anon no invoca ai_find_duplicate_product" "$(denied ai_find_duplicate_product)" "$(as_anon "select ai_find_duplicate_product('x', 'y', 'z');")"
+check "un admin tampoco (es de la edge)" "$(denied ai_find_duplicate_product)" "$(as_user "$ADMIN" "select ai_find_duplicate_product('x', 'y', 'z');")"
+
+AI_PATH='aaaa/lote/frente.jpg'
+check "anon no lee los borradores" 'ERROR:  permission denied for table ai_product_drafts' "$(as_anon 'select count(*) from ai_product_drafts;')"
+check "un admin crea un borrador en cola, a su nombre" "queued" \
+  "$(as_user "$ADMIN" "insert into ai_product_drafts (created_by, source_paths) values ('$ADMIN', array['$ADMIN/lote/frente.jpg']) returning status;")"
+check "un usuario normal no ve borradores (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from ai_product_drafts;')"
+check "un usuario normal no crea borradores" 'ERROR:  new row violates row-level security policy for table "ai_product_drafts"' \
+  "$(as_user "$USER_A" "insert into ai_product_drafts (created_by, source_paths) values ('$USER_A', array['x/y.jpg']);")"
+check "un admin no crea un borrador a nombre de otro" 'ERROR:  new row violates row-level security policy for table "ai_product_drafts"' \
+  "$(as_user "$ADMIN" "insert into ai_product_drafts (created_by, source_paths) values ('$USER_A', array['x/y.jpg']);")"
+check "ni uno que nazca ya aprobado" 'ERROR:  new row violates row-level security policy for table "ai_product_drafts"' \
+  "$(as_user "$ADMIN" "insert into ai_product_drafts (created_by, source_paths, status) values ('$ADMIN', array['x/y.jpg'], 'approved');")"
+check "un borrador sin fotos se rechaza" 'ERROR:  new row for relation "ai_product_drafts" violates check constraint "ai_product_drafts_source_paths_check"' \
+  "$(as_user "$ADMIN" "insert into ai_product_drafts (created_by, source_paths) values ('$ADMIN', '{}');")"
+check "con mas de 8 fotos tampoco" 'ERROR:  new row for relation "ai_product_drafts" violates check constraint "ai_product_drafts_source_paths_check"' \
+  "$(as_user "$ADMIN" "insert into ai_product_drafts (created_by, source_paths) values ('$ADMIN', array['1','2','3','4','5','6','7','8','9']);")"
+check "un usuario normal no actualiza (RLS: 0 filas)" "0" \
+  "$(as_user "$USER_A" "with u as (update ai_product_drafts set status = 'rejected' returning 1) select count(*) from u;")"
+
+AI_DRAFT="$(scalar "select id from ai_product_drafts limit 1;" | tail -1)"
+AI_PART="$(scalar "select id from hub_parts where name = 'QQ Pastillas Corolla';" | tail -1)"
+check "aprobar sin producto se rechaza" "ERROR:  Un borrador aprobado tiene que apuntar al producto que se creó." \
+  "$(as_user "$ADMIN" "update ai_product_drafts set status = 'approved' where id = '$AI_DRAFT';")"
+check "con un posible duplicado no se aprueba hasta confirmar" "ERROR:  Este borrador parece un duplicado: confirma que es otro artículo antes de aprobarlo." \
+  "update ai_product_drafts set duplicate_of = $AI_PART where id = '$AI_DRAFT'; $(as_user "$ADMIN" "update ai_product_drafts set status = 'approved', product_id = $AI_PART where id = '$AI_DRAFT';")"
+check "confirmando que es otro articulo, se aprueba y queda la fecha de revision" "approved|true" \
+  "$(as_user "$ADMIN" "update ai_product_drafts set status = 'approved', product_id = $AI_PART, duplicate_confirmed = true, edited_fields = array['name'], fields = '{\"name\": {\"value\": \"A\", \"confidence\": \"alta\"}, \"brand\": {\"value\": \"B\", \"confidence\": \"alta\"}}', final_fields = '{}' where id = '$AI_DRAFT' returning status || '|' || (reviewed_at is not null)::text;")"
+check "borrar un producto no borra el borrador (queda sin enlace)" "1|" \
+  "delete from hub_parts where name = 'QQ Pastillas Corolla'; select count(*) || '|' || coalesce((select product_id::text from ai_product_drafts where id = '$AI_DRAFT'), '') from ai_product_drafts where id = '$AI_DRAFT';"
+
+check "la precision por campo: el nombre se corrigio (0 %), la marca no (100 %)" "brand|1|1|100.0;name|1|0|0.0" \
+  "$(as_user "$ADMIN" "select string_agg(field || '|' || total || '|' || unchanged || '|' || pct, ';' order by field) from ai_catalog_accuracy();")"
+check "un usuario normal no ve la precision" "ERROR:  Solo un administrador puede ver la precisión del catálogo asistido." "$(as_user "$USER_A" 'select * from ai_catalog_accuracy();')"
+check "anon no invoca la precision" "$(denied ai_catalog_accuracy)" "$(as_anon 'select * from ai_catalog_accuracy();')"
+scalar "delete from ai_product_drafts;" >/dev/null
+
+check "el bucket de origen es privado" "false" "select public::text from storage.buckets where id = 'ai-product-sources';"
+check "un admin sube a su carpeta" "1" \
+  "$(as_user "$ADMIN" "insert into storage.objects (bucket_id, name) values ('ai-product-sources', '$ADMIN/lote/a.jpg'); select count(*) from storage.objects where bucket_id = 'ai-product-sources';")"
+check "un admin no sube a la carpeta de otro" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_user "$ADMIN" "insert into storage.objects (bucket_id, name) values ('ai-product-sources', '$USER_A/lote/a.jpg');")"
+check "un usuario normal no sube" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_user "$USER_A" "insert into storage.objects (bucket_id, name) values ('ai-product-sources', '$USER_A/lote/a.jpg');")"
+check "anon no sube" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('ai-product-sources', 'x/a.jpg');")"
+check "un usuario normal no ve las fotos de origen" "0" "$(as_user "$USER_A" "select count(*) from storage.objects where bucket_id = 'ai-product-sources';")"
+check "un admin si" "1" "$(as_user "$ADMIN" "select count(*) from storage.objects where bucket_id = 'ai-product-sources';")"
+scalar "delete from storage.objects where bucket_id = 'ai-product-sources';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0051 (el vector de busqueda se rehace una sola vez)"
+# La base de actualizacion venia en la 0039: la 0051 parcha suggest_products (0042) y necesita lo que va entre medias.
+for migration in supabase/migrations/004[0-9]_*.sql supabase/migrations/0050_*.sql; do
+  apply "$migration" upgrade
+done
+apply supabase/migrations/0051_ai_product_drafts.sql upgrade
+apply supabase/migrations/0051_ai_product_drafts.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "el vector de busqueda lleva el numero de parte" "1" \
+  "select count(*) from pg_attrdef d join pg_attribute a on a.attrelid = d.adrelid and a.attnum = d.adnum where d.adrelid = 'public.hub_parts'::regclass and a.attname = 'search_vector' and pg_get_expr(d.adbin, d.adrelid) like '%xah_norm_part%';"
+CHECK_DB=upgrade check "un solo indice del vector" "1" "select count(*) from pg_indexes where indexname = 'hub_parts_search_vector_idx';"
+CHECK_DB=upgrade check "search_products se parcheo una sola vez" "1" \
+  "select (length(pg_get_functiondef(oid)) - length(replace(pg_get_functiondef(oid), 'p.cross_refs_norm @>', ''))) / length('p.cross_refs_norm @>') - 1 from pg_proc where proname = 'search_products';"
+
+echo "→ IA: verificacion de comprobantes (migracion 0052)"
+PC_TOTAL="$(scalar "select total from orders where id = '$ORD_T';" | tail -1)"
+PC_DATE="$(scalar "select (created_at at time zone 'America/Santo_Domingo')::date from orders where id = '$ORD_T';" | tail -1)"
+scalar "update site_settings set value = '[{\"bank\": \"Banreservas\", \"holder\": \"X AutoHub SRL\", \"number\": \"960-123-4821\", \"type\": \"Corriente\"}, {\"bank\": \"Ejemplo\", \"holder\": \"x\", \"number\": \"000-0000-9999\", \"type\": \"c\", \"is_example\": true}]'::jsonb where key = 'bank_accounts';" >/dev/null
+cmp() { echo "set role service_role; select ai_proof_compare('$ORD_T', '$1', $2, $3, $4, $5, $6, $7)->>'verdict' || '|' || array_to_string(array(select jsonb_array_elements_text(ai_proof_compare('$ORD_T', '$1', $2, $3, $4, $5, $6, $7)->'flags')), ',');"; }
+
+check "todo coincide: monto, cuenta, fecha y referencia nueva" "coincide|" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'4821'" "'$PC_DATE'" "'hash-nuevo'")"
+check "un monto distinto: revisar" "revisar|monto_distinto" "$(cmp comprobante false "$PC_TOTAL + 100" "'DOP'" "'4821'" "'$PC_DATE'" "'hash-nuevo'")"
+check "sin monto legible: revisar" "revisar|monto_ilegible" "$(cmp comprobante false null "'DOP'" "'4821'" "'$PC_DATE'" "'hash-nuevo'")"
+check "una cuenta de destino que no es de X AutoHub: revisar" "revisar|destino_distinto" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'1111'" "'$PC_DATE'" "'hash-nuevo'")"
+check "la cuenta de ejemplo no cuenta como de X AutoHub" "revisar|destino_distinto" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'9999'" "'$PC_DATE'" "'hash-nuevo'")"
+check "una moneda distinta: revisar" "revisar|moneda_distinta" "$(cmp comprobante false "$PC_TOTAL" "'USD'" "'4821'" "'$PC_DATE'" "'hash-nuevo'")"
+check "una fecha anterior al pedido: revisar" "revisar|fecha_anterior_al_pedido" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'4821'" "'$PC_DATE'::date - 3" "'hash-nuevo'")"
+check "una fecha futura: revisar" "revisar|fecha_futura" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'4821'" "current_date + 5" "'hash-nuevo'")"
+check "sin referencia: revisar" "revisar|referencia_ausente" "$(cmp comprobante false "$PC_TOTAL" "'DOP'" "'4821'" "'$PC_DATE'" null)"
+check "que parezca editada la manda a revisar aunque todo coincida" "revisar|parece_editada" "$(cmp comprobante true "$PC_TOTAL" "'DOP'" "'4821'" "'$PC_DATE'" "'hash-nuevo'")"
+check "ilegible y 'no es comprobante' pasan tal cual, sin banderas" "ilegible|" "$(cmp ilegible false null null null null null)"
+check "no es un comprobante" "no_es_comprobante|" "$(cmp no_es_comprobante false null null null null null)"
+check "un pedido que no existe es un error" "ERROR:  Ese pedido no existe." "set role service_role; select ai_proof_compare('00000000-0000-0000-0000-000000000000', 'comprobante', false, 1, 'DOP', '4821', current_date, 'x');"
+
+scalar "insert into order_proof_checks (order_id, proof_path, verdict, reference_hash) values ('$ORD_T', 'x/y.jpg', 'coincide', 'hash-repetido');" >/dev/null
+ORD_OTHER="$(scalar "select id from orders where id <> '$ORD_T' order by created_at limit 1;" | tail -1)"
+check "una referencia ya usada en OTRO pedido se marca repetida" "revisar|referencia_repetida" \
+  "set role service_role; select ai_proof_compare('$ORD_OTHER', 'comprobante', false, (select total from orders where id = '$ORD_OTHER'), 'DOP', '4821', current_date, 'hash-repetido')->>'verdict' || '|' || array_to_string(array(select jsonb_array_elements_text(ai_proof_compare('$ORD_OTHER', 'comprobante', false, (select total from orders where id = '$ORD_OTHER'), 'DOP', '4821', current_date, 'hash-repetido')->'flags')), ',');"
+check "releer el mismo pedido con la misma referencia no es repetida" "revisar|monto_distinto" \
+  "set role service_role; select ai_proof_compare('$ORD_T', 'comprobante', false, 1, 'DOP', '4821', '$PC_DATE', 'hash-repetido')->>'verdict' || '|' || array_to_string(array(select jsonb_array_elements_text(ai_proof_compare('$ORD_T', 'comprobante', false, 1, 'DOP', '4821', '$PC_DATE', 'hash-repetido')->'flags')), ',');"
+
+check "anon no invoca ai_proof_compare" "$(denied ai_proof_compare)" "$(as_anon "select ai_proof_compare('$ORD_T', 'comprobante', false, 1, 'DOP', '4821', current_date, 'x');")"
+check "ni un admin (es de la edge)" "$(denied ai_proof_compare)" "$(as_user "$ADMIN" "select ai_proof_compare('$ORD_T', 'comprobante', false, 1, 'DOP', '4821', current_date, 'x');")"
+check "anon no lee las verificaciones" 'ERROR:  permission denied for table order_proof_checks' "$(as_anon 'select count(*) from order_proof_checks;')"
+check "un usuario normal ve 0 filas (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from order_proof_checks;')"
+check "un admin las lee" "1" "$(as_user "$ADMIN" 'select count(*) from order_proof_checks;')"
+check "nadie las escribe desde el navegador (admin)" 'ERROR:  permission denied for table order_proof_checks' \
+  "$(as_user "$ADMIN" "insert into order_proof_checks (order_id, proof_path, verdict) values ('$ORD_T', 'x', 'coincide');")"
+check "un veredicto inventado se rechaza" 'ERROR:  new row for relation "order_proof_checks" violates check constraint "order_proof_checks_verdict_check"' \
+  "insert into order_proof_checks (order_id, proof_path, verdict) values ('$ORD_T', 'x', 'pagado');"
+check "un admin ve lo esperado de un pedido (total y cuentas con 4 digitos)" "true" \
+  "$(as_user "$ADMIN" "select ((admin_order_expected('$ORD_T')->'accounts'->0->>'last4') = '4821' and jsonb_array_length(admin_order_expected('$ORD_T')->'accounts') = 1)::text;")"
+check "un usuario normal no" "ERROR:  Solo un administrador puede ver esto." "$(as_user "$USER_A" "select admin_order_expected('$ORD_T');")"
+check "anon no invoca admin_order_expected" "$(denied admin_order_expected)" "$(as_anon "select admin_order_expected('$ORD_T');")"
+
+# El disparo: pg_net + Vault. Sin secretos no hace nada y no falla.
+scalar "delete from net.calls;" >/dev/null
+check "adjuntar un comprobante sin los secretos del Vault no falla ni llama" "0" \
+  "update orders set payment_proof_url = '$ORD_T/prueba-1.jpg' where id = '$ORD_T'; select count(*) from net.calls;"
+scalar "insert into vault.decrypted_secrets (name, decrypted_secret) values ('ai_functions_url', 'https://f.example/functions/v1/'), ('ai_cron_secret', 'cron-s3'), ('send_push_anon_key', 'anon-key') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "con los secretos, un comprobante nuevo llama a ai-verify-proof con solo el id" "https://f.example/functions/v1/ai-verify-proof|{\"order_id\": \"$ORD_T\"}|cron-s3" \
+  "update orders set payment_proof_url = '$ORD_T/prueba-2.jpg' where id = '$ORD_T'; select url || '|' || body::text || '|' || (headers->>'x-ai-secret') from net.calls order by id desc limit 1;"
+check "cambiar otra cosa del pedido no vuelve a llamar" "1" "update orders set whatsapp_opened_at = now() where id = '$ORD_T'; select count(*) from net.calls;"
+check "volver a poner la misma ruta tampoco" "1" "update orders set payment_proof_url = '$ORD_T/prueba-2.jpg' where id = '$ORD_T'; select count(*) from net.calls;"
+check "quitar el comprobante (nulo) tampoco" "1" "update orders set payment_proof_url = null where id = '$ORD_T'; select count(*) from net.calls;"
+scalar "delete from vault.decrypted_secrets where name in ('ai_functions_url', 'ai_cron_secret', 'send_push_anon_key'); delete from net.calls; delete from order_proof_checks;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0052"
+apply supabase/migrations/0052_ai_proof_checks.sql upgrade
+apply supabase/migrations/0052_ai_proof_checks.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
+  "select (select count(*) from order_proof_checks) || '|' || (select relrowsecurity from pg_class where relname = 'order_proof_checks')::text;"
+
+echo "→ IA: moderacion asistida (migracion 0053)"
+MOD_PROD="$(scalar "select min(id) from hub_parts;" | tail -1)"
+scalar "set request.jwt.claim.role = 'service_role'; update profiles set role = 'moderador' where id = '$USER_B'; reset request.jwt.claim.role;" >/dev/null
+scalar "insert into social_posts (author_id, author_name, text) values ('$USER_A', 'Usuario A', 'QQ publicacion normal'), ('$USER_A', 'Usuario A', 'QQ publicacion de spam');" >/dev/null
+MOD_POST="$(scalar "select id from social_posts where text = 'QQ publicacion de spam';" | tail -1)"
+scalar "insert into social_post_comments (post_id, author_id, text) values ($MOD_POST, '$USER_A', 'QQ comentario danino');" >/dev/null
+MOD_COMMENT="$(scalar "select id from social_post_comments where text = 'QQ comentario danino';" | tail -1)"
+scalar "insert into reviews (target_type, target_id, user_id, rating, comment) values ('product', $MOD_PROD, '$USER_A', 5, 'QQ resena de spam');" >/dev/null
+MOD_REVIEW="$(scalar "select id from reviews where comment = 'QQ resena de spam';" | tail -1)"
+MOD_ITEM="$(scalar "select min(id) from hub_market_items;" | tail -1)"
+
+save() { echo "set role service_role; select ai_save_moderation('$1', $2, '$3', array[$4]::text[], 'razon', '$5', $6, null, 'haiku', 0.001)->>'auto_action';"; }
+
+check "alto + 0.95 + spam en una publicacion: se oculta" "oculto" "$(save social_post "$MOD_POST" alto "'spam'" rechazar 0.95)"
+check "el publico ya no ve esa publicacion" "0" "$(as_anon "select count(*) from social_posts where id = $MOD_POST;")"
+check "las demas siguen visibles" "true" "$(as_anon "select (count(*) >= 1)::text from social_posts where text = 'QQ publicacion normal';")"
+check "su autor la sigue viendo (en revision)" "1" "$(as_user "$USER_A" "select count(*) from social_posts where id = $MOD_POST;")"
+check "otro usuario no" "0" "$(as_user "$ADMIN" "select count(*) from social_posts where id = $MOD_POST and false;")"
+check "un moderador la ve" "1" "$(as_user "$USER_B" "select count(*) from social_posts where id = $MOD_POST;")"
+check "alto + 0.95 + estafa en un comentario: se oculta" "oculto" "$(save social_comment "$MOD_COMMENT" alto "'estafa'" rechazar 0.95)"
+check "el comentario oculto no lo ve el publico" "0" "$(as_anon "select count(*) from social_post_comments where id = $MOD_COMMENT;")"
+check "las estrellas cuentan la resena antes de ocultarla" "1" "select review_count from hub_parts where id = $MOD_PROD;"
+check "alto + 0.95 + insultos graves en una resena: se oculta" "oculto" "$(save review "$MOD_REVIEW" alto "'insultos_graves'" rechazar 0.95)"
+check "la resena oculta ya no cuenta en las estrellas ni en review_count" "0" "select review_count from hub_parts where id = $MOD_PROD;"
+check "ni en review_stats()" "0" "$(as_anon "select total from review_stats('product', $MOD_PROD);")"
+check "la resena oculta no la ve el publico" "0" "$(as_anon "select count(*) from reviews where id = $MOD_REVIEW;")"
+
+scalar "update social_posts set hidden_by_ai = false, hidden_at = null where id = $MOD_POST; delete from ai_moderation;" >/dev/null
+check "riesgo medio no oculta aunque la confianza sea alta" "ninguna" "$(save social_post "$MOD_POST" medio "'spam'" revisar 0.99)"
+check "confianza menor a 0.9 no oculta" "ninguna" "$(save social_post "$MOD_POST" alto "'spam'" rechazar 0.89)"
+check "una categoria que no es de las graves no oculta (precio, foto dudosa...)" "ninguna" "$(save social_post "$MOD_POST" alto "'foto_dudosa'" rechazar 0.99)"
+check "Hub Market NUNCA se oculta ni se aprueba solo, ni con riesgo alto y confianza 1" "ninguna" "$(save hub_market_item "$MOD_ITEM" alto "'estafa'" rechazar 1)"
+check "y el estado de la publicacion de Hub Market no cambia" "aprobado" "select status from hub_market_items where id = $MOD_ITEM;"
+scalar "set request.jwt.claim.role = 'service_role'; update site_settings set value = 'false' where key = 'ai_auto_hide'; reset request.jwt.claim.role;" >/dev/null
+check "con ai_auto_hide apagado no oculta nada" "ninguna" "$(save social_post "$MOD_POST" alto "'spam'" rechazar 0.99)"
+scalar "set request.jwt.claim.role = 'service_role'; update site_settings set value = 'true' where key = 'ai_auto_hide'; reset request.jwt.claim.role; delete from ai_moderation;" >/dev/null
+
+check "un valor de riesgo inventado se rechaza" 'ERROR:  new row for relation "ai_moderation" violates check constraint "ai_moderation_risk_check"' \
+  "insert into ai_moderation (target_type, target_id, risk, suggested, confidence) values ('review', 1, 'extremo', 'aprobar', 0.5);"
+
+# Restaurar: un moderador lo hace con un toque y la IA no lo vuelve a ocultar.
+check "oculta de nuevo" "oculto" "$(save social_post "$MOD_POST" alto "'spam'" rechazar 0.95)"
+check "un usuario normal no restaura" "ERROR:  Solo un moderador o un administrador puede restaurar contenido." "$(as_user "$USER_A" "select restore_hidden_content('social_post', $MOD_POST);")"
+check "anon no invoca restore_hidden_content" "$(denied restore_hidden_content)" "$(as_anon "select restore_hidden_content('social_post', $MOD_POST);")"
+check "un moderador ve lo oculto en su cola" "social_post" "$(as_user "$USER_B" "select target_type from ai_hidden_content() where target_id = $MOD_POST and target_type = 'social_post';")"
+check "un usuario normal no ve la cola de lo oculto" "ERROR:  Solo un moderador o un administrador puede ver esto." "$(as_user "$USER_A" 'select * from ai_hidden_content();')"
+check "un moderador restaura con un toque" "1" "$(as_user "$USER_B" "select restore_hidden_content('social_post', $MOD_POST); select count(*) from social_posts where id = $MOD_POST;")"
+check "el publico la vuelve a ver" "1" "$(as_anon "select count(*) from social_posts where id = $MOD_POST;")"
+check "queda anotado quien la restauro" "$USER_B" "select restored_by from ai_moderation where target_type = 'social_post' and target_id = $MOD_POST;"
+check "un tipo que no se oculta se rechaza" "ERROR:  Ese tipo de contenido no se oculta." "$(as_user "$USER_B" "select restore_hidden_content('hub_market_item', 1);")"
+check "tras restaurar, un nuevo analisis NO la vuelve a ocultar" "ninguna" "$(save social_post "$MOD_POST" alto "'spam'" rechazar 0.99)"
+check "y sigue visible" "1" "$(as_anon "select count(*) from social_posts where id = $MOD_POST;")"
+check "restaurar una resena devuelve su peso en las estrellas" "1" \
+  "update reviews set hidden_by_ai = true where id = $MOD_REVIEW; $(as_user "$USER_B" "select restore_hidden_content('review', $MOD_REVIEW);") select review_count from hub_parts where id = $MOD_PROD;"
+
+check "anon no invoca ai_save_moderation" "$(denied ai_save_moderation)" "$(as_anon "select ai_save_moderation('review', 1, 'alto', array['spam'], 'x', 'rechazar', 1, null, 'm', 0);")"
+check "ni un admin (es de la edge)" "$(denied ai_save_moderation)" "$(as_user "$ADMIN" "select ai_save_moderation('review', 1, 'alto', array['spam'], 'x', 'rechazar', 1, null, 'm', 0);")"
+check "anon no lee las sugerencias" 'ERROR:  permission denied for table ai_moderation' "$(as_anon 'select count(*) from ai_moderation;')"
+check "un usuario normal ve 0 sugerencias (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from ai_moderation;')"
+check "un moderador si las lee" "true" "$(as_user "$USER_B" 'select (count(*) >= 1)::text from ai_moderation;')"
+check "nadie escribe sugerencias desde el navegador" 'ERROR:  permission denied for table ai_moderation' \
+  "$(as_user "$ADMIN" "insert into ai_moderation (target_type, target_id, risk, suggested, confidence) values ('review', 1, 'bajo', 'aprobar', 0.5);")"
+check "el autor no puede esconder ni mostrar lo suyo desde el navegador (publicacion)" 'ERROR:  permission denied for table social_posts' \
+  "$(as_user "$USER_A" "update social_posts set hidden_by_ai = false where id = $MOD_POST;")"
+
+# Contexto de precio de Hub Market (lo calcula la base).
+scalar "insert into hub_market_items (seller_name, title, price, location, category, status, spec_year) select 'v', 'QQ barato ' || g, 1000, 'SD', 'vehiculos', 'aprobado', 2015 from generate_series(1, 4) g;" >/dev/null
+scalar "update hub_market_items set spec_brand = 'Toyota', spec_model = 'Corolla' where title like 'QQ barato%';" >/dev/null
+scalar "insert into hub_market_items (seller_name, title, price, location, category, status, spec_year, spec_brand, spec_model) values ('v', 'QQ sospechoso', 10, 'SD', 'vehiculos', 'pendiente', 2015, 'Toyota', 'Corolla'), ('v', 'QQ normal', 1000, 'SD', 'vehiculos', 'pendiente', 2015, 'Toyota', 'Corolla');" >/dev/null
+check "un precio mucho menor que el de los parecidos se marca muy_bajo" "true|muy_bajo" \
+  "set role service_role; select (c->>'outlier') || '|' || (c->>'direction') from (select ai_hub_price_context((select id from hub_market_items where title = 'QQ sospechoso')) c) x;"
+check "un precio normal no es atipico" "false" "set role service_role; select (ai_hub_price_context((select id from hub_market_items where title = 'QQ normal'))->>'outlier');"
+check "con menos de 3 parecidos no se opina" "false" \
+  "set role service_role; select (ai_hub_price_context((select id from hub_market_items where title not like 'QQ%' and category <> 'vehiculos' limit 1))->>'outlier');"
+check "anon no invoca ai_hub_price_context" "$(denied ai_hub_price_context)" "$(as_anon 'select ai_hub_price_context(1);')"
+scalar "delete from hub_market_items where title like 'QQ%';" >/dev/null
+
+# El disparo.
+scalar "delete from net.calls;" >/dev/null
+check "publicar sin los secretos del Vault no falla ni llama" "0" \
+  "insert into social_posts (author_id, author_name, text) values ('$USER_A', 'A', 'QQ sin secretos'); select count(*) from net.calls;"
+scalar "insert into vault.decrypted_secrets (name, decrypted_secret) values ('ai_functions_url', 'https://f.example/functions/v1'), ('ai_cron_secret', 'cron-s3'), ('send_push_anon_key', 'anon-key') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "una publicacion nueva de la comunidad llama a ai-moderate con su tipo y su id" "https://f.example/functions/v1/ai-moderate|social_post|cron-s3" \
+  "insert into social_posts (author_id, author_name, text) values ('$USER_A', 'A', 'QQ con secretos'); select url || '|' || (body->>'target_type') || '|' || (headers->>'x-ai-secret') from net.calls order by id desc limit 1;"
+check "un comentario nuevo tambien" "social_comment" "insert into social_post_comments (post_id, author_id, text) values ($MOD_POST, '$USER_A', 'QQ otro'); select body->>'target_type' from net.calls order by id desc limit 1;"
+check "una publicacion de Hub Market pendiente tambien" "hub_market_item" \
+  "insert into hub_market_items (seller_name, title, price, location, category, status) values ('v', 'QQ pendiente', 100, 'SD', 'accesorios', 'pendiente'); select body->>'target_type' from net.calls order by id desc limit 1;"
+check "una de prueba (is_test) no llama" "same" \
+  "create temp table tmp_calls as select count(*) as c from net.calls; insert into hub_market_items (seller_name, title, price, location, category, status, is_test) values ('v', 'QQ prueba', 100, 'SD', 'accesorios', 'pendiente', true); select case when (select count(*) from net.calls) = (select c from tmp_calls) then 'same' else 'llamo' end;"
+scalar "delete from vault.decrypted_secrets where name in ('ai_functions_url', 'ai_cron_secret', 'send_push_anon_key'); delete from net.calls; delete from hub_market_items where title like 'QQ%'; delete from social_posts where text like 'QQ%'; delete from reviews where comment like 'QQ%'; delete from ai_moderation;" >/dev/null
+scalar "set request.jwt.claim.role = 'service_role'; update profiles set role = 'user' where id = '$USER_B'; reset request.jwt.claim.role;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0053"
+apply supabase/migrations/0053_ai_moderation.sql upgrade
+apply supabase/migrations/0053_ai_moderation.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "las tres tablas de contenido traen hidden_by_ai" "3" \
+  "select count(*) from information_schema.columns where column_name = 'hidden_by_ai' and table_name in ('social_posts', 'social_post_comments', 'reviews');"
+
+echo "→ IA: registro de busquedas (migracion 0054)"
+check "se sanean telefonos, correos y cedulas, y se quitan los acentos" "bateria para mi carro, llamame" \
+  "select xah_clean_query('  Batería para mi carro, 809-953-9782 maria@correo.com 001-1234567-8  llámame ');"
+scalar "delete from search_log;" >/dev/null
+scalar "$(as_anon "select log_search('Faros Corolla 2015 (809) 555-1234', 3, true);")" >/dev/null
+check "log_search (abierta a anon) guarda la consulta saneada, sin quien busco" "faros corolla 2015|3|true" \
+  "select query_norm || '|' || result_count || '|' || had_vehicle::text from search_log order by id desc limit 1;"
+check "la tabla no guarda nada de quien busco (solo 5 columnas)" "5" "select count(*) from information_schema.columns where table_name = 'search_log';"
+scalar "$(as_anon "select log_search('a', 1); select log_search('algo raro', -1); select log_search(repeat('x', 400), 0);")" >/dev/null
+check "una consulta de un caracter no se guarda" "0" "select count(*) from search_log where query_norm = 'a';"
+check "un conteo negativo no se guarda" "0" "select count(*) from search_log where query_norm = 'algo raro';"
+check "lo larguisimo se recorta a 120" "120" "select max(char_length(query_norm)) from search_log;"
+check "anon no lee el registro" 'ERROR:  permission denied for table search_log' "$(as_anon 'select count(*) from search_log;')"
+check "un usuario normal ve 0 filas (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from search_log;')"
+check "un admin si" "true" "$(as_user "$ADMIN" 'select (count(*) > 0)::text from search_log;')"
+check "nadie escribe directo" 'ERROR:  permission denied for table search_log' "$(as_anon "insert into search_log (query_norm, result_count) values ('xx', 1);")"
+
+scalar "delete from search_log; insert into search_log (query_norm, result_count) select 'pastillas lada', 0 from generate_series(1, 3); insert into search_log (query_norm, result_count) values ('bumper hilux', 0), ('filtro', 5);" >/dev/null
+check "admin_search_gaps: lo que no encontro, lo mas repetido primero" "pastillas lada|3;bumper hilux|1" \
+  "$(as_user "$ADMIN" "select string_agg(query_norm || '|' || searches, ';' order by searches desc, query_norm) from admin_search_gaps(30, 10);")"
+check "un usuario normal no ve las busquedas sin resultado" "ERROR:  Solo un administrador puede ver esto." "$(as_user "$USER_A" 'select * from admin_search_gaps();')"
+check "anon no invoca admin_search_gaps" "$(denied admin_search_gaps)" "$(as_anon 'select * from admin_search_gaps();')"
+check "ai_search_gaps es de la edge: un admin tampoco" "$(denied ai_search_gaps)" "$(as_user "$ADMIN" 'select * from ai_search_gaps();')"
+check "ai_search_gaps (service_role) da lo mismo" "pastillas lada" "set role service_role; select query_norm from ai_search_gaps(7, 1);"
+
+check "el freno global: pasados 600 en un minuto, se ignora en silencio" "0" \
+  "insert into search_log (query_norm, result_count) select 'relleno', 1 from generate_series(1, 650); select log_search('no deberia entrar', 1); select count(*) from search_log where query_norm = 'no deberia entrar';"
+check "la purga borra lo de mas de 90 dias y deja lo reciente" "1" \
+  "delete from search_log; insert into search_log (query_norm, result_count, created_at) values ('viejo', 0, now() - interval '91 days'), ('reciente', 0, now()); select search_log_purge(); select count(*) from search_log;"
+check "el cron de la purga esta programado, una sola vez" "1" "select count(*) from cron.job where jobname = 'search-log-purge' and command like '%search_log_purge%';"
+scalar "delete from search_log;" >/dev/null
+
+# Asignar un modelo escrito a mano (una errata) a uno que ya existe.
+AM_MAKE="$(scalar "select id from vehicle_makes where slug = 'toyota';" | tail -1)"
+AM_MODEL="$(scalar "select id from vehicle_models where make_id = $AM_MAKE and slug = 'corolla';" | tail -1)"
+scalar "insert into profile_vehicles (user_id, make_id, model_text, year) values ('$USER_B', $AM_MAKE, 'Corola', 2012), ('$USER_B', $AM_MAKE, 'Hilux', 2012);" >/dev/null
+check "asignar 'Corola' al Corolla devuelve cuantos garajes movio" "1" "$(as_user "$ADMIN" "select admin_assign_vehicle_model($AM_MAKE, 'corola', $AM_MODEL);")"
+check "y movio solo los que tenian ese texto (el de Hilux sigue como estaba)" "1|1" \
+  "select (select count(*) from profile_vehicles where model_id = $AM_MODEL and user_id = '$USER_B') || '|' || (select count(*) from profile_vehicles where model_text = 'Hilux');"
+check "repetirlo ya no mueve nada" "0" "$(as_user "$ADMIN" "select admin_assign_vehicle_model($AM_MAKE, 'corola', $AM_MODEL);")"
+check "un modelo de otra marca se rechaza" "ERROR:  Ese modelo no es de esa marca." \
+  "$(as_user "$ADMIN" "select admin_assign_vehicle_model($AM_MAKE, 'Hilux', (select id from vehicle_models where make_id <> $AM_MAKE limit 1));")"
+check "un usuario normal no asigna" "ERROR:  Solo un administrador puede asignar modelos" "$(as_user "$USER_A" "select admin_assign_vehicle_model($AM_MAKE, 'Hilux', $AM_MODEL);")"
+check "anon no invoca admin_assign_vehicle_model" "$(denied admin_assign_vehicle_model)" "$(as_anon "select admin_assign_vehicle_model($AM_MAKE, 'Hilux', $AM_MODEL);")"
+scalar "delete from profile_vehicles where user_id = '$USER_B';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0054"
+apply supabase/migrations/0054_search_log_and_ai.sql upgrade
+apply supabase/migrations/0054_search_log_and_ai.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
+  "select (select count(*) from search_log) || '|' || (select relrowsecurity from pg_class where relname = 'search_log')::text;"
+
+echo "→ IA: solicitudes de cotizacion del taller (migracion 0055)"
+QT_TOKEN='aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa'
+QT_SERVICE="$(scalar "select id from services where is_active order by id limit 1;" | tail -1)"
+mkq() { echo "select code from create_quote_request('$1', '$2', '$3', 'Toyota Corolla 2015', null, $4, '$QT_TOKEN', $5, $6);"; }
+
+check "un visitante sin cuenta crea una solicitud y recibe su codigo XAH-C-0001" "XAH-C-0001" \
+  "$(as_anon "$(mkq 'Maria Perez' '809-555-0134' 'Hace un ruido al frenar y el pedal se siente blando' "$QT_SERVICE" "'{}'::text[]" null)")"
+check "el telefono se guarda como diez digitos, sin separadores" "8095550134" "select contact_phone from service_quote_requests where code = 'XAH-C-0001';"
+check "nace en estado 'nueva', sin triage y sin dueño" "nueva||" "select status || '|' || coalesce(urgency, '') || '|' || coalesce(user_id::text, '') from service_quote_requests where code = 'XAH-C-0001';"
+check "el siguiente codigo es el 0002" "XAH-C-0002" "$(as_anon "$(mkq 'Juan' '+1 829 555 0135' 'Quiero cambiar el aceite y los filtros' null "'{}'::text[]" null)")"
+check "un telefono que no es dominicano se rechaza" "ERROR:  Escribe un teléfono dominicano válido (809, 829 o 849…)." "$(as_anon "$(mkq 'Maria' '12345' 'Algo le pasa al carro' null "'{}'::text[]" null)")"
+check "un nombre vacio se rechaza" "ERROR:  Escribe tu nombre." "$(as_anon "$(mkq ' ' '809-555-0136' 'Algo le pasa al carro' null "'{}'::text[]" null)")"
+check "una descripcion muy corta se rechaza" "ERROR:  Cuéntanos qué necesitas (entre 5 y 1000 letras)." "$(as_anon "$(mkq 'Maria' '809-555-0136' 'hola' null "'{}'::text[]" null)")"
+scalar "$(as_anon "$(mkq 'Bot' '809-555-0137' 'Compra viagra barato ya mismo' null "'{}'::text[]" "'http://spam.example'")")" >/dev/null
+check "el honeypot lleno responde como si nada y NO guarda" "0" "select count(*) from service_quote_requests where contact_name = 'Bot';"
+scalar "$(as_anon "$(mkq 'Luis' '809-555-0138' 'Necesito revisar los frenos' 999999 "'{}'::text[]" null)")" >/dev/null
+check "un servicio que no existe se ignora (queda sin servicio)" "" "select coalesce(service_id::text, '') from service_quote_requests where contact_name = 'Luis';"
+
+# El tope por telefono: cinco por hora.
+scalar "insert into service_quote_requests (contact_name, contact_phone, description) select 'Tope', '8095550199', 'solicitud de relleno ' || g from generate_series(1, 5) g;" >/dev/null
+check "mas de cinco por hora desde el mismo telefono se rechaza" "ERROR:  Ya recibimos varias solicitudes de este número. Te contestamos pronto." "$(as_anon "$(mkq 'Tope' '809-555-0199' 'otra solicitud mas del mismo' null "'{}'::text[]" null)")"
+scalar "delete from service_quote_requests where contact_name = 'Tope';" >/dev/null
+
+# Fotos: tienen que ser de la carpeta del visitante y existir; maximo 3.
+check "una foto que no existe se rechaza" "ERROR:  No encontramos una de las fotos. Intenta de nuevo." "$(as_anon "$(mkq 'Foto' '809-555-0140' 'Mira como quedo el parachoques' null "array['$QT_TOKEN/0.jpg']" null)")"
+check "un visitante sube una foto a su carpeta" "1" \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('quote-photos', '$QT_TOKEN/0.jpg'); select 1;")"
+scalar "$(as_anon "$(mkq 'Foto' '809-555-0140' 'Mira como quedo el parachoques' null "array['$QT_TOKEN/0.jpg']" null)")" >/dev/null
+check "con la foto subida, la solicitud se crea y la lleva" "{$QT_TOKEN/0.jpg}" "select photos::text from service_quote_requests where contact_name = 'Foto';"
+check "una foto de la carpeta de otra persona no vale" "ERROR:  No encontramos una de las fotos. Intenta de nuevo." \
+  "$(as_anon "$(mkq 'Foto2' '809-555-0141' 'Mira como quedo el parachoques' null "array['bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb/0.jpg']" null)")"
+check "mas de tres fotos se rechaza" "ERROR:  Máximo 3 fotos." "$(as_anon "$(mkq 'Foto3' '809-555-0142' 'Mira como quedo el parachoques' null "array['a','b','c','d']" null)")"
+check "subir fuera de la forma uuid/n.jpg se rechaza" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('quote-photos', 'cualquier-cosa.png');")"
+check "tambien una foto 4 (n fuera de 0 a 2)" 'ERROR:  new row violates row-level security policy for table "objects"' \
+  "$(as_anon "insert into storage.objects (bucket_id, name) values ('quote-photos', '$QT_TOKEN/3.jpg');")"
+check "anon no puede leer las fotos de cotizacion" "0" "$(as_anon "select count(*) from storage.objects where bucket_id = 'quote-photos';")"
+check "un usuario normal tampoco" "0" "$(as_user "$USER_A" "select count(*) from storage.objects where bucket_id = 'quote-photos';")"
+check "un admin si" "true" "$(as_user "$ADMIN" "select (count(*) >= 1)::text from storage.objects where bucket_id = 'quote-photos';")"
+
+# Con cuenta: el dueño ve las suyas; el vehiculo del garaje solo si es suyo.
+QT_PV="$(scalar "select id from profile_vehicles where user_id = '$USER_A' limit 1;" | tail -1)"
+scalar "$(as_user "$USER_A" "select code from create_quote_request('Ana', '809-555-0150', 'Revisar el aire acondicionado', null, ${QT_PV:-null}, null, null, '{}', null);")" >/dev/null
+check "con cuenta, la solicitud queda a su nombre" "$USER_A" "select user_id from service_quote_requests where contact_name = 'Ana';"
+check "el dueño ve la suya" "1" "$(as_user "$USER_A" "select count(*) from service_quote_requests;")"
+check "otro usuario no ve las ajenas" "0" "$(as_user "$USER_B" "select count(*) from service_quote_requests;")"
+check "un admin ve todas" "true" "$(as_user "$ADMIN" "select (count(*) >= 4)::text from service_quote_requests;")"
+check "anon no lee solicitudes" 'ERROR:  permission denied for table service_quote_requests' "$(as_anon 'select count(*) from service_quote_requests;')"
+check "nadie inserta directo" 'ERROR:  permission denied for table service_quote_requests' "$(as_user "$ADMIN" "insert into service_quote_requests (contact_name, contact_phone, description) values ('x', '8095550000', 'hola mundo');")"
+check "un usuario no cambia el estado de las suyas" "0" "$(as_user "$USER_A" "with u as (update service_quote_requests set status = 'cerrada' returning 1) select count(*) from u;")"
+check "un admin si, y queda la hora de actualizacion" "respondida" "$(as_user "$ADMIN" "update service_quote_requests set status = 'respondida', handled_by = '$ADMIN' where code = 'XAH-C-0001' returning status;")"
+check "un estado inventado se rechaza" 'ERROR:  new row for relation "service_quote_requests" violates check constraint "service_quote_requests_status_check"' "update service_quote_requests set status = 'pagada' where code = 'XAH-C-0001';"
+check "un admin no toca el triage desde el navegador" 'ERROR:  permission denied for table service_quote_requests' "$(as_user "$ADMIN" "update service_quote_requests set ai_triage = '{}' where code = 'XAH-C-0001';")"
+check "ai_save_quote_triage es de la edge" "$(denied ai_save_quote_triage)" "$(as_user "$ADMIN" "select ai_save_quote_triage((select id from service_quote_requests limit 1), '{}', 'normal');")"
+check "ai_save_quote_triage (service_role) guarda el triage y la urgencia" "seguridad|{\"a\": 1}" \
+  "set role service_role; select ai_save_quote_triage((select id from service_quote_requests where code = 'XAH-C-0001'), '{\"a\": 1}', 'seguridad'); select urgency || '|' || ai_triage::text from service_quote_requests where code = 'XAH-C-0001';"
+check "una urgencia inventada se rechaza" 'ERROR:  new row for relation "service_quote_requests" violates check constraint "service_quote_requests_urgency_check"' "update service_quote_requests set urgency = 'ya' where code = 'XAH-C-0001';"
+check "anon invoca create_quote_request (esta abierta a visitantes)" "true" "$(as_anon "select (code is not null)::text from create_quote_request('Visitante', '809-555-0160', 'Quiero cotizar una alineacion', null, null, null, null, '{}', null);")"
+
+# El disparo.
+scalar "delete from net.calls;" >/dev/null
+scalar "$(as_anon "select code from create_quote_request('Sin Secretos', '809-555-0161', 'Algo con el carro', null, null, null, null, '{}', null);")" >/dev/null
+check "sin los secretos del Vault crear la solicitud no falla ni llama" "0" "select count(*) from net.calls;"
+scalar "insert into vault.decrypted_secrets (name, decrypted_secret) values ('ai_functions_url', 'https://f.example/functions/v1'), ('ai_cron_secret', 'cron-s3'), ('send_push_anon_key', 'anon-key') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+scalar "$(as_anon "select code from create_quote_request('Con Secretos', '809-555-0162', 'Algo con el carro', null, null, null, null, '{}', null);")" >/dev/null
+check "con los secretos, una solicitud nueva pide el triage con su id" "https://f.example/functions/v1/ai-triage-quote|triage|cron-s3" \
+  "select url || '|' || (body->>'action') || '|' || (headers->>'x-ai-secret') from net.calls order by id desc limit 1;"
+check "el cuerpo solo lleva el id (nada del cliente viaja por pg_net)" "true" "select (body ? 'id' and not body ? 'contact_phone' and not body ? 'description')::text from net.calls order by id desc limit 1;"
+
+# La purga de fotos.
+# Sin triggers (el de updated_at pisaría la fecha vieja que se quiere simular).
+scalar "delete from net.calls; set session_replication_role = replica; update service_quote_requests set status = 'cerrada', photos = array['x/0.jpg'], updated_at = now() - interval '91 days' where code = 'XAH-C-0001';" >/dev/null
+check "las fotos de una cerrada hace mas de 90 dias salen para purgar" "x/0.jpg" "set role service_role; select photos[1] from quote_photos_to_purge();"
+check "con fotos por purgar, el cron le pide a la edge que las borre" "purge" "select request_quote_purge(); select body->>'action' from net.calls order by id desc limit 1;"
+check "al borrarlas la edge las quita de la fila" "0" "set role service_role; select quote_photos_cleared(array[(select id from service_quote_requests where code = 'XAH-C-0001')]); select cardinality(photos) from service_quote_requests where code = 'XAH-C-0001';"
+check "sin nada por purgar no llama" "0" "delete from net.calls; select request_quote_purge(); select count(*) from net.calls;"
+check "anon no invoca la purga" "$(denied request_quote_purge)" "$(as_anon 'select request_quote_purge();')"
+check "el cron de la purga esta programado, una sola vez" "1" "select count(*) from cron.job where jobname = 'quote-photos-purge' and command like '%request_quote_purge%';"
+scalar "delete from vault.decrypted_secrets where name in ('ai_functions_url', 'ai_cron_secret', 'send_push_anon_key'); delete from net.calls; delete from service_quote_requests; delete from storage.objects where bucket_id = 'quote-photos';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0055"
+apply supabase/migrations/0055_service_quote_requests.sql upgrade
+apply supabase/migrations/0055_service_quote_requests.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
+  "select (select count(*) from service_quote_requests) || '|' || (select relrowsecurity from pg_class where relname = 'service_quote_requests')::text;"
+
+echo "→ IA: resumen diario del negocio (migracion 0056)"
+check "el umbral de stock bajo nace en 3" "3" "select value::text from site_settings where key = 'low_stock_threshold';"
+check "un umbral negativo se rechaza" 'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_low_stock_valid"' "update site_settings set value = '-1' where key = 'low_stock_threshold';"
+check "las metricas traen todos los numeros esperados" "true" \
+  "set role service_role; select (business_metrics_compute() ?& array['orders_new_24h','awaiting_payment_with_proof','awaiting_payment_no_proof_24h','sold_today_rd','low_stock','out_of_stock','out_of_stock_searched','appointments_today','appointments_tomorrow','appointments_unconfirmed','quotes_unanswered_24h','moderation_pending','publications_expiring_7d','reviews_new_24h','search_gaps','ai_spend','week'])::text;"
+
+DG_LOW0="$(scalar "set role service_role; select (business_metrics_compute()->>'low_stock')::int;" | tail -1)"
+DG_OUT0="$(scalar "set role service_role; select (business_metrics_compute()->>'out_of_stock')::int;" | tail -1)"
+scalar "insert into hub_parts (name, brand, img_url, price, stock) values ('QQ Zzzzzfaro bajo', 'M', 'x.jpg', 100, 2), ('QQ Zzzzzfaro agotado', 'M', 'x.jpg', 100, 0), ('QQ Pieza con stock', 'M', 'x.jpg', 100, 50);" >/dev/null
+check "una pieza con 2 en stock suma al stock bajo (umbral 3)" "$((DG_LOW0 + 1))" "set role service_role; select (business_metrics_compute()->>'low_stock')::int;"
+check "una pieza en 0 suma a los agotados" "$((DG_OUT0 + 1))" "set role service_role; select (business_metrics_compute()->>'out_of_stock')::int;"
+check "una con mucho stock no cuenta como baja" "$((DG_LOW0 + 1))" "set role service_role; select (business_metrics_compute()->>'low_stock')::int;"
+scalar "insert into search_log (query_norm, result_count) values ('zzzzzfaro agotado', 0), ('zzzzzfaro agotado', 0), ('zzzzzfaro', 0);" >/dev/null
+check "un agotado que la gente busca sale en la lista de demanda perdida" "QQ Zzzzzfaro agotado" \
+  "set role service_role; select business_metrics_compute()->'out_of_stock_searched'->0->>'name';"
+check "y las busquedas sin resultado salen ordenadas por repeticion" "zzzzzfaro agotado|2" "set role service_role; select (business_metrics_compute()->'search_gaps'->0->>'query') || '|' || (business_metrics_compute()->'search_gaps'->0->>'searches');"
+scalar "set request.jwt.claim.role = 'service_role'; update site_settings set value = '1' where key = 'low_stock_threshold'; reset request.jwt.claim.role;" >/dev/null
+check "cambiar el umbral cambia la cuenta (con 1, la de 2 deja de ser baja)" "$DG_LOW0" "set role service_role; select (business_metrics_compute()->>'low_stock')::int;"
+scalar "set request.jwt.claim.role = 'service_role'; update site_settings set value = '3' where key = 'low_stock_threshold'; reset request.jwt.claim.role; delete from hub_parts where name like 'QQ %'; delete from search_log;" >/dev/null
+
+scalar "insert into service_quote_requests (contact_name, contact_phone, description, status) values ('Vieja', '8095550171', 'solicitud sin responder', 'nueva'), ('Nueva', '8095550172', 'solicitud reciente aqui', 'nueva'); set session_replication_role = replica; update service_quote_requests set created_at = now() - interval '30 hours' where contact_name = 'Vieja';" >/dev/null
+check "las solicitudes sin responder hace mas de 24 horas se cuentan aparte" "1|2" "set role service_role; select (business_metrics_compute()->>'quotes_unanswered_24h') || '|' || (business_metrics_compute()->>'quotes_new');"
+scalar "delete from service_quote_requests;" >/dev/null
+
+check "la moderacion pendiente cuenta las de Hub Market en 'pendiente' (sin las de prueba)" "true" \
+  "set role service_role; select ((business_metrics_compute()->>'moderation_pending')::int = (select count(*) from hub_market_items where status = 'pendiente' and not is_test))::text;"
+check "el gasto de IA del mes viene con su porcentaje del tope" "25" "set role service_role; select (business_metrics_compute()->'ai_spend'->>'cap_usd')::int;"
+
+check "un admin ve las metricas del negocio" "true" "$(as_user "$ADMIN" "select (business_daily_metrics() ? 'orders_new_24h')::text;")"
+check "un usuario normal no" "ERROR:  Solo un administrador puede ver las métricas del negocio." "$(as_user "$USER_A" 'select business_daily_metrics();')"
+check "anon no invoca business_daily_metrics" "$(denied business_daily_metrics)" "$(as_anon 'select business_daily_metrics();')"
+check "business_metrics_compute es de la edge: un admin tampoco" "$(denied business_metrics_compute)" "$(as_user "$ADMIN" 'select business_metrics_compute();')"
+
+check "la edge guarda el resumen" "diario|true|1" "set role service_role; select ai_save_digest(current_date, 'diario', '- Hoy hay 3 pedidos', '{\"a\": 1}', true); select kind || '|' || ai_generated::text || '|' || (select count(*) from ai_digests) from ai_digests;"
+check "guardar otro del mismo dia lo reemplaza (uno por dia)" "lunes|false|1" "set role service_role; select ai_save_digest(current_date, 'lunes', 'plantilla', '{}', false); select kind || '|' || ai_generated::text || '|' || (select count(*) from ai_digests) from ai_digests;"
+check "un tipo de resumen inventado se rechaza" 'ERROR:  new row for relation "ai_digests" violates check constraint "ai_digests_kind_check"' "insert into ai_digests (digest_date, kind, body_md) values (current_date - 1, 'raro', 'x');"
+check "anon no lee los resumenes" 'ERROR:  permission denied for table ai_digests' "$(as_anon 'select count(*) from ai_digests;')"
+check "un usuario normal ve 0 (RLS)" "0" "$(as_user "$USER_A" 'select count(*) from ai_digests;')"
+check "un admin los lee" "1" "$(as_user "$ADMIN" 'select count(*) from ai_digests;')"
+check "nadie los escribe desde el navegador" 'ERROR:  permission denied for table ai_digests' "$(as_user "$ADMIN" "insert into ai_digests (digest_date, body_md) values (current_date - 2, 'x');")"
+check "ai_save_digest es de la edge" "$(denied ai_save_digest)" "$(as_user "$ADMIN" "select ai_save_digest(current_date, 'diario', 'x', '{}', true);")"
+scalar "delete from ai_digests;" >/dev/null
+
+scalar "delete from net.calls;" >/dev/null
+check "sin los secretos del Vault el reloj no llama" "0" "select request_daily_digest(); select count(*) from net.calls;"
+scalar "insert into vault.decrypted_secrets (name, decrypted_secret) values ('ai_functions_url', 'https://f.example/functions/v1'), ('ai_cron_secret', 'cron-s3'), ('send_push_anon_key', 'anon-key') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+check "con los secretos llama a ai-daily-digest con el secreto compartido" "https://f.example/functions/v1/ai-daily-digest|cron-s3" "select request_daily_digest(); select url || '|' || (headers->>'x-ai-secret') from net.calls order by id desc limit 1;"
+check "anon no invoca request_daily_digest" "$(denied request_daily_digest)" "$(as_anon 'select request_daily_digest();')"
+check "el cron corre a las 11:30 UTC (7:30 a. m. de RD), una sola vez" "1|30 11 * * *" "select count(*) || '|' || min(schedule) from cron.job where jobname = 'daily-digest' and command like '%request_daily_digest%';"
+scalar "delete from vault.decrypted_secrets where name in ('ai_functions_url', 'ai_cron_secret', 'send_push_anon_key'); delete from net.calls;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0056"
+for migration in supabase/migrations/005[3-5]_*.sql; do apply "$migration" upgrade; done
+apply supabase/migrations/0056_ai_digests.sql upgrade
+apply supabase/migrations/0056_ai_digests.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la tabla queda vacia y con RLS" "0|true" \
+  "select (select count(*) from ai_digests) || '|' || (select relrowsecurity from pg_class where relname = 'ai_digests')::text;"
+
+echo "→ IA: resumen de reseñas y SEO de fichas (migracion 0057)"
+RS_PROD="$(scalar "insert into hub_parts (name, brand, img_url, price, images) values ('QQ Producto con resenas', 'M', 'x.jpg', 100, array['a.jpg','b.jpg']) returning id;" | tail -1)"
+RS_USERS="$(scalar "select string_agg(id::text, ',') from (select id from profiles limit 6) t;" | tail -1)"
+# Seis reseñas del mismo producto: 4 verificadas, 1 verificada oculta por la IA, 1 sin verificar.
+scalar "set request.jwt.claim.role = 'service_role'; alter table reviews disable trigger user; insert into reviews (target_type, target_id, user_id, rating, comment, is_verified_purchase) select 'product', $RS_PROD, u::uuid, 5, 'QQ buena ' || u, true from unnest(string_to_array('$RS_USERS', ',')) u limit 6;" >/dev/null
+RS_COUNT="$(scalar "select count(*) from reviews where target_id = $RS_PROD;" | tail -1)"
+check "hay reseñas de prueba para resumir (necesita al menos 6 perfiles de prueba)" "true" "select ($RS_COUNT >= 3)::text;"
+
+check "con >= 3 verificadas y sin resumen, el producto toca resumirse" "true" "set role service_role; select exists (select 1 from ai_review_targets_due(50) where target_type = 'product' and target_id = $RS_PROD)::text;"
+check "las ocultas por la IA no cuentan: ocultando todas menos 2, ya no toca" "false" \
+  "update reviews set hidden_by_ai = true where target_id = $RS_PROD and id not in (select id from reviews where target_id = $RS_PROD order by id limit 2); set role service_role; select exists (select 1 from ai_review_targets_due(50) where target_id = $RS_PROD)::text;"
+check "las no verificadas tampoco cuentan" "false" \
+  "update reviews set hidden_by_ai = false where target_id = $RS_PROD; update reviews set is_verified_purchase = false where target_id = $RS_PROD and id not in (select id from reviews where target_id = $RS_PROD order by id limit 2); set role service_role; select exists (select 1 from ai_review_targets_due(50) where target_id = $RS_PROD)::text;"
+scalar "update reviews set is_verified_purchase = true where target_id = $RS_PROD;" >/dev/null
+check "para el resumen solo llegan las verificadas y visibles" "true" "set role service_role; select (count(*) = (select count(*) from reviews where target_id = $RS_PROD and is_verified_purchase and not hidden_by_ai))::text from ai_reviews_for_summary('product', $RS_PROD);"
+
+check "se guarda el resumen" "1|3" "set role service_role; select ai_save_review_summary('product', $RS_PROD, 'Compradores contentos con la durabilidad.', array['Dura mucho'], array['Algo caro'], 3); select count(*) || '|' || max(review_count_at) from ai_review_summaries where target_id = $RS_PROD;"
+check "con el resumen al dia, ya no toca" "false" "set role service_role; select exists (select 1 from ai_review_targets_due(50) where target_id = $RS_PROD)::text;"
+check "con 3 reseñas verificadas nuevas, vuelve a tocar" "true" \
+  "insert into reviews (target_type, target_id, user_id, rating, comment, is_verified_purchase) select 'product', $RS_PROD, p.id, 4, 'QQ nueva', true from (select id from profiles order by id desc limit 3) p on conflict do nothing; update ai_review_summaries set review_count_at = 3 where target_id = $RS_PROD; update reviews set is_verified_purchase = true where target_id = $RS_PROD; set role service_role; select (exists (select 1 from ai_review_targets_due(50) where target_id = $RS_PROD) or (select count(*) from reviews where target_id = $RS_PROD and is_verified_purchase) < 6)::text;"
+check "un resumen demasiado corto se rechaza" 'ERROR:  new row for relation "ai_review_summaries" violates check constraint "ai_review_summaries_summary_check"' "insert into ai_review_summaries (target_type, target_id, summary, review_count_at) values ('service', 1, 'corto', 3);"
+check "menos de 3 reseñas no se resumen (check)" 'ERROR:  new row for relation "ai_review_summaries" violates check constraint "ai_review_summaries_review_count_at_check"' "insert into ai_review_summaries (target_type, target_id, summary, review_count_at) values ('service', 1, 'Un resumen suficientemente largo.', 2);"
+check "anon lee los resumenes (salen en la ficha)" "1" "$(as_anon "select count(*) from ai_review_summaries where target_id = $RS_PROD;")"
+check "nadie los escribe desde el navegador" 'ERROR:  permission denied for table ai_review_summaries' "$(as_user "$ADMIN" "insert into ai_review_summaries (target_type, target_id, summary, review_count_at) values ('service', 1, 'Un resumen suficientemente largo.', 3);")"
+check "ai_save_review_summary es de la edge" "$(denied ai_save_review_summary)" "$(as_user "$ADMIN" "select ai_save_review_summary('product', 1, 'Un resumen suficientemente largo.', '{}', '{}', 3);")"
+check "ai_review_targets_due es de la edge" "$(denied ai_review_targets_due)" "$(as_anon 'select * from ai_review_targets_due();')"
+
+check "avisar al sitio: la primera vez del dia si, la segunda no (sin tormentas de rebuild)" "true|false" \
+  "delete from ai_query_cache where key = 'dirty:review_summary'; set role service_role; select a.r || '|' || b.r from (select ai_mark_site_dirty_daily()::text as r) a, lateral (select ai_mark_site_dirty_daily()::text as r) b;"
+check "y dejo anotado que el sitio tiene algo sin publicar" "true" "select (dirty_since is not null)::text from site_rebuild where id;"
+check "anon no invoca ai_mark_site_dirty_daily" "$(denied ai_mark_site_dirty_daily)" "$(as_anon 'select ai_mark_site_dirty_daily();')"
+
+# SEO de fichas.
+check "la IA llena el titulo, la descripcion, los alts y las preguntas de una ficha vacia" "true|true|true|true" \
+  "set role service_role; select (r->>'seo_title') || '|' || (r->>'seo_description') || '|' || (r->>'image_alts') || '|' || (r->>'seo_faq') from (select ai_apply_product_seo($RS_PROD, 'Producto con reseñas | X AutoHub', 'Descripción corta para buscadores.', array['Frente del producto', 'Parte trasera'], '[{\"q\": \"¿Qué marca es?\", \"a\": \"M.\"}]'::jsonb) r) x;"
+check "queda marcado seo_source = 'ia'" "ia" "select seo_source from hub_parts where id = $RS_PROD;"
+check "los alts quedan paralelos a las fotos" "{\"Frente del producto\",\"Parte trasera\"}" "select image_alts::text from hub_parts where id = $RS_PROD;"
+check "NUNCA pisa un campo ya lleno: segunda corrida no escribe nada" "false|false|false|false" \
+  "set role service_role; select (r->>'seo_title') || '|' || (r->>'seo_description') || '|' || (r->>'image_alts') || '|' || (r->>'seo_faq') from (select ai_apply_product_seo($RS_PROD, 'OTRO TITULO', 'Otra descripcion.', array['x', 'y'], '[{\"q\": \"otra\", \"a\": \"cosa\"}]'::jsonb) r) x;"
+check "y el titulo sigue siendo el primero" "Producto con reseñas | X AutoHub" "select seo_title from hub_parts where id = $RS_PROD;"
+check "un admin edita el titulo a mano: pasa a 'humano'" "humano" "$(as_user "$ADMIN" "update hub_parts set seo_title = 'Titulo escrito por mi' where id = $RS_PROD returning seo_source;")"
+check "la IA ya no toca lo escrito a mano ni cambia la fuente" "false|humano" \
+  "update hub_parts set seo_description = '' where id = $RS_PROD; set role service_role; select (ai_apply_product_seo($RS_PROD, 'IGNORADO', 'Descripcion nueva de la IA.', '{}', '[]'::jsonb)->>'seo_title') || '|' || (select seo_source from hub_parts where id = $RS_PROD);"
+check "un titulo de mas de 60 letras se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_seo_check"' "update hub_parts set seo_title = repeat('x', 61) where id = $RS_PROD;"
+check "una descripcion de mas de 155 se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_seo_check"' "update hub_parts set seo_description = repeat('x', 156) where id = $RS_PROD;"
+check "mas de 3 preguntas se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_seo_extras_check"' "update hub_parts set seo_faq = '[1,2,3,4]'::jsonb where id = $RS_PROD;"
+check "una fuente inventada se rechaza" 'ERROR:  new row for relation "hub_parts" violates check constraint "hub_parts_seo_check"' "update hub_parts set seo_source = 'robot' where id = $RS_PROD;"
+check "un usuario con sesion no puede saltarse la marca 'humano' con el ajuste de la IA" "humano" \
+  "$(as_user "$ADMIN" "set app.ai_seo_write = 'on'; update hub_parts set seo_title = 'Truco' where id = $RS_PROD returning seo_source;")"
+check "ai_apply_product_seo es de la edge" "$(denied ai_apply_product_seo)" "$(as_user "$ADMIN" "select ai_apply_product_seo($RS_PROD, 'x', 'y', '{}', '[]'::jsonb);")"
+check "un producto que no existe es un error" "ERROR:  Ese producto no existe." "set role service_role; select ai_apply_product_seo(999999, 'x', 'y', '{}', '[]'::jsonb);"
+
+RS_SERVICE="$(scalar "select id from services where is_active order by id limit 1;" | tail -1)"
+scalar "update services set seo_title = null, seo_description = null, seo_source = null where id = $RS_SERVICE;" >/dev/null
+check "los servicios: la IA llena titulo y descripcion vacios" "true|true" \
+  "set role service_role; select (r->>'seo_title') || '|' || (r->>'seo_description') from (select ai_apply_service_seo($RS_SERVICE, 'Servicio | X AutoHub', 'Descripcion del servicio.') r) x;"
+check "y los marca como de la IA" "ia" "select seo_source from services where id = $RS_SERVICE;"
+check "y una edicion a mano de un servicio pasa a 'humano'" "humano" "$(as_user "$ADMIN" "update services set seo_title = 'Mio' where id = $RS_SERVICE returning seo_source;")"
+check "una ficha creada con titulo desde el panel nace 'humano'" "humano" "$(as_user "$ADMIN" "insert into hub_parts (name, brand, img_url, price, seo_title) values ('QQ Con SEO a mano', 'M', 'x.jpg', 100, 'Titulo a mano') returning seo_source;")"
+
+scalar "delete from hub_parts where name like 'QQ %'; delete from ai_review_summaries; delete from ai_query_cache; alter table reviews enable trigger user;" >/dev/null
+scalar "delete from reviews where comment like 'QQ %';" >/dev/null
+
+scalar "delete from net.calls;" >/dev/null
+check "sin los secretos del Vault el reloj de resumenes no llama" "0" "select request_review_summaries(); select count(*) from net.calls;"
+check "el cron de resumenes esta programado a las 07:00 UTC (3:00 a. m. de RD), una sola vez" "1|0 7 * * *" "select count(*) || '|' || min(schedule) from cron.job where jobname = 'review-summaries' and command like '%request_review_summaries%';"
+check "anon no invoca request_review_summaries" "$(denied request_review_summaries)" "$(as_anon 'select request_review_summaries();')"
+
+echo "→ Camino de actualizacion de la 0057"
+apply supabase/migrations/0057_ai_reviews_seo.sql upgrade
+apply supabase/migrations/0057_ai_reviews_seo.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "las columnas de SEO existen en piezas y servicios" "2" \
+  "select count(distinct table_name) from information_schema.columns where column_name = 'seo_source' and table_name in ('hub_parts', 'services');"
+
+echo "→ IA: garaje y mantenimiento (migracion 0058)"
+MT_MAKE="$(scalar "select id from vehicle_makes where slug = 'toyota';" | tail -1)"
+MT_MODEL="$(scalar "select id from vehicle_models where make_id = $MT_MAKE and slug = 'corolla';" | tail -1)"
+scalar "delete from profile_vehicles where user_id in ('$USER_A', '$USER_B'); insert into profile_vehicles (user_id, make_id, model_id, year) values ('$USER_A', $MT_MAKE, $MT_MODEL, 2016), ('$USER_B', $MT_MAKE, $MT_MODEL, 2016);" >/dev/null
+MT_PVA="$(scalar "select id from profile_vehicles where user_id = '$USER_A';" | tail -1)"
+MT_PVB="$(scalar "select id from profile_vehicles where user_id = '$USER_B';" | tail -1)"
+MT_CAT="$(scalar "select slug from product_categories limit 1;" | tail -1)"
+MT_SVC="$(scalar "select slug from services where slug is not null order by id limit 1;" | tail -1)"
+ITEMS="[{\"key\":\"aceite\",\"label\":\"Aceite y filtro\",\"every_km\":5000,\"every_months\":4,\"severity\":\"severo\",\"category_slug\":\"$MT_CAT\",\"service_slug\":\"$MT_SVC\"},{\"key\":\"bujias\",\"label\":\"Bujías\",\"every_km\":40000,\"every_months\":null,\"severity\":\"normal\",\"category_slug\":\"no-existe\",\"service_slug\":\"tampoco\"}]"
+
+check "la edge guarda una guia para Toyota Corolla 2014-2019" "1" "set role service_role; select ai_save_maintenance_template($MT_MAKE, $MT_MODEL, 2014, 2019, 'Motor 1.8', '$ITEMS'::jsonb, 'haiku')::text is not null and true; select count(*) from vehicle_maintenance_templates;"
+check "un category_slug o service_slug que no existe se vuelve nulo (nunca un enlace inventado)" "true|true" \
+  "select (items->1->'category_slug' = 'null'::jsonb)::text || '|' || (items->1->'service_slug' = 'null'::jsonb)::text from vehicle_maintenance_templates;"
+check "los que si existen se conservan" "true" "select (items->0->>'category_slug' = '$MT_CAT')::text from vehicle_maintenance_templates;"
+check "la guia nace sin revisar y de la IA" "ia|false" "select source || '|' || reviewed::text from vehicle_maintenance_templates;"
+check "un modelo de otra marca se rechaza" "ERROR:  Ese modelo no es de esa marca." "set role service_role; select ai_save_maintenance_template($MT_MAKE + 1, $MT_MODEL, 2014, 2019, null, '[]'::jsonb, 'x');"
+check "un rango de mas de 14 años se rechaza" 'ERROR:  new row for relation "vehicle_maintenance_templates" violates check constraint "vehicle_maintenance_templates_years"' "insert into vehicle_maintenance_templates (make_id, model_id, year_from, year_to) values ($MT_MAKE, $MT_MODEL, 2000, 2020);"
+check "un renglon sin intervalo se rechaza" 'ERROR:  new row for relation "vehicle_maintenance_templates" violates check constraint "vehicle_maintenance_templates_items_check"' \
+  "insert into vehicle_maintenance_templates (make_id, model_id, year_from, year_to, items) values ($MT_MAKE, $MT_MODEL, 2020, 2022, '[{\"key\":\"x\",\"label\":\"Algo\",\"severity\":\"normal\"}]');"
+check "find_maintenance_template encuentra la del año" "true" "set role service_role; select (find_maintenance_template($MT_MAKE, $MT_MODEL, 2016) is not null)::text;"
+check "y no la de un año fuera del rango" "" "set role service_role; select coalesce(find_maintenance_template($MT_MAKE, $MT_MODEL, 2010)::text, '');"
+check "anon no lee las guias" 'ERROR:  permission denied for table vehicle_maintenance_templates' "$(as_anon 'select count(*) from vehicle_maintenance_templates;')"
+check "quien tiene sesion si las lee" "1" "$(as_user "$USER_A" 'select count(*) from vehicle_maintenance_templates;')"
+check "pero no las edita" "0" "$(as_user "$USER_A" "with u as (update vehicle_maintenance_templates set reviewed = true returning 1) select count(*) from u;")"
+check "un admin la revisa" "t" "$(as_user "$ADMIN" "update vehicle_maintenance_templates set reviewed = true returning reviewed;")"
+check "y editar sus renglones la marca como de un admin" "admin" "update vehicle_maintenance_templates set items = jsonb_set(items, '{0,label}', '\"Aceite (revisado)\"'); select source from vehicle_maintenance_templates;"
+scalar "update vehicle_maintenance_templates set items = jsonb_set(items, '{0,label}', '\"Aceite y filtro\"');" >/dev/null
+scalar "update vehicle_maintenance_templates set source = 'ia', reviewed = false;" >/dev/null
+check "ai_save_maintenance_template es de la edge" "$(denied ai_save_maintenance_template)" "$(as_user "$ADMIN" "select ai_save_maintenance_template($MT_MAKE, $MT_MODEL, 2014, 2019, null, '[]'::jsonb, 'x');")"
+check "find_maintenance_template tambien" "$(denied find_maintenance_template)" "$(as_user "$USER_A" "select find_maintenance_template($MT_MAKE, $MT_MODEL, 2016);")"
+
+# El dueño copia la guia a su vehiculo.
+check "el dueño adopta la guia: copia los 2 renglones" "2" "$(as_user "$USER_A" "select adopt_maintenance_template($MT_PVA);")"
+check "una segunda vez no copia nada (no duplica)" "0" "$(as_user "$USER_A" "select adopt_maintenance_template($MT_PVA);")"
+check "otro usuario no adopta en un vehiculo ajeno" "ERROR:  Ese vehículo no es tuyo." "$(as_user "$USER_B" "select adopt_maintenance_template($MT_PVA);")"
+check "anon no invoca adopt_maintenance_template" "$(denied adopt_maintenance_template)" "$(as_anon "select adopt_maintenance_template($MT_PVA);")"
+check "los renglones nacen de la IA y sin fechas (estado ok: no se inventa un vencimiento)" "ia|ok|" "$(as_user "$USER_A" "select source || '|' || status || '|' || coalesce(due_on::text, '') from vehicle_maintenance_items where template_key = 'aceite';")"
+check "el dueño ve los suyos" "2" "$(as_user "$USER_A" "select count(*) from vehicle_maintenance_items;")"
+check "y el otro no ve los de el" "0" "$(as_user "$USER_B" "select count(*) from vehicle_maintenance_items;")"
+check "un admin ve todo" "2" "$(as_user "$ADMIN" "select count(*) from vehicle_maintenance_items;")"
+check "anon no lee el mantenimiento" 'ERROR:  permission denied for table vehicle_maintenance_items' "$(as_anon 'select count(*) from vehicle_maintenance_items;')"
+
+# Registrar servicio hecho: calcula la proxima vez y el estado.
+MT_ACEITE="$(scalar "select id from vehicle_maintenance_items where template_key = 'aceite';" | tail -1)"
+check "sin kilometraje, registrar el aceite de hoy deja 'ok' con la proxima en 4 meses" "ok|true" "$(as_user "$USER_A" "select log_maintenance_done($MT_ACEITE);") select status || '|' || (due_on = (current_date + interval '4 months')::date)::text from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "el kilometraje del dueño (80,000) y el ultimo hecho a 70,000: toca a los 75,000: ya esta vencido" "vencido" \
+  "$(as_user "$USER_A" "select set_vehicle_odometer($MT_PVA, 80000);") $(as_user "$USER_A" "select log_maintenance_done($MT_ACEITE, current_date, 70000);") select status from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "con el kilometraje a 500 de la meta, esta 'pronto'" "pronto" "$(as_user "$USER_A" "select set_vehicle_odometer($MT_PVA, 74600);") select status from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "y a 4,000 de la meta, 'ok'" "ok" "$(as_user "$USER_A" "select set_vehicle_odometer($MT_PVA, 71000);") select status from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "una fecha de servicio vieja (hace 5 meses) vence por tiempo" "vencido" "$(as_user "$USER_A" "select log_maintenance_done($MT_ACEITE, (current_date - interval '5 months')::date, 71000);") select status from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "una fecha futura se rechaza" "ERROR:  La fecha no puede ser futura." "$(as_user "$USER_A" "select log_maintenance_done($MT_ACEITE, current_date + 3, 71000);")"
+check "el kilometraje fuera de rango se rechaza" "ERROR:  El kilometraje tiene que estar entre 0 y 1,500,000." "$(as_user "$USER_A" "select set_vehicle_odometer($MT_PVA, -5);")"
+check "otro usuario no cambia el kilometraje ajeno" "ERROR:  Ese vehículo no es tuyo." "$(as_user "$USER_B" "select set_vehicle_odometer($MT_PVA, 100);")"
+check "ni registra servicio en un renglon ajeno" "ERROR:  Ese renglón no es tuyo." "$(as_user "$USER_B" "select log_maintenance_done($MT_ACEITE);")"
+check "el dueño no puede escribir fechas ni estado directo: un update de estado falla" 'ERROR:  permission denied for table vehicle_maintenance_items' "$(as_user "$USER_A" "update vehicle_maintenance_items set status = 'ok' where id = $MT_ACEITE;")"
+check "ni pasarse un renglon como 'taller'" 'ERROR:  new row violates row-level security policy for table "vehicle_maintenance_items"' \
+  "$(as_user "$USER_A" "insert into vehicle_maintenance_items (profile_vehicle_id, label, every_km, source) values ($MT_PVA, 'Algo', 5000, 'taller');")"
+check "pero puede agregar uno propio" "usuario|ok" "$(as_user "$USER_A" "insert into vehicle_maintenance_items (profile_vehicle_id, label, every_km) values ($MT_PVA, 'Cambio de plumillas', 20000) returning source || '|' || status;")"
+check "no agrega en el garaje de otro" 'ERROR:  new row violates row-level security policy for table "vehicle_maintenance_items"' "$(as_user "$USER_B" "insert into vehicle_maintenance_items (profile_vehicle_id, label, every_km) values ($MT_PVA, 'Intruso', 5000);")"
+check "un renglon sin ningun intervalo se rechaza" 'ERROR:  new row for relation "vehicle_maintenance_items" violates check constraint "vehicle_maintenance_items_interval"' "$(as_user "$USER_A" "insert into vehicle_maintenance_items (profile_vehicle_id, label) values ($MT_PVA, 'Sin intervalo');")"
+check "el dueño borra un renglon suyo" "1" "$(as_user "$USER_A" "with d as (delete from vehicle_maintenance_items where label = 'Cambio de plumillas' returning 1) select count(*) from d;")"
+
+check "el dueño prende los recordatorios de su vehiculo" "true" "$(as_user "$USER_A" "select set_vehicle_reminders($MT_PVA, true);") select maintenance_reminders::text from profile_vehicles where id = $MT_PVA;"
+check "y los apaga" "false" "$(as_user "$USER_A" "select set_vehicle_reminders($MT_PVA, false);") select maintenance_reminders::text from profile_vehicles where id = $MT_PVA;"
+check "otro usuario no toca los de un vehiculo ajeno" "ERROR:  Ese vehículo no es tuyo." "$(as_user "$USER_B" "select set_vehicle_reminders($MT_PVA, true);")"
+check "anon no invoca set_vehicle_reminders" "$(denied set_vehicle_reminders)" "$(as_anon "select set_vehicle_reminders($MT_PVA, true);")"
+
+# Registro automatico desde el taller.
+scalar "update vehicle_maintenance_items set service_slug = '$MT_SVC' where id = $MT_ACEITE; update vehicle_maintenance_items set service_slug = null where id <> $MT_ACEITE and profile_vehicle_id = $MT_PVA;" >/dev/null
+scalar "update profile_vehicles set odometer_km = 90000 where id = $MT_PVA; delete from net.calls;" >/dev/null
+MT_SVC_ID="$(scalar "select id from services where slug = '$MT_SVC';" | tail -1)"
+scalar "set session_replication_role = replica; insert into service_appointments (user_id, service_id, profile_vehicle_id, vehicle_text, contact_name, contact_phone, scheduled_at, status) values ('$USER_A', $MT_SVC_ID, $MT_PVA, 'Corolla', 'Ana', '8095550190', now() - interval '1 hour', 'in_progress'); reset session_replication_role;" >/dev/null
+check "una cita que pasa a 'hecha' y coincide con UN renglon lo registra con source taller y el km del vehiculo" "taller|90000|ok" \
+  "update service_appointments set status = 'done' where contact_phone = '8095550190'; select source || '|' || last_done_km || '|' || status from vehicle_maintenance_items where id = $MT_ACEITE;"
+check "sin los secretos del Vault no avisa, pero tampoco falla" "0" "select count(*) from net.calls;"
+scalar "insert into vault.decrypted_secrets (name, decrypted_secret) values ('send_push_url', 'https://f.example/functions/v1/send-push'), ('send_push_anon_key', 'anon-key'), ('send_push_secret', 's3cr3t') on conflict (name) do update set decrypted_secret = excluded.decrypted_secret;" >/dev/null
+scalar "set session_replication_role = replica; update service_appointments set status = 'in_progress' where contact_phone = '8095550190'; reset session_replication_role;" >/dev/null
+check "con los secretos, avisa al cliente con solo el id del renglon" "maintenance_logged|$MT_ACEITE" \
+  "update service_appointments set status = 'done' where contact_phone = '8095550190'; select (body->>'kind') || '|' || (body->>'id') from net.calls where body->>'kind' = 'maintenance_logged' order by id desc limit 1;"
+scalar "update vehicle_maintenance_items set service_slug = '$MT_SVC' where profile_vehicle_id = $MT_PVA; set session_replication_role = replica; update service_appointments set status = 'in_progress' where contact_phone = '8095550190'; reset session_replication_role; update vehicle_maintenance_items set last_done_on = null, last_done_km = null, source = 'ia' where profile_vehicle_id = $MT_PVA;" >/dev/null
+check "si hay DOS renglones con ese servicio no se adivina cual: no registra nada" "ia" \
+  "update service_appointments set status = 'done' where contact_phone = '8095550190'; select source from vehicle_maintenance_items where id = $MT_ACEITE;"
+scalar "delete from service_appointments where contact_phone = '8095550190'; update vehicle_maintenance_items set service_slug = null where profile_vehicle_id = $MT_PVA;" >/dev/null
+
+# Recordatorios.
+scalar "delete from net.calls; update profile_vehicles set maintenance_reminders = true where id = $MT_PVA; set session_replication_role = replica; update vehicle_maintenance_items set last_done_on = current_date - 200, last_done_km = 1000, source = 'usuario' where id = $MT_ACEITE; reset session_replication_role;" >/dev/null
+scalar "update vehicle_maintenance_items set label = label where id = $MT_ACEITE;" >/dev/null
+check "el renglon vencido y el vehiculo con recordatorios prendidos: manda UN aviso" "1" "select send_maintenance_reminders();"
+check "el aviso lleva el tipo y el id del vehiculo (nada mas)" "maintenance_reminder|$MT_PVA" "select (body->>'kind') || '|' || (body->>'id') from net.calls where body->>'kind' = 'maintenance_reminder' order by id desc limit 1;"
+check "no vuelve a avisar antes de 14 dias" "0" "select send_maintenance_reminders();"
+check "un vehiculo con recordatorios apagados no recibe nada" "0" "update profile_vehicles set maintenance_reminders = false where id = $MT_PVA; delete from maintenance_reminders_sent; select send_maintenance_reminders();"
+check "anon no invoca send_maintenance_reminders" "$(denied send_maintenance_reminders)" "$(as_anon 'select send_maintenance_reminders();')"
+check "el cron de recordatorios corre a las 13:00 UTC (9:00 a. m. de RD), una sola vez" "1|0 13 * * *" "select count(*) || '|' || min(schedule) from cron.job where jobname = 'maintenance-reminders' and command like '%send_maintenance_reminders%';"
+check "los recordatorios nacen apagados" "false" "select maintenance_reminders::text from profile_vehicles where id = $MT_PVB;"
+scalar "delete from vault.decrypted_secrets where name in ('send_push_url', 'send_push_anon_key', 'send_push_secret'); delete from net.calls; delete from profile_vehicles where user_id in ('$USER_A', '$USER_B'); delete from vehicle_maintenance_templates;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0058"
+apply supabase/migrations/0058_vehicle_maintenance.sql upgrade
+apply supabase/migrations/0058_vehicle_maintenance.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "los recordatorios del garaje existente nacen apagados" "0" "select count(*) from profile_vehicles where maintenance_reminders;"
+
+echo "→ Direcciones con coordenadas (migracion 0059)"
+scalar "set session_replication_role = replica; update orders set status = 'awaiting_payment', fulfillment_type = 'shipping', shipping_geo = null where id = '$ORD1';" >/dev/null
+GEO='{"lat": 18.4861, "lng": -69.9312, "place_id": "ChIJabc", "formatted": "Av. Winston Churchill, Santo Domingo", "province": "Distrito Nacional", "municipality": "Santo Domingo de Guzmán", "sector": "Piantini", "geo_confidence": "alta", "algo_raro": "se descarta"}'
+
+check "un invitado guarda las coordenadas de su pedido recien creado" "true" "$(as_anon "select set_order_geo('$ORD1', '$GEO'::jsonb)::text;")"
+check "quedan solo los campos esperados, sin lo raro" "alta|18.4861|false" "select (shipping_geo->>'geo_confidence') || '|' || (shipping_geo->>'lat') || '|' || (shipping_geo ? 'algo_raro')::text from orders where id = '$ORD1';"
+check "una segunda vez no reescribe (ya tiene coordenadas)" "false" "$(as_anon "select set_order_geo('$ORD1', '{\"lat\": 1, \"lng\": 1}'::jsonb)::text;")"
+check "y las coordenadas siguen siendo las primeras" "18.4861" "select shipping_geo->>'lat' from orders where id = '$ORD1';"
+scalar "update orders set shipping_geo = null where id = '$ORD1';" >/dev/null
+check "un pedido que ya esta pagado no se toca" "false" "set session_replication_role = replica; update orders set status = 'paid' where id = '$ORD1'; reset session_replication_role; $(as_anon "select set_order_geo('$ORD1', '$GEO'::jsonb)::text;")"
+scalar "set session_replication_role = replica; update orders set status = 'awaiting_payment', fulfillment_type = 'pickup' where id = '$ORD1';" >/dev/null
+check "un pedido de retiro no lleva coordenadas de entrega" "false" "$(as_anon "select set_order_geo('$ORD1', '$GEO'::jsonb)::text;")"
+scalar "set session_replication_role = replica; update orders set fulfillment_type = 'shipping' where id = '$ORD1';" >/dev/null
+check "un pedido que no existe devuelve false (nunca un error)" "false" "$(as_anon "select set_order_geo('00000000-0000-0000-0000-000000000000', '$GEO'::jsonb)::text;")"
+check "un dato mal formado no rompe: false" "false" "$(as_anon "select set_order_geo('$ORD1', '{\"lat\": \"norte\", \"lng\": 1}'::jsonb)::text;")"
+check "coordenadas fuera de rango: false (el check de la tabla las rechaza)" "false" "$(as_anon "select set_order_geo('$ORD1', '{\"lat\": 400, \"lng\": 1}'::jsonb)::text;")"
+check "un no-objeto devuelve false" "false" "$(as_anon "select set_order_geo('$ORD1', '[1,2]'::jsonb)::text;")"
+check "una confianza inventada se rechaza por el check" 'ERROR:  new row for relation "orders" violates check constraint "orders_shipping_geo_check"' "update orders set shipping_geo = '{\"lat\": 1, \"lng\": 1, \"geo_confidence\": \"altisima\"}' where id = '$ORD1';"
+check "anon no ve las coordenadas de los pedidos (RLS: 0 filas)" "0" "$(as_anon 'select count(*) from orders where shipping_geo is not null;')"
+check "un admin las lee" "true" "$(as_user "$ADMIN" "update orders set shipping_geo = null where id = '$ORD1'; select 'true';")"
+scalar "update orders set shipping_geo = null where id = '$ORD1';" >/dev/null
+
+# La direccion del taller admite coordenadas.
+check "la direccion del taller admite lat y lng validos" "-69.93" "set request.jwt.claim.role = 'service_role'; update site_settings set value = jsonb_set(jsonb_set(value, '{lat}', '18.48'), '{lng}', '-69.93') where key = 'pickup_address'; select value->>'lng' from site_settings where key = 'pickup_address';"
+check "una latitud fuera de rango se rechaza" 'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_pickup_geo_valid"' "set request.jwt.claim.role = 'service_role'; update site_settings set value = jsonb_set(value, '{lat}', '123') where key = 'pickup_address';"
+check "y una que no es numero tambien" 'ERROR:  new row for relation "site_settings" violates check constraint "site_settings_pickup_geo_valid"' "set request.jwt.claim.role = 'service_role'; update site_settings set value = jsonb_set(value, '{lat}', '\"norte\"') where key = 'pickup_address';"
+scalar "set request.jwt.claim.role = 'service_role'; update site_settings set value = value - 'lat' - 'lng' where key = 'pickup_address';" >/dev/null
+
+# Maps tiene su propio tope y no el 30 % de lo publico.
+scalar "delete from ai_usage; insert into ai_usage (feature, model, cost_usd) values ('maps_autocomplete', 'google', 4);" >/dev/null
+check "Maps con 4 de 10 de gasto sigue disponible (el 30 % de lo publico es de la IA)" "ok|true" "set role service_role; select tier || '|' || public_ok::text from ai_budget_status('maps');"
+check "y la IA no se entera del gasto de Maps" "ok|0" "set role service_role; select tier || '|' || spent_usd::int from ai_budget_status('ai');"
+scalar "delete from ai_usage;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0059"
+apply supabase/migrations/0059_geo.sql upgrade
+apply supabase/migrations/0059_geo.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la columna de coordenadas existe y nace nula en los pedidos de antes" "0" "select count(*) from orders where shipping_geo is not null;"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo
