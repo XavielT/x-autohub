@@ -517,6 +517,31 @@ Cosas que ya causaron un bug. No las repitas:
   recorrido "desde cero + seed" migra con la tabla vacía y nunca ejercita el
   backfill.
 
+- **Reglas de la IA (ver `docs/IA.md`).** (1) Las claves de Anthropic y Google viven **solo** como secretos de Edge Functions: ni en
+  `environment*.ts`, ni en el bundle (`dist/` no debe traer `sk-ant`, `AIza` ni los nombres de los secretos). (2) **La IA nunca toca
+  dinero ni estados de pedido**: ni confirma pagos, ni cambia estados, stock o precios, ni aprueba o rechaza publicaciones de Hub Market,
+  ni publica productos sin revisión, ni manda un WhatsApp; propone y una persona aprueba. (3) **Todo contenido de usuario va como dato**
+  (`wrapData()` → `<datos>…</datos>`, con teléfonos, correos y cédulas fuera) y no hay *tool use*: la IA solo devuelve JSON validado y los
+  cambios pasan por funciones SQL con chequeo de rol. (4) **Cada función nueva trae su interruptor** (`ai_feature_<nombre>`, migración 0050)
+  y registra su costo en `ai_usage`; el front pasa por `AiService` y nunca se bloquea si la IA responde `ia_no_disponible`. Las edges
+  comprueban el rol llamando a la base **con el JWT del usuario**, no con la service_role. Las edges de `supabase/functions` no se
+  compilan con la app: se prueban con `scripts/verify-ai-*.mjs`.
+- **Lo que oculta la IA vive en tres columnas `hidden_by_ai` (0053) y se filtra por RLS.** `social_posts`, `social_post_comments` y `reviews` solo se leen si `not hidden_by_ai` o si
+  eres el autor o moderador. Ocultar y restaurar pasan solo por `ai_save_moderation()` (service_role) y `restore_hidden_content()`: nadie escribe la columna desde el navegador (`social_posts` ya solo
+  deja actualizar un puñado de columnas, 0045: **si agregas una columna editable, no sumes `hidden_by_ai`**). `review_stats()` y `reviews_sync_product()` ignoran las reseñas ocultas; si reescribes
+  alguna, conserva `and not hidden_by_ai`. La regla de cuándo se oculta (riesgo alto, confianza ≥ 0,9, categoría grave, `ai_auto_hide`) está en SQL y no en la edge.
+- **Google Maps es solo del servidor, y las coordenadas de un pedido no viajan en `create_order()` (0059).** Las tres edges (`maps-autocomplete`, `maps-geocode`, `ai-normalize-address`) usan `GOOGLE_MAPS_API_KEY`
+  (la de **servidor**; la de navegador de SGC está restringida por referrer y no sirve) y no hay ninguna clave de Google en el front ni cambios en la CSP: **no agregues el script de Google Maps JS ni una clave en `environment*.ts`**. Gastan contra
+  `maps_monthly_cap_usd` (`gate(env, 'address', 'maps')`), no contra el tope de la IA. Las coordenadas se anotan **después** con `set_order_geo()`: cambiar la firma de `create_order()` para llevarlas obliga a retirar la anterior (`PGRST203`).
+  La IA que entiende direcciones informales nunca da una confianza mayor que "media" y la provincia tiene que ser una de las 32 (`PROVINCES` en `_shared/maps.ts`). "Abrir en Google Maps" y "Cómo llegar" son enlaces `google.com/maps/…?api=1`, sin API.
+- **`search_products()` y `suggest_products()` se parchan leyendo su definición viva (0051).** Para agregar el número de parte no se copiaron
+  sus cuerpos: la migración reemplaza un texto exacto en `pg_get_functiondef()` y falla si ya no está. Si alguien reescribe una de las dos
+  con `create or replace` desde una copia vieja, **se pierde** la búsqueda por número de parte (la comprobación de `verify-migrations.sh`
+  lo atrapa). El `search_vector` es una columna generada que ahora lee `part_number` y `cross_refs`: cambiar su expresión obliga a borrarla
+  y volver a crearla (con su índice).
+- **`part_number` y `cross_refs` solo llegan a la ficha y al formulario**, no a las listas (`search_products()` devuelve columnas explícitas);
+  por eso son opcionales en `HubPartRow` y en `ProductModel`. Las normalizadas (`*_norm`) las escribe un trigger: no las mandes desde un formulario.
+
 ---
 
 ## Documentos
@@ -529,5 +554,6 @@ Cosas que ya causaron un bug. No las repitas:
 | `docs/CONVENTIONS.md`    | Convenciones de TS, plantillas, SCSS, nombres, imágenes          |
 | `docs/BACKEND.md`        | Supabase: puesta en marcha, esquema, RLS, tareas frecuentes      |
 | `docs/ROADMAP.md`        | Trabajo pendiente, priorizado, con el por qué de cada punto      |
+| `docs/IA.md`             | La IA: arquitectura, claves y secretos, topes, cómo apagarla, estado por bloque |
 | `docs/AUDIT-2026-08-11.md` | Auditoría completa: qué se encontró, qué se arregló, qué queda |
 | `brand/README.md`        | Assets originales de marca y cómo regenerar los favicons         |

@@ -211,6 +211,15 @@ Fuera de la ronda, a propósito (ver `docs/PIVOT-2026-10.md` §9). Cada uno con 
 
 ---
 
+## IA en los flujos reales (2.31.0) — escrita, sin desplegar
+
+Plan completo en `docs/IA.md` (tabla de estado). **Hecho en el código:** base común (tope mensual, interruptores, registro de costo), catálogo
+asistido por fotos y número de parte buscable, lectura asistida de comprobantes, moderación asistida, búsqueda inteligente, cotización del taller con triage, resumen diario, reseñas/SEO, garaje con mantenimiento, mensajes de WhatsApp (sin bot) y Google Maps (autocompletar y geocodificar desde el servidor, coordenadas del pedido, "Cómo llegar" del taller).
+**Falta, y no depende del código:** aplicar las migraciones 0050–0059, cargar los secretos y desplegar las edges (pasos manuales en `docs/IA.md`), cerrar la versión 2.31.0, y probar con **fotos y comprobantes reales** (todo se probó con Anthropic y Google simulados).
+**Queda para después:** voz (STT), geocodificación inversa al soltar el pin de `/publicar` (la edge ya la soporta; falta un campo de municipio en texto), y claves propias de X AutoHub en vez de las de SGC.
+
+---
+
 ## Pulido de la tienda y novedades (2.30.0) ✅
 
 Hecho (el prompt 08 sustituye al 04b, que no llegó a correrse y queda **absorbido** aquí): "Mi vehículo" con selector

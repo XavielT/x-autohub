@@ -1318,6 +1318,35 @@ las fotos reales del inventario propio a Storage, actualiza esas filas.
 
 ---
 
+## IA (migraciones 0050 a 0059)
+
+Todo está en `docs/IA.md`; aquí lo que toca a la base:
+
+- **0050 `ai_core`**: `ai_usage` (una fila por llamada: función, modelo, tokens, costo, si salió bien), `ai_rate_limits`
+  (`ai_rate_check()`, atómica) y `ai_query_cache`. RLS activada y **sin acceso para `anon` ni `authenticated`** (se revoca: los default
+  privileges de Supabase se lo darían); solo `service_role` (las edges) escribe, y un admin lee `ai_usage`. Los ajustes viven en
+  `site_settings` (`ai_enabled`, `ai_monthly_cap_usd`, `maps_monthly_cap_usd`, `ai_auto_hide` y un `ai_feature_<nombre>` por función), con
+  `check` de tipo (booleano o número ≥ 0). `ai_budget_status('ai'|'maps')` da gasto, tope, % y tier (solo `service_role`);
+  `ai_admin_overview()` es el resumen del panel (solo admin, comprueba `is_admin()` por dentro); `ai_housekeeping()` (cron diario) limpia
+  límites y caché vencidos.
+- **0051 `ai_product_drafts`**: `hub_parts.part_number` / `cross_refs` (+ `part_number_norm`, `cross_refs_norm` por trigger), el vector
+  `search_vector` rehecho con ambos (una columna generada no se altera: se borra y se crea otra, una sola vez), `search_products()` y
+  `suggest_products()` **parchadas leyendo su definición viva** (la migración falla en voz alta si el texto esperado ya no está),
+  `ai_product_drafts` (solo admin), bucket privado `ai-product-sources`, `ai_find_duplicate_product()` (solo `service_role`) y
+  `ai_catalog_accuracy()` (solo admin).
+- **0052 `ai_proof_checks`**: `order_proof_checks` (lo que la IA leyó de un comprobante) y `ai_proof_compare()`, que da el **veredicto en SQL** (coincide, no coincide, ilegible…) contra `admin_order_expected()`; la IA solo anota. Un trigger sobre `orders.payment_proof_url` pide la lectura.
+- **0053 `ai_moderation`**: `hidden_by_ai` / `hidden_at` en `social_posts`, `social_post_comments` y `reviews` (la RLS de lectura ya los filtra), `ai_moderation`, `ai_save_moderation()` (la regla de ocultar vive aquí), `restore_hidden_content()`, `ai_hidden_content()` y `ai_hub_price_context()`.
+- **0054 `search_log_and_ai`**: `search_log` (texto limpio de datos personales, sin quién buscó; se purga con cron), `log_search()` (abierta a visitantes), `admin_search_gaps()`, `ai_search_gaps()` y `admin_assign_vehicle_model()`.
+- **0055 `service_quote_requests`**: solicitudes de cotización (`XAH-C-####`), bucket `quote-photos` (subidas `<uuid>/<0-2>.jpg|webp`), `create_quote_request()` (señuelo anti-bots, teléfono validado, límites), `ai_save_quote_triage()` y la purga de fotos viejas.
+- **0056 `ai_digests`**: `ai_digests`, `business_metrics_compute()` / `business_daily_metrics()` (los números salen de la base, no de la IA), `ai_save_digest()` y el cron de las 11:30 UTC; ajuste `low_stock_threshold`.
+- **0057 `ai_reviews_seo`**: `ai_review_summaries`, `seo_*` / `image_alts` / `seo_faq` en productos y servicios, `ai_apply_product_seo()` / `ai_apply_service_seo()` (**solo llenan campos vacíos**) y los guardias `seo_source_guard`.
+- **0058 `vehicle_maintenance`**: `profile_vehicles.odometer_km` y `maintenance_reminders`, plantillas y renglones de mantenimiento, `set_vehicle_odometer()`, `log_maintenance_done()`, `adopt_maintenance_template()`, el cron de recordatorios (13:00 UTC) y el trigger que anota lo que el taller hizo en una cita.
+- **0059 `geo`**: `orders.shipping_geo` (jsonb con un `check`: lat/lng en rango, confianza `alta|media|baja`) y `set_order_geo(p_order_id, p_geo)`, **aparte** de `create_order()` (cambiarle la firma obliga a retirar la anterior: `PGRST203`). Solo pedidos con envío, en `pending`/`awaiting_payment` y sin coordenadas; descarta campos desconocidos y devuelve `false` en vez de lanzar. Y `site_settings_pickup_geo_valid`: `pickup_address` admite `lat`, `lng` y `place_id` válidos.
+- **Secretos de las edges de IA**: `ANTHROPIC_API_KEY`, `GOOGLE_MAPS_API_KEY`, `AI_MODEL_FAST`, `AI_MODEL_SMART`, `AI_CRON_SECRET`. Nunca
+  en el repositorio ni en el navegador.
+- **Orden de despliegue**: migración → edges (incluida `send-push`) → frontend. El frontend ya pide columnas nuevas (`part_number`, `seo_*`, `hidden_by_ai`, `odometer_km`, `shipping_geo`…): desplegarlo antes de las migraciones rompe páginas, y **`npm run build` falla en el prerenderizado hasta que producción tenga la 0051** (la ficha pide `part_number`).
+- **Pruebas**: los `node scripts/verify-ai-*.mjs` (uno por bloque, incluido `verify-ai-maps.mjs`), `verify-send-push-ai.mjs` y `./scripts/verify-migrations.sh`.
+
 ## Lo que todavía no está
 
 - **Pasarela de pago.** No hay cobro en línea: se paga por transferencia (con

@@ -309,6 +309,22 @@ formularios) sigue en el navegador.
   para eso. El formato del mensaje lo arma `send-push`.
 - Tres scripts prueban lo que `ng test` no ve: `scripts/verify-webpush.mjs`, `scripts/verify-send-push.mjs` y `scripts/verify-build-status.mjs`.
 
+## IA
+
+Ver `docs/IA.md`. Las claves de Anthropic y Google viven solo en Edge Functions; el front habla con ellas **solo** por `AiService` (o el
+servicio de su dominio) y nunca se bloquea si la IA no está.
+
+| Pieza | Dónde | Qué hace |
+| ----- | ----- | -------- |
+| `_shared/` | `supabase/functions/_shared` | `ai.ts` (cliente de Anthropic: interruptores, tope, JSON validado, registro de costo), `guard.ts` (JWT + rol como el usuario, CORS, límite por IP), `schema.ts`, `prices.ts`, `db.ts`. No se compilan con la app |
+| `AiService` | `shared/services/ai.service.ts` | `call()` a una edge (nunca falla: `ia_no_disponible`) y `getOverview()` del panel. En modo simulado, la IA "no está" |
+| `AiCatalogService` | `shared/services/ai-catalog.service.ts` | Sube las fotos (1280 px), crea borradores, sigue el estado, aprueba por el camino del panel y da la precisión por campo |
+| `<app-admin-ia-panel>` | `pages/admin/ajustes/admin-ia-panel` | Interruptores, topes, gasto del mes, errores y precisión del catálogo |
+| `/admin/inventario/cargar-ia` | `pages/admin/inventario/cargar-ia` | Subir, seguir el estado y revisar borradores de producto |
+| `ai-product-ingest` | `supabase/functions/ai-product-ingest` | Lee las fotos y escribe el borrador (en segundo plano, solo admin) |
+
+Tres scripts prueban lo que `ng test` no ve: `scripts/verify-ai-core.mjs`, `scripts/verify-ai-ingest.mjs` y `scripts/verify-migrations.sh`.
+
 ## Variantes de producto (color, talla…)
 
 | Pieza | Dónde | Qué hace |
