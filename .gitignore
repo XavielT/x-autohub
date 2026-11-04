@@ -49,6 +49,10 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+# Así se guardan las claves de API en SGC: un archivo suelto con solo el valor (ANTHROPIC_API_KEY.env, maps_platform_api_key.env)
+*.env
+*api_key*
+*.key
 
 # Vercel
 .vercel
