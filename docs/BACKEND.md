@@ -1318,7 +1318,7 @@ las fotos reales del inventario propio a Storage, actualiza esas filas.
 
 ---
 
-## IA (migraciones 0050 a 0059)
+## IA (migraciones 0050 a 0060)
 
 Todo está en `docs/IA.md`; aquí lo que toca a la base:
 
@@ -1342,6 +1342,7 @@ Todo está en `docs/IA.md`; aquí lo que toca a la base:
 - **0057 `ai_reviews_seo`**: `ai_review_summaries`, `seo_*` / `image_alts` / `seo_faq` en productos y servicios, `ai_apply_product_seo()` / `ai_apply_service_seo()` (**solo llenan campos vacíos**) y los guardias `seo_source_guard`.
 - **0058 `vehicle_maintenance`**: `profile_vehicles.odometer_km` y `maintenance_reminders`, plantillas y renglones de mantenimiento, `set_vehicle_odometer()`, `log_maintenance_done()`, `adopt_maintenance_template()`, el cron de recordatorios (13:00 UTC) y el trigger que anota lo que el taller hizo en una cita.
 - **0059 `geo`**: `orders.shipping_geo` (jsonb con un `check`: lat/lng en rango, confianza `alta|media|baja`) y `set_order_geo(p_order_id, p_geo)`, **aparte** de `create_order()` (cambiarle la firma obliga a retirar la anterior: `PGRST203`). Solo pedidos con envío, en `pending`/`awaiting_payment` y sin coordenadas; descarta campos desconocidos y devuelve `false` en vez de lanzar. Y `site_settings_pickup_geo_valid`: `pickup_address` admite `lat`, `lng` y `place_id` válidos.
+- **0060 `function_search_path`**: fija `search_path = public` en cinco funciones auxiliares de 0051, 0055 y 0058 (`xah_join`, `xah_norm_part`, `xah_norm_parts`, `maintenance_items_valid`, `service_quote_requests_touch`) que el linter de Supabase marcaba. Solo un ALTER: no cambia cuerpo, volatilidad ni permisos.
 - **Secretos de las edges de IA**: `ANTHROPIC_API_KEY`, `GOOGLE_MAPS_API_KEY`, `AI_MODEL_FAST`, `AI_MODEL_SMART`, `AI_CRON_SECRET`. Nunca
   en el repositorio ni en el navegador.
 - **Orden de despliegue**: migración → edges (incluida `send-push`) → frontend. El frontend ya pide columnas nuevas (`part_number`, `seo_*`, `hidden_by_ai`, `odometer_km`, `shipping_geo`…): desplegarlo antes de las migraciones rompe páginas, y **`npm run build` falla en el prerenderizado hasta que producción tenga la 0051** (la ficha pide `part_number`).
