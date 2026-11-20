@@ -10,6 +10,7 @@ import {
   model,
   signal,
 } from '@angular/core';
+import { trackKeyboard } from '../../utils/keyboard-inset';
 
 export interface SelectOption<T extends string | number = string | number> {
   value: T;
@@ -100,21 +101,10 @@ export class SearchableSelect {
 
   private trackKeyboard(): void {
     if (this.stopKeyboardTracking) return;
-    if (typeof window === 'undefined' || !window.visualViewport) return;
-    if (!window.matchMedia('(max-width: 640px)').matches) return;
-
-    const vv = window.visualViewport;
-    const update = () => {
-      this.sheetInset.set(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
-      this.sheetMax.set(Math.floor(Math.min(window.innerHeight * 0.55, vv.height - 16)));
-    };
-    update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-    this.stopKeyboardTracking = () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-    };
+    this.stopKeyboardTracking = trackKeyboard(640, ({ inset, free }) => {
+      this.sheetInset.set(inset);
+      this.sheetMax.set(Math.floor(Math.min(window.innerHeight * 0.55, free - 16)));
+    });
   }
 
   private untrackKeyboard(): void {

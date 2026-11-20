@@ -1,7 +1,8 @@
 @if (isOpen()) {
   <div class="vpm__overlay" (click)="close()"></div>
 
-  <div #dialog class="vpm" role="dialog" aria-modal="true" aria-labelledby="vpm-title" tabindex="-1">
+  <div #dialog class="vpm" role="dialog" aria-modal="true" aria-labelledby="vpm-title" tabindex="-1"
+    [style.bottom.px]="sheetInset() || null" [style.max-height.px]="sheetMax()">
     <header class="vpm__head">
       <h3 id="vpm-title" class="vpm__title">¿Para qué <span>carro</span> buscas?</h3>
       <button type="button" class="vpm__close" aria-label="Cerrar" (click)="close()">✕</button>

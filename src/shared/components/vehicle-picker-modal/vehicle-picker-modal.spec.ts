@@ -26,6 +26,37 @@ describe('VehiclePickerModal', () => {
     };
   }
 
+  describe('con el teclado abierto en el teléfono', () => {
+    const realViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+    const realMatchMedia = window.matchMedia;
+
+    afterEach(() => {
+      if (realViewport) Object.defineProperty(window, 'visualViewport', realViewport);
+      else delete (window as unknown as Record<string, unknown>)['visualViewport'];
+      window.matchMedia = realMatchMedia;
+    });
+
+    it('sube el modal por encima del teclado para que el botón no quede tapado', () => {
+      const vv = new EventTarget() as EventTarget & { height: number; offsetTop: number };
+      vv.height = window.innerHeight - 300; // el teclado ocupa 300px
+      vv.offsetTop = 0;
+      Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+      window.matchMedia = ((q: string) => ({ matches: true, media: q }) as MediaQueryList) as typeof window.matchMedia;
+
+      const { fixture, picker, el } = montar();
+      picker.open();
+      fixture.detectChanges();
+
+      const modal = el.querySelector<HTMLElement>('.vpm')!;
+      expect(modal.style.bottom).toBe('300px');
+      expect(parseInt(modal.style.maxHeight, 10)).toBeLessThanOrEqual(window.innerHeight - 300 - 16);
+
+      picker.close();
+      fixture.detectChanges();
+      expect(el.querySelector('.vpm')).toBeNull();
+    });
+  });
+
   it('cerrado no pinta nada', () => {
     const { el } = montar();
     expect(el.querySelector('.vpm')).toBeNull();
