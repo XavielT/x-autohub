@@ -32,9 +32,13 @@ function meta(selector: string): string | null {
 }
 
 describe('AutoHubDetails', () => {
-  function montar(auto: AutoHubModel | undefined = VEHICULO) {
+  // La ficha pide también la lista completa (getAll) para los relacionados: el doble tiene que
+  // traerla, o la suscripción lanza "getAll is not a function" y Vitest lo cuenta como error no atrapado.
+  function montar(auto: AutoHubModel | undefined = VEHICULO, todos: AutoHubModel[] = [VEHICULO]) {
     TestBed.configureTestingModule({
-      providers: [{ provide: AutoHubService, useValue: { getById: vi.fn(() => of(auto)) } }],
+      providers: [
+        { provide: AutoHubService, useValue: { getById: vi.fn(() => of(auto)), getAll: vi.fn(() => of(todos)) } },
+      ],
     });
 
     const fixture = TestBed.createComponent(AutoHubDetails);
@@ -44,6 +48,15 @@ describe('AutoHubDetails', () => {
   it('should create', () => {
     const { componente } = montar();
     expect(componente).toBeTruthy();
+  });
+
+  it('muestra como relacionados los de la misma marca con precio parecido, sin repetir el actual', async () => {
+    const parecido: AutoHubModel = { ...VEHICULO, id: 2, model: 'Camry', price: 1400000 };
+    const caro: AutoHubModel = { ...VEHICULO, id: 3, model: 'Land Cruiser', price: 5000000 };
+    const { fixture, componente } = montar(VEHICULO, [VEHICULO, parecido, caro]);
+    await fixture.whenStable();
+
+    expect(componente.related().map((v) => v.id)).toEqual([2]);
   });
 
   it('muestra el teléfono con formato, no los diez digitos pegados', async () => {
