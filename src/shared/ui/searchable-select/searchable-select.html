@@ -22,7 +22,7 @@
 
   @if (isOpen()) {
     <div class="ss__backdrop" (pointerdown)="close()"></div>
-    <ul class="ss__list" role="listbox" [id]="listId()">
+    <ul class="ss__list" role="listbox" [id]="listId()" [style.bottom.px]="sheetInset() || null" [style.max-height.px]="sheetMax()">
       @for (option of filtered(); track option.value; let i = $index) {
         <li
           role="option"

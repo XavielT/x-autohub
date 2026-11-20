@@ -28,6 +28,65 @@ describe('SearchableSelect', () => {
     return { fixture, c: fixture.componentInstance, el, input, labels, type, key };
   }
 
+  describe('hoja inferior en el teléfono', () => {
+    const realViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+    const realMatchMedia = window.matchMedia;
+
+    afterEach(() => {
+      if (realViewport) Object.defineProperty(window, 'visualViewport', realViewport);
+      else delete (window as unknown as Record<string, unknown>)['visualViewport'];
+      window.matchMedia = realMatchMedia;
+    });
+
+    function simular(movil: boolean, alto: number) {
+      const vv = new EventTarget() as EventTarget & { height: number; offsetTop: number };
+      vv.height = alto;
+      vv.offsetTop = 0;
+      Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+      window.matchMedia = ((q: string) => ({ matches: movil, media: q }) as MediaQueryList) as typeof window.matchMedia;
+      return vv;
+    }
+
+    it('sube la hoja por encima del teclado y la sigue si el teclado cambia', () => {
+      const vv = simular(true, window.innerHeight - 300); // el teclado ocupa 300px
+      const { fixture, c, el } = montar();
+      c.open();
+      fixture.detectChanges();
+
+      const lista = el.querySelector<HTMLElement>('.ss__list')!;
+      expect(c.sheetInset()).toBe(300);
+      expect(lista.style.bottom).toBe('300px');
+      expect(c.sheetMax()).toBeLessThanOrEqual(window.innerHeight - 300 - 16);
+
+      vv.height = window.innerHeight; // se cierra el teclado
+      vv.dispatchEvent(new Event('resize'));
+      fixture.detectChanges();
+      expect(c.sheetInset()).toBe(0);
+    });
+
+    it('fuera del teléfono no toca la posición de la lista', () => {
+      simular(false, window.innerHeight - 300);
+      const { fixture, c, el } = montar();
+      c.open();
+      fixture.detectChanges();
+
+      expect(c.sheetInset()).toBe(0);
+      expect(c.sheetMax()).toBeNull();
+      expect(el.querySelector<HTMLElement>('.ss__list')!.style.bottom).toBe('');
+    });
+
+    it('al cerrar deja de escuchar y vuelve a cero', () => {
+      simular(true, window.innerHeight - 300);
+      const { fixture, c } = montar();
+      c.open();
+      c.close();
+      fixture.detectChanges();
+
+      expect(c.sheetInset()).toBe(0);
+      expect(c.sheetMax()).toBeNull();
+    });
+  });
+
   it('normaliza acentos y mayúsculas', () => {
     expect(normalizeSearch('  Citroën ')).toBe('citroen');
     expect(filterOptions(OPTIONS, 'CITROEN').map((o) => o.value)).toEqual([1]);

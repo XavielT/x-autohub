@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   computed,
@@ -47,6 +48,7 @@ export function filterOptions<T extends string | number>(
 })
 export class SearchableSelect {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly options = input.required<readonly SelectOption[]>();
   readonly value = model<string | number | null>(null);
@@ -67,17 +69,59 @@ export class SearchableSelect {
   readonly displayText = computed(() => (this.isOpen() ? this.query() : (this.selected()?.label ?? '')));
   readonly listId = computed(() => `${this.inputId() ?? 'ss'}-list`);
 
+  /**
+   * Solo en el teléfono (hoja inferior): cuánto sube la hoja para quedar justo encima del teclado y
+   * cuánto puede medir. El teclado se pone encima de la página sin achicarla, y una hoja pegada al
+   * borde de la ventana se queda detrás de él (con pocos resultados, entera). Fuera del teléfono
+   * valen `null` y manda el SCSS.
+   */
+  readonly sheetInset = signal(0);
+  readonly sheetMax = signal<number | null>(null);
+  private stopKeyboardTracking: (() => void) | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.untrackKeyboard());
+  }
+
   open(): void {
     if (this.disabled() || this.isOpen()) return;
     this.query.set('');
     const i = this.options().findIndex((o) => o.value === this.value());
     this.activeIndex.set(Math.max(i, 0));
     this.isOpen.set(true);
+    this.trackKeyboard();
   }
 
   close(): void {
     this.isOpen.set(false);
     this.query.set('');
+    this.untrackKeyboard();
+  }
+
+  private trackKeyboard(): void {
+    if (this.stopKeyboardTracking) return;
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    if (!window.matchMedia('(max-width: 640px)').matches) return;
+
+    const vv = window.visualViewport;
+    const update = () => {
+      this.sheetInset.set(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+      this.sheetMax.set(Math.floor(Math.min(window.innerHeight * 0.55, vv.height - 16)));
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    this.stopKeyboardTracking = () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }
+
+  private untrackKeyboard(): void {
+    this.stopKeyboardTracking?.();
+    this.stopKeyboardTracking = null;
+    this.sheetInset.set(0);
+    this.sheetMax.set(null);
   }
 
   onInput(text: string): void {
