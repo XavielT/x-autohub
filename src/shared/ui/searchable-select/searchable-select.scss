@@ -49,8 +49,9 @@
     margin: 0;
     padding: 4px;
     list-style: none;
-    // 8 filas visibles de 40px; el resto con scroll.
-    max-height: 328px;
+    // 8 filas visibles de 40px; el resto con scroll. Sin pasar del 40% de la
+    // ventana, para que dentro de un modal centrado no se salga por abajo.
+    max-height: min(328px, 40dvh);
     overflow-y: auto;
     background-color: var(--main);
     border: 1px solid rgba(255, 255, 255, 0.18);

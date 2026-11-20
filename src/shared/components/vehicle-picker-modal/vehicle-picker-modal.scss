@@ -80,6 +80,15 @@
   }
 }
 
+// En escritorio el modal no recorta: las listas desplegables de marca, modelo y año
+// se posicionan dentro de él y, con overflow, quedaban cortadas por su borde. Solo si
+// la ventana es baja se vuelve a permitir el scroll del modal.
+@media (min-width: 901px) and (min-height: 560px) {
+  .vpm {
+    overflow: visible;
+  }
+}
+
 // En el teléfono sale desde abajo, como una hoja: se alcanza con el pulgar.
 @media (max-width: 900px) {
   .vpm {
