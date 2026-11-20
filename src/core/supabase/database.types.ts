@@ -928,6 +928,11 @@ export type ReleaseRow = {
   created_at: string;
 }
 
+/** Lo que el público lee de `releases` por la vista `releases_public` (0062): sin el changelog técnico. */
+export type ReleasePublicRow = Pick<ReleaseRow, 'id' | 'version' | 'released_at' | 'title'> & {
+  user_summary: string;
+}
+
 /**
  * Fila que devuelve `get_my_profile()`, no un select sobre `profiles`.
  *
@@ -1437,7 +1442,9 @@ export type Database = {
         Relationships: OrderItemRelationships;
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      releases_public: { Row: ReleasePublicRow; Relationships: [] };
+    };
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       /** true para moderador y para admin (migración 0011). */

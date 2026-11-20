@@ -3385,6 +3385,22 @@ apply supabase/migrations/0059_geo.sql upgrade
 echo "   (aplicada dos veces)"
 CHECK_DB=upgrade check "la columna de coordenadas existe y nace nula en los pedidos de antes" "0" "select count(*) from orders where shipping_geo is not null;"
 
+echo "→ Novedades: el publico lee una vista sin el changelog tecnico (migracion 0062)"
+scalar "insert into releases (version, title, summary, user_summary, changes, is_published) values ('9.0.1', 'Con resumen', 'detalle tecnico', 'Para la gente', array['migracion interna'], true), ('9.0.2', 'Sin resumen', 'detalle tecnico', null, array['x'], true), ('9.0.3', 'Borrador', 'detalle tecnico', 'Aun no', array['x'], false);" >/dev/null
+check "anon ve por la vista solo las publicadas con resumen para el usuario" "1" "$(as_anon "select count(*) from releases_public where version like '9.0.%';")"
+check "y la vista no trae summary" "ERROR:  column \"summary\" does not exist" "$(as_anon "select summary from releases_public limit 1;")"
+check "ni changes" "ERROR:  column \"changes\" does not exist" "$(as_anon "select changes from releases_public limit 1;")"
+check "anon ya no lee la tabla releases" "0" "$(as_anon "select count(*) from releases;")"
+check "un usuario con sesion tampoco" "0" "$(as_user "$USER_A" "select count(*) from releases;")"
+check "pero si lee la vista" "1" "$(as_user "$USER_A" "select count(*) from releases_public where version like '9.0.%';")"
+check "la vista no se puede escribir desde el navegador" "ERROR:  permission denied for view releases_public" "$(as_anon "insert into releases_public (version, title, user_summary) values ('9.9.9', 'x', 'y');")"
+scalar "delete from releases where version like '9.0.%';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0062"
+apply supabase/migrations/0062_releases_public_view.sql upgrade
+apply supabase/migrations/0062_releases_public_view.sql upgrade
+echo "   (aplicada dos veces)"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo

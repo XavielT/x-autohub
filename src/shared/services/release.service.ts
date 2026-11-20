@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, from, map, of } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
-import { ReleaseRow } from '../../core/supabase/database.types';
+import { ReleasePublicRow, ReleaseRow } from '../../core/supabase/database.types';
 import { ReleaseDraft, ReleaseModel } from '../models/release.model';
 import { RELEASES_MOCK } from '../data/release.mock';
 
@@ -22,12 +22,27 @@ function toRelease(row: ReleaseRow): ReleaseModel {
   };
 }
 
+/** Una versión como la ve el público: solo título y resumen para el usuario, sin el detalle técnico. */
+function toPublicRelease(row: ReleasePublicRow): ReleaseModel {
+  return {
+    id: row.id,
+    version: row.version,
+    releasedAt: new Date(`${row.released_at}T12:00:00Z`),
+    title: row.title,
+    summary: '',
+    userSummary: row.user_summary,
+    changes: [],
+    isPublished: true,
+  };
+}
+
 /**
  * Historial de versiones del sitio.
  *
- * Lectura pública de lo publicado; escritura solo para admin. Las dos cosas las
- * decide RLS (migración 0007), no este servicio: si un no-admin intenta escribir
- * recibe un 42501 traducido.
+ * El público lee `releases_public` (migración 0062): solo versión, fecha, título y el resumen
+ * para el usuario de lo publicado. La tabla `releases`, con el changelog técnico, es solo de
+ * admin, y también la escritura: lo decide RLS, no este servicio (un no-admin que escribe
+ * recibe un 42501 traducido).
  */
 @Injectable({ providedIn: 'root' })
 export class ReleaseService {
@@ -37,27 +52,37 @@ export class ReleaseService {
   private mockReleases: ReleaseModel[] = [...RELEASES_MOCK];
 
   /**
-   * @param includeDrafts true para que un admin vea también los borradores.
-   *   Sin permiso de admin, RLS los filtra igual, así que pedirlos no es un
-   *   riesgo — simplemente no vuelven.
+   * @param includeDrafts true para el panel de admin: lee la tabla completa (borradores y
+   *   detalle técnico). Sin ser admin, RLS no devuelve nada. Con false se lee la vista pública.
    */
   getAll(includeDrafts = false): Observable<ReleaseModel[]> {
     if (this.supabase.shouldUseMockData()) {
       const items = includeDrafts
         ? this.mockReleases
-        : this.mockReleases.filter((r) => r.isPublished);
+        : this.mockReleases
+            .filter((r) => r.isPublished && r.userSummary?.trim())
+            .map((r) => ({ ...r, summary: '', changes: [] }));
       return of(
         [...items].sort((a, b) => +b.releasedAt - +a.releasedAt || b.id - a.id),
       );
     }
 
-    let query = this.supabase.db.from('releases').select('*');
-    if (!includeDrafts) query = query.eq('is_published', true);
-
     // El `id` desempata: dos versiones publicadas el mismo día quedarían en
     // orden arbitrario ordenando solo por fecha, y en un historial eso se nota.
+    if (!includeDrafts) {
+      return from(
+        this.supabase.db
+          .from('releases_public')
+          .select('id, version, released_at, title, user_summary')
+          .order('released_at', { ascending: false })
+          .order('id', { ascending: false }),
+      ).pipe(map((res) => unwrap(res).map(toPublicRelease)));
+    }
+
     return from(
-      query
+      this.supabase.db
+        .from('releases')
+        .select('*')
         .order('released_at', { ascending: false })
         .order('id', { ascending: false }),
     ).pipe(map((res) => unwrap(res).map(toRelease)));

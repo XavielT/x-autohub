@@ -54,7 +54,9 @@ Cada push a `main` lleva, en este orden:
    en `/admin/versiones` y en el sitio. Misma versión y mismas notas que el tag.
    La fila lleva también `user_summary`: una o dos frases en español llano, escritas para
    quien usa el sitio y no para quien lo programa. Es lo que lee la modal de novedades y
-   `/novedades` (sin él, caen al `summary` técnico).
+   `/novedades`, y **lo único**: una versión sin `user_summary` no se muestra al público.
+   Nada de migraciones, nombres de funciones, tablas, cifras de pruebas ni de seguridad en
+   `user_summary` ni en `title`: el detalle técnico va solo en `summary` y `changes`.
 6. **Despliegue**: `vercel --prod`.
 
 Antes de empujar, **verifica que cada commit compile por su cuenta**, no solo el
@@ -388,6 +390,11 @@ Cosas que ya causaron un bug. No las repitas:
   tiene dispositivos. La tarjeta es `app-guest-avisos` (`kind`: `order` o `appointment`), en `/pedido/:id` y en la confirmación de `/agendar`.
   `send-push` borra los dispositivos de un pedido o cita al avisar un estado final. Los tres rechazos de la base usan el código `22023`: es el único que `translateDbError`
   deja pasar con su mensaje. `send-push` va **antes** que la migración.
+- **El público lee las novedades por `releases_public`, no por la tabla (0062).** `releases` guarda el changelog técnico
+  (`summary`, `changes`) y desde la 0062 solo la lee un admin; la vista `releases_public` expone versión, fecha, título y
+  `user_summary` de lo publicado que tenga resumen. `ReleaseService.getAll(false)` lee la vista; `getAll(true)` (panel) lee la tabla.
+  La modal y `/novedades` nunca pintan `summary` ni `changes`: decirle al público por dónde se tocó el sistema no le sirve y da pistas.
+  **La migración va antes que el frontend.** Con la migración y el frontend viejo, la modal y `/novedades` salen vacías, sin error.
 - **Las fotos de una opción son una lista (`image_urls`), y `image_url` es su espejo.** `product_variants.image_urls` (0033) es la verdad; `image_url` queda como la primera
   para el frontend anterior y para el carrito (`variant.imageUrl` es la portada), y lo mantiene el trigger `product_variants_photos_sync`: **no escribas `image_url`
   desde el panel**, manda la lista. La ficha decide qué enseñar con `variantGallery()`: con **2 o más** fotos propias la galería es solo de la opción; con **una** se

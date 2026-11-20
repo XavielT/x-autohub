@@ -16,12 +16,7 @@
             <h2 class="nov__h2">{{ release.title }}</h2>
             <span class="nov__meta">v{{ release.version }} &middot; {{ release.releasedAt | date: 'd MMM y' }}</span>
           </header>
-          <p class="nov__summary">{{ release.userSummary || release.summary }}</p>
-          @if (release.changes.length > 0) {
-            <ul class="nov__changes">
-              @for (change of release.changes; track change) { <li>{{ change }}</li> }
-            </ul>
-          }
+          <p class="nov__summary">{{ release.userSummary }}</p>
         </li>
       }
     </ol>

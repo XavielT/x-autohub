@@ -8,10 +8,11 @@ export interface ReleaseModel {
   /** Fecha de publicación, ya parseada para el pipe `date`. */
   releasedAt: Date;
   title: string;
+  /** Resumen técnico. Solo lo lee el admin: en la lista pública llega vacío (0062). */
   summary: string;
-  /** Resumen para quien usa el sitio, en español llano. Si falta, se usa `summary`. */
+  /** Resumen para quien usa el sitio, en español llano. Es lo único que se enseña al público. */
   userSummary?: string;
-  /** Los puntos del changelog, en orden. */
+  /** Los puntos del changelog, en orden. Solo admin: en la lista pública llega vacío (0062). */
   changes: string[];
   /** En false se puede redactar sin que el público la vea. */
   isPublished: boolean;

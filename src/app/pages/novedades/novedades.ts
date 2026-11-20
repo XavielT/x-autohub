@@ -7,8 +7,8 @@ import { SeoService } from '../../../shared/services/seo.service';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /**
  * /novedades — el historial completo de versiones publicadas, para cualquiera.
- * (Hasta ahora solo existía en /admin/versiones.) Cada versión dice su resumen para
- * el usuario y sus cambios.
+ * (Hasta ahora solo existía en /admin/versiones.) Cada versión dice su título y su resumen
+ * para el usuario; el detalle técnico es solo del panel.
  */
 @Component({
   selector: 'app-novedades',

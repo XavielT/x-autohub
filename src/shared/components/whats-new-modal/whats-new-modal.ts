@@ -3,12 +3,10 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { WhatsNewService } from '../../services/whats-new.service';
 
-/** Cuántos puntos del changelog caben por versión en la modal. */
-const CHANGES_SHOWN = 4;
-
 /**
- * La modal "Novedades": las versiones que la persona no ha visto, cada una con su título, su
- * resumen para el usuario (`userSummary`, o `summary` si falta) y unos pocos puntos de cambio.
+ * La modal "Novedades": las versiones que la persona no ha visto, cada una con su título y su
+ * resumen para el usuario (`userSummary`). Nunca el changelog técnico (`summary`, `changes`): ese
+ * es del panel de admin, y a quien usa el sitio no le sirve ni conviene contárselo (0062).
  * Se cierra con "Entendido", con Escape o tocando fuera.
  */
 @Component({
@@ -22,10 +20,6 @@ export class WhatsNewModal {
   private readonly whatsNew = inject(WhatsNewService);
 
   protected readonly pending = this.whatsNew.pending;
-
-  protected changes(changes: string[]): string[] {
-    return changes.slice(0, CHANGES_SHOWN);
-  }
 
   protected close(): void {
     void this.whatsNew.dismiss();
