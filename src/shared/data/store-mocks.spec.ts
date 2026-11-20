@@ -100,11 +100,17 @@ describe('mocks de la tienda', () => {
   });
 
   describe('vehiculos', () => {
-    // Estas cifras son las de la semilla de la migracion 0017, que
-    // scripts/verify-migrations.sh comprueba por su lado (35 marcas, 88 modelos).
-    it('son las 35 marcas y los 88 modelos de la semilla', () => {
+    // Estas cifras son las de las migraciones 0017 y 0061, que
+    // scripts/verify-migrations.sh comprueba por su lado (35 marcas, 517 modelos).
+    it('son las 35 marcas y los 517 modelos de la semilla', () => {
       expect(VEHICLE_MAKES_MOCK.length).toBe(35);
-      expect(VEHICLE_MODELS_MOCK.length).toBe(88);
+      expect(VEHICLE_MODELS_MOCK.length).toBe(517);
+    });
+
+    it('ninguna marca de la semilla se queda sin modelos', () => {
+      for (const make of VEHICLE_MAKES_MOCK) {
+        expect(VEHICLE_MODELS_MOCK.some((m) => m.makeId === make.id), make.name).toBe(true);
+      }
     });
 
     it('los slugs son unicos: por marca y, dentro de cada marca, por modelo', () => {

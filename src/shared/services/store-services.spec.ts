@@ -167,7 +167,7 @@ describe('servicios de la tienda (mock)', () => {
     it('trae las 35 marcas y los modelos de una marca', async () => {
       expect((await firstValueFrom(vehicles().getMakes())).length).toBe(35);
       const modelos = await firstValueFrom(vehicles().getModels(make('toyota').id));
-      expect(modelos.length).toBe(11);
+      expect(modelos.length).toBe(24);
       expect(modelos.every((m) => m.makeId === make('toyota').id)).toBe(true);
     });
 

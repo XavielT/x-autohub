@@ -479,7 +479,7 @@ USER_B='33333333-3333-3333-3333-333333333333'
 check "las 12 categorias de primer nivel" "12" \
   "$(as_anon 'select count(*) from product_categories where parent_id is null;')"
 check "anon lee las 35 marcas" "35" "$(as_anon 'select count(*) from vehicle_makes;')"
-check "anon lee los 88 modelos" "88" "$(as_anon 'select count(*) from vehicle_models;')"
+check "anon lee los 517 modelos" "517" "$(as_anon 'select count(*) from vehicle_models;')"
 check "las 36 piezas del seed quedan clasificadas" "0" \
   "select count(*) from hub_parts where category_id is null;"
 check "y todas traen slug y sku" "0" \

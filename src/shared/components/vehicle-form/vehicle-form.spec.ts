@@ -7,7 +7,8 @@ import { SelectedVehicle } from '../../models/product.model';
 const toyota = VEHICLE_MAKES_MOCK.find((m) => m.slug === 'toyota')!;
 const honda = VEHICLE_MAKES_MOCK.find((m) => m.slug === 'honda')!;
 const corolla = VEHICLE_MODELS_MOCK.find((m) => m.makeId === toyota.id && m.slug === 'corolla')!;
-const subaru = VEHICLE_MAKES_MOCK.find((m) => m.slug === 'subaru')!;
+// Las 35 marcas de la semilla traen modelos: una marca sin ellos solo existe si el admin la crea.
+const marcaSinModelos = { id: 9999 };
 
 describe('VehicleForm', () => {
   beforeEach(() => localStorage.clear());
@@ -40,7 +41,7 @@ describe('VehicleForm', () => {
 
     c.onMakeChange(toyota.id);
 
-    expect(c.models().length).toBe(11);
+    expect(c.models().length).toBe(24);
     expect(c.models().every((m) => m.makeId === toyota.id)).toBe(true);
   });
 
@@ -58,7 +59,7 @@ describe('VehicleForm', () => {
   it('una marca sin modelos pide escribirlo, sin mandar a WhatsApp', () => {
     const { fixture, c, el } = montar();
 
-    c.onMakeChange(subaru.id);
+    c.onMakeChange(marcaSinModelos.id);
     fixture.detectChanges();
 
     expect(c.models()).toEqual([]);
@@ -70,7 +71,7 @@ describe('VehicleForm', () => {
 
   it('con el modelo escrito a mano emite modelId nulo y el texto', () => {
     const { fixture, c, chosen } = montar();
-    c.onMakeChange(subaru.id);
+    c.onMakeChange(marcaSinModelos.id);
     expect(c.isComplete()).toBe(false);
 
     c.onModelTextChange('  Impreza ');
@@ -79,7 +80,7 @@ describe('VehicleForm', () => {
     expect(c.isComplete()).toBe(true);
 
     c.submit();
-    expect(chosen).toEqual([{ makeId: subaru.id, modelId: null, modelText: 'Impreza', year: 2012 }]);
+    expect(chosen).toEqual([{ makeId: marcaSinModelos.id, modelId: null, modelText: 'Impreza', year: 2012 }]);
   });
 
   it('el boton se habilita solo con marca, modelo y año, y emite el vehículo', () => {

@@ -30,19 +30,19 @@ describe('AdminMarcas', () => {
     c.selectMake(toyota.id);
     fixture.detectChanges();
 
-    expect(c.models().length).toBe(11);
-    expect(el.querySelectorAll('.mk__model').length).toBe(11);
+    expect(c.models().length).toBe(24);
+    expect(el.querySelectorAll('.mk__model').length).toBe(24);
     expect(el.textContent).toContain('Corolla');
   });
 
   it('una marca sin modelos lo dice', () => {
     const { fixture, c, el } = montar();
-    const subaru = c.makes().find((m) => m.slug === 'subaru')!;
-
-    c.selectMake(subaru.id);
+    // Las 35 marcas de la semilla ya traen modelos; una que el admin acaba de crear, no.
+    c.newMakeName.set('Abarth');
+    c.addMake();
     fixture.detectChanges();
 
-    expect(el.textContent).toContain('Subaru todavía no tiene modelos');
+    expect(el.textContent).toContain('Abarth todavía no tiene modelos');
   });
 
   it('agrega una marca nueva en su lugar alfabetico y la deja elegida', () => {
@@ -74,7 +74,7 @@ describe('AdminMarcas', () => {
 
     c.addModel();
 
-    expect(c.models().length).toBe(12);
+    expect(c.models().length).toBe(25);
     expect(c.models().some((m) => m.name === 'Avensis')).toBe(true);
     expect(show).toHaveBeenCalledWith('Toyota Avensis agregado.');
   });
@@ -97,17 +97,17 @@ describe('AdminMarcas', () => {
     const subaru = c.makes().find((m) => m.slug === 'subaru')!;
     // Un usuario con sesión simulada que escribió el modelo.
     vi.spyOn(TestBed.inject(AuthService), 'user').mockReturnValue({ id: 'u-1' } as never);
-    await firstValueFrom(vehicles.addToGarage({ makeId: subaru.id, modelId: null, modelText: 'Impreza', year: 2012 }));
+    await firstValueFrom(vehicles.addToGarage({ makeId: subaru.id, modelId: null, modelText: 'Levorg', year: 2012 }));
 
     c.ngOnInit();
-    expect(c.unmatched()).toEqual([{ makeId: subaru.id, makeName: 'Subaru', modelText: 'Impreza', vehicles: 1 }]);
+    expect(c.unmatched()).toEqual([{ makeId: subaru.id, makeName: 'Subaru', modelText: 'Levorg', vehicles: 1 }]);
 
     c.selectMake(subaru.id);
     c.createFromText(c.unmatched()[0]);
     fixture.detectChanges();
 
     expect(c.unmatched()).toEqual([]);
-    expect(c.models().map((m) => m.name)).toContain('Impreza');
+    expect(c.models().map((m) => m.name)).toContain('Levorg');
     const [row] = await firstValueFrom(vehicles.getGarage());
     expect(row.modelText).toBeNull();
     expect(row.modelId).not.toBeNull();
