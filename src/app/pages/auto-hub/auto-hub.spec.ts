@@ -23,6 +23,13 @@ describe('AutoHub', () => {
     expect(component).toBeTruthy();
   });
 
+  it('la página tiene un solo h1, el título, y el buscador pregunta con ¿Qué?', () => {
+    const h1 = pantalla().querySelectorAll('h1');
+    expect(h1.length).toBe(1);
+    expect(h1[0].textContent?.replace(/s+/g, ' ').trim()).toBe('Auto Hub');
+    expect(pantalla().querySelector<HTMLInputElement>('.autohub__input')!.placeholder).toBe('¿Qué estás buscando?');
+  });
+
   it('los filtros avanzados empiezan cerrados y el boton los abre', () => {
     expect(pantalla().querySelector('.autohub__filters-panel')).toBeNull();
     pantalla().querySelector<HTMLButtonElement>('.autohub__filters-toggle')!.click();
