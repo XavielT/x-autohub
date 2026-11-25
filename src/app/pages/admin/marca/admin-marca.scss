@@ -1,0 +1,93 @@
+@use '../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.mk-upload { cursor: pointer; }
+
+.mk {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.mk__stage {
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  // Cuadrícula tenue: deja ver que la imagen puede tener bordes claros u oscuros.
+  background: #1a1a1a;
+}
+
+.mk__canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  max-width: 100%;
+  max-height: 70vh;
+  height: auto;
+  width: auto;
+}
+
+.mk__panel { display: grid; gap: 1rem; }
+.mk__check { display: flex; gap: 0.5rem; align-items: flex-start; }
+.mk__actions { gap: 0.5rem; flex-wrap: wrap; }
+
+.mk__list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mk__item {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--main-light);
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 100%;
+
+  &--active { border-color: var(--Hub); }
+}
+
+.mk__pick,
+.mk__del {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.4rem 0.75rem;
+}
+
+.mk__pick {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .mk { grid-template-columns: minmax(0, 1fr); }
+}
+
+.mk__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 2.25rem);
+  gap: 0.35rem;
+}
+
+.mk__preset {
+  height: 1.75rem;
+  border: 1px solid var(--main-light);
+  border-radius: 0.35rem;
+  background: var(--secondary);
+  cursor: pointer;
+
+  &:hover { border-color: var(--Hub); }
+  &--on { background: var(--Hub); border-color: var(--Hub); }
+}

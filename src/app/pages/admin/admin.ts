@@ -61,6 +61,7 @@ export class Admin {
     { path: 'cupones', label: 'Cupones', description: 'Códigos de descuento del checkout' },
     { path: 'taller', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
     { path: 'inventario', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
+    { path: 'marca', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
     { path: 'usuarios', label: 'Usuarios', description: 'Cuentas, verificación y permisos' },
     { path: 'ajustes', label: 'Ajustes', description: 'Cuentas para transferir y dirección de retiro' },
   ];

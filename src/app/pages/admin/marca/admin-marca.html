@@ -1,0 +1,81 @@
+<section class="tl">
+  <header class="tl__head tl__row">
+    <div>
+      <h2 class="tl__title">Marca en fotos</h2>
+      <p class="tl__lead">
+        Sube una o varias fotos, elige dónde va la insignia de X AutoHub y descárgalas listas. Todo pasa en tu
+        navegador: las fotos no se suben a ningún lado.
+      </p>
+    </div>
+    <label class="tl__btn tl__btn--small mk-upload">
+      + Subir fotos
+      <input type="file" accept="image/*" multiple hidden (change)="onFiles($event)" />
+    </label>
+  </header>
+
+  @if (selected(); as current) {
+    <div class="mk">
+      <div class="tl__card mk__stage">
+        <canvas #preview class="mk__canvas" (pointerdown)="dragStart($event)" (pointermove)="dragMove($event)" (pointerup)="dragEnd()" (pointercancel)="dragEnd()" [attr.aria-label]="'Vista previa de ' + current.name"></canvas>
+      </div>
+
+      <div class="tl__card mk__panel">
+        <div class="tl__form">
+          <div class="tl__field">
+            <span>Posición <small class="tl__muted">(o arrastra la insignia en la foto)</small></span>
+            <div class="mk__grid" role="group" aria-label="Posiciones predefinidas">
+              @for (p of presets; track p.value) {
+                <button type="button" class="mk__preset" [class.mk__preset--on]="activePreset() === p.value"
+                        [attr.aria-label]="p.label" [attr.aria-pressed]="activePreset() === p.value"
+                        (click)="applyPreset(p.fx, p.fy)"></button>
+              }
+            </div>
+          </div>
+          <label class="tl__field">
+            <span>Tamaño <small class="tl__muted">({{ sizePct() }} % del ancho)</small></span>
+            <input type="range" min="5" max="40" step="1" [value]="sizePct()" (input)="setSize($event)" />
+          </label>
+          <label class="tl__field">
+            <span>Opacidad <small class="tl__muted">({{ opacityPct() }} %)</small></span>
+            <input type="range" min="20" max="100" step="5" [value]="opacityPct()" (input)="setOpacity($event)" />
+          </label>
+          <label class="tl__field">
+            <span>Margen <small class="tl__muted">({{ marginPct() }} %)</small></span>
+            <input type="range" min="0" max="10" step="0.5" [value]="marginPct()" (input)="setMargin($event)" />
+          </label>
+          <label class="tl__field">
+            <span>Formato</span>
+            <select class="tl__input" [value]="format()" (change)="setFormat($event)">
+              <option value="jpeg" [selected]="format() === 'jpeg'">JPG (más liviano)</option>
+              <option value="png" [selected]="format() === 'png'">PNG (sin pérdida)</option>
+            </select>
+          </label>
+          <label class="tl__field mk__check">
+            <input type="checkbox" [checked]="backdrop()" (change)="setBackdrop($event)" />
+            <span>Fondo oscuro detrás de la insignia <small class="tl__muted">(se lee sobre fotos claras)</small></span>
+          </label>
+        </div>
+
+        <div class="tl__row mk__actions">
+          <button type="button" class="tl__btn" [disabled]="busy()" (click)="download(current)">Descargar esta</button>
+          @if (items().length > 1) {
+            <button type="button" class="tl__btn tl__btn--ghost" [disabled]="busy()" (click)="downloadAll()">
+              Descargar las {{ items().length }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <ul class="mk__list" aria-label="Fotos cargadas">
+      @for (item of items(); track item.id) {
+        <li class="mk__item" [class.mk__item--active]="item.id === current.id">
+          <button type="button" class="mk__pick" (click)="select(item.id)">{{ item.name }}</button>
+          <button type="button" class="mk__del" [attr.aria-label]="'Quitar ' + item.name" (click)="remove(item.id)">×</button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="tl__empty">Todavía no hay fotos. Pulsa «Subir fotos» para empezar.</p>
+  }
+</section>

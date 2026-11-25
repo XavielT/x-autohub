@@ -293,6 +293,12 @@ export const routes: Routes = [
           import('./pages/admin/usuarios/admin-usuarios').then((m) => m.AdminUsuarios),
       },
       {
+        path: 'marca',
+        title: `Marca en fotos | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin/marca/admin-marca').then((m) => m.AdminMarca),
+      },
+      {
         path: 'ajustes',
         title: `Ajustes | ${BRAND}`,
         canActivate: [adminGuard],

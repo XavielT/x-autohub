@@ -45,7 +45,7 @@ describe('Admin', () => {
     return { fixture, componente: fixture.componentInstance };
   }
 
-  it('un admin ve las ocho secciones', () => {
+  it('un admin ve las nueve secciones', () => {
     const { componente } = montar('admin');
 
     expect(componente.sections().map((s) => s.path)).toEqual([
@@ -55,6 +55,7 @@ describe('Admin', () => {
       'cupones',
       'taller',
       'inventario',
+      'marca',
       'usuarios',
       'ajustes',
     ]);
