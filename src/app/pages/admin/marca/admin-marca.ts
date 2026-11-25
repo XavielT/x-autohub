@@ -14,6 +14,12 @@ interface Item {
 
 const LOGO_SRC = 'assets/imgs/autohub-logo.png';
 
+/** Calidades JPG que se prueban, de la mejor a la más baja que aún no se nota. */
+const JPEG_QUALITIES = [0.92, 0.88, 0.84, 0.8, 0.76];
+
+/** Un poco menos que el tope de 5 MB del formulario de inventario, por si acaso. */
+const LISTING_MAX_BYTES = 4.5 * 1024 * 1024;
+
 /**
  * /admin/marca — le pone la insignia de X AutoHub a una foto y la deja lista para descargar.
  *
@@ -191,20 +197,43 @@ export class AdminMarca {
     ctx.restore();
   }
 
-  /** La foto con la insignia, ya codificada. */
-  private async render(item: Item, png: boolean): Promise<Blob> {
-    const canvas = document.createElement('canvas');
-    await this.paint(canvas, item.bitmap);
-    const blob = await new Promise<Blob | null>((ok) =>
-      canvas.toBlob(ok, png ? 'image/png' : 'image/jpeg', 0.9),
+  private toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
+    return new Promise((ok, fail) =>
+      canvas.toBlob((blob) => (blob ? ok(blob) : fail(new Error('toBlob vacío'))), type, quality),
     );
-    if (!blob) throw new Error('toBlob vacío');
+  }
+
+  /**
+   * La foto con la insignia, ya codificada.
+   *
+   * Con `maxBytes` (JPG) comprime de forma adaptativa: baja la calidad por pasos (de 0.92 a 0.76,
+   * que a simple vista no se nota) y, solo si aun así pesa de más, reduce las dimensiones un 15 %
+   * y vuelve a empezar. Una foto de celular de 8 MB termina cerca de 1–2 MB.
+   */
+  private async render(item: Item, png: boolean, maxBytes?: number): Promise<Blob> {
+    let canvas = document.createElement('canvas');
+    await this.paint(canvas, item.bitmap);
+    if (png) return this.toBlob(canvas, 'image/png', 1);
+    if (!maxBytes) return this.toBlob(canvas, 'image/jpeg', 0.9);
+
+    let blob = await this.toBlob(canvas, 'image/jpeg', JPEG_QUALITIES[0]);
+    for (let round = 0; round < 6; round++) {
+      for (const quality of JPEG_QUALITIES) {
+        blob = await this.toBlob(canvas, 'image/jpeg', quality);
+        if (blob.size <= maxBytes) return blob;
+      }
+      const smaller = document.createElement('canvas');
+      smaller.width = Math.max(1, Math.round(canvas.width * 0.85));
+      smaller.height = Math.max(1, Math.round(canvas.height * 0.85));
+      smaller.getContext('2d')?.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+      canvas = smaller;
+    }
     return blob;
   }
 
   /**
    * Manda todas las fotos cargadas, con la insignia, al formulario de alta de inventario.
-   * Siempre en JPG: el formulario rechaza archivos de más de 5 MB y un PNG de foto los pasa.
+   * Siempre en JPG y comprimido bajo el tope de 5 MB del formulario.
    */
   async useInListing(destination: BrandedDestination): Promise<void> {
     const items = this.items();
@@ -213,7 +242,7 @@ export class AdminMarca {
     try {
       const files: File[] = [];
       for (const item of items) {
-        const blob = await this.render(item, false);
+        const blob = await this.render(item, false, LISTING_MAX_BYTES);
         files.push(new File([blob], `${outputName(item.name)}.jpg`, { type: 'image/jpeg' }));
       }
       this.handoff.offer({ destination, files });
