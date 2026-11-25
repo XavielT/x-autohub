@@ -18,8 +18,12 @@ describe('imageInputProblem', () => {
     expect(imageInputProblem({ type: 'image/webp', size: 100 })).toBeNull();
   });
 
-  it('rechaza otros tipos y lo que pasa de 10 MB', () => {
+  it('rechaza otros tipos y solo lo absurdamente grande (más de 40 MB)', () => {
     expect(imageInputProblem({ type: 'image/gif', size: 100 })).toMatch(/JPG, PNG o WebP/);
-    expect(imageInputProblem({ type: 'image/jpeg', size: 11 * 1024 * 1024 })).toMatch(/10 MB/);
+    expect(imageInputProblem({ type: 'image/jpeg', size: 41 * 1024 * 1024 })).toMatch(/40 MB/);
+  });
+
+  it('una foto de celular de 12 MB ya no se rechaza: se comprime', () => {
+    expect(imageInputProblem({ type: 'image/jpeg', size: 12 * 1024 * 1024 })).toBeNull();
   });
 });

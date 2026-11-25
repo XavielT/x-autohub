@@ -8,7 +8,7 @@ import { StorageService } from '../../../shared/services/storage.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
-import { ImageUploader } from '../../../shared/components/image-uploader/image-uploader';
+import { ImageUploader, UPLOADER_MAX } from '../../../shared/components/image-uploader/image-uploader';
 import { LocationSelect } from '../../../shared/ui/location-select/location-select';
 import { SearchableSelect } from '../../../shared/ui/searchable-select/searchable-select';
 import {
@@ -17,6 +17,8 @@ import {
   missingFieldsMessage,
 } from '../../../shared/forms/required-fields';
 import { drPhoneValidator, normalizeDrPhone } from '../../../shared/utils/phone';
+import { BrandedPhotosService } from '../../../shared/services/branded-photos.service';
+import { compressImage } from '../../../shared/utils/image-compress';
 
 @Component({
   selector: 'app-publicar',
@@ -32,6 +34,7 @@ export class Publicar {
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly branded = inject(BrandedPhotosService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Las fotos ya comprimidas, en el orden en que se suben (la primera es la portada). */
@@ -70,6 +73,14 @@ export class Publicar {
   });
 
   constructor() {
+    // Fotos con la insignia que el admin mandó desde /admin/marca eligiendo Hub Market.
+    const handoff = this.branded.take('hubmarket');
+    if (handoff) {
+      void Promise.all(handoff.files.slice(0, UPLOADER_MAX).map((file) => compressImage(file))).then((done) =>
+        this.selectedFiles.set(done),
+      );
+    }
+
     // Año y kilometraje solo son obligatorios cuando la ficha de vehículo está a
     // la vista. Antes se rellenaban en silencio al guardar (`?? new Date()...`,
     // `?? 0`), así que una publicación podía salir con el año equivocado sin que

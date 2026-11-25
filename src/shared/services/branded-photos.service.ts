@@ -1,7 +1,11 @@
 import { Injectable, signal } from '@angular/core';
 
-/** A qué formulario de inventario van las fotos. */
-export type BrandedDestination = 'piezas' | 'vehiculos' | 'noticias';
+/**
+ * A qué formulario van las fotos: las tres primeras son del inventario oficial (`/admin/inventario`)
+ * y `hubmarket` es una publicación de la comunidad (`/publicar`). Hub Market es siempre una opción
+ * elegida, nunca el destino por defecto.
+ */
+export type BrandedDestination = 'piezas' | 'vehiculos' | 'noticias' | 'hubmarket';
 
 export interface BrandedHandoff {
   destination: BrandedDestination;
@@ -22,9 +26,13 @@ export class BrandedPhotosService {
     this.pending.set(handoff);
   }
 
-  /** Entrega lo pendiente una sola vez. */
-  take(): BrandedHandoff | null {
+  /**
+   * Entrega lo pendiente una sola vez, y solo si su destino es de los que pide quien llama:
+   * el inventario no se lleva lo de Hub Market ni al revés.
+   */
+  take(...accept: BrandedDestination[]): BrandedHandoff | null {
     const handoff = this.pending();
+    if (!handoff || !accept.includes(handoff.destination)) return null;
     this.pending.set(null);
     return handoff;
   }

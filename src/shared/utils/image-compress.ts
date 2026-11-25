@@ -3,7 +3,7 @@ export const IMAGE_MAX_EDGE = 1600;
 /** Calidad JPEG de la copia que se sube. */
 export const IMAGE_QUALITY = 0.85;
 /** Lo más que se acepta de entrada, antes de comprimir. */
-export const IMAGE_INPUT_MAX_BYTES = 10 * 1024 * 1024;
+export const IMAGE_INPUT_MAX_BYTES = 40 * 1024 * 1024;
 
 const INPUT_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -18,7 +18,7 @@ export function fitWithin(width: number, height: number, maxEdge = IMAGE_MAX_EDG
 /** El error de una foto que no se puede aceptar, o null. */
 export function imageInputProblem(file: Pick<File, 'type' | 'size'>): string | null {
   if (!INPUT_TYPES.includes(file.type)) return 'Solo se aceptan imágenes JPG, PNG o WebP.';
-  if (file.size > IMAGE_INPUT_MAX_BYTES) return 'Cada foto debe pesar menos de 10 MB.';
+  if (file.size > IMAGE_INPUT_MAX_BYTES) return 'Esa foto es demasiado grande (más de 40 MB). Prueba con otra.';
   return null;
 }
 

@@ -232,7 +232,8 @@ export class AdminMarca {
   }
 
   /**
-   * Manda todas las fotos cargadas, con la insignia, al formulario de alta de inventario.
+   * Manda todas las fotos cargadas, con la insignia, a un formulario de alta: el inventario oficial
+   * o, si se elige, una publicación de Hub Market.
    * Siempre en JPG y comprimido bajo el tope de 5 MB del formulario.
    */
   async useInListing(destination: BrandedDestination): Promise<void> {
@@ -246,7 +247,7 @@ export class AdminMarca {
         files.push(new File([blob], `${outputName(item.name)}.jpg`, { type: 'image/jpeg' }));
       }
       this.handoff.offer({ destination, files });
-      await this.router.navigate(['/admin/inventario']);
+      await this.router.navigate([destination === 'hubmarket' ? '/publicar' : '/admin/inventario']);
     } catch {
       this.toast.show('No se pudieron preparar las fotos.');
     } finally {

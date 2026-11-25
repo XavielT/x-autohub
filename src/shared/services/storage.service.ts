@@ -3,10 +3,7 @@ import { Observable, forkJoin, from, map, of, switchMap } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { PROOF_MAX_BYTES } from '../models/order.model';
 import { SocialMedia } from '../models/social-hub.model';
-
-/** Límites que espejean los del bucket (ver 0003_storage.sql). */
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+import { compressImage, imageInputProblem } from '../utils/image-compress';
 
 /** Lo que acepta el bucket `payment-proofs` (migración 0018): foto o PDF, hasta 10 MB. */
 const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
@@ -30,13 +27,8 @@ export class StorageService {
 
   /** Valida un archivo antes de subirlo. Devuelve el error o null. */
   validate(file: File): string | null {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Solo se aceptan imágenes JPG, PNG o WebP.';
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      return 'Cada imagen debe pesar menos de 5 MB.';
-    }
-    return null;
+    // El peso ya no es un problema del usuario: `uploadOne()` comprime antes de subir.
+    return imageInputProblem(file);
   }
 
   /** Valida un comprobante de pago antes de subirlo. Devuelve el error o null. */
@@ -221,13 +213,17 @@ export class StorageService {
     folder: string,
     bucket: 'listings' | 'avatars' | 'inventory' | 'service-works' | 'social-media',
   ): Observable<string> {
-    const path = `${folder}/${this.uniqueName(file.name)}`;
-
     // `getPublicUrl()` es sincrónico y por el proxy `db` nunca responde (se cuelga sin error): se pide el cliente real.
-    return from(this.supabase.client()).pipe(
-      switchMap((client) =>
-        from(
-          client.storage.from(bucket).upload(path, file, {
+    // Toda imagen se optimiza aquí (1600 px, JPEG al 85 %): un JPEG que ya viene así no se toca,
+    // y una foto de 12 MB del celular no le pide nada al usuario ni topa con el límite del bucket.
+    // Los videos del feed pasan intactos.
+    const prepared = file.type.startsWith('image/') ? compressImage(file) : Promise.resolve(file);
+    return from(Promise.all([this.supabase.client(), prepared])).pipe(
+      switchMap(([client, body]) => {
+        // El nombre sale del archivo ya optimizado: un PNG comprimido se sube como .jpg.
+        const path = `${folder}/${this.uniqueName(body.name)}`;
+        return from(
+          client.storage.from(bucket).upload(path, body, {
             cacheControl: '31536000',
             upsert: false,
           }),
@@ -239,8 +235,8 @@ export class StorageService {
             }
             return client.storage.from(bucket).getPublicUrl(res.data.path).data.publicUrl;
           }),
-        ),
-      ),
+        );
+      }),
     );
   }
 

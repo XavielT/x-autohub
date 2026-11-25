@@ -20,7 +20,7 @@ describe('ImageUploader', () => {
 
   it('agrega las fotos válidas y rechaza las demás con un aviso', async () => {
     const { uploader, show } = montar();
-    await uploader.add([foto('a.jpg'), foto('b.gif', 'image/gif'), foto('c.jpg', 'image/jpeg', 11 * 1024 * 1024)]);
+    await uploader.add([foto('a.jpg'), foto('b.gif', 'image/gif'), foto('c.jpg', 'image/jpeg', 41 * 1024 * 1024)]);
 
     expect(uploader.files().map((f) => f.name)).toEqual(['a.jpg']);
     expect(show).toHaveBeenCalledTimes(2);

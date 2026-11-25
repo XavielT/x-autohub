@@ -275,8 +275,8 @@ export class AdminInventario implements OnInit {
   ngOnInit(): void {
     this.loadAll();
     // Vienen de /admin/marca: fotos ya con la insignia para publicar un artículo nuevo.
-    const handoff = this.branded.take();
-    if (handoff) {
+    const handoff = this.branded.take('piezas', 'vehiculos', 'noticias');
+    if (handoff && handoff.destination !== 'hubmarket') {
       this.setTab(handoff.destination);
       this.startCreate();
       this.addFiles(handoff.files);
