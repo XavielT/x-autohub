@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { Router } from '@angular/router';
+import { BrandedDestination, BrandedPhotosService } from '../../../../shared/services/branded-photos.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { PRESETS, badgeRect, fitEdge, outputName } from './badge-layout';
 
@@ -25,6 +27,8 @@ const LOGO_SRC = 'assets/imgs/autohub-logo.png';
 })
 export class AdminMarca {
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly handoff = inject(BrandedPhotosService);
 
   readonly presets = PRESETS;
   readonly items = signal<Item[]>([]);
@@ -187,16 +191,45 @@ export class AdminMarca {
     ctx.restore();
   }
 
+  /** La foto con la insignia, ya codificada. */
+  private async render(item: Item, png: boolean): Promise<Blob> {
+    const canvas = document.createElement('canvas');
+    await this.paint(canvas, item.bitmap);
+    const blob = await new Promise<Blob | null>((ok) =>
+      canvas.toBlob(ok, png ? 'image/png' : 'image/jpeg', 0.9),
+    );
+    if (!blob) throw new Error('toBlob vacío');
+    return blob;
+  }
+
+  /**
+   * Manda todas las fotos cargadas, con la insignia, al formulario de alta de inventario.
+   * Siempre en JPG: el formulario rechaza archivos de más de 5 MB y un PNG de foto los pasa.
+   */
+  async useInListing(destination: BrandedDestination): Promise<void> {
+    const items = this.items();
+    if (!items.length) return;
+    this.busy.set(true);
+    try {
+      const files: File[] = [];
+      for (const item of items) {
+        const blob = await this.render(item, false);
+        files.push(new File([blob], `${outputName(item.name)}.jpg`, { type: 'image/jpeg' }));
+      }
+      this.handoff.offer({ destination, files });
+      await this.router.navigate(['/admin/inventario']);
+    } catch {
+      this.toast.show('No se pudieron preparar las fotos.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   async download(item: Item): Promise<void> {
     this.busy.set(true);
     try {
-      const canvas = document.createElement('canvas');
-      await this.paint(canvas, item.bitmap);
       const png = this.format() === 'png';
-      const blob = await new Promise<Blob | null>((ok) =>
-        canvas.toBlob(ok, png ? 'image/png' : 'image/jpeg', 0.92),
-      );
-      if (!blob) throw new Error('toBlob vacío');
+      const blob = await this.render(item, png);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

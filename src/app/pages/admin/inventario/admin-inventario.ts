@@ -13,6 +13,7 @@ import {
 } from '@angular/forms';
 import { forkJoin, map, switchMap } from 'rxjs';
 import { AdminService } from '../../../../shared/services/admin.service';
+import { BrandedPhotosService } from '../../../../shared/services/branded-photos.service';
 import { AdminCatalogService } from '../../../../shared/services/admin-catalog.service';
 import { AiCatalogService } from '../../../../shared/services/ai-catalog.service';
 import { ServiciosCardService } from '../../../../shared/services/servicios-card.service';
@@ -115,6 +116,7 @@ export class AdminInventario implements OnInit {
   private readonly storage = inject(StorageService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly branded = inject(BrandedPhotosService);
 
   readonly tab = signal<Tab>('piezas');
   readonly isLoading = signal(true);
@@ -272,6 +274,13 @@ export class AdminInventario implements OnInit {
 
   ngOnInit(): void {
     this.loadAll();
+    // Vienen de /admin/marca: fotos ya con la insignia para publicar un artículo nuevo.
+    const handoff = this.branded.take();
+    if (handoff) {
+      this.setTab(handoff.destination);
+      this.startCreate();
+      this.addFiles(handoff.files);
+    }
   }
 
   /**
@@ -504,7 +513,14 @@ export class AdminInventario implements OnInit {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
+    this.addFiles(files);
 
+    // Permite volver a elegir el mismo archivo si el usuario lo quitó y cambió de idea.
+    input.value = '';
+  }
+
+  /** Valida y suma imágenes nuevas al formulario (las elegidas a mano o las de /admin/marca). */
+  private addFiles(files: File[]): void {
     const accepted: File[] = [];
     for (const file of files) {
       const problem = this.storage.validate(file);
@@ -521,9 +537,6 @@ export class AdminInventario implements OnInit {
       reader.onload = () => this.previews.update((list) => [...list, reader.result as string]);
       reader.readAsDataURL(file);
     }
-
-    // Permite volver a elegir el mismo archivo si el usuario lo quitó y cambió de idea.
-    input.value = '';
   }
 
   /** Quita una imagen nueva (todavía no subida). */

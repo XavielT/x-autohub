@@ -64,6 +64,15 @@
             </button>
           }
         </div>
+
+        <div class="mk__use">
+          <span>Publicar {{ items().length === 1 ? 'esta foto' : 'estas ' + items().length + ' fotos' }} con la insignia</span>
+          <div class="tl__row mk__actions">
+            <button type="button" class="tl__btn tl__btn--small" [disabled]="busy()" (click)="useInListing('piezas')">Pieza de la tienda</button>
+            <button type="button" class="tl__btn tl__btn--small" [disabled]="busy()" (click)="useInListing('vehiculos')">Vehículo de Auto Hub</button>
+            <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" [disabled]="busy()" (click)="useInListing('noticias')">Noticia</button>
+          </div>
+        </div>
       </div>
     </div>
 

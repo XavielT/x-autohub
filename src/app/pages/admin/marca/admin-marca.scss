@@ -91,3 +91,10 @@
   &:hover { border-color: var(--Hub); }
   &--on { background: var(--Hub); border-color: var(--Hub); }
 }
+
+.mk__use {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--main-light);
+}
