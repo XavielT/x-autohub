@@ -874,6 +874,19 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(c.draft()!.items[0].vehicle).toBeUndefined();
     });
 
+    it('al agregar el segundo vehículo, lo que ya estaba escrito pasa al primero y no queda como general', async () => {
+      const { c } = await montar();
+      c.startNew();
+      c.pickTemplate('mecanica');
+      c.addLine('servicio', 'Cambio de pastillas', 500);
+      expect(c.draft()!.items.every((l) => l.vehicle === undefined)).toBe(true);
+
+      c.addVehicle();
+
+      expect(c.draft()!.items.every((l) => l.vehicle === 0)).toBe(true);
+      expect(c.vehicleGroups().map((g) => g.slot)).toEqual([0, 1]);
+    });
+
     it('con varios vehículos el editor se divide en un bloque por vehículo, cada uno con su subtotal', async () => {
       const { fixture, c, el } = await conDosVehiculos();
       c.addLineToVehicle(0);

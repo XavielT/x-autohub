@@ -624,7 +624,10 @@ export class AdminDocumentos implements OnInit {
     this.draft.update((d) => {
       if (!d) return d;
       const next = from ? this.vehicleOf(from, emptyDocumentVehicle()) : emptyDocumentVehicle();
-      return { ...d, extraVehicles: [...(d.extraVehicles ?? []), next] };
+      // Al pasar de uno a dos vehículos, lo que ya estaba escrito era del primero: no se queda como "general".
+      const first = (d.extraVehicles?.length ?? 0) === 0;
+      const items = first ? d.items.map((l) => (typeof l.vehicle === 'number' ? l : { ...l, vehicle: 0 })) : d.items;
+      return { ...d, items, extraVehicles: [...(d.extraVehicles ?? []), next] };
     });
   }
 
