@@ -30,6 +30,8 @@ export interface AdminPartModel {
    */
   hasVariants: boolean;
   isActive: boolean;
+  /** Foto para la miniatura de la lista. Vacía = sin foto. */
+  imageUrl?: string;
   /**
    * Artículo de prueba (migración 0013).
    *
@@ -48,6 +50,8 @@ export interface AdminVehicleModel {
   price: number;
   mileage: number;
   isAvailable: boolean;
+  /** Foto para la miniatura de la lista. Vacía = sin foto. */
+  imageUrl?: string;
   isTest: boolean;
 }
 
@@ -57,6 +61,8 @@ export interface AdminNewsModel {
   scope: NewsScope;
   publishedAt: Date;
   isPublished: boolean;
+  /** Foto para la miniatura de la lista. Vacía = sin foto. */
+  imageUrl?: string;
   isTest: boolean;
 }
 

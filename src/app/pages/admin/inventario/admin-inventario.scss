@@ -409,3 +409,7 @@
   .adm-inv__save,
   .adm-inv__cancel { min-height: 48px; }
 }
+
+// Renglón de una lista con su miniatura al lado: la foto del artículo (o un icono de referencia) y, junto a ella, el nombre.
+.adm-inv__item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.adm-inv__item-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }

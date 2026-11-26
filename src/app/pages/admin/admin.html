@@ -19,6 +19,7 @@
         [routerLink]="section.path"
         [attr.aria-label]="section.label + ': ' + section.description">
         <span class="admin__nav-label">
+          <app-icon class="admin__nav-icon" [name]="section.icon" [size]="22" />
           {{ section.label }}
           @if (section.path === 'moderacion' && pendingCount() > 0) {
             <span class="admin__badge" [attr.aria-label]="pendingCount() + ' pendientes'">{{ pendingCount() }}</span>

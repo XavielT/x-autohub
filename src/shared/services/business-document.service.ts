@@ -41,6 +41,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     validUntil: row.valid_until,
     items: (row.items ?? []).map((i) => ({
       uid: newLineUid(),
+      section: i.section ?? '',
       kind: i.kind as LineKind,
       description: i.description,
       quantity: Number(i.quantity),
@@ -66,7 +67,13 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
 const cleanItems = (items: readonly DocumentLine[]) =>
   items
     .filter((i) => i.description.trim())
-    .map((i) => ({ kind: i.kind, description: i.description.trim(), quantity: i.quantity, unitPrice: i.unitPrice }));
+    .map((i) => ({
+      section: i.section.trim(),
+      kind: i.kind,
+      description: i.description.trim(),
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+    }));
 
 /**
  * Cotizaciones y facturas desde el panel (`/admin/documentos`).

@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -5,6 +6,11 @@ import { AdminCatalogService } from '../../../../../shared/services/admin-catalo
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { ProductCategoryModel } from '../../../../../shared/models/product.model';
 import { buildCategoryTree } from '../../../../../shared/utils/category-tree';
+
+/** El SVG de una categoría de primer nivel (`assets/icons/categories/<slug>.svg`), o nulo si no tiene. */
+export function categoryMask(icon: string | null): string | null {
+  return icon ? `assets/icons/categories/${icon}.svg` : null;
+}
 
 /**
  * Las categorías de la tienda: crearlas, ordenarlas, renombrarlas y desactivarlas.
@@ -18,12 +24,15 @@ import { buildCategoryTree } from '../../../../../shared/utils/category-tree';
  */
 @Component({
   selector: 'app-admin-categorias',
-  imports: [FormsModule, Skeleton],
+  imports: [FormsModule, Skeleton, Thumb],
   templateUrl: './admin-categorias.html',
   styleUrl: './admin-categorias.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminCategorias implements OnInit {
+  /** Para la plantilla: el SVG de la categoría. */
+  protected readonly mask = categoryMask;
+
   private readonly catalog = inject(AdminCatalogService);
   private readonly toast = inject(ToastService);
 

@@ -110,6 +110,79 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(c.totals()?.total).toBe(4500);
   });
 
+  it('arma secciones a su manera: crear, renombrar, mover líneas y quitar', async () => {
+    const { c } = await montar();
+    c.pickTemplate('general');
+    expect(c.sectionTitles()).toEqual(['Chequeo', 'Trabajos', 'Repuestos']);
+
+    c.addSection('Aire acondicionado');
+    expect(c.target()).toBe('Aire acondicionado');
+    c.addLine('servicio', 'Recarga de gas', 3000);
+
+    // Una línea pasa de sección y las líneas siguen el orden de las secciones.
+    c.addSection('Repuestos');
+    c.addLine('repuesto', 'Bomba de agua', 4500);
+    const bomba = c.draft()!.items.find((i) => i.description === 'Bomba de agua')!;
+    c.setLineSection(bomba.uid, input('Aire acondicionado'));
+    expect(c.grouped().find((g) => g.title === 'Aire acondicionado')?.lines).toHaveLength(2);
+
+    c.renameSectionTo('Aire acondicionado', input('A/C'));
+    expect(c.sectionTitles()).toContain('A/C');
+    expect(c.draft()!.items.every((i) => i.section !== 'Aire acondicionado')).toBe(true);
+
+    c.moveSectionBy('A/C', -1);
+    const titles = c.sectionTitles();
+    expect(titles.indexOf('A/C')).toBeLessThan(titles.indexOf('Repuestos'));
+  });
+
+  it('quitar una sección con líneas pide una segunda pulsación', async () => {
+    const { c } = await montar();
+    c.pickTemplate('mecanica');
+    c.addLine('mano_de_obra', 'Cambio de pastillas', 1000);
+
+    c.askRemoveSection('Mano de obra');
+    expect(c.pendingRemove()).toBe('Mano de obra');
+    expect(c.sectionTitles()).toContain('Mano de obra');
+
+    c.askRemoveSection('Mano de obra');
+    expect(c.sectionTitles()).not.toContain('Mano de obra');
+    expect(c.draft()!.items.some((i) => i.section === 'Mano de obra')).toBe(false);
+  });
+
+  it('una sección vacía se quita sin pedir confirmación', async () => {
+    const { c } = await montar();
+    c.pickTemplate('mecanica');
+    c.askRemoveSection('Repuestos');
+    expect(c.sectionTitles()).toEqual(['Mano de obra']);
+  });
+
+  it('los subtotales por sección suman el total', async () => {
+    const { c } = await montar();
+    c.pickTemplate('general');
+    c.addLine('servicio', 'Chequeo general del vehículo', 800);
+    c.setTarget(input('Repuestos'));
+    c.addLine('repuesto', 'Filtro', 1200);
+
+    const subs = Object.fromEntries(c.grouped().map((g) => [g.title, g.subtotal]));
+    expect(subs['Chequeo']).toBe(800);
+    expect(subs['Repuestos']).toBe(1200);
+    expect(c.totals()?.total).toBe(2000);
+  });
+
+  it('el papel muestra cada sección con su título y subtotal', async () => {
+    const { fixture, c, el } = await montar();
+    c.pickTemplate('general');
+    c.addLine('servicio', 'Chequeo general del vehículo', 800);
+    c.setTarget(input('Repuestos'));
+    c.addLine('repuesto', 'Filtro', 1200);
+    fixture.detectChanges();
+
+    const paper = el.querySelector('.doc-sheet')!.textContent!;
+    expect(paper).toContain('Chequeo');
+    expect(paper).toContain('Repuestos');
+    expect(paper).toContain('Subtotal · Chequeo');
+  });
+
   it('el área abierta arranca en la de la plantilla y cambia al tocar otra', async () => {
     const { c } = await montar();
     c.pickTemplate('mantenimiento');

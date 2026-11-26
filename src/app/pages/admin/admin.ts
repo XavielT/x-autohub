@@ -4,11 +4,14 @@ import { AuthService } from '../../../shared/services/auth.service';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { AdminPublicar } from './publicar/admin-publicar';
 import { AdminHoy } from './hoy/admin-hoy';
+import { Icon, IconName } from '../../../shared/ui/icon/icon';
 
 interface AdminSection {
   path: string;
   label: string;
   description: string;
+  /** Icono de la tarjeta, para reconocerla de un vistazo. */
+  icon: IconName;
   /** true si un moderador también puede abrirla. Ver `sections`. */
   forModerators?: boolean;
 }
@@ -27,7 +30,7 @@ interface AdminSection {
  */
 @Component({
   selector: 'app-admin',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminPublicar, AdminHoy],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, AdminPublicar, AdminHoy, Icon],
   templateUrl: './admin.html',
   styleUrl: './admin.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,24 +50,24 @@ export class Admin {
 
   private readonly allSections: readonly AdminSection[] = [
     {
-      path: 'moderacion',
+      path: 'moderacion', icon: 'shield-check',
       label: 'Moderación',
       description: 'Publicaciones que esperan revisión',
       forModerators: true,
     },
     {
-      path: 'versiones',
+      path: 'versiones', icon: 'tag',
       label: 'Versiones',
       description: 'Historial de versiones del sitio',
     },
-    { path: 'pedidos', label: 'Pedidos', description: 'Pedidos del catálogo y su estado' },
-    { path: 'cupones', label: 'Cupones', description: 'Códigos de descuento del checkout' },
-    { path: 'taller', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
-    { path: 'inventario', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
-    { path: 'marca', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
-    { path: 'documentos', label: 'Documentos', description: 'Cotizaciones y facturas para tus clientes' },
-    { path: 'usuarios', label: 'Usuarios', description: 'Cuentas, verificación y permisos' },
-    { path: 'ajustes', label: 'Ajustes', description: 'Cuentas para transferir y dirección de retiro' },
+    { path: 'pedidos', icon: 'package', label: 'Pedidos', description: 'Pedidos del catálogo y su estado' },
+    { path: 'cupones', icon: 'ticket', label: 'Cupones', description: 'Códigos de descuento del checkout' },
+    { path: 'taller', icon: 'wrench', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
+    { path: 'inventario', icon: 'boxes', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
+    { path: 'marca', icon: 'image', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
+    { path: 'documentos', icon: 'file-text', label: 'Documentos', description: 'Cotizaciones y facturas para tus clientes' },
+    { path: 'usuarios', icon: 'users', label: 'Usuarios', description: 'Cuentas, verificación y permisos' },
+    { path: 'ajustes', icon: 'sliders', label: 'Ajustes', description: 'Cuentas para transferir y dirección de retiro' },
   ];
 
   /**

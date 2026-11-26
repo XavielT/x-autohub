@@ -476,9 +476,14 @@
                 @for (part of parts(); track part.id) {
                   <tr [class.adm-inv__row--off]="!part.isActive">
                     <td>
-                      <span class="adm-inv__name">{{ part.name }}</span>
-                      @if (part.isTest) { <span class="adm-inv__test">PRUEBA</span> }
-                      <span class="adm-inv__sub">{{ part.brand }} · {{ categoryName(part) }} · {{ part.sku }}</span>
+                      <div class="adm-inv__item">
+                        <app-thumb [src]="part.imageUrl" [mask]="categoryIcon(part)" icon="package" [size]="56" />
+                        <div class="adm-inv__item-text">
+                          <span class="adm-inv__name">{{ part.name }}</span>
+                          @if (part.isTest) { <span class="adm-inv__test">PRUEBA</span> }
+                          <span class="adm-inv__sub">{{ part.brand }} · {{ categoryName(part) }} · {{ part.sku }}</span>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <input type="number" min="0" step="50" class="adm-inv__input"
@@ -543,9 +548,14 @@
                 @for (v of vehicles(); track v.id) {
                   <tr [class.adm-inv__row--off]="!v.isAvailable">
                     <td>
-                      <span class="adm-inv__name">{{ v.brand }} {{ v.model }}</span>
-                      @if (v.isTest) { <span class="adm-inv__test">PRUEBA</span> }
-                      <span class="adm-inv__sub">{{ v.year }}</span>
+                      <div class="adm-inv__item">
+                        <app-thumb [src]="v.imageUrl" icon="car" [size]="56" />
+                        <div class="adm-inv__item-text">
+                          <span class="adm-inv__name">{{ v.brand }} {{ v.model }}</span>
+                          @if (v.isTest) { <span class="adm-inv__test">PRUEBA</span> }
+                          <span class="adm-inv__sub">{{ v.year }}</span>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <input type="number" min="0" step="5000" class="adm-inv__input"
@@ -595,8 +605,13 @@
                 @for (n of news(); track n.id) {
                   <tr [class.adm-inv__row--off]="!n.isPublished">
                     <td>
-                      <span class="adm-inv__name">{{ n.title }}</span>
-                      @if (n.isTest) { <span class="adm-inv__test">PRUEBA</span> }
+                      <div class="adm-inv__item">
+                        <app-thumb [src]="n.imageUrl" icon="newspaper" [size]="56" />
+                        <div class="adm-inv__item-text">
+                          <span class="adm-inv__name">{{ n.title }}</span>
+                          @if (n.isTest) { <span class="adm-inv__test">PRUEBA</span> }
+                        </div>
+                      </div>
                     </td>
                     <td>{{ n.scope === 'local' ? 'Local' : 'Internacional' }}</td>
                     <td>{{ n.publishedAt | date:'d MMM y' }}</td>

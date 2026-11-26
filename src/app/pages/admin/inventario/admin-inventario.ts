@@ -1,4 +1,5 @@
 import { AliasEditor } from './alias-editor/alias-editor';
+import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { RouterLink } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -102,6 +103,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     AdminMarcas,
     AliasEditor,
     Skeleton,
+    Thumb,
     RouterLink,
   ],
   templateUrl: './admin-inventario.html',
@@ -339,6 +341,17 @@ export class AdminInventario implements OnInit {
   /** El nombre de la categoría de una pieza, o "Sin clasificar" si todavía no tiene. */
   categoryName(part: AdminPartModel): string {
     return this.categories().find((c) => c.id === part.categoryId)?.name ?? 'Sin clasificar';
+  }
+
+  /**
+   * El SVG de la categoría de una pieza, para la miniatura cuando no tiene foto. Las hijas usan el de su categoría
+   * madre (solo las de primer nivel traen icono). Nulo si la pieza no está clasificada.
+   */
+  categoryIcon(part: AdminPartModel): string | null {
+    const all = this.categories();
+    let category = all.find((c) => c.id === part.categoryId);
+    if (category && category.parentId !== null) category = all.find((c) => c.id === category?.parentId) ?? category;
+    return category?.icon ? `assets/icons/categories/${category.icon}.svg` : null;
   }
 
   /** Error de grupo del formulario de la pieza (las reglas que cruzan campos). */

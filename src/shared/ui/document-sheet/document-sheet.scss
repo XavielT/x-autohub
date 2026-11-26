@@ -72,6 +72,8 @@
   td { padding: 8px; border-bottom: 1px solid var(--ds-line); vertical-align: top; }
   small { display: block; color: var(--ds-soft); font-size: 11px; }
   tr { break-inside: avoid; }
+  tfoot td { padding: 6px 8px; border-bottom: 0; font-weight: 700; }
+  .ds__sub-label { text-align: right; color: var(--ds-soft); font-weight: 600; }
 }
 
 .ds__num { text-align: right !important; white-space: nowrap; width: 1%; }

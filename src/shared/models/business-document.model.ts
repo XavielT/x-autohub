@@ -38,6 +38,8 @@ export const STATUSES_BY_KIND: Record<DocumentKind, readonly DocumentStatus[]> =
 export interface DocumentLine {
   /** Solo para el `track` de la lista en el formulario; no se guarda. */
   uid: string;
+  /** Título de la sección a la que pertenece ('' = sin sección). Lo elige quien arma el documento. */
+  section: string;
   kind: LineKind;
   description: string;
   quantity: number;

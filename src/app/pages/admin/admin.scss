@@ -108,10 +108,15 @@
   }
 
   &__nav-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-family: var(--font-brand);
     font-size: 17px;
     color: var(--Hub);
   }
+
+  &__nav-icon { color: var(--Hub); }
 
   &__nav-desc {
     font-family: var(--font-body);

@@ -28,6 +28,7 @@
       @for (root of tree(); track root.id) {
         <li class="cat__node" [class.cat__node--off]="!root.isActive">
           <div class="cat__row">
+            <app-thumb [mask]="mask(root.icon)" icon="folder" [size]="44" />
             <input type="text" class="cat__name" maxlength="80" [value]="root.name"
                    [disabled]="savingId() === root.id"
                    [attr.aria-label]="'Nombre de ' + root.name"
@@ -48,6 +49,7 @@
               @for (child of root.children; track child.id) {
                 <li class="cat__node cat__node--child" [class.cat__node--off]="!child.isActive">
                   <div class="cat__row">
+                    <app-thumb [mask]="mask(root.icon)" icon="folder" [size]="36" />
                     <input type="text" class="cat__name" maxlength="80" [value]="child.name"
                            [disabled]="savingId() === child.id"
                            [attr.aria-label]="'Nombre de ' + child.name"

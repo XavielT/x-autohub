@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DOCUMENT, DecimalPipe, DatePipe } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
+import { Icon } from '../../../../shared/ui/icon/icon';
 import { DocumentSheet } from '../../../../shared/ui/document-sheet/document-sheet';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
 import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
@@ -13,6 +14,7 @@ import {
   BusinessProfile,
   DocumentDraft,
   DocumentKind,
+  DocumentLine,
   DocumentStatus,
   DocumentVehicle,
   EMPTY_BUSINESS_PROFILE,
@@ -25,6 +27,15 @@ import {
 } from '../../../../shared/models/business-document.model';
 import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
 import { computeTotals } from '../../../../shared/utils/document-totals';
+import {
+  SECTION_PRESETS,
+  mergeTitles,
+  moveItem,
+  moveLine,
+  renameSection,
+  sortBySection,
+  uniqueTitle,
+} from '../../../../shared/utils/document-sections';
 import { documentWhatsAppLink } from '../../../../shared/utils/document-whatsapp';
 
 type View = 'list' | 'pick' | 'edit';
@@ -68,7 +79,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
  */
 @Component({
   selector: 'app-admin-documentos',
-  imports: [Skeleton, DocumentSheet, DecimalPipe, DatePipe],
+  imports: [Skeleton, DocumentSheet, Icon, DecimalPipe, DatePipe],
   templateUrl: './admin-documentos.html',
   styleUrl: './admin-documentos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -107,6 +118,7 @@ export class AdminDocumentos implements OnInit {
   /** Áreas con conceptos frecuentes: están en todos los documentos, porque una factura puede mezclar trabajos. */
   readonly suggestionAreas = DOCUMENT_TEMPLATES.filter((t) => t.suggestions.length > 0).map((t) => ({
     id: t.id,
+    icon: t.icon,
     label: t.areaLabel,
     suggestions: t.suggestions,
   }));
@@ -116,6 +128,30 @@ export class AdminDocumentos implements OnInit {
   readonly activeArea = computed(() => {
     const wanted = this.suggestAreaId() ?? this.draft()?.template ?? null;
     return this.suggestionAreas.find((a) => a.id === wanted) ?? this.suggestionAreas[0];
+  });
+
+  /** Los títulos de las secciones, en su orden: viven en el editor y dejan tener secciones todavía vacías. */
+  readonly sectionTitles = signal<string[]>([]);
+  private readonly targetTitle = signal<string | null>(null);
+  /** La sección que pidió quitarse y espera la segunda pulsación. */
+  readonly pendingRemove = signal<string | null>(null);
+  readonly sectionPresets = SECTION_PRESETS;
+
+  /** A qué sección van los conceptos que se tocan: la elegida o, por defecto, la primera. */
+  readonly target = computed(() => {
+    const titles = this.sectionTitles();
+    const wanted = this.targetTitle();
+    return wanted !== null && titles.includes(wanted) ? wanted : (titles[0] ?? '');
+  });
+
+  /** Las secciones con sus líneas y su subtotal, para dibujar el editor. */
+  readonly grouped = computed(() => {
+    const d = this.draft();
+    if (!d) return [];
+    return this.sectionTitles().map((title) => {
+      const lines = d.items.filter((i) => i.section === title);
+      return { title, lines, subtotal: lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0) };
+    });
   });
 
   readonly catalog = signal<CatalogEntry[] | null>(null);
@@ -196,13 +232,13 @@ export class AdminDocumentos implements OnInit {
   }
 
   open(doc: BusinessDocument): void {
-    this.draft.set(toDraft(doc));
+    this.edit(toDraft(doc));
     this.saved.set(doc);
     this.view.set('edit');
   }
 
   duplicate(doc: BusinessDocument): void {
-    this.draft.set(this.docs.duplicate(doc));
+    this.edit(this.docs.duplicate(doc));
     this.saved.set(null);
     this.view.set('edit');
     this.toast.show('Copia lista como borrador. Revísala y guárdala.');
@@ -210,7 +246,7 @@ export class AdminDocumentos implements OnInit {
 
   toInvoice(doc: BusinessDocument): void {
     const draft = this.docs.duplicate(doc, 'factura');
-    this.draft.set({ ...draft, paid: 0 });
+    this.edit({ ...draft, paid: 0 });
     this.saved.set(null);
     this.view.set('edit');
     this.toast.show('Factura lista como borrador. Revísala y guárdala.');
@@ -238,7 +274,7 @@ export class AdminDocumentos implements OnInit {
 
   pickTemplate(id: TemplateId): void {
     this.suggestAreaId.set(null);
-    this.draft.set(draftFromTemplate(id, this.pickKind()));
+    this.edit(draftFromTemplate(id, this.pickKind()), templateById(id).defaultSections);
     this.saved.set(null);
     this.catalogQuery.set('');
     this.view.set('edit');
@@ -285,16 +321,105 @@ export class AdminDocumentos implements OnInit {
     this.suggestAreaId.set(id);
   }
 
+  /** Abre un documento en el editor: fija el borrador y las secciones (las dadas más las que traen las líneas). */
+  private edit(draft: DocumentDraft, titles: readonly string[] = []): void {
+    this.sectionTitles.set(mergeTitles(titles, draft.items));
+    this.targetTitle.set(null);
+    this.pendingRemove.set(null);
+    this.draft.set(draft);
+  }
+
+  /** Fija secciones y líneas a la vez, con las líneas siempre en el orden de las secciones. */
+  private commit(items: DocumentLine[], titles: string[]): void {
+    this.sectionTitles.set(titles);
+    this.patch({ items: sortBySection(items, titles) });
+  }
+
+  setTarget(event: Event): void {
+    this.targetTitle.set(value(event));
+  }
+
+  addSection(title = 'Nueva sección'): void {
+    const d = this.draft();
+    if (!d) return;
+    const titles = this.sectionTitles();
+    // Una sección que ya existe no se duplica: solo se elige como destino.
+    const name = SECTION_PRESETS.includes(title) && titles.includes(title) ? title : uniqueTitle(title, titles);
+    if (!titles.includes(name)) this.sectionTitles.set([...titles, name]);
+    this.targetTitle.set(name);
+  }
+
+  renameSectionTo(title: string, event: Event): void {
+    const d = this.draft();
+    const next = value(event).trim();
+    if (!d || next === title) return;
+    const r = renameSection(d.items, this.sectionTitles(), title, next);
+    if (this.targetTitle() === title) this.targetTitle.set(next);
+    this.commit(r.items, r.titles);
+  }
+
+  /** Quita una sección. Si tiene líneas pide una segunda pulsación, porque se van con ella. */
+  askRemoveSection(title: string): void {
+    const d = this.draft();
+    if (!d) return;
+    const hasLines = d.items.some((i) => i.section === title);
+    if (hasLines && this.pendingRemove() !== title) {
+      this.pendingRemove.set(title);
+      return;
+    }
+    this.pendingRemove.set(null);
+    this.commit(
+      d.items.filter((i) => i.section !== title),
+      this.sectionTitles().filter((t) => t !== title),
+    );
+  }
+
+  moveSectionBy(title: string, delta: -1 | 1): void {
+    const d = this.draft();
+    if (!d) return;
+    const titles = this.sectionTitles();
+    this.commit(d.items, moveItem(titles, titles.indexOf(title), delta));
+  }
+
+  moveLineBy(uid: string, delta: -1 | 1): void {
+    this.draft.update((d) => (d ? { ...d, items: moveLine(d.items, uid, delta) } : d));
+  }
+
+  setLineSection(uid: string, event: Event): void {
+    const d = this.draft();
+    if (!d) return;
+    const section = value(event);
+    this.commit(
+      d.items.map((i) => (i.uid === uid ? { ...i, section } : i)),
+      this.sectionTitles(),
+    );
+  }
+
+  /** Agrega una línea en una sección concreta (el botón de cada sección). */
+  addLineTo(title: string): void {
+    this.targetTitle.set(title);
+    this.addLine();
+  }
+
   addLine(kind?: LineKind, description = '', unitPrice = 0): void {
+    const d = this.draft();
+    if (!d) return;
+    let titles = this.sectionTitles();
+    if (titles.length === 0) {
+      titles = [''];
+      this.sectionTitles.set(titles);
+    }
+    const section = this.target();
     const tpl = this.template();
-    const line = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice);
-    this.draft.update((d) => {
-      if (!d) return d;
-      // Una línea vacía al final se reutiliza en vez de dejar un renglón en blanco en medio.
-      const last = d.items[d.items.length - 1];
-      const items = last && !last.description.trim() && last.unitPrice === 0 ? [...d.items.slice(0, -1), line] : [...d.items, line];
-      return { ...d, items };
-    });
+    const line = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice, section);
+    // Una línea vacía al final de la sección se reutiliza en vez de dejar un renglón en blanco en medio.
+    const own = d.items.filter((i) => i.section === section);
+    const last = own[own.length - 1];
+    const items =
+      last && !last.description.trim() && last.unitPrice === 0
+        ? d.items.map((i) => (i.uid === last.uid ? line : i))
+        : [...d.items, line];
+    this.commit(items, titles);
   }
 
   removeLine(uid: string): void {

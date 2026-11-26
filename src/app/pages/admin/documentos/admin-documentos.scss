@@ -2,6 +2,20 @@
 
 @include taller-base;
 
+// Botones y chips con icono: el icono y el texto alineados.
+.tl__btn, .tl__chip { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.dc__code { display: inline-flex; align-items: center; gap: 6px; }
+.dc__template-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--Hub-translucid);
+  color: var(--Hub);
+}
+
 .dc__profile { margin-bottom: 16px; }
 .dc__amount { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .dc__status { min-height: 40px; width: auto; }
@@ -76,7 +90,6 @@
 }
 .dc__line-desc { grid-column: 1 / -1; }
 .dc__line-kind { grid-column: 1 / 2; }
-.dc__line-total { align-self: center; text-align: right; font-weight: 700; grid-column: 1 / -1; grid-row: 3; }
 .dc__line-del {
   grid-column: 4; grid-row: 2;
   min-height: 44px;
@@ -89,6 +102,48 @@
   &:hover { color: #ff8d8f; }
 }
 .dc__line-num { text-align: right; }
+
+.dc__target { margin-top: 4px; }
+
+.dc__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  min-width: 0;
+
+  &.is-target { border-color: var(--Hub); }
+}
+
+.dc__section-head { display: flex; align-items: center; gap: 6px; }
+.dc__section-title { flex: 1; min-width: 0; font-weight: 700; }
+
+.dc__icon {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { border-color: var(--Hub); color: var(--Hub); }
+  &:disabled { opacity: 0.35; cursor: default; }
+  &--danger:hover:not(:disabled) { border-color: #ff8d8f; color: #ff8d8f; }
+}
+
+.dc__line-tools { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+.dc__line-section { flex: 1; min-width: 0; }
+.dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }
+
+.dc__section-foot { justify-content: space-between; }
+.dc__new-section .tl__chips { margin: 6px 0 0; }
 
 // Al imprimir, el CSS global (`styles.scss`) deja solo `.doc-sheet`; esto es por si se ve algo del formulario.
 @media print { .dc__noprint { display: none !important; } }

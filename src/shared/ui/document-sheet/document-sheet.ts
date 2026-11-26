@@ -11,6 +11,7 @@ import {
 import { BankAccount } from '../../models/order.model';
 import { computeTotals } from '../../utils/document-totals';
 import { templateById } from '../../utils/document-templates';
+import { sectionTitlesOf } from '../../utils/document-sections';
 
 interface LineGroup {
   title: string | null;
@@ -55,9 +56,19 @@ export class DocumentSheet {
 
   readonly groups = computed<LineGroup[]>(() => {
     const lines = this.lines();
+    const sum = (ls: DocumentLine[]) => ls.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+
+    // Con secciones elegidas por quien armó el documento, el papel las respeta tal cual.
+    if (lines.some((l) => l.section.trim())) {
+      return sectionTitlesOf(lines).map((title) => {
+        const own = lines.filter((l) => l.section === title);
+        return { title: title.trim() || null, lines: own, subtotal: sum(own) };
+      });
+    }
+
+    // Documentos de antes de las secciones: se separan trabajo y piezas.
     const work = lines.filter((l) => WORK_KINDS.has(l.kind));
     const parts = lines.filter((l) => !WORK_KINDS.has(l.kind));
-    const sum = (ls: DocumentLine[]) => ls.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
 
     if (work.length > 0 && parts.length > 0) {
       return [

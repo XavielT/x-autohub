@@ -1,4 +1,5 @@
 import { DocumentDraft, DocumentKind, DocumentLine, LineKind, TemplateId } from '../models/business-document.model';
+import { IconName } from '../ui/icon/icon';
 import { DEFAULT_ITBIS_RATE, addDaysIso, todayIso } from './document-totals';
 
 /** Un concepto que la plantilla ofrece con un toque. **Sin precio**: el precio lo pones tú, no se inventa. */
@@ -12,9 +13,12 @@ export interface DocumentTemplate {
   label: string;
   /** Nombre corto del área, para el selector de conceptos. */
   areaLabel: string;
+  icon: IconName;
   description: string;
   /** Si el documento lleva el bloque del vehículo (marca, placa, kilometraje). */
   showVehicle: boolean;
+  /** Secciones con las que arranca el documento (se renombran, mueven o borran). Vacío = una sola, sin título. */
+  defaultSections: readonly string[];
   /** Tipo de línea con la que arranca "Agregar línea". */
   defaultLineKind: LineKind;
   /** Conceptos frecuentes de este tipo de trabajo, para agregar con un toque. */
@@ -33,6 +37,8 @@ const WARRANTY_LABOR =
 export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   {
     id: 'mecanica',
+    icon: 'wrench',
+    defaultSections: ['Mano de obra', 'Repuestos'],
     areaLabel: 'Mecánica',
     label: 'Reparación mecánica',
     description: 'Motor, frenos, suspensión, transmisión y dirección: mano de obra y repuestos por separado.',
@@ -54,6 +60,8 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'electrica',
+    icon: 'bolt',
+    defaultSections: ['Diagnóstico', 'Mano de obra', 'Repuestos'],
     areaLabel: 'Eléctrica y A/C',
     label: 'Eléctrica y A/C',
     description: 'Diagnóstico con escáner, cableado, batería, alternador, luces y aire acondicionado.',
@@ -74,6 +82,8 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'mantenimiento',
+    icon: 'droplet',
+    defaultSections: ['Servicios', 'Repuestos'],
     areaLabel: 'Mantenimiento',
     label: 'Mantenimiento',
     description: 'Cambio de aceite, filtros, bujías y revisiones periódicas.',
@@ -94,6 +104,8 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'instalacion',
+    icon: 'plug',
+    defaultSections: ['Productos', 'Instalación'],
     areaLabel: 'Instalación',
     label: 'Instalación de accesorios',
     description: 'Luces LED, pantallas, cámaras, alarmas y otros accesorios con su instalación.',
@@ -114,6 +126,8 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'venta',
+    icon: 'bag',
+    defaultSections: [],
     areaLabel: 'Piezas',
     label: 'Venta de piezas y accesorios',
     description: 'Solo productos, sin datos de vehículo. Ideal para mostrador o pedidos por WhatsApp.',
@@ -128,6 +142,8 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'general',
+    icon: 'layers',
+    defaultSections: ['Chequeo', 'Trabajos', 'Repuestos'],
     areaLabel: 'Chequeo y otros',
     label: 'Mixta / general',
     description: 'Para una factura o cotización que junta varios trabajos: A/C, chequeo, piezas mecánicas y lo que haga falta.',
@@ -153,8 +169,8 @@ export function templateById(id: TemplateId): DocumentTemplate {
 let uidSeq = 0;
 export const newLineUid = (): string => `l${Date.now().toString(36)}${(uidSeq++).toString(36)}`;
 
-export function blankLine(kind: LineKind, description = '', quantity = 1, unitPrice = 0): DocumentLine {
-  return { uid: newLineUid(), kind, description, quantity, unitPrice };
+export function blankLine(kind: LineKind, description = '', quantity = 1, unitPrice = 0, section = ''): DocumentLine {
+  return { uid: newLineUid(), section, kind, description, quantity, unitPrice };
 }
 
 /** Un documento nuevo, ya con lo que trae la plantilla: condiciones, validez y una línea lista. */
@@ -172,7 +188,7 @@ export function draftFromTemplate(templateId: TemplateId, kind: DocumentKind, to
     vehicle: { text: '', plate: '', mileage: '' },
     issueDate: today,
     validUntil: kind === 'cotizacion' ? addDaysIso(today, tpl.validDays) : null,
-    items: [blankLine(tpl.defaultLineKind)],
+    items: [blankLine(tpl.defaultLineKind, '', 1, 0, tpl.defaultSections[0] ?? '')],
     discountType: 'amount',
     discountValue: 0,
     applyItbis: false,

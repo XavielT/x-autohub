@@ -1,0 +1,7 @@
+@if (photo(); as url) {
+  <img class="thumb__img" [src]="url" alt="" loading="lazy" decoding="async" (error)="onError()" />
+} @else if (maskVar(); as m) {
+  <span class="thumb__ph"><span class="thumb__mask" [style.--thumb-mask]="m" [style.width.px]="iconSize() + 4" [style.height.px]="iconSize() + 4"></span></span>
+} @else {
+  <span class="thumb__ph"><app-icon [name]="icon()" [size]="iconSize()" /></span>
+}

@@ -45,12 +45,12 @@ function toAdminUser(row: AdminUserRow): AdminUserModel {
 
 /** Las columnas del listado de piezas del panel. */
 const ADMIN_PART_COLUMNS =
-  'id, name, brand, category_id, sku, fulfillment, price, stock, has_variants, is_active, is_test';
+  'id, name, brand, category_id, sku, fulfillment, price, stock, has_variants, is_active, is_test, img_url, images';
 
 type AdminPartRow = Pick<
   HubPartRow,
   | 'id' | 'name' | 'brand' | 'category_id' | 'sku' | 'fulfillment'
-  | 'price' | 'stock' | 'has_variants' | 'is_active' | 'is_test'
+  | 'price' | 'stock' | 'has_variants' | 'is_active' | 'is_test' | 'img_url' | 'images'
 >;
 
 function toAdminPart(r: AdminPartRow): AdminPartModel {
@@ -65,6 +65,8 @@ function toAdminPart(r: AdminPartRow): AdminPartModel {
     stock: r.stock,
     hasVariants: r.has_variants,
     isActive: r.is_active,
+    // La portada; si falta, la primera foto de la galería.
+    imageUrl: r.img_url || r.images?.[0] || '',
     isTest: r.is_test,
   };
 }
@@ -338,7 +340,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('auto_hub_vehicles')
-        .select('id, brand, model, year, price, mileage, is_available, is_test')
+        .select('id, brand, model, year, price, mileage, is_available, is_test, images')
         .order('created_at', { ascending: false }),
     ).pipe(
       map((res) =>
@@ -350,6 +352,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          imageUrl: r.images?.[0] ?? '',
           isTest: r.is_test,
         })),
       ),
@@ -389,7 +392,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('news')
-        .select('id, title, scope, published_at, is_published, is_test')
+        .select('id, title, scope, published_at, is_published, is_test, image_url')
         .order('published_at', { ascending: false }),
     ).pipe(
       map((res) =>
@@ -399,6 +402,7 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          imageUrl: r.image_url,
           isTest: r.is_test,
         })),
       ),
@@ -502,7 +506,7 @@ export class AdminService {
           is_available: draft.isAvailable,
           is_test: draft.isTest,
         })
-        .select('id, brand, model, year, price, mileage, is_available, is_test')
+        .select('id, brand, model, year, price, mileage, is_available, is_test, images')
         .single(),
     ).pipe(
       map((res) => {
@@ -515,6 +519,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          imageUrl: r.images?.[0] ?? '',
           isTest: r.is_test,
         };
       }),
@@ -550,7 +555,7 @@ export class AdminService {
           is_published: draft.isPublished,
           is_test: draft.isTest,
         })
-        .select('id, title, scope, published_at, is_published, is_test')
+        .select('id, title, scope, published_at, is_published, is_test, image_url')
         .single(),
     ).pipe(
       map((res) => {
@@ -561,6 +566,7 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          imageUrl: r.image_url,
           isTest: r.is_test,
         };
       }),
@@ -719,6 +725,7 @@ export class AdminService {
           location: r.location,
           contact: r.contact,
           isAvailable: r.is_available,
+          imageUrl: r.images?.[0] ?? '',
           isTest: r.is_test,
         };
       }),
@@ -764,7 +771,7 @@ export class AdminService {
           is_test: draft.isTest,
         })
         .eq('id', id)
-        .select('id, brand, model, year, price, mileage, is_available, is_test')
+        .select('id, brand, model, year, price, mileage, is_available, is_test, images')
         .single(),
     ).pipe(
       map((res) => {
@@ -777,6 +784,7 @@ export class AdminService {
           price: Number(r.price),
           mileage: r.mileage,
           isAvailable: r.is_available,
+          imageUrl: r.images?.[0] ?? '',
           isTest: r.is_test,
         };
       }),
@@ -852,7 +860,7 @@ export class AdminService {
           is_test: draft.isTest,
         })
         .eq('id', id)
-        .select('id, title, scope, published_at, is_published, is_test')
+        .select('id, title, scope, published_at, is_published, is_test, image_url')
         .single(),
     ).pipe(
       map((res) => {
@@ -863,6 +871,7 @@ export class AdminService {
           scope: r.scope,
           publishedAt: new Date(`${r.published_at}T12:00:00Z`),
           isPublished: r.is_published,
+          imageUrl: r.image_url,
           isTest: r.is_test,
         };
       }),

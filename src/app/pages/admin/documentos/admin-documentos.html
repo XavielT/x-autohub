@@ -7,8 +7,8 @@
           <p class="tl__lead">Elige una plantilla según el trabajo, llena los datos y entrega el documento listo, con el logo de X AutoHub.</p>
         </div>
         <div class="tl__row">
-          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toggleProfile()" [attr.aria-expanded]="profileOpen()">Datos de la empresa</button>
-          <button type="button" class="tl__btn tl__btn--small" (click)="startNew()">+ Nuevo documento</button>
+          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toggleProfile()" [attr.aria-expanded]="profileOpen()"><app-icon name="building" [size]="18" /> Datos de la empresa</button>
+          <button type="button" class="tl__btn tl__btn--small" (click)="startNew()"><app-icon name="plus" [size]="18" /> Nuevo documento</button>
         </div>
       </header>
 
@@ -36,9 +36,9 @@
       }
 
       <div class="tl__chips" role="group" aria-label="Filtrar documentos">
-        <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')">Todos</button>
-        <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')">Cotizaciones</button>
-        <button type="button" class="tl__chip" [class.is-active]="filter() === 'factura'" (click)="setFilter('factura')">Facturas</button>
+        <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
+        <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
+        <button type="button" class="tl__chip" [class.is-active]="filter() === 'factura'" (click)="setFilter('factura')"><app-icon name="receipt" [size]="16" /> Facturas</button>
       </div>
 
       @if (loading()) {
@@ -51,7 +51,7 @@
             <li class="tl__card" [class.is-off]="doc.status === 'anulada'">
               <div class="tl__row">
                 <div>
-                  <span class="tl__ref">{{ doc.code }}</span>
+                  <span class="tl__ref dc__code"><app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="16" /> {{ doc.code }}</span>
                   <h3 class="tl__name">{{ doc.customerName }}</h3>
                   <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }</p>
                 </div>
@@ -65,13 +65,13 @@
                 </div>
               </div>
               <div class="tl__row dc__actions">
-                <button type="button" class="tl__btn tl__btn--small" (click)="open(doc)">Abrir</button>
-                <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="duplicate(doc)">Duplicar</button>
+                <button type="button" class="tl__btn tl__btn--small" (click)="open(doc)"><app-icon name="eye" [size]="16" /> Abrir</button>
+                <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="duplicate(doc)"><app-icon name="copy" [size]="16" /> Duplicar</button>
                 @if (doc.kind === 'cotizacion' && doc.status !== 'anulada') {
-                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toInvoice(doc)">Convertir en factura</button>
+                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toInvoice(doc)"><app-icon name="receipt" [size]="16" /> Convertir en factura</button>
                 }
                 @if (doc.status === 'borrador') {
-                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="remove(doc)">Borrar</button>
+                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="remove(doc)"><app-icon name="trash" [size]="16" /> Borrar</button>
                 }
               </div>
             </li>
@@ -86,18 +86,19 @@
           <h2 class="tl__title">Nuevo documento</h2>
           <p class="tl__lead">Primero el tipo, luego la plantilla del trabajo.</p>
         </div>
-        <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()">Cancelar</button>
+        <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()"><app-icon name="x" [size]="16" /> Cancelar</button>
       </header>
 
       <div class="tl__chips" role="group" aria-label="Tipo de documento">
-        <button type="button" class="tl__chip" [class.is-active]="pickKind() === 'cotizacion'" (click)="setPickKind('cotizacion')">Cotización</button>
-        <button type="button" class="tl__chip" [class.is-active]="pickKind() === 'factura'" (click)="setPickKind('factura')">Factura</button>
+        <button type="button" class="tl__chip" [class.is-active]="pickKind() === 'cotizacion'" (click)="setPickKind('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotización</button>
+        <button type="button" class="tl__chip" [class.is-active]="pickKind() === 'factura'" (click)="setPickKind('factura')"><app-icon name="receipt" [size]="16" /> Factura</button>
       </div>
 
       <ul class="tl__list dc__templates">
         @for (t of templates; track t.id) {
           <li>
             <button type="button" class="tl__card dc__template" (click)="pickTemplate(t.id)">
+              <span class="dc__template-icon"><app-icon [name]="t.icon" [size]="28" /></span>
               <span class="tl__name">{{ t.label }}</span>
               <span class="tl__muted">{{ t.description }}</span>
             </button>
@@ -113,7 +114,7 @@
             <h2 class="tl__title">{{ kindLabels[d.kind] }}@if (saved(); as s) { · {{ s.code }} }</h2>
             <p class="tl__lead">{{ template()?.label }}@if (!saved()) { · sin guardar }</p>
           </div>
-          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()">← Volver a la lista</button>
+          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()"><app-icon name="arrow-left" [size]="16" /> Volver a la lista</button>
         </header>
 
         <div class="dc__layout">
@@ -156,19 +157,31 @@
                 </select></label>
             </div>
 
-            <h3 class="tl__name">Líneas</h3>
+            <h3 class="tl__name">Secciones y líneas</h3>
+            <p class="tl__muted">Arma el documento a tu manera: crea secciones con el nombre que quieras, renómbralas, muévelas y pasa líneas de una a otra. En el papel cada sección sale con su título y su subtotal.</p>
+
+            <div class="dc__target">
+              <label class="tl__field">
+                <span>Los conceptos que toques abajo se agregan en</span>
+                <select class="tl__input" name="target" (change)="setTarget($event)">
+                  @for (t of sectionTitles(); track $index) {
+                    <option [value]="t" [selected]="target() === t">{{ t || 'Sin título' }}</option>
+                  }
+                </select>
+              </label>
+            </div>
 
             <div class="dc__suggest">
-              <span class="tl__muted">Una misma factura puede mezclar trabajos: elige un área y toca los conceptos que apliquen (el precio lo pones tú).</span>
+              <span class="tl__muted">Conceptos frecuentes de cualquier área (el precio lo pones tú):</span>
               <div class="tl__chips" role="group" aria-label="Área de los conceptos">
                 @for (a of suggestionAreas; track a.id) {
-                  <button type="button" class="tl__chip" [class.is-active]="activeArea().id === a.id" (click)="setSuggestArea(a.id)">{{ a.label }}</button>
+                  <button type="button" class="tl__chip" [class.is-active]="activeArea().id === a.id" (click)="setSuggestArea(a.id)"><app-icon [name]="a.icon" [size]="16" /> {{ a.label }}</button>
                 }
               </div>
               @if (activeArea(); as area) {
                 <div class="tl__chips">
                   @for (s of area.suggestions; track s.description) {
-                    <button type="button" class="tl__chip" (click)="addLine(s.kind, s.description)">+ {{ s.description }}</button>
+                    <button type="button" class="tl__chip" (click)="addLine(s.kind, s.description)"><app-icon name="plus" [size]="14" /> {{ s.description }}</button>
                   }
                 </div>
               }
@@ -187,21 +200,56 @@
               }
             </div>
 
-            <ul class="dc__lines">
-              @for (line of d.items; track line.uid) {
-                <li class="dc__line">
-                  <input class="tl__input dc__line-desc" type="text" aria-label="Descripción" placeholder="Descripción" [value]="line.description" (input)="setLineDescription(line.uid, $event)" />
-                  <select class="tl__input dc__line-kind" aria-label="Tipo de línea" (change)="setLineKind(line.uid, $event)">
-                    @for (k of lineKinds; track k) { <option [value]="k" [selected]="line.kind === k">{{ lineKindLabels[k] }}</option> }
-                  </select>
-                  <input class="tl__input dc__line-num" type="number" aria-label="Cantidad" min="0" step="any" inputmode="decimal" [value]="line.quantity" (input)="setLineNumber(line.uid, 'quantity', $event)" />
-                  <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.unitPrice" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
-                  <span class="dc__line-total">{{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }}</span>
-                  <button type="button" class="dc__line-del" aria-label="Quitar línea" (click)="removeLine(line.uid)">×</button>
-                </li>
-              }
-            </ul>
-            <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLine()">+ Agregar línea</button>
+            @for (group of grouped(); track $index; let first = $first; let last = $last) {
+              <fieldset class="dc__section" [class.is-target]="target() === group.title">
+                <div class="dc__section-head">
+                  <input class="tl__input dc__section-title" type="text" aria-label="Nombre de la sección" placeholder="Sin título (no se muestra)"
+                         [value]="group.title" (change)="renameSectionTo(group.title, $event)" />
+                  <button type="button" class="dc__icon" aria-label="Subir sección" [disabled]="first" (click)="moveSectionBy(group.title, -1)"><app-icon name="arrow-up" [size]="18" /></button>
+                  <button type="button" class="dc__icon" aria-label="Bajar sección" [disabled]="last" (click)="moveSectionBy(group.title, 1)"><app-icon name="arrow-down" [size]="18" /></button>
+                  <button type="button" class="dc__icon dc__icon--danger" [attr.aria-label]="'Quitar la sección ' + group.title" (click)="askRemoveSection(group.title)">
+                    @if (pendingRemove() === group.title) { ¿Quitar? } @else { <app-icon name="trash" [size]="18" /> }
+                  </button>
+                </div>
+
+                <ul class="dc__lines">
+                  @for (line of group.lines; track line.uid) {
+                    <li class="dc__line">
+                      <input class="tl__input dc__line-desc" type="text" aria-label="Descripción" placeholder="Descripción" [value]="line.description" (input)="setLineDescription(line.uid, $event)" />
+                      <select class="tl__input dc__line-kind" aria-label="Tipo de línea" (change)="setLineKind(line.uid, $event)">
+                        @for (k of lineKinds; track k) { <option [value]="k" [selected]="line.kind === k">{{ lineKindLabels[k] }}</option> }
+                      </select>
+                      <input class="tl__input dc__line-num" type="number" aria-label="Cantidad" min="0" step="any" inputmode="decimal" [value]="line.quantity" (input)="setLineNumber(line.uid, 'quantity', $event)" />
+                      <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.unitPrice" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
+                      <button type="button" class="dc__line-del" aria-label="Quitar línea" (click)="removeLine(line.uid)"><app-icon name="x" [size]="18" /></button>
+                      <div class="dc__line-tools">
+                        <select class="tl__input dc__line-section" aria-label="Pasar a otra sección" (change)="setLineSection(line.uid, $event)">
+                          @for (t of sectionTitles(); track $index) { <option [value]="t" [selected]="line.section === t">{{ t || 'Sin título' }}</option> }
+                        </select>
+                        <button type="button" class="dc__icon" aria-label="Subir línea" (click)="moveLineBy(line.uid, -1)"><app-icon name="arrow-up" [size]="16" /></button>
+                        <button type="button" class="dc__icon" aria-label="Bajar línea" (click)="moveLineBy(line.uid, 1)"><app-icon name="arrow-down" [size]="16" /></button>
+                        <span class="dc__line-total">{{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }}</span>
+                      </div>
+                    </li>
+                  }
+                </ul>
+
+                <div class="tl__row dc__section-foot">
+                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLineTo(group.title)"><app-icon name="plus" [size]="16" /> Agregar línea aquí</button>
+                  <span class="dc__sum">Subtotal: <strong>RD$ {{ group.subtotal | number: '1.2-2' }}</strong></span>
+                </div>
+              </fieldset>
+            }
+
+            <div class="dc__new-section">
+              <span class="tl__muted">Nueva sección:</span>
+              <div class="tl__chips">
+                <button type="button" class="tl__chip" (click)="addSection()"><app-icon name="plus" [size]="14" /> En blanco</button>
+                @for (p of sectionPresets; track p) {
+                  <button type="button" class="tl__chip" (click)="addSection(p)"><app-icon name="plus" [size]="14" /> {{ p }}</button>
+                }
+              </div>
+            </div>
 
             <h3 class="tl__name">Totales</h3>
             <div class="tl__form">
@@ -231,10 +279,10 @@
             </div>
 
             <div class="tl__row dc__actions">
-              <button type="submit" class="tl__btn" [disabled]="saving()">{{ saving() ? 'Guardando…' : 'Guardar' }}</button>
-              <button type="button" class="tl__btn tl__btn--ghost" (click)="print()">Imprimir / PDF</button>
+              <button type="submit" class="tl__btn" [disabled]="saving()"><app-icon name="save" [size]="18" /> {{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+              <button type="button" class="tl__btn tl__btn--ghost" (click)="print()"><app-icon name="printer" [size]="18" /> Imprimir / PDF</button>
               @if (whatsappLink(); as wa) {
-                <a class="tl__btn tl__btn--ghost" [href]="wa" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+                <a class="tl__btn tl__btn--ghost" [href]="wa" target="_blank" rel="noopener"><app-icon name="message" [size]="18" /> Enviar por WhatsApp</a>
               }
             </div>
             @if (!saved()) { <p class="tl__muted">Guarda el documento para que tenga su número y se pueda enviar por WhatsApp.</p> }

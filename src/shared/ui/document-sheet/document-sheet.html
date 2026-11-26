@@ -69,6 +69,14 @@
           </tr>
         }
       </tbody>
+      @if (groups().length > 1) {
+        <tfoot>
+          <tr>
+            <td class="ds__desc ds__sub-label" colspan="3">Subtotal{{ group.title ? ' · ' + group.title : '' }}</td>
+            <td class="ds__num">{{ group.subtotal | number: '1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      }
     </table>
   } @empty {
     <p class="ds__empty">Aún no hay líneas.</p>
