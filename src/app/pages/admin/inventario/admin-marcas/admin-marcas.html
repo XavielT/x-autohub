@@ -32,14 +32,11 @@
     <app-skeleton variant="row" [count]="4" label="Cargando marcas…" />
   } @else {
     <div class="mk__card">
-      <label class="mk__field">
-        <span>Marca <small>({{ makes().length }})</small></span>
-        <select [ngModel]="selectedMakeId()" (ngModelChange)="selectMake($event)"
-                [ngModelOptions]="{ standalone: true }">
-          <option [ngValue]="null">Elige una marca para ver sus modelos</option>
-          @for (m of makes(); track m.id) { <option [ngValue]="m.id">{{ m.name }}</option> }
-        </select>
-      </label>
+      <div class="mk__field">
+        <label for="mk-make"><span>Marca <small>({{ makes().length }})</small></span></label>
+        <app-searchable-select inputId="mk-make" [options]="makeOptions()" [value]="selectedMakeId()"
+          (valueChange)="pickMake($event)" placeholder="Elige una marca para ver sus modelos" />
+      </div>
 
       @if (selectedMake(); as make) {
         <form class="mk__add-model" (ngSubmit)="addModel()">

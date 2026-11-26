@@ -93,6 +93,53 @@ describe('SearchableSelect', () => {
     expect(filterOptions(OPTIONS, '').length).toBe(3);
   });
 
+  it('busca por cualquier parte del texto y por varias palabras en cualquier orden', () => {
+    const modelos: SelectOption[] = [
+      { value: 1, label: 'Corolla' },
+      { value: 2, label: 'Land Cruiser' },
+      { value: 3, label: 'Civic' },
+      { value: 4, label: 'Santa Fe' },
+    ];
+    expect(filterOptions(modelos, 'roll').map((o) => o.value)).toEqual([1]);
+    expect(filterOptions(modelos, 'land cr').map((o) => o.value)).toEqual([2]);
+    expect(filterOptions(modelos, 'cruiser land').map((o) => o.value)).toEqual([2]);
+    expect(filterOptions(modelos, 'fe santa').map((o) => o.value)).toEqual([4]);
+    expect(filterOptions(modelos, 'zzz')).toEqual([]);
+  });
+
+  it('pone primero lo que empieza con lo escrito, luego lo que tiene una palabra que empieza así, y al final lo que solo lo contiene', () => {
+    const marcas: SelectOption[] = [
+      { value: 1, label: 'Mitsubishi Montero' },
+      { value: 2, label: 'Toyota Tercel' },
+      { value: 3, label: 'Terios' },
+      { value: 4, label: 'Subaru Forester' },
+    ];
+    // "ter": Terios empieza así; Toyota Tercel tiene una palabra que empieza así; Montero y Forester solo lo contienen.
+    expect(filterOptions(marcas, 'ter').map((o) => o.value)).toEqual([3, 2, 1, 4]);
+  });
+
+  it('con igual cercanía conserva el orden de la lista', () => {
+    const lista: SelectOption[] = [
+      { value: 1, label: 'Ford' },
+      { value: 2, label: 'Fiat' },
+      { value: 3, label: 'Fisker' },
+    ];
+    expect(filterOptions(lista, 'f').map((o) => o.value)).toEqual([1, 2, 3]);
+  });
+
+  it('abierto y vacío invita a escribir para buscar', () => {
+    const { fixture, c, input } = montar();
+    expect(input.placeholder).toBe('Elige una opción');
+
+    c.open();
+    fixture.detectChanges();
+    expect(input.placeholder).toBe('Escribe para buscar…');
+
+    c.close();
+    fixture.detectChanges();
+    expect(input.placeholder).toBe('Elige una opción');
+  });
+
   it('al escribir "citroen" encuentra "Citroën"', () => {
     const { type, labels } = montar();
     type('citroen');

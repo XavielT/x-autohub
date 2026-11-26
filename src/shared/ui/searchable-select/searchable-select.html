@@ -10,7 +10,7 @@
     [attr.aria-controls]="listId()"
     [attr.aria-activedescendant]="isOpen() && filtered().length ? listId() + '-' + activeIndex() : null"
     [attr.aria-invalid]="invalid() || null"
-    [placeholder]="placeholder()"
+    [placeholder]="isOpen() ? searchHint() : placeholder()"
     [disabled]="disabled()"
     [value]="displayText()"
     (focus)="open()"

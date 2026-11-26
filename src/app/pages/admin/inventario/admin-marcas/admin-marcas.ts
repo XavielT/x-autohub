@@ -1,5 +1,6 @@
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { IaSugerencias } from './ia-sugerencias';
+import { SearchableSelect, SelectOption } from '../../../../../shared/ui/searchable-select/searchable-select';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminCatalogService } from '../../../../../shared/services/admin-catalog.service';
@@ -21,7 +22,7 @@ import { UnmatchedVehicleModel, VehicleMakeModel, VehicleModelModel } from '../.
  */
 @Component({
   selector: 'app-admin-marcas',
-  imports: [FormsModule, Skeleton, IaSugerencias],
+  imports: [FormsModule, Skeleton, IaSugerencias, SearchableSelect],
   templateUrl: './admin-marcas.html',
   styleUrl: './admin-marcas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -98,6 +99,13 @@ export class AdminMarcas implements OnInit {
         this.toast.show(e.message, 'error');
       },
     });
+  }
+
+  /** Opciones del selector de marca. */
+  readonly makeOptions = computed<SelectOption[]>(() => this.makes().map((m) => ({ value: m.id, label: m.name })));
+
+  pickMake(value: string | number | null): void {
+    this.selectMake(value === null ? null : Number(value));
   }
 
   selectMake(id: number | null): void {

@@ -22,14 +22,33 @@ export function normalizeSearch(text: string): string {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
-/** Las opciones cuyo texto contiene lo escrito, sin distinguir acentos ni mayúsculas. */
+/**
+ * Las opciones que coinciden con lo escrito, sin distinguir acentos ni mayúsculas.
+ *
+ * - Busca por cualquier parte del texto ("roll" encuentra "Corolla") y por varias palabras en cualquier orden
+ *   ("land cr" encuentra "Land Cruiser", "civic honda" también).
+ * - Ordena por cercanía: primero las que **empiezan** con lo escrito, luego las que tienen una palabra que empieza
+ *   así y al final las que solo lo contienen; a igualdad, el orden original (el alfabético de la lista).
+ */
 export function filterOptions<T extends string | number>(
   options: readonly SelectOption<T>[],
   query: string,
 ): SelectOption<T>[] {
   const q = normalizeSearch(query);
   if (!q) return [...options];
-  return options.filter((o) => normalizeSearch(o.label).includes(q));
+
+  const tokens = q.split(/\s+/);
+  const rank = (label: string): number => {
+    if (label.startsWith(q)) return 0;
+    if (label.includes(` ${q}`)) return 1;
+    return tokens.every((t) => label.startsWith(t) || label.includes(` ${t}`)) ? 2 : 3;
+  };
+
+  return options
+    .map((option, index) => ({ option, index, label: normalizeSearch(option.label) }))
+    .filter((x) => tokens.every((t) => x.label.includes(t)))
+    .sort((a, b) => rank(a.label) - rank(b.label) || a.index - b.index)
+    .map((x) => x.option);
 }
 
 /**
@@ -55,6 +74,8 @@ export class SearchableSelect {
   readonly value = model<string | number | null>(null);
   readonly placeholder = input('Elige una opción');
   readonly emptyText = input('Sin resultados');
+  /** Lo que dice el campo cuando está abierto y vacío: invita a escribir para buscar. */
+  readonly searchHint = input('Escribe para buscar…');
   readonly disabled = input(false);
   readonly invalid = input(false);
   /** Para enlazar un `<label for>` con el campo. */
