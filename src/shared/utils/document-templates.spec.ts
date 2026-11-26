@@ -10,6 +10,12 @@ describe('plantillas de documentos', () => {
     }
   });
 
+  it('toda plantilla con conceptos tiene nombre de área, para mezclar trabajos en una factura', () => {
+    for (const t of DOCUMENT_TEMPLATES.filter((x) => x.suggestions.length > 0)) {
+      expect(t.areaLabel.length).toBeGreaterThan(2);
+    }
+  });
+
   it('la venta de piezas no lleva vehículo y la mecánica sí', () => {
     expect(templateById('venta').showVehicle).toBe(false);
     expect(templateById('mecanica').showVehicle).toBe(true);

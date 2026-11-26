@@ -158,16 +158,21 @@
 
             <h3 class="tl__name">Líneas</h3>
 
-            @if (template()?.suggestions?.length) {
-              <div class="dc__suggest">
-                <span class="tl__muted">Conceptos frecuentes (el precio lo pones tú):</span>
+            <div class="dc__suggest">
+              <span class="tl__muted">Una misma factura puede mezclar trabajos: elige un área y toca los conceptos que apliquen (el precio lo pones tú).</span>
+              <div class="tl__chips" role="group" aria-label="Área de los conceptos">
+                @for (a of suggestionAreas; track a.id) {
+                  <button type="button" class="tl__chip" [class.is-active]="activeArea().id === a.id" (click)="setSuggestArea(a.id)">{{ a.label }}</button>
+                }
+              </div>
+              @if (activeArea(); as area) {
                 <div class="tl__chips">
-                  @for (s of template()!.suggestions; track s.description) {
+                  @for (s of area.suggestions; track s.description) {
                     <button type="button" class="tl__chip" (click)="addLine(s.kind, s.description)">+ {{ s.description }}</button>
                   }
                 </div>
-              </div>
-            }
+              }
+            </div>
 
             <div class="dc__catalog">
               <label class="tl__field"><span>Buscar en el catálogo <small class="tl__muted">(piezas de la tienda y servicios del taller)</small></span>

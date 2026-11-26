@@ -89,4 +89,32 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(c.saved()).toBeNull();
     expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('cliente'), 'error');
   });
+
+  it('una misma factura mezcla áreas: chequeo, A/C y una pieza mecánica', async () => {
+    const { c } = await montar();
+    c.pickTemplate('general');
+    c.addLine('servicio', 'Chequeo general del vehículo');
+
+    c.setSuggestArea('electrica');
+    expect(c.activeArea().label).toBe('Eléctrica y A/C');
+    c.addLine('servicio', 'Recarga de gas del aire acondicionado');
+
+    c.addLine('repuesto', 'Bomba de agua', 4500);
+
+    const items = c.draft()!.items;
+    expect(items.map((i) => i.description)).toEqual([
+      'Chequeo general del vehículo',
+      'Recarga de gas del aire acondicionado',
+      'Bomba de agua',
+    ]);
+    expect(c.totals()?.total).toBe(4500);
+  });
+
+  it('el área abierta arranca en la de la plantilla y cambia al tocar otra', async () => {
+    const { c } = await montar();
+    c.pickTemplate('mantenimiento');
+    expect(c.activeArea().id).toBe('mantenimiento');
+    c.setSuggestArea('mecanica');
+    expect(c.activeArea().id).toBe('mecanica');
+  });
 });

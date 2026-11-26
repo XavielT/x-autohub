@@ -104,6 +104,20 @@ export class AdminDocumentos implements OnInit {
   readonly profileOpen = signal(false);
   readonly profileSaving = signal(false);
 
+  /** Áreas con conceptos frecuentes: están en todos los documentos, porque una factura puede mezclar trabajos. */
+  readonly suggestionAreas = DOCUMENT_TEMPLATES.filter((t) => t.suggestions.length > 0).map((t) => ({
+    id: t.id,
+    label: t.areaLabel,
+    suggestions: t.suggestions,
+  }));
+  private readonly suggestAreaId = signal<TemplateId | null>(null);
+
+  /** El área abierta: la que el usuario tocó o, por defecto, la de la plantilla del documento. */
+  readonly activeArea = computed(() => {
+    const wanted = this.suggestAreaId() ?? this.draft()?.template ?? null;
+    return this.suggestionAreas.find((a) => a.id === wanted) ?? this.suggestionAreas[0];
+  });
+
   readonly catalog = signal<CatalogEntry[] | null>(null);
   readonly catalogQuery = signal('');
 
@@ -223,6 +237,7 @@ export class AdminDocumentos implements OnInit {
   }
 
   pickTemplate(id: TemplateId): void {
+    this.suggestAreaId.set(null);
     this.draft.set(draftFromTemplate(id, this.pickKind()));
     this.saved.set(null);
     this.catalogQuery.set('');
@@ -264,6 +279,10 @@ export class AdminDocumentos implements OnInit {
 
   setItbis(event: Event): void {
     this.patch({ applyItbis: (event.target as HTMLInputElement).checked });
+  }
+
+  setSuggestArea(id: TemplateId): void {
+    this.suggestAreaId.set(id);
   }
 
   addLine(kind?: LineKind, description = '', unitPrice = 0): void {

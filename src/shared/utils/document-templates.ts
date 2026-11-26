@@ -10,6 +10,8 @@ export interface LineSuggestion {
 export interface DocumentTemplate {
   id: TemplateId;
   label: string;
+  /** Nombre corto del área, para el selector de conceptos. */
+  areaLabel: string;
   description: string;
   /** Si el documento lleva el bloque del vehículo (marca, placa, kilometraje). */
   showVehicle: boolean;
@@ -31,6 +33,7 @@ const WARRANTY_LABOR =
 export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   {
     id: 'mecanica',
+    areaLabel: 'Mecánica',
     label: 'Reparación mecánica',
     description: 'Motor, frenos, suspensión, transmisión y dirección: mano de obra y repuestos por separado.',
     showVehicle: true,
@@ -51,6 +54,7 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'electrica',
+    areaLabel: 'Eléctrica y A/C',
     label: 'Eléctrica y A/C',
     description: 'Diagnóstico con escáner, cableado, batería, alternador, luces y aire acondicionado.',
     showVehicle: true,
@@ -70,6 +74,7 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'mantenimiento',
+    areaLabel: 'Mantenimiento',
     label: 'Mantenimiento',
     description: 'Cambio de aceite, filtros, bujías y revisiones periódicas.',
     showVehicle: true,
@@ -89,6 +94,7 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'instalacion',
+    areaLabel: 'Instalación',
     label: 'Instalación de accesorios',
     description: 'Luces LED, pantallas, cámaras, alarmas y otros accesorios con su instalación.',
     showVehicle: true,
@@ -108,6 +114,7 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'venta',
+    areaLabel: 'Piezas',
     label: 'Venta de piezas y accesorios',
     description: 'Solo productos, sin datos de vehículo. Ideal para mostrador o pedidos por WhatsApp.',
     showVehicle: false,
@@ -121,11 +128,13 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
   },
   {
     id: 'general',
-    label: 'Cotización general',
-    description: 'Presupuesto abierto para cualquier trabajo; combina mano de obra, repuestos y productos.',
+    areaLabel: 'Chequeo y otros',
+    label: 'Mixta / general',
+    description: 'Para una factura o cotización que junta varios trabajos: A/C, chequeo, piezas mecánicas y lo que haga falta.',
     showVehicle: true,
     defaultLineKind: 'servicio',
     suggestions: [
+      { kind: 'servicio', description: 'Chequeo general del vehículo' },
       { kind: 'servicio', description: 'Diagnóstico y revisión' },
       { kind: 'mano_de_obra', description: 'Mano de obra' },
       { kind: 'repuesto', description: 'Repuestos' },
