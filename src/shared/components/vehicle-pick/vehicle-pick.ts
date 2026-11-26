@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, ou
 import { VehicleMakeModel, VehicleModelModel } from '../../models/product.model';
 import { VehicleSelection } from '../../models/business-document.model';
 import { VehicleService } from '../../services/vehicle.service';
-import { SearchableSelect, SelectOption } from '../../ui/searchable-select/searchable-select';
+import { SearchableSelect, SelectOption, normalizeSearch } from '../../ui/searchable-select/searchable-select';
 
 /** El año más viejo que se ofrece (igual que el selector de vehículo del sitio). */
 const OLDEST_YEAR = 1990;
@@ -11,10 +11,14 @@ const OLDEST_YEAR = 1990;
  * Marca → modelo → año, del mismo catálogo que usa el selector "Elige tu vehículo" del sitio.
  *
  * A diferencia de `app-vehicle-form`, no está atado al vehículo elegido por el visitante ni tiene botón: cada cambio
- * se avisa con `changed`, con el texto ya armado ("Toyota Corolla 2018") y los ids, para que quien lo usa lo guarde
- * (clientes y documentos del panel). Si el vehículo no está en el catálogo, se puede escribir a mano.
+ * se avisa con `changed`, con el texto ya armado ("Toyota Corolla 2018"), la marca y el modelo **por separado**
+ * (`makeName`, `modelName`) y los ids del catálogo. Quien lo usa guarda lo que necesite: clientes y documentos del
+ * panel, la ficha de Auto Hub, publicar en Hub Market.
  *
- * Arranca con lo que ya traiga `value`: los ids si los hay y, si es un vehículo viejo escrito a mano, su texto.
+ * Si el vehículo no está en el catálogo, se escribe a mano (marca y modelo, más el año de la lista).
+ *
+ * Arranca con lo que traiga `value`: los ids si los hay; si solo trae nombres (un vehículo guardado antes de que
+ * hubiera selector), los busca en el catálogo y, si no los encuentra, los deja escritos a mano sin perder nada.
  */
 @Component({
   selector: 'app-vehicle-pick',
@@ -39,42 +43,74 @@ export class VehiclePick implements OnInit {
 
   readonly makeId = signal<number | null>(null);
   readonly modelId = signal<number | null>(null);
-  /** El modelo escrito, cuando la marca no tiene modelos cargados. */
+  /** El modelo escrito, cuando la marca del catálogo no tiene modelos cargados. */
   readonly modelText = signal('');
   readonly year = signal<number | null>(null);
 
-  /** Se escribe todo a mano (un vehículo que no está en el catálogo). */
+  /** Se escribe a mano (un vehículo que no está en el catálogo). */
   readonly manual = signal(false);
-  readonly manualText = signal('');
+  readonly manualMake = signal('');
+  readonly manualModel = signal('');
 
   readonly freeModel = computed(() => this.makeId() !== null && !this.isLoadingModels() && this.models().length === 0);
 
   readonly makeOptions = computed<SelectOption[]>(() => this.makes().map((m) => ({ value: m.id, label: m.name })));
   readonly modelOptions = computed<SelectOption[]>(() => this.models().map((m) => ({ value: m.id, label: m.name })));
-  readonly yearOptions: SelectOption[] = Array.from(
-    { length: new Date().getFullYear() + 1 - OLDEST_YEAR + 1 },
-    (_, i) => {
-      const y = new Date().getFullYear() + 1 - i;
-      return { value: y, label: String(y) };
-    },
-  );
+
+  /** De este año más uno hasta 1990; si el vehículo trae un año fuera de ese rango, se agrega para no perderlo. */
+  readonly yearOptions = computed<SelectOption[]>(() => {
+    const top = new Date().getFullYear() + 1;
+    const years = Array.from({ length: top - OLDEST_YEAR + 1 }, (_, i) => top - i);
+    const current = this.year();
+    if (current !== null && !years.includes(current)) years.push(current);
+    return years.sort((a, b) => b - a).map((y) => ({ value: y, label: String(y) }));
+  });
 
   ngOnInit(): void {
-    this.vehicles.getMakes().subscribe({ next: (makes) => this.makes.set(makes), error: () => undefined });
-
     const v = this.value();
+    this.year.set(v?.year ?? null);
+
+    this.vehicles.getMakes().subscribe({
+      next: (makes) => {
+        this.makes.set(makes);
+        this.hydrate(v);
+      },
+      error: () => this.hydrate(v),
+    });
+  }
+
+  /** Pone lo que ya traía el vehículo: por ids, por nombres del catálogo o, si no hay forma, a mano. */
+  private hydrate(v: Partial<VehicleSelection> | null): void {
     if (!v) return;
 
     if (v.makeId != null) {
       this.makeId.set(v.makeId);
-      this.year.set(v.year ?? null);
       this.modelText.set(v.modelText ?? '');
-      this.loadModels(v.makeId, v.modelId ?? null);
-    } else if (v.text?.trim()) {
-      // Un vehículo escrito a mano antes de que hubiera selector: se conserva tal cual, editable.
-      this.manual.set(true);
-      this.manualText.set(v.text);
+      this.loadModels(v.makeId, { modelId: v.modelId ?? null, modelName: v.modelName ?? null });
+      return;
     }
+
+    const makeName = (v.makeName ?? '').trim();
+    const modelName = (v.modelName ?? '').trim();
+
+    if (makeName) {
+      const make = this.makes().find((m) => normalizeSearch(m.name) === normalizeSearch(makeName));
+      if (make) {
+        this.makeId.set(make.id);
+        this.loadModels(make.id, { modelId: null, modelName });
+        return;
+      }
+      this.setManual(makeName, modelName);
+    } else if (modelName || v.text?.trim()) {
+      // Solo un texto (un vehículo escrito a mano antes de que hubiera selector): se conserva tal cual, editable.
+      this.setManual('', modelName || (v.text ?? '').trim());
+    }
+  }
+
+  private setManual(make: string, model: string): void {
+    this.manual.set(true);
+    this.manualMake.set(make);
+    this.manualModel.set(model);
   }
 
   onMakeChange(value: string | number | null): void {
@@ -103,8 +139,13 @@ export class VehiclePick implements OnInit {
     this.emit();
   }
 
-  onManualText(text: string): void {
-    this.manualText.set(text);
+  onManualMake(text: string): void {
+    this.manualMake.set(text);
+    this.emit();
+  }
+
+  onManualModel(text: string): void {
+    this.manualModel.set(text);
     this.emit();
   }
 
@@ -114,7 +155,11 @@ export class VehiclePick implements OnInit {
     this.emit();
   }
 
-  private loadModels(makeId: number, preselect: number | null): void {
+  /**
+   * Carga los modelos de la marca y, si venía uno elegido, lo selecciona: por id o por nombre. Si la marca está en el
+   * catálogo pero ese modelo no, el vehículo pasa a escrito a mano para no perderlo.
+   */
+  private loadModels(makeId: number, preselect: { modelId: number | null; modelName: string | null } | null): void {
     this.isLoadingModels.set(true);
     this.vehicles.getModels(makeId).subscribe({
       next: (models) => {
@@ -122,28 +167,40 @@ export class VehiclePick implements OnInit {
         if (this.makeId() !== makeId) return;
         this.models.set(models);
         this.isLoadingModels.set(false);
-        if (preselect !== null && models.some((m) => m.id === preselect)) this.modelId.set(preselect);
+        if (!preselect) return;
+
+        const byId = preselect.modelId !== null ? models.find((m) => m.id === preselect.modelId) : undefined;
+        const name = (preselect.modelName ?? '').trim();
+        const byName = name ? models.find((m) => normalizeSearch(m.name) === normalizeSearch(name)) : undefined;
+        const found = byId ?? byName;
+
+        if (found) this.modelId.set(found.id);
+        else if (name && models.length > 0) {
+          const make = this.makes().find((m) => m.id === makeId)?.name ?? '';
+          this.makeId.set(null);
+          this.setManual(make, name);
+        } else if (name) this.modelText.set(name);
       },
       error: () => this.isLoadingModels.set(false),
     });
   }
 
-  /** El texto del vehículo: "Toyota Corolla 2018", con lo que haya elegido hasta ahora. */
-  private textNow(): string {
-    if (this.manual()) return this.manualText().trim();
-    const make = this.makes().find((m) => m.id === this.makeId())?.name;
-    const model = this.models().find((m) => m.id === this.modelId())?.name ?? this.modelText().trim();
-    return [make, model, this.year()].filter((p) => p !== undefined && p !== null && `${p}`.trim() !== '').join(' ');
-  }
-
   private emit(): void {
     const manual = this.manual();
+    const makeName = manual ? this.manualMake().trim() : (this.makes().find((m) => m.id === this.makeId())?.name ?? '');
+    const modelName = manual
+      ? this.manualModel().trim()
+      : (this.models().find((m) => m.id === this.modelId())?.name ?? this.modelText().trim());
+    const year = this.year();
+
     this.changed.emit({
-      text: this.textNow(),
+      text: [makeName, modelName, year].filter((p) => p !== null && `${p}`.trim() !== '').join(' '),
+      makeName,
+      modelName,
       makeId: manual ? null : this.makeId(),
       modelId: manual ? null : this.modelId(),
       modelText: manual ? '' : this.modelText().trim(),
-      year: manual ? null : this.year(),
+      year,
     });
   }
 }

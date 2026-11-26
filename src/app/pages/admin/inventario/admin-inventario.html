@@ -300,21 +300,13 @@
 
         @case ('vehiculos') {
           <form [formGroup]="vehicleForm" (ngSubmit)="submitVehicle()" class="adm-inv__fields">
-            <label class="adm-inv__field">
-              <span>Marca</span>
-              <input type="text" formControlName="brand" placeholder="Toyota" />
-              @if (showError('vehicle', 'brand')) { <small class="adm-inv__err">Obligatorio.</small> }
-            </label>
-            <label class="adm-inv__field">
-              <span>Modelo</span>
-              <input type="text" formControlName="model" placeholder="Corolla" />
-              @if (showError('vehicle', 'model')) { <small class="adm-inv__err">Obligatorio.</small> }
-            </label>
-            <label class="adm-inv__field">
-              <span>Año</span>
-              <input type="number" formControlName="year" min="1900" [max]="maxYear" step="1" />
-              @if (showError('vehicle', 'year')) { <small class="adm-inv__err">Entre 1900 y 2100.</small> }
-            </label>
+            <div class="adm-inv__field adm-inv__wide">
+              @for (k of [vehicleKey()]; track k) {
+                <app-vehicle-pick [value]="vehicleSeed()" idPrefix="av" (changed)="onVehiclePick($event)" />
+              }
+              @if (showError('vehicle', 'brand') || showError('vehicle', 'model')) { <small class="adm-inv__err">Elige la marca y el modelo.</small> }
+              @if (showError('vehicle', 'year')) { <small class="adm-inv__err">Elige el año.</small> }
+            </div>
             <label class="adm-inv__field">
               <span>Precio (RD$)</span>
               <input type="number" formControlName="price" min="0" step="5000" />

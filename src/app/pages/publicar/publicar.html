@@ -100,17 +100,17 @@
       </div>
 
       @if (isVehicle) {
+        <div class="form-group">
+          <span class="form-label">Vehículo<span class="req" aria-hidden="true">*</span></span>
+          <app-vehicle-pick idPrefix="vehicle" (changed)="onVehiclePick($event)" />
+          @if (showError('brand') || showError('model') || showError('year')) {
+            <span class="field-error">Elige la marca, el modelo y el año del vehículo.</span>
+          } @else {
+            <span class="form-hint">Elígelos de la lista; el título se arma solo y lo puedes cambiar.</span>
+          }
+        </div>
+
         <div class="form-row">
-          <div class="form-group">
-            <label for="year" class="form-label">
-              Año<span class="req" aria-hidden="true">*</span>
-            </label>
-            <input type="number" id="year" formControlName="year" class="form-input" required
-                   [class.is-invalid]="showError('year')">
-            @if (showError('year')) {
-              <span class="field-error">Indica el año del vehículo.</span>
-            }
-          </div>
           <div class="form-group">
             <label for="mileage" class="form-label">
               Kilometraje<span class="req" aria-hidden="true">*</span>

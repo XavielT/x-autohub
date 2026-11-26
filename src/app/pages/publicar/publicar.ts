@@ -18,11 +18,13 @@ import {
 } from '../../../shared/forms/required-fields';
 import { drPhoneValidator, normalizeDrPhone } from '../../../shared/utils/phone';
 import { BrandedPhotosService } from '../../../shared/services/branded-photos.service';
+import { VehiclePick } from '../../../shared/components/vehicle-pick/vehicle-pick';
+import { VehicleSelection } from '../../../shared/models/business-document.model';
 import { compressImage } from '../../../shared/utils/image-compress';
 
 @Component({
   selector: 'app-publicar',
-  imports: [ReactiveFormsModule, LocationSelect, ImageUploader, SearchableSelect],
+  imports: [ReactiveFormsModule, LocationSelect, ImageUploader, SearchableSelect, VehiclePick],
   templateUrl: './publicar.html',
   styleUrl: './publicar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +66,9 @@ export class Publicar {
     // Opcional: sin él la publicación sale igual, solo que sin botón de
     // WhatsApp. Por eso no entra en `requiredFields()`.
     contactPhone: ['', drPhoneValidator],
+    // Marca, modelo y año del vehículo salen del selector del catálogo (`app-vehicle-pick`).
+    brand: [''],
+    model: [''],
     year: [null as number | null],
     mileage: [null as number | null],
     hp: [null as number | null],
@@ -108,16 +113,42 @@ export class Publicar {
   }
 
   private syncVehicleValidators(): void {
-    const { year, mileage } = this.publishForm.controls;
+    const { year, mileage, brand, model } = this.publishForm.controls;
 
-    for (const control of [year, mileage]) {
+    for (const control of [year, mileage, brand, model]) {
       if (this.isVehicle) {
         control.addValidators(Validators.required);
       } else {
         control.removeValidators(Validators.required);
-        control.setValue(null);
       }
       control.updateValueAndValidity({ emitEvent: false });
+    }
+
+    if (!this.isVehicle) {
+      year.setValue(null);
+      mileage.setValue(null);
+      brand.setValue('');
+      model.setValue('');
+    }
+  }
+
+  /** El título que se armó solo desde el selector, para saber si el usuario ya lo cambió a mano. */
+  private lastAutoTitle = '';
+
+  /**
+   * Lo que eligió el selector de marca, modelo y año. Se guardan en sus campos (`spec_brand`, `spec_model`, `spec_year`)
+   * y, si el título está vacío o es el que armó el selector antes, se escribe como "Toyota Corolla 2018".
+   */
+  onVehiclePick(pick: VehicleSelection): void {
+    this.publishForm.patchValue({ brand: pick.makeName ?? '', model: pick.modelName ?? '', year: pick.year });
+    for (const control of [this.publishForm.controls.brand, this.publishForm.controls.model, this.publishForm.controls.year]) {
+      control.markAsTouched();
+    }
+
+    const title = this.publishForm.controls.title;
+    if (pick.text && (!title.value.trim() || title.value === this.lastAutoTitle)) {
+      title.setValue(pick.text);
+      this.lastAutoTitle = pick.text;
     }
   }
 
@@ -151,7 +182,9 @@ export class Publicar {
 
     if (this.isVehicle) {
       fields.push(
-        { key: 'year', label: 'Año', invalid: c.year.invalid },
+        { key: 'vehicle-make', label: 'Marca', invalid: c.brand.invalid },
+        { key: 'vehicle-model', label: 'Modelo', invalid: c.model.invalid },
+        { key: 'vehicle-year', label: 'Año', invalid: c.year.invalid },
         { key: 'mileage', label: 'Kilometraje', invalid: c.mileage.invalid },
       );
     }
@@ -243,6 +276,8 @@ export class Publicar {
             ...(form.category === 'vehiculos' && {
               vehicleSpecs: {
                 year: form.year ?? new Date().getFullYear(),
+                brand: form.brand.trim() || undefined,
+                model: form.model.trim() || undefined,
                 mileage: form.mileage ?? 0,
                 hp: form.hp ?? undefined,
                 zeroTo100: form.zeroTo100 ?? undefined,

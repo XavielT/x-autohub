@@ -353,3 +353,64 @@ describe('AdminInventario (piezas de la tienda)', () => {
     });
   });
 });
+
+describe('AdminInventario (Auto Hub): marca, modelo y año del catálogo', () => {
+  function montar() {
+    TestBed.configureTestingModule({ providers: [{ provide: ToastService, useValue: { show: vi.fn() } }] });
+    const fixture = TestBed.createComponent(AdminInventario);
+    fixture.detectChanges();
+    return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('el formulario de vehículo usa el selector y ya no los campos de texto de marca y modelo', () => {
+    const { fixture, c, el } = montar();
+    c.setTab('vehiculos');
+    c.startCreate();
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-vehicle-pick')).not.toBeNull();
+    expect(el.querySelector('input[formcontrolname="brand"]')).toBeNull();
+    expect(el.querySelector('input[formcontrolname="model"]')).toBeNull();
+  });
+
+  it('lo que elige el selector pasa a marca, modelo y año del formulario (por nombre, como siempre)', () => {
+    const { c } = montar();
+    c.setTab('vehiculos');
+    c.startCreate();
+
+    c.onVehiclePick({ text: 'Toyota Corolla 2018', makeName: 'Toyota', modelName: 'Corolla', makeId: 1, modelId: 3, modelText: '', year: 2018 });
+    expect(c.vehicleForm.getRawValue()).toMatchObject({ brand: 'Toyota', model: 'Corolla', year: 2018 });
+  });
+
+  it('si el selector no trae año, se conserva el que ya tenía el formulario', () => {
+    const { c } = montar();
+    c.setTab('vehiculos');
+    c.startCreate();
+    const antes = c.vehicleForm.controls.year.value;
+
+    c.onVehiclePick({ text: 'Toyota Corolla', makeName: 'Toyota', modelName: 'Corolla', makeId: 1, modelId: 3, modelText: '', year: null });
+    expect(c.vehicleForm.controls.year.value).toBe(antes);
+  });
+
+  it('sin marca ni modelo el formulario no es válido', () => {
+    const { c } = montar();
+    c.setTab('vehiculos');
+    c.startCreate();
+    expect(c.vehicleForm.controls.brand.valid).toBe(false);
+    expect(c.vehicleForm.controls.model.valid).toBe(false);
+
+    c.onVehiclePick({ text: 'Honda Civic 2015', makeName: 'Honda', modelName: 'Civic', makeId: 2, modelId: 9, modelText: '', year: 2015 });
+    expect(c.vehicleForm.controls.brand.valid && c.vehicleForm.controls.model.valid).toBe(true);
+  });
+
+  it('al empezar otro vehículo, el selector se reinicia (cambia su clave)', () => {
+    const { c } = montar();
+    c.setTab('vehiculos');
+    c.startCreate();
+    const antes = c.vehicleKey();
+    c.cancelCreate();
+    c.startCreate();
+    expect(c.vehicleKey()).toBeGreaterThan(antes);
+    expect(c.vehicleSeed()).toMatchObject({ makeName: '', modelName: '' });
+  });
+});

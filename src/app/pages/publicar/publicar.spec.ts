@@ -214,4 +214,95 @@ describe('Publicar', () => {
       'Escribe un teléfono válido, ej. 809 555 0134.',
     );
   });
+
+  describe('vehículos: marca, modelo y año del catálogo', () => {
+    const toyotaCorolla = { text: 'Toyota Corolla 2018', makeName: 'Toyota', modelName: 'Corolla', makeId: 1, modelId: 3, modelText: '', year: 2018 };
+
+    /** Deja un vehículo listo para enviar, con la marca y el modelo elegidos del selector. */
+    function llenarVehiculo(componente: Publicar): void {
+      componente.publishForm.patchValue({
+        category: 'vehiculos',
+        description: 'Impecable',
+        price: 900000,
+        location: 'Santo Domingo',
+        mileage: 60000,
+      });
+      componente.selectedFiles.set([new File(['x'], 'x.jpg', { type: 'image/jpeg' })]);
+    }
+
+    it('pide marca, modelo y año cuando la categoría es vehículos, y no en otra', async () => {
+      const { fixture, componente } = montar();
+      await fixture.whenStable();
+
+      componente.publishForm.controls.category.setValue('piezas');
+      expect(componente.requiredFields().map((f) => f.key)).not.toContain('vehicle-make');
+
+      componente.publishForm.controls.category.setValue('vehiculos');
+      expect(componente.requiredFields().map((f) => f.key)).toEqual(
+        expect.arrayContaining(['vehicle-make', 'vehicle-model', 'vehicle-year', 'mileage']),
+      );
+    });
+
+    it('lo que elige el selector va a los campos y arma el título', async () => {
+      const { fixture, componente } = montar();
+      await fixture.whenStable();
+      componente.publishForm.controls.category.setValue('vehiculos');
+
+      componente.onVehiclePick(toyotaCorolla);
+
+      expect(componente.publishForm.getRawValue()).toMatchObject({ brand: 'Toyota', model: 'Corolla', year: 2018, title: 'Toyota Corolla 2018' });
+    });
+
+    it('si el título ya lo escribió el usuario, no se lo pisa; si lo armó el selector, sí lo actualiza', async () => {
+      const { fixture, componente } = montar();
+      await fixture.whenStable();
+      componente.publishForm.controls.category.setValue('vehiculos');
+
+      componente.onVehiclePick(toyotaCorolla);
+      componente.onVehiclePick({ ...toyotaCorolla, year: 2019, text: 'Toyota Corolla 2019' });
+      expect(componente.publishForm.controls.title.value).toBe('Toyota Corolla 2019');
+
+      componente.publishForm.controls.title.setValue('Corolla full, único dueño');
+      componente.onVehiclePick({ ...toyotaCorolla, year: 2020, text: 'Toyota Corolla 2020' });
+      expect(componente.publishForm.controls.title.value).toBe('Corolla full, único dueño');
+    });
+
+    it('publica con la marca y el modelo guardados en vehicleSpecs', async () => {
+      const { fixture, componente, publish } = montar();
+      await fixture.whenStable();
+
+      llenarVehiculo(componente);
+      componente.onVehiclePick(toyotaCorolla);
+      componente.onSubmit();
+      await fixture.whenStable();
+
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect(publish.mock.calls[0][0].vehicleSpecs).toMatchObject({ brand: 'Toyota', model: 'Corolla', year: 2018, mileage: 60000 });
+    });
+
+    it('sin marca y modelo no publica un vehículo', async () => {
+      const { fixture, componente, publish } = montar();
+      await fixture.whenStable();
+
+      llenarVehiculo(componente);
+      componente.publishForm.patchValue({ title: 'Mi carro', year: 2018 });
+      componente.onSubmit();
+      await fixture.whenStable();
+
+      expect(publish).not.toHaveBeenCalled();
+      expect(componente.requiredFields().filter((f) => f.invalid).map((f) => f.key)).toEqual(
+        expect.arrayContaining(['vehicle-make', 'vehicle-model']),
+      );
+    });
+
+    it('al cambiar de vehículos a otra categoría se limpian marca, modelo y año', async () => {
+      const { fixture, componente } = montar();
+      await fixture.whenStable();
+      componente.publishForm.controls.category.setValue('vehiculos');
+      componente.onVehiclePick(toyotaCorolla);
+
+      componente.publishForm.controls.category.setValue('piezas');
+      expect(componente.publishForm.getRawValue()).toMatchObject({ brand: '', model: '', year: null });
+    });
+  });
 });

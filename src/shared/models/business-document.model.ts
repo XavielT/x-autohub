@@ -71,6 +71,9 @@ export interface DocumentLine {
  */
 export interface VehicleSelection {
   text: string;
+  /** La marca y el modelo por separado (los que se guardan donde hay campos aparte, como Auto Hub). */
+  makeName?: string;
+  modelName?: string;
   makeId: number | null;
   modelId: number | null;
   /** El modelo escrito, cuando la marca no tiene modelos cargados. */

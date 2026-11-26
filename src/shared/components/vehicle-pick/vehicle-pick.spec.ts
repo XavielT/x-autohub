@@ -11,9 +11,9 @@ describe('VehiclePick', () => {
   function montar(value: Partial<VehicleSelection> | null = null) {
     const fixture = TestBed.createComponent(VehiclePick);
     fixture.componentRef.setInput('value', value);
-    fixture.detectChanges();
     const emitted: VehicleSelection[] = [];
     fixture.componentInstance.changed.subscribe((e) => emitted.push(e));
+    fixture.detectChanges();
     return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, emitted };
   }
 
@@ -28,11 +28,20 @@ describe('VehiclePick', () => {
     c.onYearChange(2018);
     expect(emitted.at(-1)).toEqual({
       text: 'Toyota Corolla 2018',
+      makeName: 'Toyota',
+      modelName: 'Corolla',
       makeId: toyota.id,
       modelId: corolla.id,
       modelText: '',
       year: 2018,
     });
+  });
+
+  it('avisa la marca y el modelo por separado, para quien los guarda en campos aparte', () => {
+    const { c, emitted } = montar();
+    c.onMakeChange(toyota.id);
+    c.onModelChange(corolla.id);
+    expect(emitted.at(-1)).toMatchObject({ makeName: 'Toyota', modelName: 'Corolla', year: null });
   });
 
   it('el modelo solo ofrece los de la marca elegida, y cambiar de marca limpia el modelo', () => {
@@ -46,7 +55,7 @@ describe('VehiclePick', () => {
     expect(c.modelId()).toBeNull();
   });
 
-  it('arranca con lo ya elegido: marca, modelo y año', () => {
+  it('arranca con lo ya elegido por ids: marca, modelo y año', () => {
     const { c } = montar({ text: 'Toyota Corolla 2018', makeId: toyota.id, modelId: corolla.id, year: 2018 });
     expect(c.makeId()).toBe(toyota.id);
     expect(c.modelId()).toBe(corolla.id);
@@ -54,21 +63,63 @@ describe('VehiclePick', () => {
     expect(c.manual()).toBe(false);
   });
 
-  it('un vehículo viejo escrito a mano se conserva y se puede editar', () => {
-    const { c, el, emitted } = montar({ text: 'Jetta 2012' });
-    expect(c.manual()).toBe(true);
-    expect(el.querySelector<HTMLInputElement>('input[type=text]')?.value).toBe('Jetta 2012');
+  describe('vehículos guardados solo por nombre (Auto Hub, antes del selector)', () => {
+    it('los reconoce en el catálogo sin importar acentos ni mayúsculas', () => {
+      const { c } = montar({ makeName: 'TOYOTA', modelName: 'corolla', year: 2015 });
+      expect(c.makeId()).toBe(toyota.id);
+      expect(c.modelId()).toBe(corolla.id);
+      expect(c.year()).toBe(2015);
+      expect(c.manual()).toBe(false);
+    });
 
-    c.onManualText('Jetta 2013');
-    expect(emitted.at(-1)).toMatchObject({ text: 'Jetta 2013', makeId: null, modelId: null, year: null });
+    it('si la marca no está en el catálogo, queda escrita a mano sin perder nada', () => {
+      const { c } = montar({ makeName: 'Marca Rara', modelName: 'Modelo 1', year: 2010 });
+      expect(c.manual()).toBe(true);
+      expect(c.manualMake()).toBe('Marca Rara');
+      expect(c.manualModel()).toBe('Modelo 1');
+    });
+
+    it('si la marca está pero el modelo no, también pasa a mano con la marca y el modelo originales', () => {
+      const { c, emitted } = montar({ makeName: 'Toyota', modelName: 'Modelo Que No Existe' });
+      expect(c.manual()).toBe(true);
+      expect(c.manualMake()).toBe('Toyota');
+      expect(c.manualModel()).toBe('Modelo Que No Existe');
+
+      c.onYearChange(2012);
+      expect(emitted.at(-1)).toMatchObject({ makeName: 'Toyota', modelName: 'Modelo Que No Existe', makeId: null });
+    });
+
+    it('un año viejo fuera de la lista se conserva como opción', () => {
+      const { c } = montar({ makeName: 'Toyota', modelName: 'Corolla', year: 1982 });
+      expect(c.yearOptions().some((o) => o.value === 1982)).toBe(true);
+    });
   });
 
-  it('se puede cambiar a escribirlo a mano y volver al catálogo', () => {
+  it('un vehículo viejo con solo un texto se conserva y se puede editar', () => {
+    const { c, el, emitted } = montar({ text: 'Jetta 2012' });
+    expect(c.manual()).toBe(true);
+    expect(el.querySelector<HTMLInputElement>('input[type=text]')).not.toBeNull();
+
+    c.onManualModel('Jetta 2013');
+    expect(emitted.at(-1)).toMatchObject({ text: 'Jetta 2013', makeId: null, modelId: null });
+  });
+
+  it('se puede cambiar a escribirlo a mano (marca y modelo) y volver al catálogo', () => {
     const { c, emitted } = montar();
     c.onMakeChange(toyota.id);
     c.toggleManual();
-    c.onManualText('Camión Hino 2010');
-    expect(emitted.at(-1)).toMatchObject({ text: 'Camión Hino 2010', makeId: null });
+    c.onManualMake('Hino');
+    c.onManualModel('300');
+    c.onYearChange(2010);
+    expect(emitted.at(-1)).toEqual({
+      text: 'Hino 300 2010',
+      makeName: 'Hino',
+      modelName: '300',
+      makeId: null,
+      modelId: null,
+      modelText: '',
+      year: 2010,
+    });
 
     c.toggleManual();
     expect(c.manual()).toBe(false);
@@ -88,7 +139,6 @@ describe('VehiclePick', () => {
 
   it('el año arranca bloqueado hasta elegir la marca', () => {
     const { el } = montar();
-    const yearSelect = el.querySelectorAll('app-searchable-select')[2];
-    expect(yearSelect).toBeTruthy();
+    expect(el.querySelectorAll('app-searchable-select')[2]).toBeTruthy();
   });
 });

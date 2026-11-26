@@ -1,5 +1,7 @@
 import { AliasEditor } from './alias-editor/alias-editor';
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
+import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
+import { VehicleSelection } from '../../../../shared/models/business-document.model';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { RouterLink } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -104,6 +106,7 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     AliasEditor,
     Skeleton,
     Thumb,
+    VehiclePick,
     RouterLink,
   ],
   templateUrl: './admin-inventario.html',
@@ -374,10 +377,35 @@ export class AdminInventario implements OnInit {
     this.resetForms();
   }
 
+  /**
+   * Lo que el selector de marca, modelo y año del vehículo muestra al arrancar, y la clave que lo reinicia cuando el
+   * formulario cambia desde fuera (nuevo, o abrir uno para editar).
+   */
+  readonly vehicleSeed = signal<Partial<VehicleSelection>>({});
+  readonly vehicleKey = signal(0);
+
+  private seedVehiclePick(): void {
+    const { brand, model, year } = this.vehicleForm.getRawValue();
+    this.vehicleSeed.set({ makeName: brand, modelName: model, year });
+    this.vehicleKey.update((k) => k + 1);
+  }
+
+  /** Lo que eligió el selector pasa al formulario: la marca y el modelo se guardan por nombre, como siempre. */
+  onVehiclePick(pick: VehicleSelection): void {
+    this.vehicleForm.patchValue({
+      brand: pick.makeName ?? '',
+      model: pick.modelName ?? '',
+      ...(pick.year !== null && { year: pick.year }),
+    });
+    this.vehicleForm.controls.brand.markAsTouched();
+    this.vehicleForm.controls.model.markAsTouched();
+  }
+
   /** Deja los cuatro formularios (y lo que cuelga de la pieza) como al principio. */
   private resetForms(): void {
     this.partForm.reset();
     this.vehicleForm.reset();
+    this.seedVehiclePick();
     this.newsForm.reset();
     this.fitments.set([]);
     this.specs.set({});
@@ -470,6 +498,8 @@ export class AdminInventario implements OnInit {
               isAvailable: v.isAvailable,
               isTest: v.isTest,
             });
+            // El selector de marca, modelo y año vuelve a arrancar con este vehículo.
+            this.seedVehiclePick();
             this.existingImages.set(v.images);
             this.isLoadingOne.set(false);
           },
