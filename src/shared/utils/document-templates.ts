@@ -1,5 +1,6 @@
 import { DocumentDraft, DocumentKind, DocumentLine, LineKind, TemplateId } from '../models/business-document.model';
 import { IconName } from '../ui/icon/icon';
+import { defaultDueDate } from './document-overdue';
 import { DEFAULT_ITBIS_RATE, addDaysIso, todayIso } from './document-totals';
 
 /** Un concepto que la plantilla ofrece con un toque. **Sin precio**: el precio lo pones tú, no se inventa. */
@@ -247,7 +248,7 @@ export function draftFromTemplate(templateId: TemplateId, kind: DocumentKind, to
     customerId: null,
     vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' },
     issueDate: today,
-    validUntil: kind === 'cotizacion' ? addDaysIso(today, tpl.validDays) : null,
+    validUntil: kind === 'cotizacion' ? addDaysIso(today, tpl.validDays) : defaultDueDate(today),
     items: [blankLine(tpl.defaultLineKind, '', 1, 0, tpl.defaultSections[0] ?? '')],
     discountType: 'amount',
     discountValue: 0,

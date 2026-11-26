@@ -1,4 +1,4 @@
-import { documentWhatsAppLink, documentWhatsAppMessage } from './document-whatsapp';
+import { documentWhatsAppLink, documentWhatsAppMessage, overdueReminderLink, overdueReminderMessage } from './document-whatsapp';
 
 const quote = { kind: 'cotizacion' as const, code: 'COT-0007', customerName: 'Juan Pérez', customerPhone: '809 555 0134', total: 12500, validUntil: '2026-12-11', balance: 0 };
 
@@ -25,5 +25,16 @@ describe('mensaje de WhatsApp de un documento', () => {
   it('el enlace va al teléfono del cliente en formato internacional y vacío si no hay teléfono', () => {
     expect(documentWhatsAppLink(quote, 'X AutoHub')).toContain('wa.me/18095550134');
     expect(documentWhatsAppLink({ ...quote, customerPhone: '' }, 'X AutoHub')).toBe('');
+  });
+
+  it('el recordatorio de cobro nombra la factura, el atraso y el saldo', () => {
+    const f = { ...quote, kind: 'factura' as const, code: 'FAC-0003', validUntil: '2026-11-20', balance: 2500 };
+    const m = overdueReminderMessage(f, 'X AutoHub', 6);
+    expect(m).toContain('Hola Juan');
+    expect(m).toContain('FAC-0003');
+    expect(m).toContain('vencía el 20/11/2026, hace 6 días');
+    expect(m).toContain('2,500.00');
+    expect(overdueReminderLink(f, 'X AutoHub', 6)).toContain('wa.me/18095550134');
+    expect(overdueReminderLink({ ...f, customerPhone: '' }, 'X AutoHub', 6)).toBe('');
   });
 });

@@ -427,7 +427,7 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       const d = env.c.draft()!;
       expect(env.c.view()).toBe('edit');
       expect(env.c.suggestInvoice()).toBeNull();
-      expect(d).toMatchObject({ id: null, kind: 'factura', status: 'borrador', sourceId: quote.id, customerName: 'Juan Pérez', customerId: quote.customerId, paid: 0, validUntil: null });
+      expect(d).toMatchObject({ id: null, kind: 'factura', status: 'borrador', sourceId: quote.id, customerName: 'Juan Pérez', customerId: quote.customerId, paid: 0, validUntil: new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10) });
       expect(d.items.map((i) => i.description)).toEqual(['Cambio de pastillas', 'Pieza a determinar']);
       expect(d.items[1].tbd).toBe(true);
       expect(env.c.saved()).toBeNull();
@@ -835,6 +835,71 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     it('un cliente sin documentos lo dice en vez de mostrar la lista vacía de siempre', async () => {
       const { el } = await montarConParams({ filtrar: 'cli-sin-docs' }, dosClientes());
       expect(el.textContent).toContain('Este cliente todavía no tiene documentos.');
+    });
+  });
+
+  describe('facturas vencidas', () => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const dia = (n: number) => new Date(Date.parse(hoy) + n * 86_400_000).toISOString().slice(0, 10);
+
+    function factura(id: string, number: number, validUntil: string | null, over: Record<string, unknown> = {}) {
+      const now = '2026-11-26T12:00:00.000Z';
+      return {
+        id, kind: 'factura', number, code: 'FAC-000' + number, template: 'mecanica', status: 'emitida',
+        customerName: 'Ana Lora', customerPhone: '809-555-0134', customerEmail: '', customerRnc: '', customerId: null,
+        vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' }, issueDate: '2026-11-01', validUntil,
+        items: [{ uid: 'l' + id, section: '', tbd: false, kind: 'servicio', description: 'Trabajo', quantity: 1, unitPrice: 1000 }],
+        discountType: 'amount', discountValue: 0, applyItbis: false, itbisRate: 18, paid: 0, payments: [], notes: '', terms: '', sourceId: null,
+        subtotal: 1000, itbis: 0, total: 1000, createdAt: now, updatedAt: now, ...over,
+      };
+    }
+
+    async function montarCon(docs: ReturnType<typeof factura>[]) {
+      localStorage.setItem('x-autohub.business-documents', JSON.stringify(docs));
+      return montar();
+    }
+
+    it('avisa arriba cuántas facturas están vencidas y cuánto suman', async () => {
+      const { el, c } = await montarCon([factura('a', 1, dia(-5)), factura('b', 2, dia(-1), { paid: 400 }), factura('c', 3, dia(3))]);
+      expect(c.overdue()).toEqual({ count: 2, total: 1600 });
+      expect(el.querySelector('.dc__overdue')?.textContent).toContain('2 facturas vencidas');
+    });
+
+    it('no avisa si nada está vencido', async () => {
+      const { el } = await montarCon([factura('a', 1, dia(3)), factura('b', 2, null)]);
+      expect(el.querySelector('.dc__overdue')).toBeNull();
+    });
+
+    it('el filtro Vencidas muestra solo esas', async () => {
+      const { fixture, c } = await montarCon([factura('a', 1, dia(-5)), factura('b', 2, dia(3))]);
+      c.setFilter('vencidas');
+      fixture.detectChanges();
+      expect(c.visible().map((d) => d.id)).toEqual(['a']);
+    });
+
+    it('la tarjeta dice hace cuántos días venció y ofrece recordar el cobro por WhatsApp', async () => {
+      const { el } = await montarCon([factura('a', 1, dia(-5))]);
+      expect(el.querySelector('.dc__late')?.textContent).toContain('Vencida hace 5 días');
+      const link = Array.from(el.querySelectorAll('a')).find((a) => a.textContent!.includes('Recordar cobro')) as HTMLAnchorElement;
+      expect(link.href).toContain('wa.me/18095550134');
+      expect(decodeURIComponent(link.href)).toContain('FAC-0001');
+    });
+
+    it('una factura pagada o sin fecha no ofrece recordatorio', async () => {
+      const { el } = await montarCon([factura('a', 1, dia(-5), { status: 'pagada', paid: 1000 }), factura('b', 2, null)]);
+      expect(el.textContent).not.toContain('Recordar cobro');
+    });
+
+    it('una factura nueva trae vencimiento a 15 días y el editor deja cambiarlo', async () => {
+      const { fixture, c, el } = await montar();
+      c.startNew();
+      c.setPickKind('factura');
+      c.pickTemplate('mecanica');
+      fixture.detectChanges();
+      expect(c.draft()?.validUntil).toBe(dia(15));
+      expect(el.querySelector('input[name="validUntil"]')).not.toBeNull();
+      c.setText('validUntil', input(''));
+      expect(c.draft()?.validUntil).toBeNull();
     });
   });
 });

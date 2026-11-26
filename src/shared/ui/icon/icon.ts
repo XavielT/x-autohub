@@ -49,6 +49,7 @@ export type IconName =
   | 'newspaper'
   | 'folder'
   | 'calendar'
+  | 'clock'
   | 'contact'
   | 'check';
 
@@ -88,6 +89,7 @@ const ICONS: Record<IconName, readonly string[]> = {
   check: ['M5 12l5 5L20 7'],
   contact: ['M7 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7z', 'M7 3v18', circle(13, 10, 2.5), 'M9.5 17a3.5 3.5 0 0 1 7 0'],
   calendar: [rect(4, 5, 16, 16, 2), 'M4 10h16', 'M8 3v4M16 3v4'],
+  clock: [circle(12, 12, 9), 'M12 7v5l3 2'],
   folder: ['M3 6h7l2 2h9v11H3z'],
   eye: ['M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', circle(12, 12, 3)],
 };

@@ -8,6 +8,12 @@
           @if (receivable(); as r) {
             @if (r.count > 0) { <p class="dc__receivable"><app-icon name="receipt" [size]="16" /> Por cobrar: <strong>RD$ {{ r.total | number: '1.2-2' }}</strong> en {{ r.count }} {{ r.count === 1 ? 'factura' : 'facturas' }}</p> }
           }
+          @if (overdue(); as o) {
+            @if (o.count > 0) {
+              <p class="dc__overdue" role="status"><app-icon name="clock" [size]="16" /> <strong>{{ o.count }} {{ o.count === 1 ? 'factura vencida' : 'facturas vencidas' }}</strong> · RD$ {{ o.total | number: '1.2-2' }} por cobrar
+                <button type="button" class="dc__linkbtn" (click)="setFilter('vencidas')">Verlas</button></p>
+            }
+          }
         </div>
         <div class="tl__row">
           <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toggleProfile()" [attr.aria-expanded]="profileOpen()"><app-icon name="building" [size]="18" /> Datos de la empresa</button>
@@ -64,6 +70,9 @@
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'factura'" (click)="setFilter('factura')"><app-icon name="receipt" [size]="16" /> Facturas</button>
+        @if (overdue().count > 0 || filter() === 'vencidas') {
+          <button type="button" class="tl__chip" [class.is-active]="filter() === 'vencidas'" (click)="setFilter('vencidas')"><app-icon name="clock" [size]="16" /> Vencidas ({{ overdue().count }})</button>
+        }
         @if (toInvoiceCount() > 0 || filter() === 'porFacturar') {
           <button type="button" class="tl__chip" [class.is-active]="filter() === 'porFacturar'" (click)="setFilter('porFacturar')"><app-icon name="check" [size]="16" /> Por facturar ({{ toInvoiceCount() }})</button>
         }
@@ -87,6 +96,9 @@
                       <p class="dc__paid-note"><app-icon name="check" [size]="14" /> Pagada el {{ day | date: 'dd/MM/yyyy' }}</p>
                     } @else {
                       <p class="tl__muted dc__cobro">Cobrado RD$ {{ doc.paid | number: '1.2-2' }} de {{ doc.total | number: '1.2-2' }} · <strong class="dc__owed">Pendiente RD$ {{ owedOf(doc) | number: '1.2-2' }}</strong></p>
+                      @if (daysLate(doc); as late) {
+                        <p class="dc__late"><app-icon name="clock" [size]="14" /> Vencida hace {{ late }} {{ late === 1 ? 'día' : 'días' }} (vencía el {{ doc.validUntil | date: 'dd/MM/yyyy' }})</p>
+                      }
                     }
                   }
                   @if (invoiceOf(doc); as inv) { <p class="tl__muted dc__link"><app-icon name="receipt" [size]="14" /> Facturada: <button type="button" class="dc__linkbtn" (click)="openInvoiceOf(doc)">{{ inv.code }}</button></p> }
@@ -114,6 +126,9 @@
                   } @else {
                     <button type="button" class="tl__btn tl__btn--small" [class.tl__btn--ghost]="doc.status !== 'aceptada'" (click)="toInvoice(doc)"><app-icon name="receipt" [size]="16" /> Crear factura</button>
                   }
+                }
+                @if (daysLate(doc) > 0 && reminderLink(doc); as wa) {
+                  <a class="tl__btn tl__btn--small" [href]="wa" target="_blank" rel="noopener"><app-icon name="message" [size]="16" /> Recordar cobro</a>
                 }
                 @if (doc.status === 'borrador') {
                   <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="remove(doc)"><app-icon name="trash" [size]="16" /> Borrar</button>
@@ -246,6 +261,10 @@
                 <input class="tl__input" type="date" name="issueDate" [value]="d.issueDate" (input)="setText('issueDate', $event)" /></label>
               @if (d.kind === 'cotizacion') {
                 <label class="tl__field"><span>Válida hasta</span>
+                  <input class="tl__input" type="date" name="validUntil" [value]="d.validUntil ?? ''" (input)="setText('validUntil', $event)" /></label>
+              }
+              @if (d.kind === 'factura') {
+                <label class="tl__field"><span>Vence el <small class="tl__muted">(déjalo vacío si no tiene plazo)</small></span>
                   <input class="tl__input" type="date" name="validUntil" [value]="d.validUntil ?? ''" (input)="setText('validUntil', $event)" /></label>
               }
               @if (invoiceOfEditing(); as inv) {

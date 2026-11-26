@@ -7,7 +7,7 @@ export interface WhatsAppDocument {
   customerName: string;
   customerPhone: string;
   total: number;
-  /** `YYYY-MM-DD`; solo cotizaciones. */
+  /** `YYYY-MM-DD`: hasta cuándo vale una cotización, o cuándo vence una factura. */
   validUntil: string | null;
   /** Solo facturas. */
   balance: number;
@@ -37,4 +37,18 @@ export function documentWhatsAppMessage(doc: WhatsAppDocument, businessName: str
 /** Enlace a WhatsApp del cliente con el mensaje listo, o cadena vacía si el documento no trae teléfono. */
 export function documentWhatsAppLink(doc: WhatsAppDocument, businessName: string): string {
   return buildWaLink(doc.customerPhone, documentWhatsAppMessage(doc, businessName));
+}
+
+/** El recordatorio de cobro de una factura vencida. */
+export function overdueReminderMessage(doc: WhatsAppDocument, businessName: string, days: number): string {
+  const first = doc.customerName.trim().split(/\s+/)[0] ?? '';
+  const hello = first ? `Hola ${first}, ` : 'Hola, ';
+  const late = days > 0 ? `, hace ${days} ${days === 1 ? 'día' : 'días'}` : '';
+  const when = doc.validUntil ? ` (vencía el ${dmy(doc.validUntil)}${late})` : '';
+  return `${hello}te escribimos de ${businessName}. La factura ${doc.code}${when} tiene un saldo pendiente de ${money(doc.balance)}. ¿Nos confirmas cuándo podemos recibir el pago? Gracias.`;
+}
+
+/** Enlace a WhatsApp con el recordatorio de cobro. */
+export function overdueReminderLink(doc: WhatsAppDocument, businessName: string, days: number): string {
+  return buildWaLink(doc.customerPhone, overdueReminderMessage(doc, businessName, days));
 }

@@ -219,3 +219,7 @@
   color: var(--Hub);
   span { color: var(--text-strong); }
 }
+
+// Facturas vencidas: el aviso de arriba y la nota de cada tarjeta.
+.dc__overdue, .dc__late { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; color: #ff8d8f; }
+.dc__late { font-size: 13px; font-weight: 700; }

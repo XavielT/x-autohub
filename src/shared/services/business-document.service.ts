@@ -143,7 +143,7 @@ export class BusinessDocumentService {
         ...pickedFields(draft.vehicle),
       },
       issue_date: draft.issueDate,
-      valid_until: draft.kind === 'cotizacion' ? draft.validUntil || null : null,
+      valid_until: draft.validUntil || null,
       items: cleanItems(draft.items),
       discount_type: draft.discountType,
       discount_value: draft.discountValue,

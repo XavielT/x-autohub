@@ -49,8 +49,8 @@ describe('plantillas de documentos', () => {
     expect(d.applyItbis).toBe(false);
   });
 
-  it('una factura nueva no lleva fecha de validez', () => {
-    expect(draftFromTemplate('venta', 'factura', '2026-11-26').validUntil).toBeNull();
+  it('una factura nueva vence a los 15 días', () => {
+    expect(draftFromTemplate('venta', 'factura', '2026-11-26').validUntil).toBe('2026-12-11');
   });
 
   it('una factura emitida no puede traer conceptos a determinar; en borrador o en una cotización sí', () => {

@@ -31,6 +31,9 @@
       @if (doc().kind === 'cotizacion' && doc().validUntil) {
         <p>Válida hasta: <span class="ds__strong">{{ doc().validUntil | date: 'dd/MM/yyyy' }}</span></p>
       }
+      @if (doc().kind === 'factura' && doc().validUntil) {
+        <p>Vence: <span class="ds__strong">{{ doc().validUntil | date: 'dd/MM/yyyy' }}</span></p>
+      }
       @if (doc().kind === 'factura') { <p>Estado: <span class="ds__strong">{{ statusLabel() }}</span></p> }
     </div>
   </section>

@@ -38,6 +38,7 @@ import {
 } from '../../../../shared/models/business-document.model';
 import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
 import { computeTotals, round2, todayIso } from '../../../../shared/utils/document-totals';
+import { defaultDueDate, overdueDays } from '../../../../shared/utils/document-overdue';
 import {
   PAYMENT_METHODS,
   lastPaymentDate,
@@ -56,12 +57,12 @@ import {
   sortBySection,
   uniqueTitle,
 } from '../../../../shared/utils/document-sections';
-import { documentWhatsAppLink } from '../../../../shared/utils/document-whatsapp';
+import { documentWhatsAppLink, overdueReminderLink } from '../../../../shared/utils/document-whatsapp';
 import { customerKey, searchCustomers } from '../../../../shared/utils/document-customers';
 import { BusinessCustomerService } from '../../../../shared/services/business-customer.service';
 
 type View = 'list' | 'pick' | 'edit';
-type Filter = 'all' | DocumentKind | 'porFacturar';
+type Filter = 'all' | DocumentKind | 'porFacturar' | 'vencidas';
 type TextKey = 'customerName' | 'customerPhone' | 'customerEmail' | 'customerRnc' | 'issueDate' | 'validUntil' | 'notes' | 'terms';
 type NumberKey = 'discountValue' | 'itbisRate';
 type ProfileKey = keyof BusinessProfile;
@@ -279,9 +280,30 @@ export class AdminDocumentos implements OnInit {
       if (customer && d.customerId !== customer) return false;
       if (f === 'all') return true;
       if (f === 'porFacturar') return this.isToInvoice(d);
+      if (f === 'vencidas') return this.daysLate(d) > 0;
       return d.kind === f;
     });
   });
+
+  /** Las facturas con saldo cuya fecha de vencimiento ya pasó, y cuánto suman. */
+  readonly overdue = computed(() => {
+    const late = this.documents().filter((d) => this.daysLate(d) > 0);
+    return { count: late.length, total: round2(late.reduce((sum, d) => sum + (d.total - d.paid), 0)) };
+  });
+
+  /** Días de atraso de una factura (0 si no está vencida). */
+  daysLate(doc: BusinessDocument): number {
+    return overdueDays(doc, todayIso());
+  }
+
+  /** Enlace de WhatsApp con el recordatorio de cobro, o vacío si la factura no tiene teléfono. */
+  reminderLink(doc: BusinessDocument): string {
+    return overdueReminderLink(
+      { kind: doc.kind, code: doc.code, customerName: doc.customerName, customerPhone: doc.customerPhone, total: doc.total, validUntil: doc.validUntil, balance: round2(doc.total - doc.paid) },
+      this.profile().legalName,
+      this.daysLate(doc),
+    );
+  }
 
   /** Cuántas cotizaciones aceptadas esperan su factura (el número del filtro "Por facturar"). */
   readonly toInvoiceCount = computed(() => this.documents().filter((d) => this.isToInvoice(d)).length);
@@ -460,7 +482,7 @@ export class AdminDocumentos implements OnInit {
     }
 
     const draft = this.docs.duplicate(doc, 'factura');
-    this.edit({ ...draft, paid: 0, payments: [] });
+    this.edit({ ...draft, paid: 0, payments: [], validUntil: defaultDueDate(todayIso()) });
     this.saved.set(null);
     this.suggestInvoice.set(null);
     this.view.set('edit');
