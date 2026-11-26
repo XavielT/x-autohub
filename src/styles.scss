@@ -236,20 +236,53 @@ button[aria-busy='true'] {
  * <body> solo mientras imprime: deja a la vista únicamente la hoja (`.doc-sheet`) y la pone en la
  * esquina de la página. Sin la clase, imprimir cualquier otra página no cambia.
  */
-@page { margin: 12mm; }
+/*
+ * Margen de página en 0: es lo que hace que el navegador no imprima su encabezado y pie (fecha, título, la URL del
+ * sitio y "1/3"). El margen que se ve en el papel lo pone la hoja misma con `padding`, y `box-decoration-break: clone`
+ * lo repite en cada página si el documento ocupa más de una.
+ */
+@page { margin: 0; }
 
 @media print {
-  body.xah-print-doc * { visibility: hidden !important; }
+  /*
+   * Todo lo que no es la hoja se quita con `display: none`, no con `visibility: hidden`: lo invisible sigue
+   * ocupando su espacio y el panel entero (largo) se imprimía como páginas en blanco antes y después de la hoja.
+   * Se conservan solo los ancestros de la hoja, sin alturas ni recortes que la corten.
+   */
+  body.xah-print-doc *:not(:has(.doc-sheet)):not(.doc-sheet):not(.doc-sheet *) { display: none !important; }
 
-  body.xah-print-doc .doc-sheet,
-  body.xah-print-doc .doc-sheet * { visibility: visible !important; }
+  html:has(body.xah-print-doc),
+  body.xah-print-doc {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body.xah-print-doc *:has(.doc-sheet) {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
 
   body.xah-print-doc .doc-sheet {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    max-width: none;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 12mm !important;
     border-radius: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 }
