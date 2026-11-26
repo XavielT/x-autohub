@@ -98,6 +98,57 @@ describe('AdminClientes (/admin/clientes)', () => {
     expect(c.customers()[0].vehicles[0]).toMatchObject({ text: 'Honda Civic 2019', plate: 'H123' });
   });
 
+  it('el vehículo se elige del catálogo (marca, modelo, año) y se guarda con sus ids', async () => {
+    const { fixture, c } = await montar(false);
+    c.startNew();
+    c.setText('name', input('Marta Díaz'));
+    c.addVehicle();
+    c.setVehiclePick(0, { text: 'Toyota Corolla 2018', makeId: 1, modelId: 3, modelText: '', year: 2018 });
+    c.setVehicle(0, 'plate', input('H123'));
+    c.save();
+    await fixture.whenStable();
+
+    expect(c.customers()[0].vehicles[0]).toMatchObject({
+      text: 'Toyota Corolla 2018',
+      plate: 'H123',
+      makeId: 1,
+      modelId: 3,
+      year: 2018,
+    });
+
+    // Al volver a editarlo, el selector arranca con lo elegido.
+    c.edit(c.customers()[0]);
+    expect(c.draft()!.vehicles[0]).toMatchObject({ makeId: 1, modelId: 3, year: 2018 });
+  });
+
+  it('un vehículo escrito a mano no guarda ids vacíos', async () => {
+    const { fixture, c } = await montar(false);
+    c.startNew();
+    c.setText('name', input('Pedro'));
+    c.addVehicle();
+    c.setVehiclePick(0, { text: 'Camión Hino 2010', makeId: null, modelId: null, modelText: '', year: null });
+    c.save();
+    await fixture.whenStable();
+
+    const v = c.customers()[0].vehicles[0];
+    expect(v.text).toBe('Camión Hino 2010');
+    expect('makeId' in v).toBe(false);
+  });
+
+  it('quitar un vehículo no mezcla los demás', async () => {
+    const { c } = await montar(false);
+    c.startNew();
+    c.addVehicle();
+    c.addVehicle();
+    c.setVehiclePick(0, { text: 'Primero', makeId: null, modelId: null, modelText: '', year: null });
+    c.setVehiclePick(1, { text: 'Segundo', makeId: null, modelId: null, modelText: '', year: null });
+    const keys = c.vehicleKeys();
+
+    c.removeVehicle(0);
+    expect(c.draft()!.vehicles.map((v) => v.text)).toEqual(['Segundo']);
+    expect(c.vehicleKeys()).toEqual([keys[1]]);
+  });
+
   it('sin nombre no guarda y lo dice', async () => {
     const { fixture, c } = await montar(false);
     c.startNew();

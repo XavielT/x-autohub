@@ -29,17 +29,18 @@
 
 .cl__vehicles { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .cl__vehicle {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px;
-  gap: 6px;
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
 }
-.cl__v-text { grid-column: 1 / -1; }
-@media (min-width: 760px) {
-  .cl__vehicle { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) 44px; }
-  .cl__v-text { grid-column: auto; }
+.cl__v-rest {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) 44px;
+  gap: 8px;
+  align-items: center;
 }
 
 .cl__icon {

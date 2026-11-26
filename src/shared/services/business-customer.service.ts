@@ -3,7 +3,7 @@ import { Observable, catchError, from, map, of, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { BusinessCustomerRow } from '../../core/supabase/database.types';
 import { translateDbError, unwrap } from '../../core/supabase/supabase-error';
-import { BusinessCustomer, CustomerDraft, CustomerVehicle, DocumentDraft } from '../models/business-document.model';
+import { BusinessCustomer, CustomerDraft, CustomerVehicle, DocumentDraft, VehicleSelection } from '../models/business-document.model';
 import { customerEnrichedBy, customerFromSource, customerKey, hasVehicleData } from '../utils/document-customers';
 import { assertTouched } from './admin.service';
 
@@ -11,6 +11,12 @@ import { assertTouched } from './admin.service';
 const CUSTOMER_COLUMNS = 'id, name, name_key, phone, email, rnc, address, notes, vehicles, created_by, created_at, updated_at';
 
 const MOCK_STORAGE_KEY = 'x-autohub.business-customers';
+
+/** Los datos del selector de vehículo, solo si el vehículo se eligió del catálogo (si no, no se guardan claves vacías). */
+export function pickedFields(v: { makeId?: number | null; modelId?: number | null; modelText?: string; year?: number | null }): Partial<VehicleSelection> {
+  if (v.makeId == null) return {};
+  return { makeId: v.makeId, modelId: v.modelId ?? null, modelText: v.modelText ?? '', year: v.year ?? null };
+}
 
 export function toBusinessCustomer(row: BusinessCustomerRow): BusinessCustomer {
   return {
@@ -26,6 +32,7 @@ export function toBusinessCustomer(row: BusinessCustomerRow): BusinessCustomer {
       plate: v.plate ?? '',
       mileage: v.mileage ?? '',
       vin: v.vin ?? '',
+      ...pickedFields(v),
     })),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -35,7 +42,7 @@ export function toBusinessCustomer(row: BusinessCustomerRow): BusinessCustomer {
 /** Lo que se guarda de los vehículos: sin espacios de sobra y sin los renglones vacíos. */
 const cleanVehicles = (vehicles: readonly CustomerVehicle[]): CustomerVehicle[] =>
   vehicles
-    .map((v) => ({ text: v.text.trim(), plate: v.plate.trim(), mileage: v.mileage.trim(), vin: v.vin.trim() }))
+    .map((v) => ({ text: v.text.trim(), plate: v.plate.trim(), mileage: v.mileage.trim(), vin: v.vin.trim(), ...pickedFields(v) }))
     .filter(hasVehicleData);
 
 export function validateCustomer(draft: CustomerDraft): string | null {

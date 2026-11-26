@@ -158,8 +158,11 @@
                 }
               }
               <div class="tl__form">
-                <label class="tl__field tl__field--wide"><span>Marca, modelo y año</span>
-                  <input class="tl__input" type="text" name="vehicleText" placeholder="Volkswagen Jetta 2012" [value]="d.vehicle.text" (input)="setVehicle('text', $event)" /></label>
+                <div class="tl__field tl__field--wide">
+                  @for (k of [vehicleKey()]; track k) {
+                    <app-vehicle-pick [value]="d.vehicle" idPrefix="dv" (changed)="pickVehicle($event)" />
+                  }
+                </div>
                 <label class="tl__field"><span>Placa</span>
                   <input class="tl__input" type="text" name="vehiclePlate" [value]="d.vehicle.plate" (input)="setVehicle('plate', $event)" /></label>
                 <label class="tl__field"><span>Kilometraje</span>

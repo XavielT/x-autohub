@@ -77,7 +77,7 @@ export type BusinessDocumentRow = {
   customer_rnc: string;
   /** El cliente de `business_customers` (0065). */
   customer_id: string | null;
-  vehicle: { text?: string; plate?: string; mileage?: string; vin?: string; verdict?: string };
+  vehicle: { text?: string; plate?: string; mileage?: string; vin?: string; verdict?: string; makeId?: number | null; modelId?: number | null; modelText?: string; year?: number | null };
   issue_date: string;
   valid_until: string | null;
   /** Líneas: `{ kind, description, quantity, unitPrice }`. */
@@ -109,7 +109,7 @@ export type BusinessCustomerRow = {
   address: string;
   notes: string;
   /** `{ text, plate, mileage, vin }` por vehículo. */
-  vehicles: { text?: string; plate?: string; mileage?: string; vin?: string }[];
+  vehicles: { text?: string; plate?: string; mileage?: string; vin?: string; makeId?: number | null; modelId?: number | null; modelText?: string; year?: number | null }[];
   created_by: string | null;
   created_at: string;
   updated_at: string;

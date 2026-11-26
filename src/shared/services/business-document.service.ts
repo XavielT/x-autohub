@@ -15,6 +15,7 @@ import {
 } from '../models/business-document.model';
 import { computeTotals, documentCode, todayIso } from '../utils/document-totals';
 import { newLineUid, validateDraft } from '../utils/document-templates';
+import { pickedFields } from './business-customer.service';
 
 /** Una sola cadena literal: ver `PRODUCT_COLUMNS` en `product.service.ts`. */
 const DOCUMENT_COLUMNS =
@@ -41,6 +42,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
       mileage: row.vehicle?.mileage ?? '',
       vin: row.vehicle?.vin ?? '',
       verdict: (row.vehicle?.verdict ?? '') as Verdict,
+      ...pickedFields(row.vehicle ?? {}),
     },
     issueDate: row.issue_date,
     validUntil: row.valid_until,
@@ -124,6 +126,7 @@ export class BusinessDocumentService {
         mileage: draft.vehicle.mileage.trim(),
         vin: draft.vehicle.vin.trim(),
         verdict: draft.vehicle.verdict,
+        ...pickedFields(draft.vehicle),
       },
       issue_date: draft.issueDate,
       valid_until: draft.kind === 'cotizacion' ? draft.validUntil || null : null,

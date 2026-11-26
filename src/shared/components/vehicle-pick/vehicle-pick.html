@@ -1,0 +1,39 @@
+<div class="vp">
+  @if (manual()) {
+    <label class="vp__field vp__field--wide">
+      <span>Vehículo (escrito a mano)</span>
+      <input class="vp__text" type="text" maxlength="80" autocomplete="off" placeholder="Marca, modelo y año"
+             [id]="idPrefix() + '-manual'" [value]="manualText()" (input)="onManualText($any($event.target).value)" />
+    </label>
+  } @else {
+    <div class="vp__field">
+      <label [for]="idPrefix() + '-make'">Marca</label>
+      <app-searchable-select [inputId]="idPrefix() + '-make'" [options]="makeOptions()"
+        [value]="makeId()" (valueChange)="onMakeChange($event)" placeholder="Elige la marca" />
+    </div>
+
+    <div class="vp__field">
+      <label [for]="idPrefix() + '-model'">Modelo</label>
+      @if (freeModel()) {
+        <input class="vp__text" type="text" maxlength="60" autocomplete="off" placeholder="Escribe el modelo"
+               [id]="idPrefix() + '-model'" [value]="modelText()" (input)="onModelTextChange($any($event.target).value)" />
+      } @else {
+        <app-searchable-select [inputId]="idPrefix() + '-model'" [options]="modelOptions()"
+          [value]="modelId()" (valueChange)="onModelChange($event)"
+          [disabled]="makeId() === null || isLoadingModels()"
+          [placeholder]="makeId() === null ? 'Primero la marca' : (isLoadingModels() ? 'Cargando…' : 'Elige el modelo')" />
+      }
+    </div>
+
+    <div class="vp__field">
+      <label [for]="idPrefix() + '-year'">Año</label>
+      <app-searchable-select [inputId]="idPrefix() + '-year'" [options]="yearOptions"
+        [value]="year()" (valueChange)="onYearChange($event)" [disabled]="makeId() === null"
+        [placeholder]="makeId() === null ? 'Primero la marca' : 'Elige el año'" />
+    </div>
+  }
+
+  <button type="button" class="vp__link" (click)="toggleManual()">
+    {{ manual() ? 'Elegir del catálogo' : '¿No está en la lista? Escríbelo' }}
+  </button>
+</div>

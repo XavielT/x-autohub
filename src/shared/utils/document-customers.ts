@@ -69,6 +69,7 @@ const clean = (v: CustomerVehicle): CustomerVehicle => ({
   plate: v.plate.trim(),
   mileage: v.mileage.trim(),
   vin: v.vin.trim(),
+  ...(v.makeId != null ? { makeId: v.makeId, modelId: v.modelId ?? null, modelText: v.modelText ?? '', year: v.year ?? null } : {}),
 });
 
 /**

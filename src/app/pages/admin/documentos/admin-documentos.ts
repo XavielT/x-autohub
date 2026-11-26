@@ -4,6 +4,7 @@ import { switchMap } from 'rxjs';
 import { DOCUMENT, DecimalPipe, DatePipe } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Icon } from '../../../../shared/ui/icon/icon';
+import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { DocumentSheet } from '../../../../shared/ui/document-sheet/document-sheet';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
 import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
@@ -29,6 +30,7 @@ import {
   STATUS_LABELS,
   TemplateId,
   VERDICT_LABELS,
+  VehicleSelection,
   Verdict,
 } from '../../../../shared/models/business-document.model';
 import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
@@ -87,7 +89,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
  */
 @Component({
   selector: 'app-admin-documentos',
-  imports: [Skeleton, DocumentSheet, Icon, DecimalPipe, DatePipe],
+  imports: [Skeleton, DocumentSheet, Icon, VehiclePick, DecimalPipe, DatePipe],
   templateUrl: './admin-documentos.html',
   styleUrl: './admin-documentos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -174,6 +176,8 @@ export class AdminDocumentos implements OnInit {
   readonly customers = signal<BusinessCustomer[]>([]);
   /** Cliente con el que se abrió la página (desde /admin/clientes): se aplica al elegir la plantilla. */
   private readonly prefillCustomerId = signal<string | null>(null);
+  /** Cambia cuando el vehículo se pone desde fuera (otro documento, un cliente): el selector vuelve a arrancar con él. */
+  readonly vehicleKey = signal(0);
   readonly customerFocus = signal(false);
   /** El cliente que se eligió de la lista: de él salen los vehículos que se ofrecen. */
   readonly pickedCustomer = signal<BusinessCustomer | null>(null);
@@ -372,6 +376,7 @@ export class AdminDocumentos implements OnInit {
     const vehicle = this.template()?.showVehicle && emptyVehicle && customer.vehicles[0] ? this.vehicleOf(customer.vehicles[0], d.vehicle) : d.vehicle;
 
     this.pickedCustomer.set(customer);
+    this.vehicleKey.update((k) => k + 1);
     this.customerFocus.set(false);
     this.patch({
       customerName: customer.name,
@@ -385,11 +390,17 @@ export class AdminDocumentos implements OnInit {
 
   /** Pone en el documento uno de los vehículos que ya trajo el cliente (el dictamen no se arrastra). */
   useVehicle(vehicle: CustomerVehicle): void {
+    this.vehicleKey.update((k) => k + 1);
     this.draft.update((d) => (d ? { ...d, vehicle: this.vehicleOf(vehicle, d.vehicle) } : d));
   }
 
   private vehicleOf(from: CustomerVehicle, current: DocumentVehicle): DocumentVehicle {
-    return { text: from.text, plate: from.plate, mileage: from.mileage, vin: from.vin, verdict: current.verdict };
+    return { ...from, text: from.text, plate: from.plate, mileage: from.mileage, vin: from.vin, verdict: current.verdict };
+  }
+
+  /** Lo que eligió el selector de marca, modelo y año. */
+  pickVehicle(pick: VehicleSelection): void {
+    this.draft.update((d) => (d ? { ...d, vehicle: { ...d.vehicle, ...pick } } : d));
   }
 
   setVerdict(event: Event): void {
@@ -416,6 +427,7 @@ export class AdminDocumentos implements OnInit {
   /** Abre un documento en el editor: fija el borrador y las secciones (las dadas más las que traen las líneas). */
   private edit(draft: DocumentDraft, titles: readonly string[] = []): void {
     this.sectionTitles.set(mergeTitles(titles, draft.items));
+    this.vehicleKey.update((k) => k + 1);
     this.pickedCustomer.set(null);
     this.targetTitle.set(null);
     this.pendingRemove.set(null);

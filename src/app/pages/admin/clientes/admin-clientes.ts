@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Avatar } from '../../../../shared/ui/avatar/avatar';
 import { Icon } from '../../../../shared/ui/icon/icon';
+import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { BusinessCustomerService, validateCustomer } from '../../../../shared/services/business-customer.service';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { BusinessCustomer, BusinessDocument, CustomerDraft, CustomerVehicle } from '../../../../shared/models/business-document.model';
+import { BusinessCustomer, BusinessDocument, CustomerDraft, CustomerVehicle, VehicleSelection } from '../../../../shared/models/business-document.model';
 import { searchCustomers } from '../../../../shared/utils/document-customers';
 import { buildWaLink } from '../../../../shared/utils/whatsapp';
 
@@ -38,7 +39,7 @@ const toDraft = (c: BusinessCustomer): CustomerDraft => ({
  */
 @Component({
   selector: 'app-admin-clientes',
-  imports: [RouterLink, Skeleton, Avatar, Icon],
+  imports: [RouterLink, Skeleton, Avatar, Icon, VehiclePick],
   templateUrl: './admin-clientes.html',
   styleUrl: './admin-clientes.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,6 +55,9 @@ export class AdminClientes implements OnInit {
   readonly documents = signal<BusinessDocument[]>([]);
   readonly query = signal('');
   readonly draft = signal<CustomerDraft | null>(null);
+  /** Una clave estable por vehículo del formulario: el selector de cada uno guarda su estado y no se mezcla al quitar uno. */
+  readonly vehicleKeys = signal<number[]>([]);
+  private keySeq = 0;
   /** El cliente que pidió borrarse y espera la segunda pulsación. */
   readonly pendingDelete = signal<string | null>(null);
 
@@ -113,12 +117,17 @@ export class AdminClientes implements OnInit {
 
   startNew(): void {
     this.pendingDelete.set(null);
-    this.draft.set(blank());
+    this.open(blank());
   }
 
   edit(customer: BusinessCustomer): void {
     this.pendingDelete.set(null);
-    this.draft.set(toDraft(customer));
+    this.open(toDraft(customer));
+  }
+
+  private open(draft: CustomerDraft): void {
+    this.vehicleKeys.set(draft.vehicles.map(() => this.keySeq++));
+    this.draft.set(draft);
   }
 
   cancel(): void {
@@ -131,11 +140,20 @@ export class AdminClientes implements OnInit {
   }
 
   addVehicle(): void {
+    this.vehicleKeys.update((k) => [...k, this.keySeq++]);
     this.draft.update((d) => (d ? { ...d, vehicles: [...d.vehicles, blankVehicle()] } : d));
   }
 
   removeVehicle(index: number): void {
+    this.vehicleKeys.update((k) => k.filter((_, i) => i !== index));
     this.draft.update((d) => (d ? { ...d, vehicles: d.vehicles.filter((_, i) => i !== index) } : d));
+  }
+
+  /** Lo que eligió el selector de marca, modelo y año para ese vehículo. */
+  setVehiclePick(index: number, pick: VehicleSelection): void {
+    this.draft.update((d) =>
+      d ? { ...d, vehicles: d.vehicles.map((v, i) => (i === index ? { ...v, ...pick } : v)) } : d,
+    );
   }
 
   setVehicle(index: number, key: keyof CustomerVehicle, event: Event): void {

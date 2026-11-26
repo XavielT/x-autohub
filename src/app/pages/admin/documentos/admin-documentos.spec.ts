@@ -329,6 +329,35 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(c.totals()?.pending).toBe(0);
   });
 
+  it('el vehículo del documento se elige del catálogo y el papel lo muestra', async () => {
+    const { fixture, c, el } = await montar();
+    c.pickTemplate('mecanica');
+    c.pickVehicle({ text: 'Toyota Corolla 2018', makeId: 1, modelId: 3, modelText: '', year: 2018 });
+    fixture.detectChanges();
+
+    expect(c.draft()!.vehicle).toMatchObject({ text: 'Toyota Corolla 2018', makeId: 1, modelId: 3, year: 2018 });
+    expect(el.querySelector('.doc-sheet')!.textContent).toContain('Toyota Corolla 2018');
+    expect(el.querySelector('app-vehicle-pick')).not.toBeNull();
+  });
+
+  it('al elegir un cliente con vehículo, el selector del documento arranca con ese vehículo', async () => {
+    const { fixture, c } = await montar();
+    c.pickTemplate('mecanica');
+    c.setText('customerName', input('Juan Pérez'));
+    c.pickVehicle({ text: 'Toyota Corolla 2018', makeId: 1, modelId: 3, modelText: '', year: 2018 });
+    c.setVehicle('plate', input('B999'));
+    c.setLineDescription(c.draft()!.items[0].uid, input('Revisión'));
+    c.save();
+    await fixture.whenStable();
+    c.backToList();
+
+    c.pickTemplate('electrica');
+    const antes = c.vehicleKey();
+    c.useCustomer(c.customers()[0]);
+    expect(c.draft()!.vehicle).toMatchObject({ text: 'Toyota Corolla 2018', plate: 'B999', makeId: 1, year: 2018 });
+    expect(c.vehicleKey()).toBeGreaterThan(antes);
+  });
+
   it('el chequeo no pide dictamen', async () => {
     const { fixture, c, el } = await montar();
     c.pickTemplate('chequeo');

@@ -65,15 +65,28 @@ export interface DocumentLine {
   tbd: boolean;
 }
 
+/**
+ * Lo que elige el selector de vehículo (marca → modelo → año del catálogo): el texto ya armado y los ids para volver
+ * a mostrar lo elegido. Sin ids es un vehículo escrito a mano.
+ */
+export interface VehicleSelection {
+  text: string;
+  makeId: number | null;
+  modelId: number | null;
+  /** El modelo escrito, cuando la marca no tiene modelos cargados. */
+  modelText: string;
+  year: number | null;
+}
+
 /** Un vehículo de un cliente, tal como se recuerda para sus próximos documentos. */
-export interface CustomerVehicle {
+export interface CustomerVehicle extends Partial<Omit<VehicleSelection, 'text'>> {
   text: string;
   plate: string;
   mileage: string;
   vin: string;
 }
 
-export interface DocumentVehicle {
+export interface DocumentVehicle extends Partial<Omit<VehicleSelection, 'text'>> {
   /** "Volkswagen Jetta 2012". */
   text: string;
   plate: string;

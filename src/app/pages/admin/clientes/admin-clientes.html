@@ -34,13 +34,15 @@
       <h3 class="tl__name">Vehículos</h3>
       @if (d.vehicles.length === 0) { <p class="tl__muted">Todavía no tiene vehículos. Se agregan solos al usarlos en un documento, o puedes ponerlos aquí.</p> }
       <ul class="cl__vehicles">
-        @for (v of d.vehicles; track $index) {
+        @for (v of d.vehicles; track vehicleKeys()[$index]) {
           <li class="cl__vehicle">
-            <input class="tl__input cl__v-text" type="text" aria-label="Marca, modelo y año" placeholder="Marca, modelo y año" [value]="v.text" (input)="setVehicle($index, 'text', $event)" />
-            <input class="tl__input" type="text" aria-label="Placa" placeholder="Placa" [value]="v.plate" (input)="setVehicle($index, 'plate', $event)" />
-            <input class="tl__input" type="text" aria-label="Kilometraje" placeholder="Kilometraje" [value]="v.mileage" (input)="setVehicle($index, 'mileage', $event)" />
-            <input class="tl__input" type="text" aria-label="Chasis (VIN)" placeholder="Chasis (VIN)" [value]="v.vin" (input)="setVehicle($index, 'vin', $event)" />
-            <button type="button" class="cl__icon" aria-label="Quitar vehículo" (click)="removeVehicle($index)"><app-icon name="x" [size]="18" /></button>
+            <app-vehicle-pick class="cl__v-pick" [value]="v" [idPrefix]="'cv' + vehicleKeys()[$index]" (changed)="setVehiclePick($index, $event)" />
+            <div class="cl__v-rest">
+              <input class="tl__input" type="text" aria-label="Placa" placeholder="Placa" [value]="v.plate" (input)="setVehicle($index, 'plate', $event)" />
+              <input class="tl__input" type="text" aria-label="Kilometraje" placeholder="Kilometraje" [value]="v.mileage" (input)="setVehicle($index, 'mileage', $event)" />
+              <input class="tl__input" type="text" aria-label="Chasis (VIN)" placeholder="Chasis (VIN)" [value]="v.vin" (input)="setVehicle($index, 'vin', $event)" />
+              <button type="button" class="cl__icon" aria-label="Quitar vehículo" (click)="removeVehicle($index)"><app-icon name="x" [size]="18" /></button>
+            </div>
           </li>
         }
       </ul>
