@@ -1,6 +1,6 @@
 {
   "name": "x-autohub",
-  "version": "2.43.0",
+  "version": "2.44.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
