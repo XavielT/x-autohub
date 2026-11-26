@@ -17,6 +17,7 @@ const line = (uid: string, section: string): DocumentLine => ({
   quantity: 1,
   unitPrice: 10,
   section,
+  tbd: false,
 });
 
 describe('secciones de un documento', () => {

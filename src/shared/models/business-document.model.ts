@@ -61,6 +61,8 @@ export interface DocumentLine {
   description: string;
   quantity: number;
   unitPrice: number;
+  /** "A determinar": todavía no se sabe qué es ni cuánto cuesta (una falla por descubrir). No suma al total. */
+  tbd: boolean;
 }
 
 export interface DocumentVehicle {

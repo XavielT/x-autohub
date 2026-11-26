@@ -40,6 +40,24 @@ describe('computeTotals', () => {
     expect(t.total).toBe(50);
   });
 
+  it('una línea a determinar no suma, ni siquiera si trae precio, y se cuenta aparte', () => {
+    const t = computeTotals({
+      ...base,
+      items: [
+        { quantity: 1, unitPrice: 1000 },
+        { quantity: 1, unitPrice: 5000, tbd: true },
+        { quantity: 2, unitPrice: 0, tbd: true },
+      ],
+    });
+    expect(t.subtotal).toBe(1000);
+    expect(t.total).toBe(1000);
+    expect(t.pending).toBe(2);
+  });
+
+  it('sin líneas a determinar, pending es cero', () => {
+    expect(computeTotals({ ...base, items: [{ quantity: 1, unitPrice: 10 }] }).pending).toBe(0);
+  });
+
   it('redondea a centavos sin errores de punto flotante', () => {
     expect(round2(0.1 + 0.2)).toBe(0.3);
     const t = computeTotals({ ...base, items: [{ quantity: 3, unitPrice: 0.1 }] });

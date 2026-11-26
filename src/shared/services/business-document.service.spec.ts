@@ -69,6 +69,18 @@ describe('BusinessDocumentService (modo simulado)', () => {
     expect((await firstValueFrom(service.list())).map((d) => d.id)).toEqual([doc.id]);
   });
 
+  it('guarda líneas a determinar sin precio y no suman al total', async () => {
+    const d = draft();
+    d.items.push({ ...d.items[0], uid: 'tbd1', description: 'Pieza a determinar', unitPrice: 9999, tbd: true });
+    const saved = await firstValueFrom(service.save(d));
+
+    const tbd = saved.items.find((i) => i.description === 'Pieza a determinar')!;
+    expect(tbd.tbd).toBe(true);
+    expect(tbd.unitPrice).toBe(0);
+    expect(saved.total).toBe(3000);
+    expect((await firstValueFrom(service.list()))[0].items.filter((i) => i.tbd)).toHaveLength(1);
+  });
+
   it('la revisión pre-compra guarda el chasis y el dictamen', async () => {
     const d = draftFromTemplate('precompra', 'factura', '2026-11-26');
     d.customerName = 'Marta';

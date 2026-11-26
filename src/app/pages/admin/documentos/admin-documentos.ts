@@ -154,7 +154,12 @@ export class AdminDocumentos implements OnInit {
     if (!d) return [];
     return this.sectionTitles().map((title) => {
       const lines = d.items.filter((i) => i.section === title);
-      return { title, lines, subtotal: lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0) };
+      return {
+        title,
+        lines,
+        subtotal: lines.reduce((sum, l) => sum + (l.tbd ? 0 : l.quantity * l.unitPrice), 0),
+        pending: lines.filter((l) => l.tbd).length,
+      };
     });
   });
 
@@ -208,7 +213,7 @@ export class AdminDocumentos implements OnInit {
     if (!doc || !d) return '';
     const t = computeTotals({ ...d, items: d.items.filter((i) => i.description.trim()) });
     return documentWhatsAppLink(
-      { kind: d.kind, code: doc.code, customerName: d.customerName, customerPhone: d.customerPhone, total: t.total, validUntil: d.validUntil, balance: t.balance },
+      { kind: d.kind, code: doc.code, customerName: d.customerName, customerPhone: d.customerPhone, total: t.total, validUntil: d.validUntil, balance: t.balance, pending: t.pending },
       this.profile().legalName,
     );
   });
@@ -462,7 +467,7 @@ export class AdminDocumentos implements OnInit {
     this.addLine();
   }
 
-  addLine(kind?: LineKind, description = '', unitPrice = 0): void {
+  addLine(kind?: LineKind, description = '', unitPrice = 0, tbd = false): void {
     const d = this.draft();
     if (!d) return;
     let titles = this.sectionTitles();
@@ -472,7 +477,7 @@ export class AdminDocumentos implements OnInit {
     }
     const section = this.target();
     const tpl = this.template();
-    const line = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice, section);
+    const line = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice, section, tbd);
     // Una línea vacía al final de la sección se reutiliza en vez de dejar un renglón en blanco en medio.
     const own = d.items.filter((i) => i.section === section);
     const last = own[own.length - 1];
@@ -497,6 +502,19 @@ export class AdminDocumentos implements OnInit {
     this.draft.update((d) => (d ? { ...d, items: d.items.map((i) => (i.uid === uid ? { ...i, [key]: n } : i)) } : d));
   }
 
+  /** Marca o desmarca una línea como "a determinar". Al marcarla su precio pasa a 0: no se sabe todavía. */
+  setLineTbd(uid: string, event: Event): void {
+    const tbd = (event.target as HTMLInputElement).checked;
+    this.draft.update((d) =>
+      d ? { ...d, items: d.items.map((i) => (i.uid === uid ? { ...i, tbd, unitPrice: tbd ? 0 : i.unitPrice } : i)) } : d,
+    );
+  }
+
+  /** Una línea sin precio para algo que se sabrá cuando se revise: una reparación o una pieza "a determinar". */
+  addTbdLine(kind: 'mano_de_obra' | 'repuesto'): void {
+    this.addLine(kind, kind === 'repuesto' ? 'Pieza a determinar' : 'Reparación a determinar', 0, true);
+  }
+
   setLineKind(uid: string, event: Event): void {
     const kind = value(event) as LineKind;
     this.draft.update((d) => (d ? { ...d, items: d.items.map((i) => (i.uid === uid ? { ...i, kind } : i)) } : d));
@@ -504,6 +522,11 @@ export class AdminDocumentos implements OnInit {
 
   lineTotal(quantity: number, unitPrice: number): number {
     return quantity * unitPrice;
+  }
+
+  /** Si algún documento de la lista trae líneas "a determinar" (para avisarlo en su tarjeta). */
+  hasTbd(doc: BusinessDocument): boolean {
+    return doc.items.some((i) => i.tbd);
   }
 
   // --- Catálogo ------------------------------------------------------------

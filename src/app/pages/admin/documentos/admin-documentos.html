@@ -53,7 +53,7 @@
                 <div>
                   <span class="tl__ref dc__code"><app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="16" /> {{ doc.code }}</span>
                   <h3 class="tl__name">{{ doc.customerName }}</h3>
-                  <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }</p>
+                  <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }@if (hasTbd(doc)) { · incluye conceptos a determinar }</p>
                 </div>
                 <div class="dc__amount">
                   <strong>RD$ {{ doc.total | number: '1.2-2' }}</strong>
@@ -208,6 +208,11 @@
             </div>
 
             <div class="dc__suggest">
+              <span class="tl__muted">¿Aún no se sabe qué está malo o cuánto cuesta? Agrégalo sin precio:</span>
+              <div class="tl__chips">
+                <button type="button" class="tl__chip" (click)="addTbdLine('mano_de_obra')"><app-icon name="plus" [size]="14" /> Reparación a determinar</button>
+                <button type="button" class="tl__chip" (click)="addTbdLine('repuesto')"><app-icon name="plus" [size]="14" /> Pieza a determinar</button>
+              </div>
               <span class="tl__muted">Conceptos frecuentes de cualquier área (el precio lo pones tú):</span>
               <div class="tl__chips" role="group" aria-label="Área de los conceptos">
                 @for (a of suggestionAreas; track a.id) {
@@ -256,7 +261,7 @@
                         @for (k of lineKinds; track k) { <option [value]="k" [selected]="line.kind === k">{{ lineKindLabels[k] }}</option> }
                       </select>
                       <input class="tl__input dc__line-num" type="number" aria-label="Cantidad" min="0" step="any" inputmode="decimal" [value]="line.quantity" (input)="setLineNumber(line.uid, 'quantity', $event)" />
-                      <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.unitPrice" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
+                      <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.tbd ? '' : line.unitPrice" [disabled]="line.tbd" [placeholder]="line.tbd ? 'A determinar' : ''" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
                       <button type="button" class="dc__line-del" aria-label="Quitar línea" (click)="removeLine(line.uid)"><app-icon name="x" [size]="18" /></button>
                       <div class="dc__line-tools">
                         <select class="tl__input dc__line-section" aria-label="Pasar a otra sección" (change)="setLineSection(line.uid, $event)">
@@ -264,7 +269,8 @@
                         </select>
                         <button type="button" class="dc__icon" aria-label="Subir línea" (click)="moveLineBy(line.uid, -1)"><app-icon name="arrow-up" [size]="16" /></button>
                         <button type="button" class="dc__icon" aria-label="Bajar línea" (click)="moveLineBy(line.uid, 1)"><app-icon name="arrow-down" [size]="16" /></button>
-                        <span class="dc__line-total">{{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }}</span>
+                        <label class="dc__tbd"><input type="checkbox" [checked]="line.tbd" (change)="setLineTbd(line.uid, $event)" /> A determinar</label>
+                        <span class="dc__line-total">@if (line.tbd) { A determinar } @else { {{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }} }</span>
                       </div>
                     </li>
                   }
@@ -272,7 +278,7 @@
 
                 <div class="tl__row dc__section-foot">
                   <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLineTo(group.title)"><app-icon name="plus" [size]="16" /> Agregar línea aquí</button>
-                  <span class="dc__sum">Subtotal: <strong>RD$ {{ group.subtotal | number: '1.2-2' }}</strong></span>
+                  <span class="dc__sum">Subtotal: <strong>RD$ {{ group.subtotal | number: '1.2-2' }}</strong>@if (group.pending > 0) { <small class="tl__muted"> + {{ group.pending }} a determinar</small> }</span>
                 </div>
               </fieldset>
             }
@@ -303,7 +309,7 @@
               }
             </div>
             @if (totals(); as t) {
-              <p class="dc__sum">Total: <strong>RD$ {{ t.total | number: '1.2-2' }}</strong>@if (d.kind === 'factura' && t.paid > 0) { · Pendiente: <strong>RD$ {{ t.balance | number: '1.2-2' }}</strong> }</p>
+              <p class="dc__sum">Total: <strong>RD$ {{ t.total | number: '1.2-2' }}</strong>@if (t.pending > 0) { <small class="tl__muted"> (sin {{ t.pending }} a determinar)</small> }@if (d.kind === 'factura' && t.paid > 0) { · Pendiente: <strong>RD$ {{ t.balance | number: '1.2-2' }}</strong> }</p>
             }
 
             <h3 class="tl__name">Notas y condiciones</h3>

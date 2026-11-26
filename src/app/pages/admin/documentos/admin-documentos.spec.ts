@@ -256,6 +256,42 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(c.pickedCustomer()).toBeNull();
   });
 
+  it('una línea a determinar no suma, sale como "A determinar" en el papel y avisa en el total', async () => {
+    const { fixture, c, el } = await montar();
+    c.pickTemplate('mecanica');
+    c.setLineDescription(c.draft()!.items[0].uid, input('Cambio de pastillas'));
+    c.setLineNumber(c.draft()!.items[0].uid, 'unitPrice', input('2500'));
+
+    c.addTbdLine('repuesto');
+    const tbd = c.draft()!.items.find((i) => i.tbd)!;
+    expect(tbd.description).toBe('Pieza a determinar');
+    expect(tbd.unitPrice).toBe(0);
+
+    expect(c.totals()?.total).toBe(2500);
+    expect(c.totals()?.pending).toBe(1);
+
+    fixture.detectChanges();
+    const paper = el.querySelector('.doc-sheet')!.textContent!;
+    expect(paper).toContain('A determinar');
+    expect(paper).toContain('No incluye 1 concepto a determinar');
+  });
+
+  it('marcar una línea como a determinar le quita el precio, y desmarcarla la deja editable', async () => {
+    const { c } = await montar();
+    c.pickTemplate('mecanica');
+    const uid = c.draft()!.items[0].uid;
+    c.setLineDescription(uid, input('Reparación de caja'));
+    c.setLineNumber(uid, 'unitPrice', input('8000'));
+
+    c.setLineTbd(uid, input('', true));
+    expect(c.draft()!.items[0]).toMatchObject({ tbd: true, unitPrice: 0 });
+
+    c.setLineTbd(uid, input('', false));
+    c.setLineNumber(uid, 'unitPrice', input('7500'));
+    expect(c.draft()!.items[0]).toMatchObject({ tbd: false, unitPrice: 7500 });
+    expect(c.totals()?.pending).toBe(0);
+  });
+
   it('el chequeo no pide dictamen', async () => {
     const { fixture, c, el } = await montar();
     c.pickTemplate('chequeo');

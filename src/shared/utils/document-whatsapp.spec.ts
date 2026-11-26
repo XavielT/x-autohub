@@ -11,6 +11,11 @@ describe('mensaje de WhatsApp de un documento', () => {
     expect(m).toContain('11/12/2026');
   });
 
+  it('una cotización con conceptos a determinar avisa que el monto no los incluye', () => {
+    expect(documentWhatsAppMessage({ ...quote, pending: 2 }, 'X AutoHub')).toContain('a determinar');
+    expect(documentWhatsAppMessage(quote, 'X AutoHub')).not.toContain('a determinar');
+  });
+
   it('la factura con saldo dice cuánto queda y saldada lo dice también', () => {
     const f = { ...quote, kind: 'factura' as const, code: 'FAC-0003', validUntil: null, balance: 2500 };
     expect(documentWhatsAppMessage(f, 'X AutoHub')).toContain('pendiente');

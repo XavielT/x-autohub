@@ -46,6 +46,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     items: (row.items ?? []).map((i) => ({
       uid: newLineUid(),
       section: i.section ?? '',
+      tbd: i.tbd === true,
       kind: i.kind as LineKind,
       description: i.description,
       quantity: Number(i.quantity),
@@ -76,7 +77,9 @@ const cleanItems = (items: readonly DocumentLine[]) =>
       kind: i.kind,
       description: i.description.trim(),
       quantity: i.quantity,
-      unitPrice: i.unitPrice,
+      // A determinar = sin precio: se guarda en 0 para que la base llegue al mismo total.
+      unitPrice: i.tbd ? 0 : i.unitPrice,
+      tbd: i.tbd,
     }));
 
 /**

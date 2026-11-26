@@ -68,8 +68,12 @@
               @if (!group.title) { <small>{{ lineKindLabels[line.kind] }}</small> }
             </td>
             <td class="ds__num">{{ line.quantity | number: '1.0-2' }}</td>
-            <td class="ds__num">{{ line.unitPrice | number: '1.2-2' }}</td>
-            <td class="ds__num">{{ line.quantity * line.unitPrice | number: '1.2-2' }}</td>
+            @if (line.tbd) {
+              <td class="ds__num ds__tbd" colspan="2">A determinar</td>
+            } @else {
+              <td class="ds__num">{{ line.unitPrice | number: '1.2-2' }}</td>
+              <td class="ds__num">{{ line.quantity * line.unitPrice | number: '1.2-2' }}</td>
+            }
           </tr>
         }
       </tbody>
@@ -96,6 +100,9 @@
         <div><dt>ITBIS ({{ doc().itbisRate }} %)</dt><dd>RD$ {{ totals().itbis | number: '1.2-2' }}</dd></div>
       }
       <div class="ds__total"><dt>Total</dt><dd>RD$ {{ totals().total | number: '1.2-2' }}</dd></div>
+      @if (totals().pending > 0) {
+        <p class="ds__tbd-note">No incluye {{ totals().pending }} {{ totals().pending === 1 ? 'concepto' : 'conceptos' }} a determinar: se informa el costo en cuanto se confirme la falla.</p>
+      }
       @if (doc().kind === 'factura' && totals().paid > 0) {
         <div><dt>Abonado</dt><dd>RD$ {{ totals().paid | number: '1.2-2' }}</dd></div>
         <div class="ds__balance"><dt>Pendiente</dt><dd>RD$ {{ totals().balance | number: '1.2-2' }}</dd></div>

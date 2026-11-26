@@ -142,6 +142,8 @@
 .dc__line-section { flex: 1; min-width: 0; }
 .dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }
 
+.dc__tbd { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); cursor: pointer; white-space: nowrap; }
+
 .dc__section-foot { justify-content: space-between; }
 .dc__new-section .tl__chips { margin: 6px 0 0; }
 

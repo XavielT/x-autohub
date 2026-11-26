@@ -79,7 +79,7 @@ export type BusinessDocumentRow = {
   issue_date: string;
   valid_until: string | null;
   /** Líneas: `{ kind, description, quantity, unitPrice }`. */
-  items: { kind: string; description: string; quantity: number; unitPrice: number; section?: string }[];
+  items: { kind: string; description: string; quantity: number; unitPrice: number; section?: string; tbd?: boolean }[];
   discount_type: 'amount' | 'percent';
   discount_value: number;
   apply_itbis: boolean;

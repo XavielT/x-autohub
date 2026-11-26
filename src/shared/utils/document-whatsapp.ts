@@ -11,6 +11,8 @@ export interface WhatsAppDocument {
   validUntil: string | null;
   /** Solo facturas. */
   balance: number;
+  /** Líneas "a determinar", que el total no incluye. */
+  pending?: number;
 }
 
 const money = (n: number): string => `RD$ ${n.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -24,7 +26,8 @@ export function documentWhatsAppMessage(doc: WhatsAppDocument, businessName: str
 
   if (doc.kind === 'cotizacion') {
     const valid = doc.validUntil ? ` Es válida hasta el ${dmy(doc.validUntil)}.` : '';
-    return `${hello}te comparto la cotización ${doc.code} de ${businessName} por ${money(doc.total)}.${valid} Cualquier duda, aquí estamos.`;
+    const tbd = doc.pending ? ' Ese monto no incluye lo que está a determinar: se te informa en cuanto se confirme la falla.' : '';
+    return `${hello}te comparto la cotización ${doc.code} de ${businessName} por ${money(doc.total)}.${tbd}${valid} Cualquier duda, aquí estamos.`;
   }
 
   const pending = doc.balance > 0 ? ` Queda pendiente ${money(doc.balance)}.` : ' Queda saldada.';

@@ -10,12 +10,15 @@
  *   ITBIS     = base × tasa (solo si se aplica)
  *   total     = base + ITBIS
  *   pendiente = total − abonado (nunca negativo)
+ *
+ * Una línea "a determinar" (`tbd`) todavía no tiene precio: no suma. Al guardarla su precio queda en 0, así que
+ * Postgres (que no mira `tbd`) llega al mismo total.
  */
 
 export type DiscountType = 'amount' | 'percent';
 
 export interface TotalsInput {
-  items: readonly { quantity: number; unitPrice: number }[];
+  items: readonly { quantity: number; unitPrice: number; tbd?: boolean }[];
   discountType: DiscountType;
   discountValue: number;
   applyItbis: boolean;
@@ -31,6 +34,8 @@ export interface DocumentTotals {
   total: number;
   paid: number;
   balance: number;
+  /** Cuántas líneas están "a determinar": el total no las incluye. */
+  pending: number;
 }
 
 export const DEFAULT_ITBIS_RATE = 18;
@@ -43,7 +48,10 @@ export function round2(value: number): number {
 const safe = (n: number): number => (Number.isFinite(n) && n > 0 ? n : 0);
 
 export function computeTotals(input: TotalsInput): DocumentTotals {
-  const subtotal = round2(input.items.reduce((sum, i) => sum + safe(i.quantity) * safe(i.unitPrice), 0));
+  const subtotal = round2(
+    input.items.reduce((sum, i) => sum + (i.tbd ? 0 : safe(i.quantity) * safe(i.unitPrice)), 0),
+  );
+  const pending = input.items.filter((i) => i.tbd).length;
 
   const discount =
     input.discountType === 'percent'
@@ -55,7 +63,7 @@ export function computeTotals(input: TotalsInput): DocumentTotals {
   const total = round2(base + itbis);
   const paid = round2(safe(input.paid));
 
-  return { subtotal, discount, base, itbis, total, paid, balance: Math.max(0, round2(total - paid)) };
+  return { subtotal, discount, base, itbis, total, paid, balance: Math.max(0, round2(total - paid)), pending };
 }
 
 /** `COT-0007` / `FAC-0012`. */

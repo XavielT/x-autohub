@@ -93,6 +93,8 @@
 
 .ds__num { text-align: right !important; white-space: nowrap; width: 1%; }
 .ds__desc { width: auto; }
+.ds__tbd { font-style: italic; color: var(--ds-soft); }
+.ds__tbd-note { margin: 6px 0 0; max-width: 260px; text-align: right; font-size: 11px; color: var(--ds-soft); }
 .ds__empty { margin: 16px 24px; color: var(--ds-soft); }
 
 .ds__totals {

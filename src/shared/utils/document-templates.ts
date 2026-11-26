@@ -221,8 +221,15 @@ export function templateById(id: TemplateId): DocumentTemplate {
 let uidSeq = 0;
 export const newLineUid = (): string => `l${Date.now().toString(36)}${(uidSeq++).toString(36)}`;
 
-export function blankLine(kind: LineKind, description = '', quantity = 1, unitPrice = 0, section = ''): DocumentLine {
-  return { uid: newLineUid(), section, kind, description, quantity, unitPrice };
+export function blankLine(
+  kind: LineKind,
+  description = '',
+  quantity = 1,
+  unitPrice = 0,
+  section = '',
+  tbd = false,
+): DocumentLine {
+  return { uid: newLineUid(), section, kind, description, quantity, unitPrice: tbd ? 0 : unitPrice, tbd };
 }
 
 /** Un documento nuevo, ya con lo que trae la plantilla: condiciones, validez y una línea lista. */
