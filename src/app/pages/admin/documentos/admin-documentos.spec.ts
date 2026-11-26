@@ -627,6 +627,25 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(paper).toContain('25/11/2026');
     });
 
+    it('la hoja pinta el pendiente en rojo solo si hay saldo; saldada dice "Saldado" y no en rojo', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '1500');
+      await env.fixture.whenStable();
+      env.fixture.detectChanges();
+
+      const row = () => env.el.querySelector('.doc-sheet .ds__balance') as HTMLElement;
+      expect(row().textContent).toContain('3,500.00');
+      expect(row().classList.contains('ds__balance--settled')).toBe(false);
+
+      abonar(env.c, '3500');
+      await env.fixture.whenStable();
+      env.fixture.detectChanges();
+      expect(row().textContent).toContain('Saldado');
+      expect(row().textContent).not.toContain('0.00');
+      expect(row().classList.contains('ds__balance--settled')).toBe(true);
+    });
+
     it('en la lista, cada factura dice cuánto se cobró y cuánto falta', async () => {
       const env = await montar();
       await facturaEmitida(env);

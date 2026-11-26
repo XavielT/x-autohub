@@ -106,7 +106,10 @@
       }
       @if (doc().kind === 'factura' && totals().paid > 0) {
         <div><dt>Abonado</dt><dd>RD$ {{ totals().paid | number: '1.2-2' }}</dd></div>
-        <div class="ds__balance"><dt>Pendiente</dt><dd>RD$ {{ totals().balance | number: '1.2-2' }}</dd></div>
+        <div class="ds__balance" [class.ds__balance--settled]="totals().balance <= 0">
+          <dt>Pendiente</dt>
+          <dd>@if (totals().balance > 0) { RD$ {{ totals().balance | number: '1.2-2' }} } @else { Saldado }</dd>
+        </div>
       }
     </dl>
   </section>

@@ -133,3 +133,6 @@
 .ds__pay-date { white-space: nowrap; width: 1%; }
 .ds__paid-on { margin: 6px 0 0; font-weight: 800; color: #1b7f3b; }
 @media screen and (max-width: 420px) { .ds__payments { margin-left: 14px; margin-right: 14px; } }
+
+// Sin nada por cobrar, la línea no se pinta como una deuda.
+.ds__balance--settled dt, .ds__balance--settled dd { color: #1b7f3b; }
