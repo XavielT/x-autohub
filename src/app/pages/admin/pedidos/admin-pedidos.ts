@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
@@ -47,7 +48,7 @@ const PAYMENT_LABELS: Record<string, string> = {
  */
 @Component({
   selector: 'app-admin-pedidos',
-  imports: [DatePipe, DecimalPipe, Skeleton, WaDraft],
+  imports: [DatePipe, DecimalPipe, Skeleton, WaDraft, Thumb],
   templateUrl: './admin-pedidos.html',
   styleUrl: './admin-pedidos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

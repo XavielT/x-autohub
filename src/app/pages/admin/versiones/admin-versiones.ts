@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -22,7 +23,7 @@ const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
  */
 @Component({
   selector: 'app-admin-versiones',
-  imports: [FormsModule, DatePipe, Skeleton],
+  imports: [FormsModule, DatePipe, Skeleton, Thumb],
   templateUrl: './admin-versiones.html',
   styleUrl: './admin-versiones.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

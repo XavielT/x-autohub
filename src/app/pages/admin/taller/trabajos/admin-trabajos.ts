@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -42,7 +43,7 @@ const toDraft = (w: ServiceWorkModel): WorkDraft => ({
  */
 @Component({
   selector: 'app-admin-trabajos',
-  imports: [DatePipe, Skeleton],
+  imports: [DatePipe, Skeleton, Thumb],
   templateUrl: './admin-trabajos.html',
   styleUrl: './admin-trabajos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

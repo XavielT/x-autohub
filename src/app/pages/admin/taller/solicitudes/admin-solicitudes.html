@@ -22,6 +22,7 @@
       @for (r of shown(); track r.id) {
         <li class="sol__item" [class.sol__item--safety]="r.urgency === 'seguridad'">
           <div class="sol__top">
+            <app-thumb [src]="r.photos.length > 0 ? photoUrls()[r.photos[0]] : null" icon="clipboard" [size]="40" />
             <strong class="sol__code">{{ r.code }}</strong>
             <span class="sol__state" [attr.data-status]="r.status">{{ statusLabel(r.status) }}</span>
             @if (r.urgency === 'seguridad') { <span class="sol__tag sol__tag--safety">Seguridad</span> }

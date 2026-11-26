@@ -43,5 +43,7 @@ export interface AdminUserModel {
   isVerified: boolean;
   /** Ve el contenido de prueba. No es un rol. Ver `UserModel.isTestUser`. */
   isTestUser: boolean;
+  /** Foto de perfil, si tiene. No viene de `admin_list_users()`: se lee aparte de `profiles`. */
+  avatarUrl?: string;
   createdAt: Date;
 }

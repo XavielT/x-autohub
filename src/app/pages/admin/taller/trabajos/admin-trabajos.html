@@ -63,7 +63,10 @@
       @for (w of works(); track w.id) {
         <li class="tl__card" [class.is-off]="!w.isPublished">
           <div class="tl__row">
-            <span class="tl__name">{{ w.title }}</span>
+            <div class="tl__lead-item">
+              <app-thumb [src]="w.afterImage || w.beforeImage" icon="wrench" [size]="48" />
+              <span class="tl__name">{{ w.title }}</span>
+            </div>
             <span class="tl__badge" [class.tl__badge--ok]="w.isPublished">{{ w.isPublished ? 'Publicado' : 'Borrador' }}</span>
           </div>
           <p class="tl__sub">

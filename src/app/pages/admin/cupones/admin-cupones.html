@@ -101,7 +101,10 @@
       @for (c of coupons(); track c.id) {
         <li class="tl__card" [class.is-off]="statusOf(c) !== 'active'">
           <div class="tl__row">
-            <span class="tl__name cpn-code">{{ c.code }}</span>
+            <div class="tl__lead-item">
+              <app-thumb icon="ticket" [size]="44" />
+              <span class="tl__name cpn-code">{{ c.code }}</span>
+            </div>
             <span class="tl__badge" [class.tl__badge--ok]="statusOf(c) === 'active'" [class.tl__badge--bad]="statusOf(c) !== 'active'">
               {{ statusLabel(c) }}
             </span>

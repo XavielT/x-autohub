@@ -47,7 +47,8 @@ export type IconName =
   | 'eye'
   | 'car'
   | 'newspaper'
-  | 'folder';
+  | 'folder'
+  | 'calendar';
 
 const ICONS: Record<IconName, readonly string[]> = {
   'shield-check': ['M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z', 'M9 12l2 2 4-4'],
@@ -82,6 +83,7 @@ const ICONS: Record<IconName, readonly string[]> = {
   search: [circle(11, 11, 6), 'M20 20l-4.5-4.5'],
   car: ['M3 15v-3l2-5h14l2 5v3z', 'M3 12h18', circle(7.5, 17, 1.8), circle(16.5, 17, 1.8)],
   newspaper: [rect(4, 4, 13, 16, 2), 'M17 8h3v10a2 2 0 0 1-2 2', 'M8 8h5M8 12h5M8 16h3'],
+  calendar: [rect(4, 5, 16, 16, 2), 'M4 10h16', 'M8 3v4M16 3v4'],
   folder: ['M3 6h7l2 2h9v11H3z'],
   eye: ['M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z', circle(12, 12, 3)],
 };

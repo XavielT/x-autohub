@@ -81,6 +81,7 @@
         <li class="adm-rel__item" [class.adm-rel__item--draft]="!item.isPublished">
           <div class="adm-rel__item-head">
             <div class="adm-rel__item-id">
+              <app-thumb icon="tag" [size]="36" />
               <span class="adm-rel__version">v{{ item.version }}</span>
               <span class="adm-rel__date">{{ item.releasedAt | date:'d MMMM y' }}</span>
               @if (!item.isPublished) {

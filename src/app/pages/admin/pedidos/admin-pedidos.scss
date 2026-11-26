@@ -309,3 +309,6 @@
 }
 .adm-ord__acct { display: block; }
 .adm-ord__flags { margin: 0 0 8px; padding-left: 18px; font-size: 13px; color: #f0b848; }
+
+// Una línea del pedido con la miniatura de su artículo.
+.adm-ord__line-name { display: inline-flex; align-items: center; gap: 10px; }

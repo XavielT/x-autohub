@@ -33,9 +33,12 @@
         @for (a of day.items; track a.id) {
           <li class="tl__card" [class.is-attention]="a.status === 'requested'">
             <div class="tl__row">
-              <div>
-                <span class="tl__ref">#{{ a.number }}</span>
-                <strong class="agenda__time">{{ time(a) }}</strong>
+              <div class="tl__lead-item">
+                <app-thumb icon="calendar" [size]="44" />
+                <div>
+                  <span class="tl__ref">#{{ a.number }}</span>
+                  <strong class="agenda__time">{{ time(a) }}</strong>
+                </div>
               </div>
               <span class="tl__badge" [class.tl__badge--hub]="a.status === 'requested'"
                     [class.tl__badge--info]="a.status === 'confirmed' || a.status === 'in_progress'"

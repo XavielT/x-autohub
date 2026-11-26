@@ -89,7 +89,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderModel[] = [
     isGuest: false,
     createdAt: new Date('2026-08-13T18:40:00Z'),
     items: [
-      { id: 1, name: 'Disco ventilado GTR 355mm', unitPrice: 12950, quantity: 1 },
+      { id: 1, name: 'Disco ventilado GTR 355mm', unitPrice: 12950, quantity: 1, imageUrl: 'assets/imgs/hub-parts/disco-brembo-gtr.jpg' },
       { id: 2, name: 'Filtro de aire de alto flujo', unitPrice: 2850, quantity: 1 },
     ],
   },
@@ -150,7 +150,7 @@ export const ADMIN_ORDERS_MOCK: AdminOrderModel[] = [
     status: 'preparing',
     isGuest: false,
     createdAt: new Date('2026-08-11T09:30:00Z'),
-    items: [{ id: 4, name: 'Alfombras all-weather', unitPrice: 3300, quantity: 1 }],
+    items: [{ id: 4, name: 'Alfombras all-weather', unitPrice: 3300, quantity: 1, imageUrl: 'assets/imgs/hub-parts/alfombras-allweather.jpg' }],
   },
   {
     id: 'mock-order-4',

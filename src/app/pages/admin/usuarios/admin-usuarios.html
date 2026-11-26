@@ -30,6 +30,7 @@
         <li class="adm-usr__item">
           <div class="adm-usr__info">
             <div class="adm-usr__name-row">
+              <app-avatar [avatarUrl]="user.avatarUrl" [name]="user.displayName" [size]="36" />
               <span class="adm-usr__name">{{ user.displayName }}</span>
               @if (user.role === 'admin') {
                 <span class="adm-usr__tag adm-usr__tag--admin">Admin</span>

@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AdminServicesService } from '../../../../../shared/services/admin-services.service';
@@ -46,7 +47,7 @@ interface AppointmentAction {
  */
 @Component({
   selector: 'app-admin-citas',
-  imports: [Skeleton, WaDraft],
+  imports: [Skeleton, WaDraft, Thumb],
   templateUrl: './admin-citas.html',
   styleUrl: './admin-citas.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

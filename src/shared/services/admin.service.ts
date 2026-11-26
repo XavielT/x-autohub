@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of, throwError } from 'rxjs';
+import { Observable, catchError, from, map, of, switchMap, throwError } from 'rxjs';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { AdminUserRow, HubPartRow, OrderStatus } from '../../core/supabase/database.types';
@@ -152,6 +152,25 @@ export class AdminService {
 
     return from(this.supabase.db.rpc('admin_list_users')).pipe(
       map((res) => unwrap(res).map(toAdminUser)),
+      switchMap((users) => this.withAvatars(users)),
+    );
+  }
+
+  /**
+   * Les pone la foto de perfil a las cuentas. `admin_list_users()` no la trae y cambiarla pediría una migración: se lee
+   * aparte de `profiles` (columna pública). Si falla, la lista sale igual, con la inicial de cada quien.
+   */
+  private withAvatars(users: AdminUserModel[]): Observable<AdminUserModel[]> {
+    if (users.length === 0) return of(users);
+    return from(
+      this.supabase.db.from('profiles').select('id, avatar_url').in('id', users.map((u) => u.id)),
+    ).pipe(
+      map((res) => {
+        if (res.error) return users;
+        const photo = new Map((res.data ?? []).map((p) => [p.id, p.avatar_url]));
+        return users.map((u) => ({ ...u, avatarUrl: photo.get(u.id) ?? undefined }));
+      }),
+      catchError(() => of(users)),
     );
   }
 
@@ -236,7 +255,7 @@ export class AdminService {
     return from(
       this.supabase.db
         .from('orders')
-        .select('*, order_items(id, name, unit_price, quantity), order_status_history(id, from_status, to_status, note, created_at)')
+        .select('*, order_items(id, part_id, name, unit_price, quantity), order_status_history(id, from_status, to_status, note, created_at)')
         .order('created_at', { ascending: false }),
     ).pipe(
       map((res) =>
@@ -281,9 +300,37 @@ export class AdminService {
             name: i.name,
             unitPrice: Number(i.unit_price),
             quantity: i.quantity,
+            partId: i.part_id,
           })),
         })),
       ),
+      switchMap((orders) => this.withItemImages(orders)),
+    );
+  }
+
+  /**
+   * Les pone la foto a las líneas de los pedidos. Va en una consulta aparte (y no como un embed) para no
+   * arriesgar un PGRST201 por relaciones ambiguas; si falla, los pedidos se muestran igual, sin fotos.
+   */
+  private withItemImages(orders: AdminOrderModel[]): Observable<AdminOrderModel[]> {
+    const ids = [
+      ...new Set(orders.flatMap((o) => o.items.map((i) => i.partId)).filter((id): id is number => typeof id === 'number')),
+    ];
+    if (ids.length === 0) return of(orders);
+
+    return from(this.supabase.db.from('hub_parts').select('id, img_url, images').in('id', ids)).pipe(
+      map((res) => {
+        if (res.error) return orders;
+        const photo = new Map((res.data ?? []).map((p) => [p.id, p.img_url || p.images?.[0] || '']));
+        return orders.map((o) => ({
+          ...o,
+          items: o.items.map(({ partId, ...item }) => ({
+            ...item,
+            imageUrl: partId != null ? (photo.get(partId) ?? '') : '',
+          })),
+        }));
+      }),
+      catchError(() => of(orders)),
     );
   }
 

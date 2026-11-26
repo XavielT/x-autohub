@@ -38,6 +38,7 @@
         <li class="adm-ord__item" [class.adm-ord__item--attention]="order.status === 'awaiting_payment' && order.proofPath">
           <div class="adm-ord__item-head">
             <div class="adm-ord__who">
+              <app-thumb [src]="order.items[0]?.imageUrl" icon="package" [size]="48" />
               <span class="adm-ord__ref">#{{ order.orderNumber }}</span>
               <span class="adm-ord__name">{{ order.fullName }}</span>
               @if (order.isGuest) {
@@ -184,7 +185,7 @@
                 <ul class="adm-ord__lines">
                   @for (item of order.items; track item.id) {
                     <li>
-                      <span>{{ item.quantity }}x {{ item.name }}</span>
+                      <span class="adm-ord__line-name"><app-thumb [src]="item.imageUrl" icon="package" [size]="32" />{{ item.quantity }}x {{ item.name }}</span>
                       <span>RD$ {{ item.unitPrice * item.quantity | number:'1.0-0' }}</span>
                     </li>
                   }

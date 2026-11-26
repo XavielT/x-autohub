@@ -55,6 +55,9 @@
     &.is-off { opacity: 0.65; }
   }
 
+  // Renglón con miniatura: la foto o el icono a un lado y el texto al otro.
+  .tl__lead-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
   .tl__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
   .tl__name { font-family: var(--font-brand); font-size: 16px; }
   .tl__ref { font-family: var(--font-brand2); font-size: 14px; color: var(--Hub); }

@@ -9,6 +9,7 @@ import { SITE_URL } from '../../../../../shared/utils/structured-data';
 import { formatDrPhone } from '../../../../../shared/utils/phone';
 import { quoteReplyDraft, scheduleLinkDraft, waLinkFor } from '../../../../../shared/utils/reply-templates';
 import { SAFETY_NOTE } from '../../../../../shared/utils/quote-safety';
+import { Thumb } from '../../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { WaDraft } from '../../../../../shared/components/wa-draft/wa-draft';
 
@@ -21,7 +22,7 @@ import { WaDraft } from '../../../../../shared/components/wa-draft/wa-draft';
  */
 @Component({
   selector: 'app-admin-solicitudes',
-  imports: [DatePipe, DecimalPipe, Skeleton, WaDraft],
+  imports: [DatePipe, DecimalPipe, Skeleton, WaDraft, Thumb],
   templateUrl: './admin-solicitudes.html',
   styleUrl: './admin-solicitudes.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

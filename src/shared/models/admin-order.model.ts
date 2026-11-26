@@ -8,6 +8,10 @@ export interface AdminOrderItem {
   name: string;
   unitPrice: number;
   quantity: number;
+  /** Foto del artículo comprado (la de hoy en el catálogo). Vacía si ya no existe. */
+  imageUrl?: string;
+  /** La pieza del catálogo de la que salió la línea (nula si era de otro origen). Sirve para buscar su foto. */
+  partId?: number | null;
 }
 
 /** Un pedido con todo lo que el panel necesita para gestionarlo. */

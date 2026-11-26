@@ -1,3 +1,4 @@
+import { Thumb } from '../../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -68,7 +69,7 @@ const toDraft = (s: ServiceModel): ServiceDraft => ({
  */
 @Component({
   selector: 'app-admin-servicios',
-  imports: [DecimalPipe, Skeleton],
+  imports: [DecimalPipe, Skeleton, Thumb],
   templateUrl: './admin-servicios.html',
   styleUrl: './admin-servicios.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
