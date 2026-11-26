@@ -27,6 +27,15 @@ import {
   ADMIN_VEHICLES_MOCK,
 } from '../data/admin.mock';
 
+/**
+ * Una escritura sin `.select()` responde sin datos, y `unwrap()` lo toma por "no encontré nada": el cambio se guardaba y el
+ * panel enseñaba "No encontramos lo que buscabas". Por eso las escrituras piden de vuelta el `id` de lo que tocaron, y aquí se
+ * comprueba que tocaron algo: RLS no falla cuando no deja escribir, simplemente no toca ninguna fila.
+ */
+export function assertTouched(rows: readonly unknown[]): void {
+  if (rows.length === 0) throw new Error('No tienes permiso para hacer esto.');
+}
+
 function toAdminUser(row: AdminUserRow): AdminUserModel {
   return {
     id: row.id,
@@ -371,10 +380,11 @@ export class AdminService {
           ...(change.isActive !== undefined && { is_active: change.isActive }),
           ...(change.isTest !== undefined && { is_test: change.isTest }),
         })
-        .eq('id', id),
+        .eq('id', id)
+        .select('id'),
     ).pipe(
       map((res) => {
-        unwrap(res);
+        assertTouched(unwrap(res));
       }),
     );
   }
@@ -423,10 +433,11 @@ export class AdminService {
           ...(change.isAvailable !== undefined && { is_available: change.isAvailable }),
           ...(change.isTest !== undefined && { is_test: change.isTest }),
         })
-        .eq('id', id),
+        .eq('id', id)
+        .select('id'),
     ).pipe(
       map((res) => {
-        unwrap(res);
+        assertTouched(unwrap(res));
       }),
     );
   }
@@ -472,10 +483,11 @@ export class AdminService {
           ...(change.isPublished !== undefined && { is_published: change.isPublished }),
           ...(change.isTest !== undefined && { is_test: change.isTest }),
         })
-        .eq('id', id),
+        .eq('id', id)
+        .select('id'),
     ).pipe(
       map((res) => {
-        unwrap(res);
+        assertTouched(unwrap(res));
       }),
     );
   }
