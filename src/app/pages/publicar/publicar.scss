@@ -44,6 +44,14 @@
     font-family: var(--font-brand);
   }
 
+  // El selector de marca, modelo y año usa las mismas etiquetas que los demás campos del formulario.
+  app-vehicle-pick {
+    --vp-label-color: #fff;
+    --vp-label-size: 16px;
+    --vp-label-weight: 600;
+    --vp-label-font: var(--font-brand);
+  }
+
   .form-input {
     padding: 14px 16px;
     background-color: #2a2a2a;

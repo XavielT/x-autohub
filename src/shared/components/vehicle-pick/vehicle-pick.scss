@@ -11,8 +11,10 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  font-size: 14px;
-  color: var(--text-soft);
+  font-size: var(--vp-label-size, 14px);
+  font-weight: var(--vp-label-weight, 400);
+  font-family: var(--vp-label-font, inherit);
+  color: var(--vp-label-color, var(--text-soft));
 
   &--wide { grid-column: 1 / -1; }
 }
@@ -36,8 +38,10 @@
 .vp__link {
   grid-column: 1 / -1;
   justify-self: start;
-  min-height: 36px;
-  padding: 0;
+  min-height: 44px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
   border: 0;
   background: transparent;
   color: var(--Hub);

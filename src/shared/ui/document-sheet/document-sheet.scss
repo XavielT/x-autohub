@@ -116,3 +116,13 @@
 .ds__pay p, .ds__notes p { white-space: pre-line; }
 
 .ds__foot { margin-top: 22px; padding: 12px 24px 18px; border-top: 1px solid var(--ds-line); text-align: center; color: var(--ds-soft); font-size: 12px; }
+
+// En un teléfono la hoja se ve debajo del formulario: se compacta para no pasar del ancho. Al imprimir no aplica
+// (la hoja impresa se arma con el ancho de la página).
+@media screen and (max-width: 420px) {
+  .ds__head, .ds__parties, .ds__totals, .ds__foot { padding-left: 14px; padding-right: 14px; }
+  .ds__vehicle, .ds__pay, .ds__notes, .doc-sheet .ds__group { margin-left: 14px; margin-right: 14px; }
+  .ds__table { width: calc(100% - 28px); margin-left: 14px; margin-right: 14px; }
+  .ds__table th, .ds__table td { padding-left: 4px; padding-right: 4px; }
+  .ds__logo { width: 150px; }
+}

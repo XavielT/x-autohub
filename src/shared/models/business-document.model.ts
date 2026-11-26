@@ -83,6 +83,8 @@ export interface VehicleSelection {
 
 /** Un vehículo de un cliente, tal como se recuerda para sus próximos documentos. */
 export interface CustomerVehicle extends Partial<Omit<VehicleSelection, 'text'>> {
+  /** Solo para el formulario: identifica la fila para que su selector no se mezcle al quitar otra. No se guarda. */
+  uid?: string;
   text: string;
   plate: string;
   mileage: string;

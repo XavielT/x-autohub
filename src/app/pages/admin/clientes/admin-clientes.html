@@ -34,9 +34,9 @@
       <h3 class="tl__name">Vehículos</h3>
       @if (d.vehicles.length === 0) { <p class="tl__muted">Todavía no tiene vehículos. Se agregan solos al usarlos en un documento, o puedes ponerlos aquí.</p> }
       <ul class="cl__vehicles">
-        @for (v of d.vehicles; track vehicleKeys()[$index]) {
+        @for (v of d.vehicles; track v.uid) {
           <li class="cl__vehicle">
-            <app-vehicle-pick class="cl__v-pick" [value]="v" [idPrefix]="'cv' + vehicleKeys()[$index]" (changed)="setVehiclePick($index, $event)" />
+            <app-vehicle-pick class="cl__v-pick" [value]="v" [idPrefix]="'cv' + v.uid" (changed)="setVehiclePick($index, $event)" />
             <div class="cl__v-rest">
               <input class="tl__input" type="text" aria-label="Placa" placeholder="Placa" [value]="v.plate" (input)="setVehicle($index, 'plate', $event)" />
               <input class="tl__input" type="text" aria-label="Kilometraje" placeholder="Kilometraje" [value]="v.mileage" (input)="setVehicle($index, 'mileage', $event)" />

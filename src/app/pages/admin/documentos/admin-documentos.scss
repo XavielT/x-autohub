@@ -80,18 +80,20 @@
 }
 
 .dc__lines { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+// Una línea: descripción y tipo a todo el ancho; cantidad, precio y quitar en una fila; y abajo sus herramientas.
+// Así cabe en 320 px: antes la fila de herramientas medía más que la pantalla.
 .dc__line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 96px 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
   gap: 6px;
   padding: 10px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
 }
 .dc__line-desc { grid-column: 1 / -1; }
-.dc__line-kind { grid-column: 1 / 2; }
+.dc__line-kind { grid-column: 1 / -1; }
 .dc__line-del {
-  grid-column: 4; grid-row: 2;
+  grid-column: 3;
   min-height: 44px;
   border: 0;
   border-radius: 8px;
@@ -138,8 +140,8 @@
   &--danger:hover:not(:disabled) { border-color: #ff8d8f; color: #ff8d8f; }
 }
 
-.dc__line-tools { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
-.dc__line-section { flex: 1; min-width: 0; }
+.dc__line-tools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.dc__line-section { flex: 1 1 100%; min-width: 0; }
 .dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }
 
 .dc__tbd { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); cursor: pointer; white-space: nowrap; }

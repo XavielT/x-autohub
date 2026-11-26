@@ -118,6 +118,15 @@
 
   &__nav-icon { color: var(--Hub); }
 
+  // En un teléfono 11 tarjetas a todo el ancho ocupaban más de una pantalla antes del contenido: dos columnas, y solo
+  // icono y nombre (la descripción sigue en el aria-label de cada enlace).
+  @media (max-width: 560px) {
+    &__nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 20px; }
+    &__nav-item { padding: 12px; min-height: 48px; justify-content: center; }
+    &__nav-label { font-size: 15px; gap: 8px; }
+    &__nav-desc { display: none; }
+  }
+
   &__nav-desc {
     font-family: var(--font-body);
     font-size: 13px;

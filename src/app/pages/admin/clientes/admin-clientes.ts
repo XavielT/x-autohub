@@ -15,7 +15,11 @@ type TextKey = 'name' | 'phone' | 'email' | 'rnc' | 'address' | 'notes';
 
 const value = (event: Event): string => (event.target as HTMLInputElement | HTMLTextAreaElement).value;
 
-const blankVehicle = (): CustomerVehicle => ({ text: '', plate: '', mileage: '', vin: '' });
+let uidSeq = 0;
+/** Un id estable por fila del formulario. La clave de `@for` tiene que depender solo del elemento, no de su posición. */
+const newUid = (): string => `v${Date.now().toString(36)}${(uidSeq++).toString(36)}`;
+
+const blankVehicle = (): CustomerVehicle => ({ uid: newUid(), text: '', plate: '', mileage: '', vin: '' });
 
 const blank = (): CustomerDraft => ({ id: null, name: '', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] });
 
@@ -27,7 +31,7 @@ const toDraft = (c: BusinessCustomer): CustomerDraft => ({
   rnc: c.rnc,
   address: c.address,
   notes: c.notes,
-  vehicles: c.vehicles.map((v) => ({ ...v })),
+  vehicles: c.vehicles.map((v) => ({ ...v, uid: newUid() })),
 });
 
 /**
@@ -55,9 +59,6 @@ export class AdminClientes implements OnInit {
   readonly documents = signal<BusinessDocument[]>([]);
   readonly query = signal('');
   readonly draft = signal<CustomerDraft | null>(null);
-  /** Una clave estable por vehículo del formulario: el selector de cada uno guarda su estado y no se mezcla al quitar uno. */
-  readonly vehicleKeys = signal<number[]>([]);
-  private keySeq = 0;
   /** El cliente que pidió borrarse y espera la segunda pulsación. */
   readonly pendingDelete = signal<string | null>(null);
 
@@ -126,7 +127,6 @@ export class AdminClientes implements OnInit {
   }
 
   private open(draft: CustomerDraft): void {
-    this.vehicleKeys.set(draft.vehicles.map(() => this.keySeq++));
     this.draft.set(draft);
   }
 
@@ -140,12 +140,10 @@ export class AdminClientes implements OnInit {
   }
 
   addVehicle(): void {
-    this.vehicleKeys.update((k) => [...k, this.keySeq++]);
     this.draft.update((d) => (d ? { ...d, vehicles: [...d.vehicles, blankVehicle()] } : d));
   }
 
   removeVehicle(index: number): void {
-    this.vehicleKeys.update((k) => k.filter((_, i) => i !== index));
     this.draft.update((d) => (d ? { ...d, vehicles: d.vehicles.filter((_, i) => i !== index) } : d));
   }
 

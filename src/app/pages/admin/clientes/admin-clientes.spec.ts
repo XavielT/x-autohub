@@ -135,18 +135,42 @@ describe('AdminClientes (/admin/clientes)', () => {
     expect('makeId' in v).toBe(false);
   });
 
-  it('quitar un vehículo no mezcla los demás', async () => {
-    const { c } = await montar(false);
+  it('quitar un vehículo no mezcla los demás: cada fila conserva su id y sus datos', async () => {
+    const { fixture, c, el } = await montar(false);
     c.startNew();
+    c.addVehicle();
     c.addVehicle();
     c.addVehicle();
     c.setVehiclePick(0, { text: 'Primero', makeId: null, modelId: null, modelText: '', year: null });
     c.setVehiclePick(1, { text: 'Segundo', makeId: null, modelId: null, modelText: '', year: null });
-    const keys = c.vehicleKeys();
+    c.setVehiclePick(2, { text: 'Tercero', makeId: null, modelId: null, modelText: '', year: null });
+    fixture.detectChanges();
+    const uids = c.draft()!.vehicles.map((v) => v.uid);
+    expect(new Set(uids).size).toBe(3);
 
+    // Cada fila arranca con SU vehículo (los selectores se crean con el valor de su fila).
     c.removeVehicle(0);
-    expect(c.draft()!.vehicles.map((v) => v.text)).toEqual(['Segundo']);
-    expect(c.vehicleKeys()).toEqual([keys[1]]);
+    fixture.detectChanges();
+
+    expect(c.draft()!.vehicles.map((v) => v.text)).toEqual(['Segundo', 'Tercero']);
+    expect(c.draft()!.vehicles.map((v) => v.uid)).toEqual([uids[1], uids[2]]);
+    // Y en pantalla: los dos selectores que quedan son los de esas filas, no los de las anteriores.
+    const ids = Array.from(el.querySelectorAll('.cl__vehicle app-vehicle-pick input[id$="-make"]')).map((i) => i.id);
+    expect(ids).toEqual([`cv${uids[1]}-make`, `cv${uids[2]}-make`]);
+  });
+
+  it('editar un cliente le da a cada vehículo su id, y el id no se guarda', async () => {
+    const { fixture, c } = await montar(false);
+    c.startNew();
+    c.setText('name', input('Marta'));
+    c.addVehicle();
+    c.setVehiclePick(0, { text: 'Kia Rio 2020', makeId: null, modelId: null, modelText: '', year: null });
+    c.save();
+    await fixture.whenStable();
+
+    expect('uid' in c.customers()[0].vehicles[0]).toBe(false);
+    c.edit(c.customers()[0]);
+    expect(c.draft()!.vehicles[0].uid).toBeTruthy();
   });
 
   it('sin nombre no guarda y lo dice', async () => {
