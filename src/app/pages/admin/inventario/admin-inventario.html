@@ -71,20 +71,26 @@
         <div class="adm-inv__thumbs">
           @for (src of existingImages(); track src) {
             <div class="adm-inv__thumb" [class.adm-inv__thumb--cover]="$first">
-              <img [src]="src" [alt]="'Imagen actual ' + ($index + 1)" />
+              <button type="button" class="adm-inv__thumb-view" [attr.aria-label]="'Ver en grande la imagen actual ' + ($index + 1)" (click)="openZoom($index)">
+                <img [src]="replacedPreviews().get(src) ?? src" [alt]="'Imagen actual ' + ($index + 1)" />
+              </button>
               <button type="button" class="adm-inv__thumb-x"
                       [attr.aria-label]="'Quitar imagen actual ' + ($index + 1)"
                       (click)="removeExistingImage($index)">×</button>
+              <button type="button" class="adm-inv__thumb-edit" [attr.aria-label]="'Editar imagen actual ' + ($index + 1)" (click)="editExisting($index)">✎</button>
               @if ($first) { <span class="adm-inv__thumb-tag">Portada</span> }
             </div>
           }
           @for (src of previews(); track $index) {
             <div class="adm-inv__thumb"
                  [class.adm-inv__thumb--cover]="$first && existingImages().length === 0">
-              <img [src]="src" [alt]="'Imagen nueva ' + ($index + 1)" />
+              <button type="button" class="adm-inv__thumb-view" [attr.aria-label]="'Ver en grande la imagen nueva ' + ($index + 1)" (click)="openZoom(existingImages().length + $index)">
+                <img [src]="src" [alt]="'Imagen nueva ' + ($index + 1)" />
+              </button>
               <button type="button" class="adm-inv__thumb-x"
                       [attr.aria-label]="'Quitar imagen nueva ' + ($index + 1)"
                       (click)="removeImage($index)">×</button>
+              <button type="button" class="adm-inv__thumb-edit" [attr.aria-label]="'Editar imagen nueva ' + ($index + 1)" (click)="editNew($index)">✎</button>
               @if ($first && existingImages().length === 0) {
                 <span class="adm-inv__thumb-tag">Portada</span>
               }
@@ -96,7 +102,11 @@
             <span>+ Agregar</span>
           </label>
         </div>
-        <span class="adm-inv__hint">JPG, PNG o WebP. Se optimizan solas, de cualquier peso.</span>
+        <span class="adm-inv__hint">JPG, PNG o WebP. Se optimizan solas, de cualquier peso. Toca una foto para verla en grande, o ✎ para recortarla y girarla.</span>
+        <app-lightbox [images]="allImages()" alt="Foto del artículo" [(open)]="zoomOpen" [(index)]="zoomIndex" />
+        @if (editing(); as ed) {
+          <app-image-editor [src]="ed.src" [fileName]="ed.name" (applied)="onEdited($event)" (closed)="closeEditor()" />
+        }
       </div>
 
       @switch (tab()) {

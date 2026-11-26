@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { AdminInventario } from './admin-inventario';
 import { AdminCatalogService } from '../../../../shared/services/admin-catalog.service';
+import { AdminService } from '../../../../shared/services/admin.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 
 describe('AdminInventario (piezas de la tienda)', () => {
@@ -264,7 +265,7 @@ describe('AdminInventario (piezas de la tienda)', () => {
 
       c.submitPart();
       expect(c.parts().length).toBe(antes);
-      expect(show).toHaveBeenCalledWith('Revisa los campos marcados.', 'error');
+      expect(show).toHaveBeenCalledWith(expect.stringContaining('Revisa los campos marcados'), 'error');
 
       llenar(c);
       c.existingImages.set([]);
@@ -350,6 +351,104 @@ describe('AdminInventario (piezas de la tienda)', () => {
       expect(texto).toContain('XAH-000001');
       expect(texto).toContain('Frenos');
       expect(texto).toContain('Bajo pedido'); // el coilover del mock
+    });
+  });
+
+  describe('fotos del artículo: verlas en grande y editarlas', () => {
+    const esperar = () => new Promise((resolve) => setTimeout(resolve, 60));
+
+    it('tocar una foto la abre en grande, contando las que ya tenía y luego las nuevas', () => {
+      const { c } = montar();
+      c.startCreate();
+      c.existingImages.set(['a.jpg', 'b.jpg']);
+      c.previews.set(['data:nueva']);
+
+      expect(c.allImages()).toEqual(['a.jpg', 'b.jpg', 'data:nueva']);
+      c.openZoom(2);
+      expect(c.zoomOpen()).toBe(true);
+      expect(c.allImages()[c.zoomIndex()]).toBe('data:nueva');
+    });
+
+    it('cada miniatura tiene su botón de ver y de editar', () => {
+      const { fixture, c, el } = montar();
+      c.startCreate();
+      c.existingImages.set(['a.jpg']);
+      fixture.detectChanges();
+
+      expect(el.querySelector('.adm-inv__thumb-view')).not.toBeNull();
+      expect(el.querySelector('.adm-inv__thumb-edit')).not.toBeNull();
+    });
+
+    it('editar una foto ya subida abre el editor con ella', () => {
+      const { fixture, c, el } = montar();
+      c.startCreate();
+      c.existingImages.set(['a.jpg', 'b.jpg']);
+      c.editExisting(1);
+      fixture.detectChanges();
+
+      expect(c.editing()?.src).toBe('b.jpg');
+      expect(el.querySelector('app-image-editor')).not.toBeNull();
+      c.closeEditor();
+      fixture.detectChanges();
+      expect(el.querySelector('app-image-editor')).toBeNull();
+    });
+
+    it('la foto editada se guarda en el mismo lugar (la portada sigue siendo la portada)', async () => {
+      const { c } = montar();
+      const create = vi.spyOn(TestBed.inject(AdminService), 'createPart');
+      c.startCreate();
+      llenar(c, { name: 'Con foto editada' });
+      c.existingImages.set(['portada.jpg', 'otra.jpg']);
+
+      c.editExisting(0);
+      c.onEdited(new File([new Uint8Array([1, 2, 3])], 'foto-1.jpg', { type: 'image/jpeg' }));
+      await esperar();
+      expect(c.allImages()[0]).toMatch(/^data:/);
+      expect(c.existingImages()[0]).toBe('portada.jpg');
+
+      c.submitPart();
+      await esperar();
+      const enviado = create.mock.calls[0][0];
+      expect(enviado.images).toHaveLength(2);
+      expect(enviado.images[0]).toMatch(/^data:/);
+      expect(enviado.images[1]).toBe('otra.jpg');
+      expect(enviado.imgUrl).toBe(enviado.images[0]);
+    });
+
+    it('editar una foto nueva la sustituye sin cambiar su lugar', async () => {
+      const { c } = montar();
+      c.startCreate();
+      c.previews.set(['data:uno', 'data:dos']);
+      (c as unknown as { selectedFiles: File[] }).selectedFiles = [new File(['1'], 'uno.jpg'), new File(['2'], 'dos.jpg')];
+
+      c.editNew(1);
+      c.onEdited(new File([new Uint8Array([9])], 'dos.jpg', { type: 'image/jpeg' }));
+      await esperar();
+
+      expect(c.previews()[0]).toBe('data:uno');
+      expect(c.previews()[1]).not.toBe('data:dos');
+    });
+
+    it('si se quita una foto editada, el cambio se descarta', async () => {
+      const { c } = montar();
+      c.startCreate();
+      c.existingImages.set(['a.jpg']);
+      c.editExisting(0);
+      c.onEdited(new File(['x'], 'a.jpg', { type: 'image/jpeg' }));
+      await esperar();
+
+      c.removeExistingImage(0);
+      expect(c.allImages()).toEqual([]);
+    });
+
+    it('al faltar un campo, el aviso lo nombra', () => {
+      const { fixture, c } = montar();
+      c.startCreate();
+      llenar(c, { brand: '' });
+      fixture.detectChanges();
+
+      c.submitPart();
+      expect(show).toHaveBeenCalledWith('Revisa los campos marcados: Marca.', 'error');
     });
   });
 });

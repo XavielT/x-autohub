@@ -1,0 +1,44 @@
+<div class="ie" role="dialog" aria-modal="true" aria-label="Editar foto" (click)="close()">
+  <div class="ie__panel" (click)="$event.stopPropagation()">
+    <header class="ie__head">
+      <strong>Editar foto</strong>
+      <button type="button" class="ie__x" aria-label="Cerrar sin guardar los cambios" (click)="close()">&times;</button>
+    </header>
+
+    @if (failed()) {
+      <p class="ie__msg" role="alert">No se pudo abrir la foto para editarla. Puedes quitarla y volver a subirla.</p>
+    } @else if (!ready()) {
+      <p class="ie__msg" role="status">Cargando la foto…</p>
+    }
+
+    <div class="ie__stage" [hidden]="!ready()" [style.width.px]="view().w" [style.height.px]="view().h">
+      <canvas #stage class="ie__canvas"></canvas>
+      <div class="ie__crop"
+           [style.left.px]="crop().x" [style.top.px]="crop().y" [style.width.px]="crop().w" [style.height.px]="crop().h"
+           (pointerdown)="down($event)" (pointermove)="move($event)" (pointerup)="up()" (pointercancel)="up()">
+        @for (h of handles; track h) {
+          <span class="ie__handle" [attr.data-h]="h" [class]="'ie__handle ie__handle--' + h" aria-hidden="true"></span>
+        }
+      </div>
+    </div>
+
+    @if (ready()) {
+      <div class="ie__tools">
+        <button type="button" class="ie__btn" (click)="rotate(-1)" aria-label="Girar a la izquierda">↺ Girar</button>
+        <button type="button" class="ie__btn" (click)="rotate(1)" aria-label="Girar a la derecha">↻ Girar</button>
+        <button type="button" class="ie__btn" (click)="flip()" [class.is-on]="flipped()" [attr.aria-pressed]="flipped()">⇋ Voltear</button>
+        <span class="ie__sep" aria-hidden="true"></span>
+        @for (r of ratios; track r.id) {
+          <button type="button" class="ie__btn" [class.is-on]="ratio() === r.value" [attr.aria-pressed]="ratio() === r.value" (click)="setRatio(r.value)">{{ r.label }}</button>
+        }
+        <button type="button" class="ie__btn" (click)="resetCrop()">Todo</button>
+      </div>
+      <p class="ie__hint">Arrastra las esquinas o los lados para quitar bordes; arrastra el recuadro para moverlo.</p>
+    }
+
+    <footer class="ie__foot">
+      <button type="button" class="ie__btn" (click)="close()">Cancelar</button>
+      <button type="button" class="ie__btn ie__btn--main" [disabled]="!ready()" (click)="apply()">Aplicar cambios</button>
+    </footer>
+  </div>
+</div>

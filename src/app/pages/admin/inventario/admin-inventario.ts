@@ -1,5 +1,7 @@
 import { AliasEditor } from './alias-editor/alias-editor';
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
+import { Lightbox } from '../../../../shared/ui/lightbox/lightbox';
+import { ImageEditor } from '../../../../shared/components/image-editor/image-editor';
 import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { VehicleSelection } from '../../../../shared/models/business-document.model';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
@@ -106,6 +108,8 @@ const MAX_YEAR = new Date().getFullYear() + 1;
     AliasEditor,
     Skeleton,
     Thumb,
+    Lightbox,
+    ImageEditor,
     VehiclePick,
     RouterLink,
   ],
@@ -177,6 +181,66 @@ export class AdminInventario implements OnInit {
    * ella. Se limpian de Storage **después** de que el guardado salga bien.
    */
   private removedImages: string[] = [];
+
+  /** Fotos ya subidas que se editaron: la URL vieja → el archivo nuevo, que sustituye a la vieja al guardar (en el mismo lugar). */
+  private replacements = new Map<string, File>();
+  /** Lo que se ve en la miniatura de una foto ya subida que se editó (la URL vieja → una vista previa). */
+  readonly replacedPreviews = signal<ReadonlyMap<string, string>>(new Map());
+
+  /** Todas las fotos del formulario, en el orden en que se guardan (las que ya tenía y luego las nuevas), tal como se ven. */
+  readonly allImages = computed(() => [...this.existingImages().map((u) => this.replacedPreviews().get(u) ?? u), ...this.previews()]);
+
+  /** El visor a pantalla completa. */
+  readonly zoomOpen = signal(false);
+  readonly zoomIndex = signal(0);
+
+  /** La foto que se está editando (recortar, girar…), o null. */
+  readonly editing = signal<{ kind: 'existing' | 'new'; index: number; src: string; name: string } | null>(null);
+
+  /** Abre la foto `index` (contando las que ya tenía y luego las nuevas) en grande. */
+  openZoom(index: number): void {
+    this.zoomIndex.set(index);
+    this.zoomOpen.set(true);
+  }
+
+  /** Abre el editor con una foto que ya estaba subida. */
+  editExisting(index: number): void {
+    const url = this.existingImages()[index];
+    if (!url) return;
+    this.editing.set({ kind: 'existing', index, src: this.replacedPreviews().get(url) ?? url, name: 'foto-' + (index + 1) + '.jpg' });
+  }
+
+  /** Abre el editor con una foto nueva (todavía no subida). */
+  editNew(index: number): void {
+    const src = this.previews()[index];
+    if (!src) return;
+    this.editing.set({ kind: 'new', index, src, name: this.selectedFiles[index]?.name ?? 'foto.jpg' });
+  }
+
+  closeEditor(): void {
+    this.editing.set(null);
+  }
+
+  /** El editor devolvió la foto cambiada: sustituye a la original en el mismo lugar. */
+  onEdited(file: File): void {
+    const target = this.editing();
+    this.editing.set(null);
+    if (!target) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = reader.result as string;
+      if (target.kind === 'new') {
+        this.selectedFiles = this.selectedFiles.map((f, i) => (i === target.index ? file : f));
+        this.previews.update((list) => list.map((p, i) => (i === target.index ? preview : p)));
+        return;
+      }
+      const url = this.existingImages()[target.index];
+      if (!url) return;
+      this.replacements.set(url, file);
+      this.replacedPreviews.update((m) => new Map(m).set(url, preview));
+    };
+    reader.readAsDataURL(file);
+  }
 
   /** Todas las categorías, para el selector de la pieza y para mostrar su nombre. */
   readonly categories = signal<ProductCategoryModel[]>([]);
@@ -591,7 +655,10 @@ export class AdminInventario implements OnInit {
   /** Quita una imagen que la fila ya tenía. Se borra de Storage al guardar. */
   removeExistingImage(index: number): void {
     const url = this.existingImages()[index];
-    if (url) this.removedImages = [...this.removedImages, url];
+    if (url) {
+      this.removedImages = [...this.removedImages, url];
+      this.replacements.delete(url);
+    }
     this.existingImages.update((list) => list.filter((_, i) => i !== index));
   }
 
@@ -600,6 +667,25 @@ export class AdminInventario implements OnInit {
     this.previews.set([]);
     this.existingImages.set([]);
     this.removedImages = [];
+    this.replacements = new Map();
+    this.replacedPreviews.set(new Map());
+    this.editing.set(null);
+    this.zoomOpen.set(false);
+  }
+
+  /**
+   * Sube las fotos nuevas y las editadas. Devuelve las que se conservan (con la URL nueva donde se editó, en
+   * el mismo lugar) y las nuevas. La foto vieja de una editada se borra de Storage solo si el guardado sale bien.
+   */
+  private uploadImages(kind: 'piezas' | 'vehiculos' | 'noticias') {
+    const edited = [...this.replacements.entries()];
+    return this.storage.uploadInventoryImages([...edited.map(([, f]) => f), ...this.selectedFiles], kind).pipe(
+      map((urls) => {
+        const swapped = new Map(edited.map(([old], i) => [old, urls[i]] as const));
+        for (const [old] of edited) this.removedImages = [...this.removedImages, old];
+        return { kept: this.existingImages().map((u) => swapped.get(u) ?? u), nuevas: urls.slice(edited.length) };
+      }),
+    );
   }
 
   /**
@@ -632,13 +718,13 @@ export class AdminInventario implements OnInit {
     let deactivated: string[] = [];
 
     this.isSubmitting.set(true);
-    this.storage
-      .uploadInventoryImages(this.selectedFiles, 'piezas')
+    this
+      .uploadImages('piezas')
       .pipe(
-        switchMap((nuevas) => {
+        switchMap(({ kept, nuevas }) => {
           // Las que se conservan van primero, y la primera de todas es la
           // portada: así reordenar es cuestión de quitar y volver a subir.
-          const images = [...this.existingImages(), ...nuevas];
+          const images = [...kept, ...nuevas];
           const draft = {
             categoryId: form.categoryId,
             slug: form.slug,
@@ -724,11 +810,11 @@ export class AdminInventario implements OnInit {
     const id = this.editingId();
 
     this.isSubmitting.set(true);
-    this.storage
-      .uploadInventoryImages(this.selectedFiles, 'vehiculos')
+    this
+      .uploadImages('vehiculos')
       .pipe(
-        switchMap((nuevas) => {
-          const draft = { ...form, images: [...this.existingImages(), ...nuevas] };
+        switchMap(({ kept, nuevas }) => {
+          const draft = { ...form, images: [...kept, ...nuevas] };
           return id === null
             ? this.admin.createVehicle(draft)
             : this.admin.updateVehicleFull(id, draft);
@@ -761,11 +847,11 @@ export class AdminInventario implements OnInit {
     const id = this.editingId();
 
     this.isSubmitting.set(true);
-    this.storage
-      .uploadInventoryImages(this.selectedFiles, 'noticias')
+    this
+      .uploadImages('noticias')
       .pipe(
-        switchMap((nuevas) => {
-          const images = [...this.existingImages(), ...nuevas];
+        switchMap(({ kept, nuevas }) => {
+          const images = [...kept, ...nuevas];
           const draft = {
             title: form.title,
             text: form.text,
@@ -817,7 +903,7 @@ export class AdminInventario implements OnInit {
   private readyToSubmit(form: { invalid: boolean; markAllAsTouched: () => void }): boolean {
     if (form.invalid) {
       form.markAllAsTouched();
-      this.toast.show('Revisa los campos marcados.', 'error');
+      this.toast.show(this.missingMessage(), 'error');
       return false;
     }
     if (this.existingImages().length + this.selectedFiles.length === 0) {
@@ -825,6 +911,23 @@ export class AdminInventario implements OnInit {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Sube hasta el primer campo con error, lo enfoca y arma el aviso nombrándolo ("Revisa los campos marcados:
+   * Marca."), porque el campo suele estar muy arriba del botón y el error solo se veía al llegar a él.
+   */
+  private missingMessage(): string {
+    const invalid = Array.from(document.querySelectorAll<HTMLElement>('.adm-inv__fields .ng-invalid')).filter((el) => el.tagName !== 'FORM');
+    const names = invalid
+      .map((el) => el.closest('label')?.querySelector('span')?.firstChild?.textContent?.trim() ?? '')
+      .filter((name, i, all) => name && all.indexOf(name) === i);
+    const first = invalid[0];
+    if (first) {
+      first.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      first.focus?.({ preventScroll: true });
+    }
+    return names.length ? `Revisa los campos marcados: ${names.join(', ')}.` : 'Revisa los campos marcados.';
   }
 
   // --- Ajustes sobre lo existente ------------------------------------------
