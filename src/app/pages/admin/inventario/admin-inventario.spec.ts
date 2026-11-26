@@ -41,6 +41,95 @@ describe('AdminInventario (piezas de la tienda)', () => {
     expect(c.isLoading()).toBe(false);
   });
 
+  it('buscar por texto filtra la lista sin importar acentos ni mayúsculas', () => {
+    const { fixture, c, el } = montar();
+    const primera = c.parts()[0];
+
+    c.partQuery.set(primera.name.toUpperCase());
+    fixture.detectChanges();
+
+    expect(c.filteredParts().every((p) => p.name === primera.name || p.brand.length > 0)).toBe(true);
+    expect(c.filteredParts()).toContain(primera);
+    expect(el.textContent).toContain(`Mostrando ${c.filteredParts().length} de 5 piezas`);
+
+    c.partQuery.set('zzz-no-existe');
+    fixture.detectChanges();
+    expect(c.filteredParts().length).toBe(0);
+    expect(el.textContent).toContain('Ninguna pieza coincide');
+  });
+
+  it('los filtros de estado separan visibles, ocultas, agotadas y sin foto, y "quitar" los reinicia', () => {
+    const { fixture, c } = montar();
+    c.parts.set(
+      c.parts().map((p, i) => ({
+        ...p,
+        isActive: i !== 0,
+        stock: i === 1 ? 0 : 5,
+        fulfillment: 'stock' as const,
+        isTest: i === 2,
+        imageUrl: i === 3 ? '' : 'x.jpg',
+      })),
+    );
+
+    c.partFilter.set('ocultas');
+    expect(c.filteredParts().map((p) => p.id)).toEqual([c.parts()[0].id]);
+    c.partFilter.set('visibles');
+    expect(c.filteredParts().length).toBe(4);
+    c.partFilter.set('agotadas');
+    expect(c.filteredParts().map((p) => p.id)).toEqual([c.parts()[1].id]);
+    c.partFilter.set('pruebas');
+    expect(c.filteredParts().map((p) => p.id)).toEqual([c.parts()[2].id]);
+    c.partFilter.set('sin_foto');
+    expect(c.filteredParts().map((p) => p.id)).toEqual([c.parts()[3].id]);
+    expect(c.partCounts().todas).toBe(5);
+
+    c.partQuery.set('algo');
+    c.clearPartSearch();
+    fixture.detectChanges();
+    expect(c.partFilter()).toBe('todas');
+    expect(c.partQuery()).toBe('');
+    expect(c.filteredParts().length).toBe(5);
+  });
+
+  it('un artículo bajo pedido con stock 0 no cuenta como agotado', () => {
+    const { c } = montar();
+    c.parts.set(c.parts().map((p, i) => ({ ...p, stock: 0, fulfillment: i === 0 ? ('on_order' as const) : ('stock' as const) })));
+    c.partFilter.set('agotadas');
+    expect(c.filteredParts().length).toBe(4);
+  });
+
+  it('tocar el artículo en la lista abre su edición y sube hasta el formulario', () => {
+    vi.useFakeTimers();
+    const { fixture, c, el } = montar();
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const fila = el.querySelector<HTMLElement>('.adm-inv__item--open')!;
+
+    fila.click();
+    fixture.detectChanges();
+    vi.runAllTimers();
+
+    expect(c.editingId()).toBe(c.parts()[0].id);
+    expect(el.querySelector('.adm-inv__form')).not.toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('el botón Editar de cada fila también sube hasta el formulario', () => {
+    vi.useFakeTimers();
+    const { fixture, c, el } = montar();
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+
+    el.querySelector<HTMLButtonElement>('button[aria-label^="Editar "]')!.click();
+    fixture.detectChanges();
+    vi.runAllTimers();
+
+    expect(c.isCreating()).toBe(true);
+    expect(scroll).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it('el selector de categoría ofrece las 12 de primer nivel y deshabilita la opción vacia', () => {
     const { fixture, c, el } = montar();
     c.startCreate();

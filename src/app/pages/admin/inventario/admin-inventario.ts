@@ -6,7 +6,7 @@ import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-
 import { VehicleSelection } from '../../../../shared/models/business-document.model';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { RouterLink } from '@angular/router';
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   AbstractControl,
@@ -40,6 +40,7 @@ import { ProductCategoryModel, ProductFitmentType, ProductFulfillment } from '..
 import { ServiciosCardModel } from '../../../../shared/models/servicios-card.model';
 import { buildCategoryTree } from '../../../../shared/utils/category-tree';
 import { VARIANT_LABEL_MAX, activeVariantStock, validateVariantDrafts } from '../../../../shared/utils/variant-rules';
+import { normalizeSearch } from '../../../../shared/ui/searchable-select/searchable-select';
 import { LocationSelect } from '../../../../shared/ui/location-select/location-select';
 import { AdminCategorias } from './admin-categorias/admin-categorias';
 import { AdminMarcas } from './admin-marcas/admin-marcas';
@@ -48,6 +49,19 @@ import { SpecsEditor } from './specs-editor/specs-editor';
 import { VariantEditor } from './variant-editor/variant-editor';
 
 type Tab = 'piezas' | 'vehiculos' | 'noticias' | 'categorias' | 'marcas';
+type PartFilter = 'todas' | 'visibles' | 'ocultas' | 'agotadas' | 'pruebas' | 'sin_foto';
+
+/** Agotada = sin existencias y no es bajo pedido (esas nunca se agotan). */
+function matchesPartFilter(p: AdminPartModel, filter: PartFilter): boolean {
+  switch (filter) {
+    case 'visibles': return p.isActive;
+    case 'ocultas': return !p.isActive;
+    case 'agotadas': return p.stock === 0 && p.fulfillment !== 'on_order';
+    case 'pruebas': return p.isTest;
+    case 'sin_foto': return !p.imageUrl;
+    default: return true;
+  }
+}
 
 /**
  * Reglas que cruzan dos campos del formulario de una pieza.
@@ -126,6 +140,7 @@ export class AdminInventario implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly branded = inject(BrandedPhotosService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly tab = signal<Tab>('piezas');
   readonly isLoading = signal(true);
@@ -134,6 +149,47 @@ export class AdminInventario implements OnInit {
   readonly parts = signal<AdminPartModel[]>([]);
   readonly vehicles = signal<AdminVehicleModel[]>([]);
   readonly news = signal<AdminNewsModel[]>([]);
+
+  // --- Buscar y filtrar la lista de piezas -----------------------------------
+
+  readonly partQuery = signal('');
+  readonly partFilter = signal<PartFilter>('todas');
+  readonly partFilters: { key: PartFilter; label: string }[] = [
+    { key: 'todas', label: 'Todas' },
+    { key: 'visibles', label: 'Visibles' },
+    { key: 'ocultas', label: 'Ocultas' },
+    { key: 'agotadas', label: 'Agotadas' },
+    { key: 'pruebas', label: 'Pruebas' },
+    { key: 'sin_foto', label: 'Sin foto' },
+  ];
+
+  /** Cuántas piezas cumple cada filtro (sin contar el texto buscado), para el número de cada chip. */
+  readonly partCounts = computed(() => {
+    const all = this.parts();
+    const counts = {} as Record<PartFilter, number>;
+    for (const f of this.partFilters) counts[f.key] = all.filter((p) => matchesPartFilter(p, f.key)).length;
+    return counts;
+  });
+
+  /** Las piezas que se ven: el filtro de estado y el texto (nombre, marca, SKU, número de parte o categoría). */
+  readonly filteredParts = computed(() => {
+    const q = normalizeSearch(this.partQuery());
+    const filter = this.partFilter();
+    return this.parts().filter(
+      (p) =>
+        matchesPartFilter(p, filter) &&
+        (q === '' || normalizeSearch(`${p.name} ${p.brand} ${p.sku} ${this.categoryName(p)}`).includes(q)),
+    );
+  });
+
+  setPartQuery(event: Event): void {
+    this.partQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  clearPartSearch(): void {
+    this.partQuery.set('');
+    this.partFilter.set('todas');
+  }
 
   // --- Alta ----------------------------------------------------------------
 
@@ -439,6 +495,17 @@ export class AdminInventario implements OnInit {
     this.isCreating.set(true);
     this.clearImages();
     this.resetForms();
+    this.scrollToForm();
+  }
+
+  /**
+   * El formulario se abre arriba de la lista: con la lista larga y el dedo en una fila de abajo, "Editar" parecía no
+   * hacer nada. Se espera a que Angular lo pinte y se sube hasta él.
+   */
+  private scrollToForm(): void {
+    setTimeout(() => {
+      this.host.nativeElement.querySelector('.adm-inv__form')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    });
   }
 
   /**
@@ -488,6 +555,7 @@ export class AdminInventario implements OnInit {
     this.editingId.set(id);
     this.clearImages();
     this.isLoadingOne.set(true);
+    this.scrollToForm();
 
     const fail = (error: Error) => {
       this.isLoadingOne.set(false);

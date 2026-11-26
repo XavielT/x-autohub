@@ -167,6 +167,26 @@
     &:disabled { opacity: 0.5; cursor: default; }
   }
 
+  &__item--open { cursor: pointer; border-radius: 10px; &:hover .adm-inv__name { color: var(--Hub); text-decoration: underline; } &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; } }
+  &__find { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  &__find-input { width: 100%; min-height: 44px; }
+  &__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  &__chip {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.2));
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover { border-color: var(--Hub); }
+    &:focus-visible { outline: 2px solid var(--Hub); outline-offset: 2px; }
+    &--on { border-color: var(--Hub); background: var(--Hub-translucid); color: var(--Hub); }
+  }
+  &__chip-n { opacity: 0.7; font-size: 12px; margin-left: 4px; }
+
   &__empty {
     background-color: var(--main-light);
     border-radius: 14px;

@@ -467,7 +467,24 @@
         @if (parts().length === 0) {
           <p class="adm-inv__empty">No hay piezas en la tienda.</p>
         } @else {
-          <div class="adm-inv__table-wrap">
+          <div class="adm-inv__find">
+            <input type="search" class="adm-inv__input adm-inv__find-input" placeholder="Buscar por nombre, marca, SKU o categoría"
+                   aria-label="Buscar piezas" [value]="partQuery()" (input)="setPartQuery($event)" />
+            <div class="adm-inv__chips" role="group" aria-label="Filtrar piezas">
+              @for (f of partFilters; track f.key) {
+                <button type="button" class="adm-inv__chip" [class.adm-inv__chip--on]="partFilter() === f.key"
+                        [attr.aria-pressed]="partFilter() === f.key" (click)="partFilter.set(f.key)">
+                  {{ f.label }} <span class="adm-inv__chip-n">{{ partCounts()[f.key] }}</span>
+                </button>
+              }
+            </div>
+            <p class="adm-inv__sub" aria-live="polite">Mostrando {{ filteredParts().length }} de {{ parts().length }} piezas</p>
+          </div>
+          @if (filteredParts().length === 0) {
+            <p class="adm-inv__empty">Ninguna pieza coincide.
+              <button type="button" class="adm-inv__btn" (click)="clearPartSearch()">Quitar búsqueda y filtros</button></p>
+          }
+          <div class="adm-inv__table-wrap" [hidden]="filteredParts().length === 0">
             <table class="adm-inv__table">
               <caption class="adm-inv__caption">Piezas de la tienda</caption>
               <thead>
@@ -475,10 +492,10 @@
                     <th scope="col">Stock</th><th scope="col">Estado</th></tr>
               </thead>
               <tbody>
-                @for (part of parts(); track part.id) {
+                @for (part of filteredParts(); track part.id) {
                   <tr [class.adm-inv__row--off]="!part.isActive">
                     <td>
-                      <div class="adm-inv__item">
+                      <div class="adm-inv__item adm-inv__item--open" role="button" tabindex="0" [attr.aria-label]="'Abrir ' + part.name" (click)="startEdit(part.id)" (keydown.enter)="startEdit(part.id)" (keydown.space)="$event.preventDefault(); startEdit(part.id)">
                         <app-thumb [src]="part.imageUrl" [mask]="categoryIcon(part)" icon="package" [size]="56" />
                         <div class="adm-inv__item-text">
                           <span class="adm-inv__name">{{ part.name }}</span>
@@ -550,7 +567,7 @@
                 @for (v of vehicles(); track v.id) {
                   <tr [class.adm-inv__row--off]="!v.isAvailable">
                     <td>
-                      <div class="adm-inv__item">
+                      <div class="adm-inv__item adm-inv__item--open" role="button" tabindex="0" [attr.aria-label]="'Abrir ' + v.brand + ' ' + v.model" (click)="startEdit(v.id)" (keydown.enter)="startEdit(v.id)" (keydown.space)="$event.preventDefault(); startEdit(v.id)">
                         <app-thumb [src]="v.imageUrl" icon="car" [size]="56" />
                         <div class="adm-inv__item-text">
                           <span class="adm-inv__name">{{ v.brand }} {{ v.model }}</span>
@@ -607,7 +624,7 @@
                 @for (n of news(); track n.id) {
                   <tr [class.adm-inv__row--off]="!n.isPublished">
                     <td>
-                      <div class="adm-inv__item">
+                      <div class="adm-inv__item adm-inv__item--open" role="button" tabindex="0" [attr.aria-label]="'Abrir ' + n.title" (click)="startEdit(n.id)" (keydown.enter)="startEdit(n.id)" (keydown.space)="$event.preventDefault(); startEdit(n.id)">
                         <app-thumb [src]="n.imageUrl" icon="newspaper" [size]="56" />
                         <div class="adm-inv__item-text">
                           <span class="adm-inv__name">{{ n.title }}</span>
