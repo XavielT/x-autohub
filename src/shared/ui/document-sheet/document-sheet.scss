@@ -126,3 +126,10 @@
   .ds__table th, .ds__table td { padding-left: 4px; padding-right: 4px; }
   .ds__logo { width: 150px; }
 }
+
+.ds__stamp--paid { border-color: #5dd68a; color: #5dd68a; }
+.ds__payments { margin: 16px 24px 0; break-inside: avoid; }
+.ds__payments .ds__table { width: 100%; margin: 6px 0 0; }
+.ds__pay-date { white-space: nowrap; width: 1%; }
+.ds__paid-on { margin: 6px 0 0; font-weight: 800; color: #1b7f3b; }
+@media screen and (max-width: 420px) { .ds__payments { margin-left: 14px; margin-right: 14px; } }

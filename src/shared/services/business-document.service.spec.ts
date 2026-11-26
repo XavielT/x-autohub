@@ -106,4 +106,54 @@ describe('BusinessDocumentService (modo simulado)', () => {
     expect(invoice.items[0].uid).not.toBe(quote.items[0].uid);
     expect(invoice.status).toBe('borrador');
   });
+
+  describe('cobros de una factura', () => {
+    const pay = (id: string, date: string, amount: number) => ({ id, date, amount, method: 'transferencia' as const, note: 'ref ' + id });
+
+    it('lo cobrado es la suma de los abonos, y se guardan del más viejo al más nuevo', async () => {
+      const d = draft('factura');
+      d.status = 'emitida';
+      d.payments = [pay('b', '2026-11-20', 500), pay('a', '2026-11-05', 1000)];
+      const saved = await firstValueFrom(service.save(d));
+
+      expect(saved.paid).toBe(1500);
+      expect(saved.payments.map((p) => p.id)).toEqual(['a', 'b']);
+      expect(saved.payments[0]).toMatchObject({ date: '2026-11-05', amount: 1000, method: 'transferencia', note: 'ref a' });
+    });
+
+    it('una cotización no se cobra: se guarda sin abonos', async () => {
+      const d = draft('cotizacion');
+      d.payments = [pay('a', '2026-11-05', 1000)];
+      const saved = await firstValueFrom(service.save(d));
+      expect(saved.payments).toEqual([]);
+      expect(saved.paid).toBe(0);
+    });
+
+    it('los abonos sobreviven a volver a abrir la factura', async () => {
+      const d = draft('factura');
+      d.status = 'emitida';
+      d.payments = [pay('a', '2026-11-05', 700)];
+      await firstValueFrom(service.save(d));
+      const [doc] = await firstValueFrom(service.list());
+      expect(doc.payments).toHaveLength(1);
+      expect(doc.paid).toBe(700);
+    });
+
+    it('un abono de cero no se guarda', async () => {
+      const d = draft('factura');
+      d.status = 'emitida';
+      d.payments = [pay('a', '2026-11-05', 0)];
+      await expect(firstValueFrom(service.save(d))).rejects.toThrow(/mayor que cero/);
+    });
+
+    it('duplicar o convertir un documento no copia los cobros', async () => {
+      const d = draft('factura');
+      d.status = 'emitida';
+      d.payments = [pay('a', '2026-11-05', 700)];
+      const saved = await firstValueFrom(service.save(d));
+      const copy = service.duplicate(saved);
+      expect(copy.payments).toEqual([]);
+      expect(copy.paid).toBe(0);
+    });
+  });
 });

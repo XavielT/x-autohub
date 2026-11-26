@@ -20,11 +20,14 @@ import {
   DocumentDraft,
   DocumentKind,
   DocumentLine,
+  DocumentPayment,
   DocumentStatus,
   DocumentVehicle,
   EMPTY_BUSINESS_PROFILE,
   KIND_LABELS,
   LINE_KIND_LABELS,
+  PAYMENT_METHOD_LABELS,
+  PaymentMethod,
   LineKind,
   STATUSES_BY_KIND,
   STATUS_LABELS,
@@ -34,7 +37,16 @@ import {
   Verdict,
 } from '../../../../shared/models/business-document.model';
 import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
-import { computeTotals } from '../../../../shared/utils/document-totals';
+import { computeTotals, round2, todayIso } from '../../../../shared/utils/document-totals';
+import {
+  PAYMENT_METHODS,
+  lastPaymentDate,
+  newPaymentId,
+  sortedPayments,
+  statusForBalance,
+  sumPayments,
+  validatePayment,
+} from '../../../../shared/utils/document-payments';
 import {
   SECTION_PRESETS,
   mergeTitles,
@@ -51,7 +63,7 @@ import { BusinessCustomerService } from '../../../../shared/services/business-cu
 type View = 'list' | 'pick' | 'edit';
 type Filter = 'all' | DocumentKind;
 type TextKey = 'customerName' | 'customerPhone' | 'customerEmail' | 'customerRnc' | 'issueDate' | 'validUntil' | 'notes' | 'terms';
-type NumberKey = 'discountValue' | 'itbisRate' | 'paid';
+type NumberKey = 'discountValue' | 'itbisRate';
 type ProfileKey = keyof BusinessProfile;
 
 interface CatalogEntry {
@@ -73,7 +85,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
     id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId,
     vehicle: { ...vehicle }, issueDate, validUntil, items: items.map((i) => ({ ...i })),
     discountType: doc.discountType, discountValue: doc.discountValue, applyItbis: doc.applyItbis, itbisRate: doc.itbisRate,
-    paid: doc.paid, notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
+    paid: doc.paid, payments: doc.payments.map((p) => ({ ...p })), notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
   };
 }
 
@@ -108,6 +120,8 @@ export class AdminDocumentos implements OnInit {
   readonly kindLabels = KIND_LABELS;
   readonly statusLabels = STATUS_LABELS;
   readonly verdictLabels = VERDICT_LABELS;
+  readonly paymentMethods = PAYMENT_METHODS;
+  readonly paymentMethodLabels = PAYMENT_METHOD_LABELS;
   readonly lineKindLabels = LINE_KIND_LABELS;
   readonly lineKinds = Object.keys(LINE_KIND_LABELS) as LineKind[];
 
@@ -118,6 +132,35 @@ export class AdminDocumentos implements OnInit {
   readonly filter = signal<Filter>('all');
 
   readonly draft = signal<DocumentDraft | null>(null);
+  // --- Cobros: el formulario de un abono ---
+  readonly payDate = signal(todayIso());
+  readonly payAmount = signal('');
+  readonly payMethod = signal<PaymentMethod>('transferencia');
+  readonly payNote = signal('');
+  /** El abono que pidió quitarse y espera la segunda pulsación. */
+  readonly pendingPaymentRemove = signal<string | null>(null);
+
+  /** Solo se cobra una factura ya emitida: ni un borrador (todavía no se entrega) ni una anulada. */
+  readonly canPay = computed(() => {
+    const d = this.draft();
+    return !!d && d.kind === 'factura' && d.status !== 'borrador' && d.status !== 'anulada';
+  });
+
+  readonly paymentsList = computed(() => sortedPayments(this.draft()?.payments ?? []));
+
+  /** El día en que se terminó de pagar (el del último abono), solo si el saldo es cero. */
+  readonly paidOn = computed(() => {
+    const d = this.draft();
+    const t = this.totals();
+    return d && t && d.payments.length > 0 && t.balance <= 0 && t.total > 0 ? lastPaymentDate(d.payments) : null;
+  });
+
+  /** Lo que falta por cobrar de todas las facturas emitidas (las cuentas por cobrar). */
+  readonly receivable = computed(() => {
+    const open = this.documents().filter((d) => d.kind === 'factura' && d.status === 'emitida' && d.total - d.paid > 0.004);
+    return { total: round2(open.reduce((sum, d) => sum + (d.total - d.paid), 0)), count: open.length };
+  });
+
   /** La cotización aceptada que todavía no tiene factura: el sistema sugiere crearla. */
   readonly suggestInvoice = signal<BusinessDocument | null>(null);
 
@@ -356,7 +399,7 @@ export class AdminDocumentos implements OnInit {
     }
 
     const draft = this.docs.duplicate(doc, 'factura');
-    this.edit({ ...draft, paid: 0 });
+    this.edit({ ...draft, paid: 0, payments: [] });
     this.saved.set(null);
     this.suggestInvoice.set(null);
     this.view.set('edit');
@@ -683,7 +726,7 @@ export class AdminDocumentos implements OnInit {
 
   // --- Guardar, imprimir, enviar ------------------------------------------
 
-  save(): void {
+  save(successMessage?: string): void {
     const d = this.draft();
     if (!d || this.saving()) return;
     this.saving.set(true);
@@ -699,7 +742,7 @@ export class AdminDocumentos implements OnInit {
         // Con el id, el siguiente "Guardar" actualiza este mismo documento en vez de crear otro.
         this.draft.update((current) => (current ? { ...current, id: doc.id, customerId: doc.customerId } : current));
         this.reloadCustomers();
-        this.toast.show(`${doc.code} guardada.`);
+        this.toast.show(successMessage ?? `${doc.code} guardada.`);
         this.reload();
         if (doc.kind === 'cotizacion' && doc.status === 'aceptada' && !this.invoiceOf(doc)) this.suggestInvoice.set(doc);
       },
@@ -708,6 +751,94 @@ export class AdminDocumentos implements OnInit {
         this.toast.show(error.message, 'error');
       },
     });
+  }
+
+  // --- Cobros -----------------------------------------------------------------
+
+  setPayDate(event: Event): void {
+    this.payDate.set(value(event));
+  }
+
+  setPayAmount(event: Event): void {
+    this.payAmount.set(value(event));
+  }
+
+  setPayMethod(event: Event): void {
+    this.payMethod.set(value(event) as PaymentMethod);
+  }
+
+  setPayNote(event: Event): void {
+    this.payNote.set(value(event));
+  }
+
+  /** Pone en el monto todo lo que falta por cobrar. */
+  payAll(): void {
+    const t = this.totals();
+    if (t && t.balance > 0) this.payAmount.set(String(t.balance));
+  }
+
+  /** Registra un abono. Si la factura ya está guardada, se guarda en el acto: un cobro no debería quedar a medias. */
+  addPayment(): void {
+    const d = this.draft();
+    const t = this.totals();
+    if (!d || !t || !this.canPay()) return;
+
+    const amount = Number(this.payAmount().replace(',', '.'));
+    const invalid = validatePayment({ date: this.payDate(), amount }, t.balance);
+    if (invalid) {
+      this.toast.show(invalid, 'error');
+      return;
+    }
+
+    const payment = { id: newPaymentId(), date: this.payDate(), amount: round2(amount), method: this.payMethod(), note: this.payNote().trim() };
+    this.payAmount.set('');
+    this.payNote.set('');
+    this.applyPayments([...d.payments, payment], 'Abono registrado.');
+  }
+
+  /** Quita un abono (se pide confirmar: cambia lo cobrado y puede devolver la factura a Emitida). */
+  removePayment(id: string): void {
+    const d = this.draft();
+    if (!d) return;
+    if (this.pendingPaymentRemove() !== id) {
+      this.pendingPaymentRemove.set(id);
+      return;
+    }
+    this.pendingPaymentRemove.set(null);
+    this.applyPayments(d.payments.filter((p) => p.id !== id), 'Abono quitado.');
+  }
+
+  /**
+   * Fija los abonos y deja lo demás coherente: `paid` es su suma y el estado sigue al saldo (al llegar a cero pasa a Pagada;
+   * si vuelve a haber saldo, regresa a Emitida). Con la factura ya guardada, se guarda en el acto.
+   */
+  private applyPayments(payments: DocumentPayment[], message: string): void {
+    const d = this.draft();
+    if (!d) return;
+
+    const paid = sumPayments(payments);
+    const balance = computeTotals({ ...d, items: d.items.filter((i) => i.description.trim()), paid }).balance;
+    const status = statusForBalance(d.status, balance);
+    this.patch({ payments, paid, status });
+
+    const note =
+      status !== d.status
+        ? status === 'pagada'
+          ? ' La factura quedó saldada: pasó a Pagada.'
+          : ' Volvió a haber saldo: la factura regresa a Emitida.'
+        : '';
+    if (this.saved()) this.save(message + note);
+    else this.toast.show(message + note + ' Guarda la factura para que quede registrado.');
+  }
+
+  /** Lo que falta por cobrar de una factura de la lista. */
+  owedOf(doc: BusinessDocument): number {
+    return Math.max(0, round2(doc.total - doc.paid));
+  }
+
+  /** El día en que se terminó de pagar una factura de la lista. */
+  paidOnOf(doc: BusinessDocument): string | null {
+    return this.owedOf(doc) === 0 && doc.payments.length > 0 ? lastPaymentDate(doc.payments) : null;
   }
 
   /** Imprime solo la hoja. En el diálogo del navegador, "Guardar como PDF" genera el archivo con el nombre del documento. */

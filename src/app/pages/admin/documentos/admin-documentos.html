@@ -5,6 +5,9 @@
         <div>
           <h2 class="tl__title">Cotizaciones y facturas</h2>
           <p class="tl__lead">Elige una plantilla según el trabajo, llena los datos y entrega el documento listo, con el logo de X AutoHub.</p>
+          @if (receivable(); as r) {
+            @if (r.count > 0) { <p class="dc__receivable"><app-icon name="receipt" [size]="16" /> Por cobrar: <strong>RD$ {{ r.total | number: '1.2-2' }}</strong> en {{ r.count }} {{ r.count === 1 ? 'factura' : 'facturas' }}</p> }
+          }
         </div>
         <div class="tl__row">
           <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toggleProfile()" [attr.aria-expanded]="profileOpen()"><app-icon name="building" [size]="18" /> Datos de la empresa</button>
@@ -68,6 +71,13 @@
                   <span class="tl__ref dc__code"><app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="16" /> {{ doc.code }}</span>
                   <h3 class="tl__name">{{ doc.customerName }}</h3>
                   <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }@if (hasTbd(doc)) { · incluye conceptos a determinar }</p>
+                  @if (doc.kind === 'factura' && doc.status !== 'borrador' && doc.status !== 'anulada') {
+                    @if (paidOnOf(doc); as day) {
+                      <p class="dc__paid-note"><app-icon name="check" [size]="14" /> Pagada el {{ day | date: 'dd/MM/yyyy' }}</p>
+                    } @else {
+                      <p class="tl__muted dc__cobro">Cobrado RD$ {{ doc.paid | number: '1.2-2' }} de {{ doc.total | number: '1.2-2' }} · <strong class="dc__owed">Pendiente RD$ {{ owedOf(doc) | number: '1.2-2' }}</strong></p>
+                    }
+                  }
                   @if (invoiceOf(doc); as inv) { <p class="tl__muted dc__link"><app-icon name="receipt" [size]="14" /> Facturada: <button type="button" class="dc__linkbtn" (click)="openInvoiceOf(doc)">{{ inv.code }}</button></p> }
                   @if (quoteOf(doc); as q) { <p class="tl__muted dc__link"><app-icon name="clipboard" [size]="14" /> Desde: <button type="button" class="dc__linkbtn" (click)="openQuoteOf(doc)">{{ q.code }}</button></p> }
                 </div>
@@ -339,13 +349,54 @@
                   <option value="percent" [selected]="d.discountType === 'percent'">Porcentaje</option>
                 </select></label>
               <label class="tl__field dc__check"><input type="checkbox" [checked]="d.applyItbis" (change)="setItbis($event)" /><span>Aplicar ITBIS ({{ d.itbisRate }} %)</span></label>
-              @if (d.kind === 'factura') {
-                <label class="tl__field"><span>Abonado RD$</span>
-                  <input class="tl__input" type="number" name="paid" min="0" step="any" inputmode="decimal" [value]="d.paid" (input)="setNumber('paid', $event)" /></label>
-              }
             </div>
             @if (totals(); as t) {
-              <p class="dc__sum">Total: <strong>RD$ {{ t.total | number: '1.2-2' }}</strong>@if (t.pending > 0) { <small class="tl__muted"> (sin {{ t.pending }} a determinar)</small> }@if (d.kind === 'factura' && t.paid > 0) { · Pendiente: <strong>RD$ {{ t.balance | number: '1.2-2' }}</strong> }</p>
+              <p class="dc__sum">Total: <strong>RD$ {{ t.total | number: '1.2-2' }}</strong>@if (t.pending > 0) { <small class="tl__muted"> (sin {{ t.pending }} a determinar)</small> }@if (d.kind === 'factura' && t.paid > 0) { · Cobrado: <strong>RD$ {{ t.paid | number: '1.2-2' }}</strong> · Pendiente: <strong>RD$ {{ t.balance | number: '1.2-2' }}</strong> }</p>
+            }
+
+            @if (d.kind === 'factura') {
+              <h3 class="tl__name">Cobros</h3>
+              @if (!canPay()) {
+                <p class="tl__muted">Para registrar cobros, la factura tiene que estar <strong>Emitida</strong>: cambia su estado arriba y guárdala. Un borrador todavía no se entrega y una anulada no se cobra.</p>
+              }
+              @if (paymentsList().length > 0) {
+                <ul class="dc__payments" aria-label="Abonos registrados">
+                  @for (p of paymentsList(); track p.id) {
+                    <li class="dc__payment">
+                      <span class="dc__pay-date">{{ p.date | date: 'dd/MM/yyyy' }}</span>
+                      <span class="dc__pay-what">{{ paymentMethodLabels[p.method] }}@if (p.note) { <small class="tl__muted"> · {{ p.note }}</small> }</span>
+                      <strong class="dc__pay-amount">RD$ {{ p.amount | number: '1.2-2' }}</strong>
+                      <button type="button" class="dc__icon dc__icon--danger" [attr.aria-label]="'Quitar el abono del ' + (p.date | date: 'dd/MM/yyyy')" (click)="removePayment(p.id)">
+                        @if (pendingPaymentRemove() === p.id) { ¿Quitar? } @else { <app-icon name="trash" [size]="18" /> }
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (paidOn(); as day) {
+                <p class="dc__paid-note"><app-icon name="check" [size]="18" /> Pagada el {{ day | date: 'dd/MM/yyyy' }}</p>
+              }
+              @if (canPay() && totals(); as t) {
+                @if (t.balance > 0) {
+                  <div class="tl__form dc__payform">
+                    <label class="tl__field"><span>Fecha del pago</span>
+                      <input class="tl__input" type="date" name="payDate" [value]="payDate()" (input)="setPayDate($event)" (keydown.enter)="$event.preventDefault(); addPayment()" /></label>
+                    <label class="tl__field"><span>Monto RD$ <small class="tl__muted">(pendiente {{ t.balance | number: '1.2-2' }})</small></span>
+                      <input class="tl__input" type="number" name="payAmount" min="0" step="any" inputmode="decimal" [placeholder]="t.balance | number: '1.2-2'"
+                             [value]="payAmount()" (input)="setPayAmount($event)" (keydown.enter)="$event.preventDefault(); addPayment()" /></label>
+                    <label class="tl__field"><span>Cómo pagó</span>
+                      <select class="tl__input" name="payMethod" (change)="setPayMethod($event)">
+                        @for (m of paymentMethods; track m) { <option [value]="m" [selected]="payMethod() === m">{{ paymentMethodLabels[m] }}</option> }
+                      </select></label>
+                    <label class="tl__field"><span>Nota <small class="tl__muted">(No. de transferencia, cheque…)</small></span>
+                      <input class="tl__input" type="text" name="payNote" maxlength="120" autocomplete="off" [value]="payNote()" (input)="setPayNote($event)" (keydown.enter)="$event.preventDefault(); addPayment()" /></label>
+                  </div>
+                  <div class="tl__row dc__actions">
+                    <button type="button" class="tl__btn" (click)="addPayment()"><app-icon name="plus" [size]="18" /> Registrar abono</button>
+                    <button type="button" class="tl__btn tl__btn--ghost" (click)="payAll()">Todo el saldo</button>
+                  </div>
+                }
+              }
             }
 
             <h3 class="tl__name">Notas y condiciones</h3>

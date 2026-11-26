@@ -5,6 +5,7 @@
       <span class="ds__kind-name">{{ kindLabel() }}</span>
       @if (code()) { <span class="ds__code">{{ code() }}</span> }
       @if (doc().status === 'anulada') { <span class="ds__stamp">Anulada</span> }
+      @else if (doc().status === 'pagada') { <span class="ds__stamp ds__stamp--paid">Pagada</span> }
     </div>
   </header>
 
@@ -109,6 +110,24 @@
       }
     </dl>
   </section>
+
+  @if (payments().length > 0) {
+    <section class="ds__payments">
+      <h4>Pagos recibidos</h4>
+      <table class="ds__table ds__table--payments">
+        <tbody>
+          @for (p of payments(); track p.id) {
+            <tr>
+              <td class="ds__pay-date">{{ p.date | date: 'dd/MM/yyyy' }}</td>
+              <td class="ds__desc">{{ paymentMethodLabels[p.method] }}@if (p.note) { <small>{{ p.note }}</small> }</td>
+              <td class="ds__num">{{ p.amount | number: '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (paidOn(); as day) { <p class="ds__paid-on">Pagada el {{ day | date: 'dd/MM/yyyy' }}</p> }
+    </section>
+  }
 
   @if (showPayment() && realBanks().length > 0) {
     <section class="ds__pay">

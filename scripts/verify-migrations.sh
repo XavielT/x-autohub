@@ -3462,6 +3462,26 @@ apply supabase/migrations/0065_business_customers.sql upgrade
 apply supabase/migrations/0065_business_customers.sql upgrade
 echo "   (aplicada dos veces)"
 
+echo "→ Cobros de las facturas: abonos, paid calculado por la base y traspaso de lo abonado a mano (migracion 0066)"
+scalar "delete from business_documents;" >/dev/null
+check "una factura con dos abonos suma lo cobrado" "1500.00" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name, items, payments) values ('factura', 'venta', 'Cobro Uno', '[{\"quantity\":1,\"unitPrice\":5000,\"description\":\"x\",\"kind\":\"producto\"}]', '[{\"id\":\"a\",\"date\":\"2026-11-01\",\"amount\":1000,\"method\":\"efectivo\",\"note\":\"\"},{\"id\":\"b\",\"date\":\"2026-11-05\",\"amount\":500,\"method\":\"transferencia\",\"note\":\"ref 1\"}]') returning paid;")"
+check "un paid mandado a mano se pisa con la suma de los abonos" "1500.00" "$(as_user "$ADMIN" "update business_documents set paid = 99999 where customer_name = 'Cobro Uno' returning paid;")"
+check "un abono de cero se rechaza" "ERROR:  Cada abono tiene que ser mayor que cero." "$(as_user "$ADMIN" "update business_documents set payments = '[{\"id\":\"c\",\"date\":\"2026-11-06\",\"amount\":0,\"method\":\"efectivo\",\"note\":\"\"}]' where customer_name = 'Cobro Uno';")"
+check "una cotizacion no se cobra: sus abonos se vacian" "0.00|[]" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name, items, payments) values ('cotizacion', 'general', 'Cobro Dos', '[]', '[{\"id\":\"d\",\"date\":\"2026-11-06\",\"amount\":300,\"method\":\"efectivo\",\"note\":\"\"}]') returning paid || '|' || payments::text;")"
+check "payments tiene que ser una lista" "ERROR:  Los abonos tienen que ser una lista." "$(as_user "$ADMIN" "update business_documents set payments = '{}'::jsonb where customer_name = 'Cobro Uno';")"
+
+# Traspaso: una factura con paid a mano y sin abonos (se simula con el trigger apagado) pasa a tener un abono.
+scalar "alter table business_documents disable trigger business_documents_prepare; insert into business_documents (kind, template, customer_name, number, paid, payments, issue_date, status) values ('factura', 'venta', 'Cobro Viejo', 90, 300, '[]', '2026-10-15', 'emitida'); alter table business_documents enable trigger business_documents_prepare;" >/dev/null
+apply supabase/migrations/0066_document_payments.sql
+check "lo abonado a mano pasa a ser un abono con la fecha de emision" "1|2026-10-15|Abono anterior|300.00" "select jsonb_array_length(payments) || '|' || (payments -> 0 ->> 'date') || '|' || (payments -> 0 ->> 'note') || '|' || paid from business_documents where customer_name = 'Cobro Viejo';"
+check "y repetir la migracion no lo duplica" "1" "select jsonb_array_length(payments) from business_documents where customer_name = 'Cobro Viejo';"
+scalar "delete from business_documents;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0066"
+apply supabase/migrations/0066_document_payments.sql upgrade
+apply supabase/migrations/0066_document_payments.sql upgrade
+echo "   (aplicada dos veces)"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo

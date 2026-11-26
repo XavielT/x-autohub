@@ -6,6 +6,7 @@ import {
   DocumentLine,
   KIND_LABELS,
   LINE_KIND_LABELS,
+  PAYMENT_METHOD_LABELS,
   STATUS_LABELS,
   VERDICT_LABELS,
 } from '../../models/business-document.model';
@@ -13,6 +14,7 @@ import { BankAccount } from '../../models/order.model';
 import { computeTotals } from '../../utils/document-totals';
 import { templateById } from '../../utils/document-templates';
 import { sectionTitlesOf } from '../../utils/document-sections';
+import { lastPaymentDate, sortedPayments } from '../../utils/document-payments';
 
 interface LineGroup {
   title: string | null;
@@ -51,6 +53,13 @@ export class DocumentSheet {
   readonly template = computed(() => templateById(this.doc().template));
   readonly lineKindLabels = LINE_KIND_LABELS;
   readonly verdictLabels = VERDICT_LABELS;
+  readonly paymentMethodLabels = PAYMENT_METHOD_LABELS;
+
+  /** Los pagos recibidos, del más viejo al más nuevo (solo una factura los tiene). */
+  readonly payments = computed(() => (this.doc().kind === 'factura' ? sortedPayments(this.doc().payments) : []));
+
+  /** El día en que se terminó de pagar, si el saldo es cero. */
+  readonly paidOn = computed(() => (this.payments().length > 0 && this.totals().balance <= 0 && this.totals().total > 0 ? lastPaymentDate(this.payments()) : null));
 
   readonly lines = computed(() => this.doc().items.filter((i) => i.description.trim()));
 

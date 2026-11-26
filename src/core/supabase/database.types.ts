@@ -86,7 +86,10 @@ export type BusinessDocumentRow = {
   discount_value: number;
   apply_itbis: boolean;
   itbis_rate: number;
+  /** La suma de `payments`, calculada por la base (0066). */
   paid: number;
+  /** Los abonos: `{ id, date, amount, method, note }`. Solo las facturas los tienen. */
+  payments: { id?: string; date?: string; amount: number; method?: string; note?: string }[];
   notes: string;
   terms: string;
   source_id: string | null;

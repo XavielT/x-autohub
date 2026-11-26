@@ -166,3 +166,26 @@
 
 // Al imprimir, el CSS global (`styles.scss`) deja solo `.doc-sheet`; esto es por si se ve algo del formulario.
 @media print { .dc__noprint { display: none !important; } }
+
+// Cobros: la lista de abonos, el formulario para registrar uno y la marca de "Pagada".
+.dc__payments { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.dc__payment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.dc__pay-date { color: var(--text-soft); font-size: 13px; white-space: nowrap; }
+.dc__pay-what { min-width: 0; overflow-wrap: anywhere; }
+.dc__pay-amount { white-space: nowrap; }
+.dc__paid-note { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: #5dd68a; font-weight: 700; }
+.dc__cobro { margin: 2px 0 0; }
+.dc__owed { color: var(--Hub); }
+.dc__receivable { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--text-soft); strong { color: var(--Hub); } }
+@media (max-width: 480px) {
+  .dc__payment { grid-template-columns: minmax(0, 1fr) auto 44px; }
+  .dc__pay-date { grid-column: 1 / -1; }
+}

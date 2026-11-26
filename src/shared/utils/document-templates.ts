@@ -254,6 +254,7 @@ export function draftFromTemplate(templateId: TemplateId, kind: DocumentKind, to
     applyItbis: false,
     itbisRate: DEFAULT_ITBIS_RATE,
     paid: 0,
+    payments: [],
     notes: tpl.notes,
     terms: tpl.terms,
     sourceId: null,
@@ -271,7 +272,7 @@ export function validateDraft(draft: DocumentDraft): string | null {
     return 'El descuento en porcentaje va de 0 a 100.';
   }
   if (draft.discountValue < 0) return 'El descuento no puede ser negativo.';
-  if (draft.paid < 0) return 'Lo abonado no puede ser negativo.';
+  if (draft.payments.some((p) => !(p.amount > 0))) return 'Cada abono tiene que ser mayor que cero.';
   // Una factura que ya se va a entregar necesita todos sus precios: lo "a determinar" es de las cotizaciones.
   if (draft.kind === 'factura' && draft.status !== 'borrador' && lines.some((i) => i.tbd)) {
     return 'Una factura emitida no puede tener conceptos a determinar: ponles su precio, quítalos o déjala en borrador.';

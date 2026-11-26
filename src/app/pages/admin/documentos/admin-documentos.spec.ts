@@ -486,4 +486,159 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(env.c.documents().filter((d) => d.kind === 'factura')).toHaveLength(0);
     });
   });
+
+  describe('cobros de una factura', () => {
+    /** Una factura de 5,000 ya emitida y guardada. */
+    async function facturaEmitida(env: Awaited<ReturnType<typeof montar>>, status: 'borrador' | 'emitida' = 'emitida') {
+      const { fixture, c } = env;
+      c.startNew();
+      c.setPickKind('factura');
+      c.pickTemplate('venta');
+      c.setText('customerName', input('Juan Pérez'));
+      c.setText('customerPhone', input('809 555 0134'));
+      c.setLineDescription(c.draft()!.items[0].uid, input('Disco de freno'));
+      c.setLineNumber(c.draft()!.items[0].uid, 'unitPrice', input('5000'));
+      c.setStatus(input(status));
+      c.save();
+      await fixture.whenStable();
+      return c.saved()!;
+    }
+
+    function abonar(c: Awaited<ReturnType<typeof montar>>['c'], monto: string, fecha = '2026-11-26', metodo = 'transferencia', nota = '') {
+      c.setPayDate(input(fecha));
+      c.setPayAmount(input(monto));
+      c.setPayMethod(input(metodo));
+      c.setPayNote(input(nota));
+      c.addPayment();
+    }
+
+    it('un borrador no se cobra: primero se emite', async () => {
+      const env = await montar();
+      await facturaEmitida(env, 'borrador');
+      expect(env.c.canPay()).toBe(false);
+      abonar(env.c, '1000');
+      expect(env.c.draft()!.payments).toEqual([]);
+    });
+
+    it('un abono parcial se guarda con su fecha y deja el saldo pendiente', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      expect(env.c.canPay()).toBe(true);
+
+      abonar(env.c, '2000', '2026-11-10', 'efectivo', 'adelanto');
+      await env.fixture.whenStable();
+
+      const saved = env.c.documents()[0];
+      expect(saved.payments).toHaveLength(1);
+      expect(saved.payments[0]).toMatchObject({ date: '2026-11-10', amount: 2000, method: 'efectivo', note: 'adelanto' });
+      expect(saved.paid).toBe(2000);
+      expect(saved.status).toBe('emitida');
+      expect(env.c.owedOf(saved)).toBe(3000);
+      expect(env.c.totals()?.balance).toBe(3000);
+      expect(env.c.paidOn()).toBeNull();
+    });
+
+    it('al cobrar todo el saldo la factura pasa a Pagada y registra el día de pago', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '2000', '2026-11-10');
+      abonar(env.c, '3000', '2026-11-25');
+      await env.fixture.whenStable();
+
+      const saved = env.c.documents()[0];
+      expect(saved.paid).toBe(5000);
+      expect(saved.status).toBe('pagada');
+      expect(env.c.paidOnOf(saved)).toBe('2026-11-25');
+      expect(env.c.paidOn()).toBe('2026-11-25');
+      expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('Pagada'));
+    });
+
+    it('"Todo el saldo" llena el monto con lo pendiente', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '1500');
+      env.c.payAll();
+      expect(env.c.payAmount()).toBe('3500');
+    });
+
+    it('no acepta un abono mayor que lo pendiente ni sin fecha ni en cero', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+
+      abonar(env.c, '5000.01');
+      expect(toast.show).toHaveBeenLastCalledWith(expect.stringContaining('mayor que lo pendiente'), 'error');
+      abonar(env.c, '0');
+      expect(toast.show).toHaveBeenLastCalledWith(expect.stringContaining('más de cero'), 'error');
+      abonar(env.c, '100', '');
+      expect(toast.show).toHaveBeenLastCalledWith(expect.stringContaining('fecha'), 'error');
+      expect(env.c.draft()!.payments).toEqual([]);
+    });
+
+    it('quitar un abono pide confirmar y, si ya estaba pagada, la regresa a Emitida', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '5000');
+      await env.fixture.whenStable();
+      expect(env.c.documents()[0].status).toBe('pagada');
+
+      const id = env.c.draft()!.payments[0].id;
+      env.c.removePayment(id);
+      expect(env.c.pendingPaymentRemove()).toBe(id);
+      expect(env.c.draft()!.payments).toHaveLength(1);
+
+      env.c.removePayment(id);
+      await env.fixture.whenStable();
+      expect(env.c.documents()[0].payments).toEqual([]);
+      expect(env.c.documents()[0].status).toBe('emitida');
+      expect(env.c.documents()[0].paid).toBe(0);
+    });
+
+    it('una factura anulada no se cobra', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      env.c.setStatus(input('anulada'));
+      expect(env.c.canPay()).toBe(false);
+    });
+
+    it('las cuentas por cobrar suman lo pendiente de las facturas emitidas, y no de las pagadas', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '1500');
+      await env.fixture.whenStable();
+      expect(env.c.receivable()).toEqual({ total: 3500, count: 1 });
+
+      abonar(env.c, '3500');
+      await env.fixture.whenStable();
+      expect(env.c.receivable()).toEqual({ total: 0, count: 0 });
+    });
+
+    it('la hoja muestra los pagos recibidos y el sello de Pagada', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '5000', '2026-11-25', 'transferencia', 'ref 991');
+      await env.fixture.whenStable();
+      env.fixture.detectChanges();
+
+      const paper = (env.el.querySelector('.doc-sheet') as HTMLElement).textContent!;
+      expect(paper).toContain('Pagos recibidos');
+      expect(paper).toContain('Transferencia');
+      expect(paper).toContain('ref 991');
+      expect(paper).toContain('Pagada');
+      expect(paper).toContain('25/11/2026');
+    });
+
+    it('en la lista, cada factura dice cuánto se cobró y cuánto falta', async () => {
+      const env = await montar();
+      await facturaEmitida(env);
+      abonar(env.c, '1000');
+      await env.fixture.whenStable();
+      env.c.backToList();
+      env.fixture.detectChanges();
+
+      const text = (env.el as HTMLElement).textContent!;
+      expect(text).toContain('Cobrado RD$ 1,000.00');
+      expect(text).toContain('Pendiente RD$ 4,000.00');
+      expect(text).toContain('Por cobrar');
+    });
+  });
 });

@@ -52,6 +52,27 @@ export const STATUSES_BY_KIND: Record<DocumentKind, readonly DocumentStatus[]> =
   factura: ['borrador', 'emitida', 'pagada', 'anulada'],
 };
 
+/** Cómo se pagó un abono. */
+export type PaymentMethod = 'efectivo' | 'transferencia' | 'tarjeta' | 'cheque' | 'otro';
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  tarjeta: 'Tarjeta',
+  cheque: 'Cheque',
+  otro: 'Otro',
+};
+
+/** Un abono de una factura: cuándo se pagó, cuánto, cómo, y una nota (el número de la transferencia, por ejemplo). */
+export interface DocumentPayment {
+  id: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  amount: number;
+  method: PaymentMethod;
+  note: string;
+}
+
 export interface DocumentLine {
   /** Solo para el `track` de la lista en el formulario; no se guarda. */
   uid: string;
@@ -127,7 +148,10 @@ export interface BusinessDocument {
   discountValue: number;
   applyItbis: boolean;
   itbisRate: number;
+  /** Lo cobrado: la suma de los abonos (lo calcula la base al guardar). */
   paid: number;
+  /** Los abonos de una factura, con su fecha. */
+  payments: DocumentPayment[];
   notes: string;
   terms: string;
   sourceId: string | null;

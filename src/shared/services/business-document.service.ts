@@ -8,18 +8,21 @@ import {
   DocumentDraft,
   DocumentKind,
   DocumentLine,
+  DocumentPayment,
   DocumentStatus,
   LineKind,
+  PaymentMethod,
   TemplateId,
   Verdict,
 } from '../models/business-document.model';
 import { computeTotals, documentCode, todayIso } from '../utils/document-totals';
 import { newLineUid, validateDraft } from '../utils/document-templates';
 import { pickedFields } from './business-customer.service';
+import { newPaymentId, sortedPayments, sumPayments } from '../utils/document-payments';
 
 /** Una sola cadena literal: ver `PRODUCT_COLUMNS` en `product.service.ts`. */
 const DOCUMENT_COLUMNS =
-  'id, kind, number, template, status, customer_name, customer_phone, customer_email, customer_rnc, customer_id, vehicle, issue_date, valid_until, items, discount_type, discount_value, apply_itbis, itbis_rate, paid, notes, terms, source_id, subtotal, itbis, total, created_by, created_at, updated_at';
+  'id, kind, number, template, status, customer_name, customer_phone, customer_email, customer_rnc, customer_id, vehicle, issue_date, valid_until, items, discount_type, discount_value, apply_itbis, itbis_rate, paid, payments, notes, terms, source_id, subtotal, itbis, total, created_by, created_at, updated_at';
 
 const MOCK_STORAGE_KEY = 'x-autohub.business-documents';
 
@@ -60,6 +63,13 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     applyItbis: row.apply_itbis,
     itbisRate: Number(row.itbis_rate),
     paid: Number(row.paid),
+    payments: (row.payments ?? []).map((p) => ({
+      id: p.id ?? newPaymentId(),
+      date: p.date ?? row.issue_date,
+      amount: Number(p.amount),
+      method: (p.method ?? 'otro') as PaymentMethod,
+      note: p.note ?? '',
+    })),
     notes: row.notes,
     terms: row.terms,
     sourceId: row.source_id,
@@ -70,6 +80,10 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     updatedAt: new Date(row.updated_at),
   };
 }
+
+/** Los abonos tal como se guardan: del más viejo al más nuevo y sin espacios de sobra en la nota. */
+const cleanPayments = (payments: readonly DocumentPayment[]) =>
+  sortedPayments(payments).map((p) => ({ id: p.id, date: p.date, amount: p.amount, method: p.method, note: p.note.trim() }));
 
 /** Las líneas tal como se guardan: sin `uid` y sin las que quedaron vacías. */
 const cleanItems = (items: readonly DocumentLine[]) =>
@@ -135,7 +149,8 @@ export class BusinessDocumentService {
       discount_value: draft.discountValue,
       apply_itbis: draft.applyItbis,
       itbis_rate: draft.itbisRate,
-      paid: draft.kind === 'factura' ? draft.paid : 0,
+      // Solo las facturas se cobran. `paid` no se manda: lo calcula la base como la suma de los abonos.
+      payments: draft.kind === 'factura' ? cleanPayments(draft.payments) : [],
       notes: draft.notes.trim(),
       terms: draft.terms.trim(),
       source_id: draft.sourceId,
@@ -146,7 +161,7 @@ export class BusinessDocumentService {
       const previous = all.find((d) => d.id === draft.id);
       const number =
         previous?.number ?? Math.max(0, ...all.filter((d) => d.kind === draft.kind).map((d) => d.number)) + 1;
-      const totals = computeTotals({ ...fields, discountType: draft.discountType, discountValue: draft.discountValue, applyItbis: draft.applyItbis, itbisRate: draft.itbisRate, items: fields.items });
+      const totals = computeTotals({ ...fields, discountType: draft.discountType, discountValue: draft.discountValue, applyItbis: draft.applyItbis, itbisRate: draft.itbisRate, items: fields.items, paid: sumPayments(fields.payments) });
       const now = new Date();
       const saved: BusinessDocument = {
         ...draft,
@@ -156,7 +171,8 @@ export class BusinessDocumentService {
         code: documentCode(previous?.kind ?? draft.kind, number),
         customerName: fields.customer_name,
         items: fields.items.map((i) => ({ ...i, uid: newLineUid() })),
-        paid: fields.paid,
+        paid: sumPayments(fields.payments),
+        payments: fields.payments.map((p) => ({ ...p })),
         subtotal: totals.subtotal,
         itbis: totals.itbis,
         total: totals.total,
@@ -238,6 +254,7 @@ export class BusinessDocumentService {
       applyItbis: doc.applyItbis,
       itbisRate: doc.itbisRate,
       paid: 0,
+      payments: [],
       notes: doc.notes,
       terms: doc.terms,
       sourceId: kind === doc.kind ? null : doc.id,
