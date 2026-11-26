@@ -61,7 +61,7 @@ import { customerKey, searchCustomers } from '../../../../shared/utils/document-
 import { BusinessCustomerService } from '../../../../shared/services/business-customer.service';
 
 type View = 'list' | 'pick' | 'edit';
-type Filter = 'all' | DocumentKind;
+type Filter = 'all' | DocumentKind | 'porFacturar';
 type TextKey = 'customerName' | 'customerPhone' | 'customerEmail' | 'customerRnc' | 'issueDate' | 'validUntil' | 'notes' | 'terms';
 type NumberKey = 'discountValue' | 'itbisRate';
 type ProfileKey = keyof BusinessProfile;
@@ -173,6 +173,13 @@ export class AdminDocumentos implements OnInit {
     return map;
   });
 
+  /** La factura de la cotización que se está editando (si ya la tiene): su estado se ve como Facturada. */
+  readonly invoiceOfEditing = computed(() => {
+    const doc = this.saved();
+    const d = this.draft();
+    return doc && d?.kind === 'cotizacion' ? this.invoiceOf(doc) : null;
+  });
+
   /** La cotización de la que viene la factura que se está editando. */
   readonly sourceQuote = computed(() => {
     const d = this.draft();
@@ -255,8 +262,15 @@ export class AdminDocumentos implements OnInit {
 
   readonly visible = computed(() => {
     const f = this.filter();
-    return this.documents().filter((d) => f === 'all' || d.kind === f);
+    return this.documents().filter((d) => {
+      if (f === 'all') return true;
+      if (f === 'porFacturar') return this.isToInvoice(d);
+      return d.kind === f;
+    });
   });
+
+  /** Cuántas cotizaciones aceptadas esperan su factura (el número del filtro "Por facturar"). */
+  readonly toInvoiceCount = computed(() => this.documents().filter((d) => this.isToInvoice(d)).length);
 
   readonly template = computed(() => {
     const d = this.draft();
@@ -342,6 +356,20 @@ export class AdminDocumentos implements OnInit {
       },
       error: (error: Error) => this.toast.show(error.message, 'error'),
     });
+  }
+
+  /**
+   * "Facturada" es el estado de una cotización que ya tiene su factura. No se guarda aparte: se deduce del enlace
+   * (la factura con `sourceId` apuntando a ella y sin anular). Así, si esa factura se anula o se borra, la cotización
+   * vuelve sola a su estado anterior y nunca queda un "Facturada" que ya no es cierto.
+   */
+  isInvoiced(doc: BusinessDocument): boolean {
+    return doc.kind === 'cotizacion' && this.invoiceOf(doc) !== null;
+  }
+
+  /** Una cotización aceptada que todavía no tiene factura: lo que hay que facturar. */
+  isToInvoice(doc: BusinessDocument): boolean {
+    return doc.kind === 'cotizacion' && doc.status === 'aceptada' && this.invoiceOf(doc) === null;
   }
 
   /** La factura que salió de esta cotización, si ya existe. */

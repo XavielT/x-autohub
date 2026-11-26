@@ -478,6 +478,112 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('a determinar'), 'error');
     });
 
+    /** Facturada una cotización: crea su factura (con la pieza a determinar ya con precio) y la guarda. */
+    async function facturar(env: Awaited<ReturnType<typeof montar>>, quote: Awaited<ReturnType<typeof cotizacionGuardada>>) {
+      env.c.toInvoice(quote);
+      env.c.setLineTbd(env.c.draft()!.items[1].uid, { target: { checked: false } } as unknown as Event);
+      env.c.setLineNumber(env.c.draft()!.items[1].uid, 'unitPrice', input('1800'));
+      env.c.save();
+      await env.fixture.whenStable();
+      return env.c.saved()!;
+    }
+
+    const tarjeta = (env: Awaited<ReturnType<typeof montar>>, code: string) =>
+      Array.from(env.el.querySelectorAll('.tl__list > li')).find((li) => li.querySelector('.dc__code')?.textContent?.trim() === code) as HTMLElement;
+
+    it('una cotización con factura se ve "Facturada" en la lista, sin selector de estado', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      await facturar(env, quote);
+      env.c.backToList();
+      env.fixture.detectChanges();
+
+      expect(env.c.isInvoiced(quote)).toBe(true);
+      const card = tarjeta(env, quote.code);
+      expect(card.querySelector('.dc__billed')?.textContent).toContain('Facturada');
+      expect(card.querySelector('select')).toBeNull();
+    });
+
+    it('la factura nunca se ve como "Facturada": ese estado es de la cotización', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      const invoice = await facturar(env, quote);
+      env.c.backToList();
+      env.fixture.detectChanges();
+
+      expect(env.c.isInvoiced(invoice)).toBe(false);
+      expect(tarjeta(env, invoice.code).querySelector('.dc__billed')).toBeNull();
+      expect(tarjeta(env, invoice.code).querySelector('select')).not.toBeNull();
+    });
+
+    it('si la factura se anula, la cotización vuelve sola a su estado anterior', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      const invoice = await facturar(env, quote);
+      env.c.backToList();
+
+      env.c.changeStatus(env.c.documents().find((d) => d.id === invoice.id)!, input('anulada'));
+      env.fixture.detectChanges();
+
+      expect(env.c.isInvoiced(quote)).toBe(false);
+      const card = tarjeta(env, quote.code);
+      expect(card.querySelector('.dc__billed')).toBeNull();
+      expect((card.querySelector('select') as HTMLSelectElement).value).toBe('aceptada');
+    });
+
+    it('en el editor, una cotización facturada muestra "Facturada · FAC-0001" en lugar del selector de estado', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      const invoice = await facturar(env, quote);
+      env.c.backToList();
+      env.c.open(env.c.documents().find((d) => d.id === quote.id)!);
+      env.fixture.detectChanges();
+
+      expect(env.c.invoiceOfEditing()?.id).toBe(invoice.id);
+      expect(env.el.querySelector('.dc__billed--field')?.textContent).toContain(`Facturada · ${invoice.code}`);
+      expect(env.el.querySelector('select[name="status"]')).toBeNull();
+    });
+
+    it('el filtro "Por facturar" muestra solo las cotizaciones aceptadas que aún no tienen factura', async () => {
+      const env = await montar();
+      await cotizacionGuardada(env, 'borrador');
+      env.c.backToList();
+      const aceptada = await (async () => {
+        env.c.pickTemplate('mecanica');
+        env.c.setText('customerName', input('Ana Lora'));
+        env.c.setLineDescription(env.c.draft()!.items[0].uid, input('Revisión'));
+        env.c.setLineNumber(env.c.draft()!.items[0].uid, 'unitPrice', input('900'));
+        env.c.setStatus(input('aceptada'));
+        env.c.save();
+        await env.fixture.whenStable();
+        return env.c.saved()!;
+      })();
+      const facturada = await (async () => {
+        env.c.backToList();
+        env.c.pickTemplate('mecanica');
+        env.c.setText('customerName', input('Pedro Gil'));
+        env.c.setLineDescription(env.c.draft()!.items[0].uid, input('Frenos'));
+        env.c.setLineNumber(env.c.draft()!.items[0].uid, 'unitPrice', input('700'));
+        env.c.setStatus(input('aceptada'));
+        env.c.save();
+        await env.fixture.whenStable();
+        const q = env.c.saved()!;
+        env.c.toInvoice(q);
+        env.c.save();
+        await env.fixture.whenStable();
+        return q;
+      })();
+      env.c.backToList();
+      env.fixture.detectChanges();
+
+      expect(env.c.toInvoiceCount()).toBe(1);
+      env.c.setFilter('porFacturar');
+      expect(env.c.visible().map((d) => d.id)).toEqual([aceptada.id]);
+      expect(env.c.visible().some((d) => d.id === facturada.id)).toBe(false);
+      env.fixture.detectChanges();
+      expect(env.el.textContent).toContain('Por facturar (1)');
+    });
+
     it('descartar el aviso lo quita sin crear nada', async () => {
       const env = await montar();
       await cotizacionGuardada(env, 'aceptada');

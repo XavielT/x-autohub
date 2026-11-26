@@ -56,6 +56,9 @@
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'factura'" (click)="setFilter('factura')"><app-icon name="receipt" [size]="16" /> Facturas</button>
+        @if (toInvoiceCount() > 0 || filter() === 'porFacturar') {
+          <button type="button" class="tl__chip" [class.is-active]="filter() === 'porFacturar'" (click)="setFilter('porFacturar')"><app-icon name="check" [size]="16" /> Por facturar ({{ toInvoiceCount() }})</button>
+        }
       </div>
 
       @if (loading()) {
@@ -83,11 +86,15 @@
                 </div>
                 <div class="dc__amount">
                   <strong>RD$ {{ doc.total | number: '1.2-2' }}</strong>
-                  <select class="tl__input dc__status" [attr.aria-label]="'Estado de ' + doc.code" (change)="changeStatus(doc, $event)">
-                    @for (s of statusesFor(doc.kind); track s) {
-                      <option [value]="s" [selected]="doc.status === s">{{ statusLabels[s] }}</option>
-                    }
-                  </select>
+                  @if (isInvoiced(doc)) {
+                    <span class="dc__billed" [attr.aria-label]="'Estado de ' + doc.code + ': facturada'"><app-icon name="receipt" [size]="16" /> Facturada</span>
+                  } @else {
+                    <select class="tl__input dc__status" [attr.aria-label]="'Estado de ' + doc.code" (change)="changeStatus(doc, $event)">
+                      @for (s of statusesFor(doc.kind); track s) {
+                        <option [value]="s" [selected]="doc.status === s">{{ statusLabels[s] }}</option>
+                      }
+                    </select>
+                  }
                 </div>
               </div>
               <div class="tl__row dc__actions">
@@ -233,10 +240,17 @@
                 <label class="tl__field"><span>Válida hasta</span>
                   <input class="tl__input" type="date" name="validUntil" [value]="d.validUntil ?? ''" (input)="setText('validUntil', $event)" /></label>
               }
-              <label class="tl__field"><span>Estado</span>
-                <select class="tl__input" name="status" (change)="setStatus($event)">
-                  @for (s of statuses(); track s) { <option [value]="s" [selected]="d.status === s">{{ statusLabels[s] }}</option> }
-                </select></label>
+              @if (invoiceOfEditing(); as inv) {
+                <div class="tl__field"><span>Estado</span>
+                  <div class="dc__billed dc__billed--field"><app-icon name="receipt" [size]="16" /> Facturada · {{ inv.code }}</div>
+                  <small class="tl__muted">Su estado sigue a la factura. Si la factura se anula, vuelve a «{{ statusLabels[d.status] }}».</small>
+                </div>
+              } @else {
+                <label class="tl__field"><span>Estado</span>
+                  <select class="tl__input" name="status" (change)="setStatus($event)">
+                    @for (s of statuses(); track s) { <option [value]="s" [selected]="d.status === s">{{ statusLabels[s] }}</option> }
+                  </select></label>
+              }
             </div>
 
             <h3 class="tl__name">Secciones y líneas</h3>

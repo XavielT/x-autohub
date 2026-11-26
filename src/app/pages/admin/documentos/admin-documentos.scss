@@ -189,3 +189,19 @@
   .dc__payment { grid-template-columns: minmax(0, 1fr) auto 44px; }
   .dc__pay-date { grid-column: 1 / -1; }
 }
+
+// "Facturada": el estado de una cotización con factura. Mismo tamaño que el selector de estado para no mover la tarjeta.
+.dc__billed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #5dd68a;
+  border-radius: 10px;
+  background: rgba(93, 214, 138, 0.1);
+  color: #5dd68a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dc__billed--field { width: fit-content; min-height: 44px; }
