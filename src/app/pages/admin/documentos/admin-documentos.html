@@ -121,8 +121,21 @@
           <form class="tl__card dc__form dc__noprint" (submit)="$event.preventDefault(); save()" novalidate>
             <h3 class="tl__name">Cliente</h3>
             <div class="tl__form">
-              <label class="tl__field"><span>Nombre</span>
-                <input class="tl__input" type="text" name="customerName" autocomplete="off" [value]="d.customerName" (input)="setText('customerName', $event)" /></label>
+              <label class="tl__field"><span>Nombre <small class="tl__muted">(si ya es cliente, escríbelo y elígelo)</small></span>
+                <input class="tl__input" type="text" name="customerName" autocomplete="off" [value]="d.customerName"
+                       (focus)="onCustomerFocus()" (blur)="onCustomerBlur()" (input)="setText('customerName', $event)" /></label>
+              @if (customerMatches().length > 0) {
+                <ul class="dc__results tl__field--wide" aria-label="Clientes anteriores" (mousedown)="$event.preventDefault()">
+                  @for (c of customerMatches(); track c.key) {
+                    <li>
+                      <button type="button" (click)="useCustomer(c)">
+                        <span>{{ c.name }}<small class="tl__muted"> · {{ c.phone || 'sin teléfono' }}</small></span>
+                        <b>{{ c.documents }} {{ c.documents === 1 ? 'documento' : 'documentos' }}</b>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
               <label class="tl__field"><span>Teléfono <small class="tl__muted">(para WhatsApp)</small></span>
                 <input class="tl__input" type="tel" name="customerPhone" inputmode="tel" [value]="d.customerPhone" (input)="setText('customerPhone', $event)" /></label>
               <label class="tl__field"><span>Correo</span>
@@ -133,6 +146,18 @@
 
             @if (template()?.showVehicle) {
               <h3 class="tl__name">Vehículo</h3>
+              @if (pickedCustomer(); as pc) {
+                @if (pc.vehicles.length > 0) {
+                  <div class="dc__suggest">
+                    <span class="tl__muted">Vehículos de {{ pc.name }} (toca uno para usarlo):</span>
+                    <div class="tl__chips">
+                      @for (v of pc.vehicles; track $index) {
+                        <button type="button" class="tl__chip" (click)="useVehicle(v)"><app-icon name="car" [size]="16" /> {{ v.text || 'Sin nombre' }}{{ v.plate ? ' · ' + v.plate : '' }}</button>
+                      }
+                    </div>
+                  </div>
+                }
+              }
               <div class="tl__form">
                 <label class="tl__field tl__field--wide"><span>Marca, modelo y año</span>
                   <input class="tl__input" type="text" name="vehicleText" placeholder="Volkswagen Jetta 2012" [value]="d.vehicle.text" (input)="setVehicle('text', $event)" /></label>

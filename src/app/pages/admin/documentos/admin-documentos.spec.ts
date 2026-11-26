@@ -199,6 +199,63 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(paper).toContain('JTDBR32E720012345');
   });
 
+  it('un cliente ya guardado se sugiere en el siguiente documento y rellena sus datos y su vehículo', async () => {
+    const { fixture, c } = await montar();
+
+    // Primer documento: se escriben todos los datos una sola vez.
+    c.pickTemplate('mecanica');
+    c.setText('customerName', input('Juan Pérez'));
+    c.setText('customerPhone', input('809 555 0134'));
+    c.setText('customerEmail', input('juan@ejemplo.com'));
+    c.setText('customerRnc', input('001-1234567-8'));
+    c.setVehicle('text', input('Volkswagen Jetta 2012'));
+    c.setVehicle('plate', input('A123456'));
+    c.setLineDescription(c.draft()!.items[0].uid, input('Cambio de pastillas'));
+    c.save();
+    await fixture.whenStable();
+    c.backToList();
+
+    // Documento nuevo: basta con escribir parte del nombre.
+    c.startNew();
+    c.pickTemplate('electrica');
+    c.onCustomerFocus();
+    c.setText('customerName', input('jua'));
+    expect(c.customerMatches().map((m) => m.name)).toEqual(['Juan Pérez']);
+
+    c.useCustomer(c.customerMatches()[0]);
+    const d = c.draft()!;
+    expect([d.customerName, d.customerPhone, d.customerEmail, d.customerRnc]).toEqual([
+      'Juan Pérez',
+      '809 555 0134',
+      'juan@ejemplo.com',
+      '001-1234567-8',
+    ]);
+    expect(d.vehicle.text).toBe('Volkswagen Jetta 2012');
+    expect(d.vehicle.plate).toBe('A123456');
+    // Ya elegido, no se vuelve a sugerir a sí mismo.
+    expect(c.customerMatches()).toEqual([]);
+  });
+
+  it('cambiar el nombre a mano suelta al cliente elegido y no pisa un vehículo ya escrito', async () => {
+    const { fixture, c } = await montar();
+    c.pickTemplate('mecanica');
+    c.setText('customerName', input('Ana Lora'));
+    c.setVehicle('text', input('Kia Rio'));
+    c.setLineDescription(c.draft()!.items[0].uid, input('Revisión'));
+    c.save();
+    await fixture.whenStable();
+    c.backToList();
+
+    c.pickTemplate('mecanica');
+    c.setVehicle('text', input('Honda Civic'));
+    c.useCustomer(c.customers()[0]);
+    expect(c.draft()!.vehicle.text).toBe('Honda Civic');
+    expect(c.pickedCustomer()).not.toBeNull();
+
+    c.setText('customerName', input('Otra persona'));
+    expect(c.pickedCustomer()).toBeNull();
+  });
+
   it('el chequeo no pide dictamen', async () => {
     const { fixture, c, el } = await montar();
     c.pickTemplate('chequeo');

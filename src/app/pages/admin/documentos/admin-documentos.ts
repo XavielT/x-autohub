@@ -39,6 +39,7 @@ import {
   uniqueTitle,
 } from '../../../../shared/utils/document-sections';
 import { documentWhatsAppLink } from '../../../../shared/utils/document-whatsapp';
+import { CustomerRecord, customerKey, customersFrom, searchCustomers } from '../../../../shared/utils/document-customers';
 
 type View = 'list' | 'pick' | 'edit';
 type Filter = 'all' | DocumentKind;
@@ -155,6 +156,20 @@ export class AdminDocumentos implements OnInit {
       const lines = d.items.filter((i) => i.section === title);
       return { title, lines, subtotal: lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0) };
     });
+  });
+
+  /** Los clientes de siempre, sacados de los documentos ya guardados. */
+  readonly customers = computed(() => customersFrom(this.documents()));
+  readonly customerFocus = signal(false);
+  /** El cliente que se eligió de la lista: de él salen los vehículos que se ofrecen. */
+  readonly pickedCustomer = signal<CustomerRecord | null>(null);
+
+  /** Clientes anteriores que coinciden con lo que se escribe en el nombre (mientras el campo está en foco). */
+  readonly customerMatches = computed(() => {
+    const d = this.draft();
+    if (!this.customerFocus() || !d) return [];
+    const picked = this.pickedCustomer()?.key;
+    return searchCustomers(this.customers(), d.customerName).filter((c) => c.key !== picked);
   });
 
   readonly catalog = signal<CatalogEntry[] | null>(null);
@@ -297,6 +312,7 @@ export class AdminDocumentos implements OnInit {
 
   setText(key: TextKey, event: Event): void {
     const text = value(event);
+    if (key === 'customerName' && customerKey(text) !== this.pickedCustomer()?.key) this.pickedCustomer.set(null);
     this.patch({ [key]: key === 'validUntil' ? text || null : text } as Partial<DocumentDraft>);
   }
 
@@ -306,6 +322,42 @@ export class AdminDocumentos implements OnInit {
 
   setVehicle(key: keyof DocumentVehicle, event: Event): void {
     this.draft.update((d) => (d ? { ...d, vehicle: { ...d.vehicle, [key]: value(event) } } : d));
+  }
+
+  onCustomerFocus(): void {
+    this.customerFocus.set(true);
+  }
+
+  /** Se cierra con un respiro para que el toque sobre una sugerencia llegue antes que el cierre. */
+  onCustomerBlur(): void {
+    setTimeout(() => this.customerFocus.set(false), 150);
+  }
+
+  /** Rellena el documento con los datos guardados del cliente y, si la plantilla lleva vehículo y está vacío, el último que trajo. */
+  useCustomer(customer: CustomerRecord): void {
+    const d = this.draft();
+    if (!d) return;
+    const emptyVehicle = !d.vehicle.text && !d.vehicle.plate && !d.vehicle.mileage && !d.vehicle.vin;
+    const vehicle = this.template()?.showVehicle && emptyVehicle && customer.vehicles[0] ? this.vehicleOf(customer.vehicles[0], d.vehicle) : d.vehicle;
+
+    this.pickedCustomer.set(customer);
+    this.customerFocus.set(false);
+    this.patch({
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      customerEmail: customer.email,
+      customerRnc: customer.rnc,
+      vehicle,
+    });
+  }
+
+  /** Pone en el documento uno de los vehículos que ya trajo el cliente (el dictamen no se arrastra). */
+  useVehicle(vehicle: DocumentVehicle): void {
+    this.draft.update((d) => (d ? { ...d, vehicle: this.vehicleOf(vehicle, d.vehicle) } : d));
+  }
+
+  private vehicleOf(from: DocumentVehicle, current: DocumentVehicle): DocumentVehicle {
+    return { text: from.text, plate: from.plate, mileage: from.mileage, vin: from.vin, verdict: current.verdict };
   }
 
   setVerdict(event: Event): void {
@@ -332,6 +384,7 @@ export class AdminDocumentos implements OnInit {
   /** Abre un documento en el editor: fija el borrador y las secciones (las dadas más las que traen las líneas). */
   private edit(draft: DocumentDraft, titles: readonly string[] = []): void {
     this.sectionTitles.set(mergeTitles(titles, draft.items));
+    this.pickedCustomer.set(null);
     this.targetTitle.set(null);
     this.pendingRemove.set(null);
     this.draft.set(draft);
