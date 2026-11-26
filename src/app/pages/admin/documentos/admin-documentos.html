@@ -35,6 +35,20 @@
         </form>
       }
 
+      @if (suggestInvoice(); as s) {
+        <div class="tl__card dc__suggestion" role="status">
+          <app-icon name="receipt" [size]="26" />
+          <div class="dc__suggestion-text">
+            <strong>{{ s.code }} fue aceptada.</strong>
+            <span class="tl__muted">¿La conviertes en factura? Se copian el cliente, el vehículo y todas las líneas, y la revisas antes de emitirla.</span>
+          </div>
+          <div class="tl__row">
+            <button type="button" class="tl__btn tl__btn--small" (click)="toInvoice(s)"><app-icon name="receipt" [size]="16" /> Crear factura</button>
+            <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="dismissSuggestion()">Más tarde</button>
+          </div>
+        </div>
+      }
+
       <div class="tl__chips" role="group" aria-label="Filtrar documentos">
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
@@ -54,6 +68,8 @@
                   <span class="tl__ref dc__code"><app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="16" /> {{ doc.code }}</span>
                   <h3 class="tl__name">{{ doc.customerName }}</h3>
                   <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }@if (hasTbd(doc)) { · incluye conceptos a determinar }</p>
+                  @if (invoiceOf(doc); as inv) { <p class="tl__muted dc__link"><app-icon name="receipt" [size]="14" /> Facturada: <button type="button" class="dc__linkbtn" (click)="openInvoiceOf(doc)">{{ inv.code }}</button></p> }
+                  @if (quoteOf(doc); as q) { <p class="tl__muted dc__link"><app-icon name="clipboard" [size]="14" /> Desde: <button type="button" class="dc__linkbtn" (click)="openQuoteOf(doc)">{{ q.code }}</button></p> }
                 </div>
                 <div class="dc__amount">
                   <strong>RD$ {{ doc.total | number: '1.2-2' }}</strong>
@@ -68,7 +84,11 @@
                 <button type="button" class="tl__btn tl__btn--small" (click)="open(doc)"><app-icon name="eye" [size]="16" /> Abrir</button>
                 <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="duplicate(doc)"><app-icon name="copy" [size]="16" /> Duplicar</button>
                 @if (doc.kind === 'cotizacion' && doc.status !== 'anulada') {
-                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toInvoice(doc)"><app-icon name="receipt" [size]="16" /> Convertir en factura</button>
+                  @if (invoiceOf(doc); as inv) {
+                    <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="openInvoiceOf(doc)"><app-icon name="receipt" [size]="16" /> Ver factura {{ inv.code }}</button>
+                  } @else {
+                    <button type="button" class="tl__btn tl__btn--small" [class.tl__btn--ghost]="doc.status !== 'aceptada'" (click)="toInvoice(doc)"><app-icon name="receipt" [size]="16" /> Crear factura</button>
+                  }
                 }
                 @if (doc.status === 'borrador') {
                   <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="remove(doc)"><app-icon name="trash" [size]="16" /> Borrar</button>
@@ -112,10 +132,24 @@
         <header class="tl__head tl__row dc__noprint">
           <div>
             <h2 class="tl__title">{{ kindLabels[d.kind] }}@if (saved(); as s) { · {{ s.code }} }</h2>
-            <p class="tl__lead">{{ template()?.label }}@if (!saved()) { · sin guardar }</p>
+            <p class="tl__lead">{{ template()?.label }}@if (!saved()) { · sin guardar }@if (sourceQuote(); as src) { · desde @if (saved()) { <button type="button" class="dc__linkbtn" (click)="openSourceQuote()">{{ src.code }}</button> } @else { {{ src.code }} } }</p>
           </div>
           <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()"><app-icon name="arrow-left" [size]="16" /> Volver a la lista</button>
         </header>
+
+        @if (suggestInvoice(); as s) {
+          <div class="tl__card dc__suggestion" role="status">
+            <app-icon name="receipt" [size]="26" />
+            <div class="dc__suggestion-text">
+              <strong>{{ s.code }} fue aceptada.</strong>
+              <span class="tl__muted">¿La conviertes en factura? Se copian el cliente, el vehículo y todas las líneas, y la revisas antes de emitirla.</span>
+            </div>
+            <div class="tl__row">
+              <button type="button" class="tl__btn tl__btn--small" (click)="toInvoice(s)"><app-icon name="receipt" [size]="16" /> Crear factura</button>
+              <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="dismissSuggestion()">Más tarde</button>
+            </div>
+          </div>
+        }
 
         <div class="dc__layout">
           <form class="tl__card dc__form dc__noprint" (submit)="$event.preventDefault(); save()" novalidate>
@@ -328,7 +362,19 @@
               @if (whatsappLink(); as wa) {
                 <a class="tl__btn tl__btn--ghost" [href]="wa" target="_blank" rel="noopener"><app-icon name="message" [size]="18" /> Enviar por WhatsApp</a>
               }
+              @if (saved(); as sv) {
+                @if (d.kind === 'cotizacion' && d.status !== 'anulada') {
+                  @if (invoiceOf(sv); as inv) {
+                    <button type="button" class="tl__btn tl__btn--ghost" (click)="openInvoiceOf(sv)"><app-icon name="receipt" [size]="18" /> Ver factura {{ inv.code }}</button>
+                  } @else {
+                    <button type="button" class="tl__btn tl__btn--ghost" (click)="invoiceFromSaved()"><app-icon name="receipt" [size]="18" /> Crear factura</button>
+                  }
+                }
+              }
             </div>
+            @if (saved() && d.kind === 'cotizacion' && !invoiceOf(saved()!) && d.status !== 'anulada') { <p class="tl__muted">«Crear factura» usa lo último que guardaste de esta cotización.</p> }
+            @if (d.kind === 'factura' && d.status !== 'borrador' && totals(); as t) { @if (t.pending > 0) { <p class="tl__error">Esta factura tiene {{ t.pending }} concepto(s) a determinar: ponles su precio para poder emitirla.</p> } }
+            @if (d.kind === 'factura' && d.status === 'borrador' && totals(); as t) { @if (t.pending > 0) { <p class="tl__warn">Tiene {{ t.pending }} concepto(s) a determinar: ponles su precio antes de emitir la factura.</p> } }
             @if (!saved()) { <p class="tl__muted">Guarda el documento para que tenga su número y se pueda enviar por WhatsApp.</p> }
             @if (saved() && !whatsappLink()) { <p class="tl__muted">Agrega el teléfono del cliente y guarda para habilitar WhatsApp.</p> }
           </form>

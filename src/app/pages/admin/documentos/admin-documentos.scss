@@ -17,6 +17,21 @@
 }
 
 .dc__profile { margin-bottom: 16px; }
+
+// El aviso "¿la conviertes en factura?": se ve, pero no tapa nada.
+.dc__suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--Hub);
+  background: var(--Hub-translucid);
+  color: var(--Hub);
+}
+.dc__suggestion-text { display: flex; flex: 1 1 260px; flex-direction: column; gap: 2px; color: var(--text-strong); }
+.dc__link { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; }
+.dc__linkbtn { padding: 0; border: 0; background: transparent; color: var(--Hub); font: inherit; text-decoration: underline; cursor: pointer; }
 .dc__amount { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .dc__status { min-height: 40px; width: auto; }
 .dc__actions { margin-top: 12px; justify-content: flex-start; }

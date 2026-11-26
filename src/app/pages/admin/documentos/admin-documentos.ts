@@ -118,6 +118,23 @@ export class AdminDocumentos implements OnInit {
   readonly filter = signal<Filter>('all');
 
   readonly draft = signal<DocumentDraft | null>(null);
+  /** La cotización aceptada que todavía no tiene factura: el sistema sugiere crearla. */
+  readonly suggestInvoice = signal<BusinessDocument | null>(null);
+
+  /** La factura (no anulada) que salió de cada cotización, por id de la cotización. */
+  private readonly invoiceByQuote = computed(() => {
+    const map = new Map<string, BusinessDocument>();
+    for (const d of this.documents()) {
+      if (d.kind === 'factura' && d.sourceId && d.status !== 'anulada') map.set(d.sourceId, d);
+    }
+    return map;
+  });
+
+  /** La cotización de la que viene la factura que se está editando. */
+  readonly sourceQuote = computed(() => {
+    const d = this.draft();
+    return d?.kind === 'factura' && d.sourceId ? (this.documents().find((x) => x.id === d.sourceId) ?? null) : null;
+  });
   /** El documento tal como quedó guardado: de ahí salen el código y el enlace de WhatsApp. */
   readonly saved = signal<BusinessDocument | null>(null);
   /** El tipo que se elige en el paso de plantillas. */
@@ -271,10 +288,47 @@ export class AdminDocumentos implements OnInit {
   }
 
   changeStatus(doc: BusinessDocument, event: Event): void {
-    this.docs.setStatus(doc, value(event) as DocumentStatus).subscribe({
-      next: () => this.reload(),
+    const status = value(event) as DocumentStatus;
+    this.docs.setStatus(doc, status).subscribe({
+      next: () => {
+        this.reload();
+        // Una cotización aceptada es el momento de facturar: se sugiere (si no tiene ya su factura).
+        if (status === 'aceptada' && doc.kind === 'cotizacion' && !this.invoiceOf(doc)) {
+          this.suggestInvoice.set({ ...doc, status });
+        }
+      },
       error: (error: Error) => this.toast.show(error.message, 'error'),
     });
+  }
+
+  /** La factura que salió de esta cotización, si ya existe. */
+  invoiceOf(quote: BusinessDocument): BusinessDocument | null {
+    return this.invoiceByQuote().get(quote.id) ?? null;
+  }
+
+  /** La cotización de la que salió esta factura, si todavía existe. */
+  quoteOf(invoice: BusinessDocument): BusinessDocument | null {
+    return invoice.kind === 'factura' && invoice.sourceId ? (this.documents().find((d) => d.id === invoice.sourceId) ?? null) : null;
+  }
+
+  openInvoiceOf(quote: BusinessDocument): void {
+    const invoice = this.invoiceOf(quote);
+    if (invoice) this.open(invoice);
+  }
+
+  openQuoteOf(invoice: BusinessDocument): void {
+    const quote = this.quoteOf(invoice);
+    if (quote) this.open(quote);
+  }
+
+  /** Abre la cotización de la que viene la factura que se está editando. */
+  openSourceQuote(): void {
+    const quote = this.sourceQuote();
+    if (quote) this.open(quote);
+  }
+
+  dismissSuggestion(): void {
+    this.suggestInvoice.set(null);
   }
 
   open(doc: BusinessDocument): void {
@@ -290,12 +344,34 @@ export class AdminDocumentos implements OnInit {
     this.toast.show('Copia lista como borrador. Revísala y guárdala.');
   }
 
+  /** Crea la factura de una cotización: copia cliente, vehículo, secciones y líneas, y queda como borrador para revisarla. */
   toInvoice(doc: BusinessDocument): void {
+    // Si ya tiene factura, se abre esa en vez de duplicarla por descuido (para otra, está "Duplicar").
+    const existing = this.invoiceOf(doc);
+    if (existing) {
+      this.suggestInvoice.set(null);
+      this.open(existing);
+      this.toast.show(`${doc.code} ya tiene su factura: ${existing.code}.`);
+      return;
+    }
+
     const draft = this.docs.duplicate(doc, 'factura');
     this.edit({ ...draft, paid: 0 });
     this.saved.set(null);
+    this.suggestInvoice.set(null);
     this.view.set('edit');
-    this.toast.show('Factura lista como borrador. Revísala y guárdala.');
+    const pending = doc.items.filter((i) => i.tbd).length;
+    this.toast.show(
+      pending > 0
+        ? `Factura lista como borrador. Tiene ${pending} concepto(s) a determinar: ponles su precio para poder emitirla.`
+        : 'Factura lista como borrador. Revísala y guárdala.',
+    );
+  }
+
+  /** Crea la factura desde la cotización que se está viendo (la última versión guardada). */
+  invoiceFromSaved(): void {
+    const doc = this.saved();
+    if (doc) this.toInvoice(doc);
   }
 
   remove(doc: BusinessDocument): void {
@@ -331,6 +407,7 @@ export class AdminDocumentos implements OnInit {
 
   backToList(): void {
     this.view.set('list');
+    this.suggestInvoice.set(null);
     this.draft.set(null);
     this.saved.set(null);
   }
@@ -624,6 +701,7 @@ export class AdminDocumentos implements OnInit {
         this.reloadCustomers();
         this.toast.show(`${doc.code} guardada.`);
         this.reload();
+        if (doc.kind === 'cotizacion' && doc.status === 'aceptada' && !this.invoiceOf(doc)) this.suggestInvoice.set(doc);
       },
       error: (error: Error) => {
         this.saving.set(false);

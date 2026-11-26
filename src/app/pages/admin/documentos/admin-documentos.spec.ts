@@ -373,4 +373,117 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     c.setSuggestArea('mecanica');
     expect(c.activeArea().id).toBe('mecanica');
   });
+
+  describe('de la cotización a la factura', () => {
+    /** Una cotización guardada de un cliente, con una línea con precio y otra a determinar. */
+    async function cotizacionGuardada(env: Awaited<ReturnType<typeof montar>>, status: 'borrador' | 'aceptada' = 'borrador') {
+      const { fixture, c } = env;
+      c.pickTemplate('mecanica');
+      c.setText('customerName', input('Juan Pérez'));
+      c.setText('customerPhone', input('809 555 0134'));
+      c.setLineDescription(c.draft()!.items[0].uid, input('Cambio de pastillas'));
+      c.setLineNumber(c.draft()!.items[0].uid, 'unitPrice', input('2500'));
+      c.addTbdLine('repuesto');
+      c.setStatus(input(status));
+      c.save();
+      await fixture.whenStable();
+      return c.saved()!;
+    }
+
+    it('al marcar una cotización como aceptada, el sistema sugiere crear su factura', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env);
+      env.c.backToList();
+
+      expect(env.c.suggestInvoice()).toBeNull();
+      env.c.changeStatus(env.c.documents()[0], input('aceptada'));
+      expect(env.c.suggestInvoice()?.code).toBe(quote.code);
+      expect(env.c.suggestInvoice()?.status).toBe('aceptada');
+    });
+
+    it('también la sugiere al guardar una cotización que ya está aceptada', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      expect(env.c.suggestInvoice()?.id).toBe(quote.id);
+    });
+
+    it('no sugiere con otros estados, ni para una factura', async () => {
+      const env = await montar();
+      await cotizacionGuardada(env);
+      env.c.backToList();
+      env.c.changeStatus(env.c.documents()[0], input('enviada'));
+      expect(env.c.suggestInvoice()).toBeNull();
+    });
+
+    it('crear la factura copia cliente, secciones y líneas, y la deja como borrador ligada a la cotización', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+
+      env.c.toInvoice(env.c.suggestInvoice()!);
+      const d = env.c.draft()!;
+      expect(env.c.view()).toBe('edit');
+      expect(env.c.suggestInvoice()).toBeNull();
+      expect(d).toMatchObject({ id: null, kind: 'factura', status: 'borrador', sourceId: quote.id, customerName: 'Juan Pérez', customerId: quote.customerId, paid: 0, validUntil: null });
+      expect(d.items.map((i) => i.description)).toEqual(['Cambio de pastillas', 'Pieza a determinar']);
+      expect(d.items[1].tbd).toBe(true);
+      expect(env.c.saved()).toBeNull();
+    });
+
+    it('al guardar la factura, la cotización y la factura se muestran enlazadas', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      env.c.toInvoice(quote);
+      env.c.setLineNumber(env.c.draft()!.items[1].uid, 'unitPrice', input('1800'));
+      env.c.setLineTbd(env.c.draft()!.items[1].uid, { target: { checked: false } } as unknown as Event);
+      env.c.setLineNumber(env.c.draft()!.items[1].uid, 'unitPrice', input('1800'));
+      env.c.save();
+      await env.fixture.whenStable();
+
+      const invoice = env.c.saved()!;
+      expect(invoice.code).toBe('FAC-0001');
+      expect(invoice.sourceId).toBe(quote.id);
+      expect(env.c.invoiceOf(quote)?.id).toBe(invoice.id);
+      expect(env.c.quoteOf(invoice)?.id).toBe(quote.id);
+      expect(env.c.sourceQuote()?.id).toBe(quote.id);
+    });
+
+    it('una cotización que ya tiene factura no se factura dos veces: abre la que existe', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      env.c.toInvoice(quote);
+      env.c.setLineTbd(env.c.draft()!.items[1].uid, { target: { checked: false } } as unknown as Event);
+      env.c.save();
+      await env.fixture.whenStable();
+      const invoice = env.c.saved()!;
+      env.c.backToList();
+
+      // Ya no se sugiere, y "Crear factura" lleva a la factura existente.
+      env.c.changeStatus(env.c.documents().find((d) => d.kind === 'cotizacion')!, input('aceptada'));
+      expect(env.c.suggestInvoice()).toBeNull();
+      env.c.toInvoice(quote);
+      expect(env.c.draft()!.id).toBe(invoice.id);
+      expect(env.c.draft()!.kind).toBe('factura');
+      expect(env.c.documents().filter((d) => d.kind === 'factura')).toHaveLength(1);
+    });
+
+    it('una factura emitida con conceptos a determinar no se guarda y dice por qué', async () => {
+      const env = await montar();
+      const quote = await cotizacionGuardada(env, 'aceptada');
+      env.c.toInvoice(quote);
+      env.c.setStatus(input('emitida'));
+      env.c.save();
+      await env.fixture.whenStable();
+
+      expect(env.c.saved()).toBeNull();
+      expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('a determinar'), 'error');
+    });
+
+    it('descartar el aviso lo quita sin crear nada', async () => {
+      const env = await montar();
+      await cotizacionGuardada(env, 'aceptada');
+      env.c.dismissSuggestion();
+      expect(env.c.suggestInvoice()).toBeNull();
+      expect(env.c.documents().filter((d) => d.kind === 'factura')).toHaveLength(0);
+    });
+  });
 });

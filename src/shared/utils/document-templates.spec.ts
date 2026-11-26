@@ -53,6 +53,31 @@ describe('plantillas de documentos', () => {
     expect(draftFromTemplate('venta', 'factura', '2026-11-26').validUntil).toBeNull();
   });
 
+  it('una factura emitida no puede traer conceptos a determinar; en borrador o en una cotización sí', () => {
+    const d = draftFromTemplate('general', 'factura');
+    d.customerName = 'Juan';
+    d.items[0].description = 'Pieza a determinar';
+    d.items[0].tbd = true;
+
+    d.status = 'borrador';
+    expect(validateDraft(d)).toBeNull();
+
+    d.status = 'emitida';
+    expect(validateDraft(d)).toMatch(/a determinar/);
+    d.status = 'pagada';
+    expect(validateDraft(d)).toMatch(/a determinar/);
+
+    d.items[0].tbd = false;
+    expect(validateDraft(d)).toBeNull();
+
+    const q = draftFromTemplate('general', 'cotizacion');
+    q.customerName = 'Juan';
+    q.items[0].description = 'Pieza a determinar';
+    q.items[0].tbd = true;
+    q.status = 'aceptada';
+    expect(validateDraft(q)).toBeNull();
+  });
+
   it('validateDraft pide cliente, una línea y valores coherentes', () => {
     const d = draftFromTemplate('general', 'factura');
     expect(validateDraft(d)).toMatch(/cliente/);

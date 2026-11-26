@@ -272,5 +272,9 @@ export function validateDraft(draft: DocumentDraft): string | null {
   }
   if (draft.discountValue < 0) return 'El descuento no puede ser negativo.';
   if (draft.paid < 0) return 'Lo abonado no puede ser negativo.';
+  // Una factura que ya se va a entregar necesita todos sus precios: lo "a determinar" es de las cotizaciones.
+  if (draft.kind === 'factura' && draft.status !== 'borrador' && lines.some((i) => i.tbd)) {
+    return 'Una factura emitida no puede tener conceptos a determinar: ponles su precio, quítalos o déjala en borrador.';
+  }
   return null;
 }
