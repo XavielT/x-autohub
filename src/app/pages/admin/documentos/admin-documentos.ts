@@ -4,6 +4,7 @@ import { switchMap } from 'rxjs';
 import { DOCUMENT, DecimalPipe, DatePipe } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Icon } from '../../../../shared/ui/icon/icon';
+import { allVehicles, emptyDocumentVehicle, vehicleLabel } from '../../../../shared/utils/document-vehicles';
 import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { DocumentSheet } from '../../../../shared/ui/document-sheet/document-sheet';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
@@ -84,7 +85,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
   const { id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId, vehicle, issueDate, validUntil, items } = doc;
   return {
     id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId,
-    vehicle: { ...vehicle }, issueDate, validUntil, items: items.map((i) => ({ ...i })),
+    vehicle: { ...vehicle }, extraVehicles: (doc.extraVehicles ?? []).map((v) => ({ ...v })), issueDate, validUntil, items: items.map((i) => ({ ...i })),
     discountType: doc.discountType, discountValue: doc.discountValue, applyItbis: doc.applyItbis, itbisRate: doc.itbisRate,
     paid: doc.paid, payments: (doc.payments ?? []).map((p) => ({ ...p })), notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
   };
@@ -604,6 +605,72 @@ export class AdminDocumentos implements OnInit {
   /** Lo que eligió el selector de marca, modelo y año. */
   pickVehicle(pick: VehicleSelection): void {
     this.draft.update((d) => (d ? { ...d, vehicle: { ...d.vehicle, ...pick } } : d));
+  }
+
+  // --- Más de un vehículo en el mismo documento ------------------------------------------------
+
+  /** Los vehículos del documento (principal + extra) con su nombre, para el selector de cada línea. */
+  readonly vehicleChoices = computed(() => {
+    const d = this.draft();
+    return d ? allVehicles(d).map((v, i) => ({ index: i, label: vehicleLabel(v, i) })) : [];
+  });
+
+  readonly hasExtraVehicles = computed(() => (this.draft()?.extraVehicles?.length ?? 0) > 0);
+
+  /** Agrega otro vehículo en blanco (o uno de los del cliente) al documento. */
+  addVehicle(from?: CustomerVehicle): void {
+    this.vehicleKey.update((k) => k + 1);
+    this.draft.update((d) => {
+      if (!d) return d;
+      const next = from ? this.vehicleOf(from, emptyDocumentVehicle()) : emptyDocumentVehicle();
+      return { ...d, extraVehicles: [...(d.extraVehicles ?? []), next] };
+    });
+  }
+
+  /** Quita un vehículo extra; sus líneas pasan a "general" y las de los siguientes se recorren un lugar. */
+  removeVehicle(extraIndex: number): void {
+    const d = this.draft();
+    if (!d) return;
+    const gone = extraIndex + 1;
+    this.vehicleKey.update((k) => k + 1);
+    this.draft.set({
+      ...d,
+      extraVehicles: (d.extraVehicles ?? []).filter((_, i) => i !== extraIndex),
+      items: d.items.map((l) => {
+        if (typeof l.vehicle !== 'number' || l.vehicle < gone) return l;
+        const { vehicle, ...rest } = l;
+        return vehicle === gone ? rest : { ...rest, vehicle: vehicle - 1 };
+      }),
+    });
+  }
+
+  pickExtraVehicle(extraIndex: number, pick: VehicleSelection): void {
+    this.patchExtra(extraIndex, pick);
+  }
+
+  setExtraVehicle(extraIndex: number, key: 'plate' | 'mileage' | 'vin', event: Event): void {
+    this.patchExtra(extraIndex, { [key]: value(event) });
+  }
+
+  private patchExtra(extraIndex: number, change: Partial<DocumentVehicle>): void {
+    this.draft.update((d) =>
+      d ? { ...d, extraVehicles: (d.extraVehicles ?? []).map((v, i) => (i === extraIndex ? { ...v, ...change } : v)) } : d,
+    );
+  }
+
+  /** A qué vehículo va una línea ('' = general). */
+  setLineVehicle(uid: string, event: Event): void {
+    const d = this.draft();
+    if (!d) return;
+    const raw = value(event);
+    this.commit(
+      d.items.map((i) => {
+        if (i.uid !== uid) return i;
+        const { vehicle, ...rest } = i;
+        return raw === '' ? rest : { ...rest, vehicle: Number(raw) };
+      }),
+      this.sectionTitles(),
+    );
   }
 
   setVerdict(event: Event): void {

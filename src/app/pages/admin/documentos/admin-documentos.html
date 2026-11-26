@@ -90,7 +90,7 @@
                 <div>
                   <span class="tl__ref dc__code"><app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="16" /> {{ doc.code }}</span>
                   <h3 class="tl__name">{{ doc.customerName }}</h3>
-                  <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }@if (hasTbd(doc)) { · incluye conceptos a determinar }</p>
+                  <p class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }@if (doc.extraVehicles?.length) { · +{{ doc.extraVehicles?.length }} {{ doc.extraVehicles?.length === 1 ? 'vehículo' : 'vehículos' }} }@if (hasTbd(doc)) { · incluye conceptos a determinar }</p>
                   @if (doc.kind === 'factura' && doc.status !== 'borrador' && doc.status !== 'anulada') {
                     @if (paidOnOf(doc); as day) {
                       <p class="dc__paid-note"><app-icon name="check" [size]="14" /> Pagada el {{ day | date: 'dd/MM/yyyy' }}</p>
@@ -228,6 +228,14 @@
                         <button type="button" class="tl__chip" (click)="useVehicle(v)"><app-icon name="car" [size]="16" /> {{ v.text || 'Sin nombre' }}{{ v.plate ? ' · ' + v.plate : '' }}</button>
                       }
                     </div>
+                    @if (pc.vehicles.length > 1) {
+                      <span class="tl__muted">¿Vienen varios? Agrégalos al mismo documento:</span>
+                      <div class="tl__chips">
+                        @for (v of pc.vehicles; track $index) {
+                          <button type="button" class="tl__chip" (click)="addVehicle(v)"><app-icon name="plus" [size]="14" /> {{ v.text || 'Sin nombre' }}{{ v.plate ? ' · ' + v.plate : '' }}</button>
+                        }
+                      </div>
+                    }
                   </div>
                 }
               }
@@ -252,6 +260,30 @@
                       <option value="rechazado" [selected]="d.vehicle.verdict === 'rechazado'">{{ verdictLabels.rechazado }}</option>
                     </select></label>
                 }
+              </div>
+
+              @for (k of [vehicleKey()]; track k) {
+                @for (ev of d.extraVehicles ?? []; track $index; let i = $index) {
+                  <div class="tl__form dc__extra-vehicle">
+                    <h4 class="tl__name tl__field--wide">Vehículo {{ i + 2 }}
+                      <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="removeVehicle(i)">Quitar</button></h4>
+                    <div class="tl__field tl__field--wide">
+                      <app-vehicle-pick [value]="ev" [idPrefix]="'dv' + (i + 2)" (changed)="pickExtraVehicle(i, $event)" />
+                    </div>
+                    <label class="tl__field"><span>Placa</span>
+                      <input class="tl__input" type="text" [name]="'vehiclePlate' + (i + 2)" [value]="ev.plate" (input)="setExtraVehicle(i, 'plate', $event)" /></label>
+                    <label class="tl__field"><span>Kilometraje</span>
+                      <input class="tl__input" type="text" [name]="'vehicleMileage' + (i + 2)" [value]="ev.mileage" (input)="setExtraVehicle(i, 'mileage', $event)" /></label>
+                    @if (template()?.hasInspection) {
+                      <label class="tl__field tl__field--wide"><span>Chasis (VIN)</span>
+                        <input class="tl__input" type="text" [name]="'vehicleVin' + (i + 2)" autocomplete="off" [value]="ev.vin" (input)="setExtraVehicle(i, 'vin', $event)" /></label>
+                    }
+                  </div>
+                }
+              }
+              <div class="tl__row">
+                <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addVehicle()"><app-icon name="plus" [size]="16" /> Agregar otro vehículo</button>
+                @if (hasExtraVehicles()) { <span class="tl__muted">Cada línea se asigna a un vehículo y se factura con su propio subtotal.</span> }
               </div>
             }
 
@@ -351,6 +383,12 @@
                       <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.tbd ? '' : line.unitPrice" [disabled]="line.tbd" [placeholder]="line.tbd ? 'A determinar' : ''" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
                       <button type="button" class="dc__line-del" aria-label="Quitar línea" (click)="removeLine(line.uid)"><app-icon name="x" [size]="18" /></button>
                       <div class="dc__line-tools">
+                        @if (hasExtraVehicles()) {
+                          <select class="tl__input dc__line-vehicle" aria-label="Vehículo de esta línea" (change)="setLineVehicle(line.uid, $event)">
+                            <option value="" [selected]="line.vehicle === undefined">General (sin vehículo)</option>
+                            @for (c of vehicleChoices(); track c.index) { <option [value]="c.index" [selected]="line.vehicle === c.index">{{ c.label }}</option> }
+                          </select>
+                        }
                         <select class="tl__input dc__line-section" aria-label="Pasar a otra sección" (change)="setLineSection(line.uid, $event)">
                           @for (t of sectionTitles(); track $index) { <option [value]="t" [selected]="line.section === t">{{ t || 'Sin título' }}</option> }
                         </select>

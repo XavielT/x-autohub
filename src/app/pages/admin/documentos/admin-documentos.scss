@@ -157,6 +157,8 @@
 
 .dc__line-tools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .dc__line-section { flex: 1 1 100%; min-width: 0; }
+.dc__line-vehicle { flex: 1 1 100%; min-width: 0; }
+.dc__extra-vehicle { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.2)); }
 .dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }
 
 .dc__tbd { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); cursor: pointer; white-space: nowrap; }

@@ -9,6 +9,7 @@ import {
   DocumentKind,
   DocumentLine,
   DocumentPayment,
+  DocumentVehicle,
   DocumentStatus,
   LineKind,
   PaymentMethod,
@@ -17,6 +18,7 @@ import {
 } from '../models/business-document.model';
 import { computeTotals, documentCode, todayIso } from '../utils/document-totals';
 import { newLineUid, validateDraft } from '../utils/document-templates';
+import { cleanExtraVehicles } from '../utils/document-vehicles';
 import { pickedFields } from './business-customer.service';
 import { newPaymentId, sortedPayments, sumPayments } from '../utils/document-payments';
 
@@ -25,6 +27,30 @@ const DOCUMENT_COLUMNS =
   'id, kind, number, template, status, customer_name, customer_phone, customer_email, customer_rnc, customer_id, vehicle, issue_date, valid_until, items, discount_type, discount_value, apply_itbis, itbis_rate, paid, payments, notes, terms, source_id, subtotal, itbis, total, created_by, created_at, updated_at';
 
 const MOCK_STORAGE_KEY = 'x-autohub.business-documents';
+
+/** Un vehículo tal como se guarda dentro del jsonb. */
+const storedVehicle = (v: DocumentVehicle) => ({
+  text: v.text.trim(),
+  plate: v.plate.trim(),
+  mileage: v.mileage.trim(),
+  vin: v.vin.trim(),
+  verdict: v.verdict,
+  ...pickedFields(v),
+});
+
+/** Los vehículos extra que trae el jsonb `vehicle` (`more`). */
+function extrasOf(raw: unknown): DocumentVehicle[] {
+  const more = (raw as { more?: unknown } | null)?.more;
+  if (!Array.isArray(more)) return [];
+  return more.map((m: Record<string, unknown>) => ({
+    text: String(m['text'] ?? ''),
+    plate: String(m['plate'] ?? ''),
+    mileage: String(m['mileage'] ?? ''),
+    vin: String(m['vin'] ?? ''),
+    verdict: String(m['verdict'] ?? '') as Verdict,
+    ...pickedFields(m as Parameters<typeof pickedFields>[0]),
+  }));
+}
 
 export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
   return {
@@ -47,6 +73,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
       verdict: (row.vehicle?.verdict ?? '') as Verdict,
       ...pickedFields(row.vehicle ?? {}),
     },
+    extraVehicles: extrasOf(row.vehicle),
     issueDate: row.issue_date,
     validUntil: row.valid_until,
     items: (row.items ?? []).map((i) => ({
@@ -57,6 +84,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
       description: i.description,
       quantity: Number(i.quantity),
       unitPrice: Number(i.unitPrice),
+      ...(typeof i.vehicle === 'number' && { vehicle: i.vehicle }),
     })),
     discountType: row.discount_type,
     discountValue: Number(row.discount_value),
@@ -97,6 +125,7 @@ const cleanItems = (items: readonly DocumentLine[]) =>
       // A determinar = sin precio: se guarda en 0 para que la base llegue al mismo total.
       unitPrice: i.tbd ? 0 : i.unitPrice,
       tbd: i.tbd,
+      ...(typeof i.vehicle === 'number' && { vehicle: i.vehicle }),
     }));
 
 /**
@@ -141,6 +170,7 @@ export class BusinessDocumentService {
         vin: draft.vehicle.vin.trim(),
         verdict: draft.vehicle.verdict,
         ...pickedFields(draft.vehicle),
+        ...(cleanExtraVehicles(draft.extraVehicles).length > 0 && { more: cleanExtraVehicles(draft.extraVehicles).map(storedVehicle) }),
       },
       issue_date: draft.issueDate,
       valid_until: draft.validUntil || null,
@@ -170,6 +200,7 @@ export class BusinessDocumentService {
         number,
         code: documentCode(previous?.kind ?? draft.kind, number),
         customerName: fields.customer_name,
+        extraVehicles: cleanExtraVehicles(draft.extraVehicles),
         items: fields.items.map((i) => ({ ...i, uid: newLineUid() })),
         paid: sumPayments(fields.payments),
         payments: fields.payments.map((p) => ({ ...p })),
@@ -246,6 +277,7 @@ export class BusinessDocumentService {
       customerRnc: doc.customerRnc,
       customerId: doc.customerId,
       vehicle: { ...doc.vehicle },
+      extraVehicles: (doc.extraVehicles ?? []).map((v) => ({ ...v })),
       issueDate: today,
       validUntil: null,
       items: doc.items.map((i) => ({ ...i, uid: newLineUid() })),

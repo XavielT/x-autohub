@@ -838,6 +838,58 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     });
   });
 
+  describe('más de un vehículo en el mismo documento', () => {
+    async function conDosVehiculos() {
+      const env = await montar();
+      env.c.startNew();
+      env.c.pickTemplate('mecanica');
+      env.c.addLine('servicio', 'Cambio de pastillas');
+      env.c.addVehicle();
+      env.fixture.detectChanges();
+      return env;
+    }
+
+    it('agregar otro vehículo muestra su formulario y deja asignar cada línea', async () => {
+      const { c, el } = await conDosVehiculos();
+      expect(c.draft()?.extraVehicles).toHaveLength(1);
+      expect(el.textContent).toContain('Vehículo 2');
+      expect(el.querySelector('.dc__line-vehicle')).not.toBeNull();
+      expect(c.vehicleChoices().map((v) => v.label)).toEqual(['Vehículo 1', 'Vehículo 2']);
+    });
+
+    it('sin vehículos extra no sale el selector de vehículo en las líneas', async () => {
+      const { c, el } = await montar();
+      c.startNew();
+      c.pickTemplate('mecanica');
+      expect(el.querySelector('.dc__line-vehicle')).toBeNull();
+    });
+
+    it('cada línea se asigna a su vehículo, y volver a general quita la asignación', async () => {
+      const { fixture, c } = await conDosVehiculos();
+      const uid = c.draft()!.items[0].uid;
+      c.setLineVehicle(uid, input('1'));
+      expect(c.draft()!.items[0].vehicle).toBe(1);
+      c.setLineVehicle(uid, input(''));
+      fixture.detectChanges();
+      expect(c.draft()!.items[0].vehicle).toBeUndefined();
+    });
+
+    it('quitar un vehículo deja sus líneas como generales y recorre las de los siguientes', async () => {
+      const { c } = await conDosVehiculos();
+      c.addVehicle();
+      c.addLine('servicio', 'Alineación');
+      const [l1, l2] = c.draft()!.items;
+      c.setLineVehicle(l1.uid, input('1'));
+      c.setLineVehicle(l2.uid, input('2'));
+
+      c.removeVehicle(0);
+
+      expect(c.draft()!.extraVehicles).toHaveLength(1);
+      expect(c.draft()!.items.find((i) => i.uid === l1.uid)!.vehicle).toBeUndefined();
+      expect(c.draft()!.items.find((i) => i.uid === l2.uid)!.vehicle).toBe(1);
+    });
+  });
+
   describe('facturas vencidas', () => {
     const hoy = new Date().toISOString().slice(0, 10);
     const dia = (n: number) => new Date(Date.parse(hoy) + n * 86_400_000).toISOString().slice(0, 10);

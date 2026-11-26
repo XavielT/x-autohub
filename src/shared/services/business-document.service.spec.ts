@@ -33,6 +33,27 @@ describe('BusinessDocumentService (modo simulado)', () => {
     expect(a.total).toBe(3000);
   });
 
+  it('guarda varios vehículos y a cuál va cada línea, y el total es la suma de todos', async () => {
+    const d = draft();
+    d.vehicle.text = 'Jetta 2012';
+    d.extraVehicles = [
+      { text: 'Civic 2015', plate: 'B222', mileage: '', vin: '', verdict: '' },
+      { text: '', plate: '', mileage: '', vin: '', verdict: '' },
+    ];
+    d.items[0].vehicle = 0;
+    d.items.push({ ...d.items[0], uid: 'x2', description: 'Diagnóstico del Civic', quantity: 1, unitPrice: 800, vehicle: 1 });
+
+    const saved = await firstValueFrom(service.save(d));
+    expect(saved.extraVehicles).toHaveLength(1);
+    expect(saved.extraVehicles![0].plate).toBe('B222');
+    expect(saved.items.map((i) => i.vehicle)).toEqual([0, 1]);
+    expect(saved.total).toBe(3800);
+
+    const copy = service.duplicate(saved, 'factura');
+    expect(copy.extraVehicles?.[0].text).toBe('Civic 2015');
+    expect(copy.items.map((i) => i.vehicle)).toEqual([0, 1]);
+  });
+
   it('aplica ITBIS y descuento al total', async () => {
     const d = draft();
     d.applyItbis = true;

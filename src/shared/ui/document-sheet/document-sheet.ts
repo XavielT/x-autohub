@@ -12,6 +12,7 @@ import {
 } from '../../models/business-document.model';
 import { BankAccount } from '../../models/order.model';
 import { computeTotals } from '../../utils/document-totals';
+import { allVehicles, hasVehicleData, vehicleLabel } from '../../utils/document-vehicles';
 import { templateById } from '../../utils/document-templates';
 import { sectionTitlesOf } from '../../utils/document-sections';
 import { lastPaymentDate, sortedPayments } from '../../utils/document-payments';
@@ -65,9 +66,34 @@ export class DocumentSheet {
 
   readonly totals = computed(() => computeTotals({ ...this.doc(), items: this.lines() }));
 
+  /** El vehículo principal y los demás, con el texto que los nombra en el papel. */
+  readonly vehicles = computed(() => {
+    const d = this.doc();
+    return allVehicles(d).map((v, i) => ({ v, label: vehicleLabel(v, i), index: i }));
+  });
+
+  /** Más de un vehículo: cada uno se factura aparte, con sus propias líneas y su subtotal. */
+  readonly multiVehicle = computed(() => this.template().showVehicle && (this.doc().extraVehicles?.length ?? 0) > 0);
+
   readonly groups = computed<LineGroup[]>(() => {
     const lines = this.lines();
     const sum = (ls: DocumentLine[]) => ls.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+
+    if (this.multiVehicle()) {
+      const list = this.vehicles();
+      const result: LineGroup[] = [];
+      const slots: (number | null)[] = [...list.map((x) => x.index), null];
+      for (const slot of slots) {
+        const own = lines.filter((l) => (typeof l.vehicle === 'number' && l.vehicle < list.length ? l.vehicle : null) === slot);
+        if (own.length === 0) continue;
+        const head = slot === null ? 'General' : list[slot].label;
+        for (const title of sectionTitlesOf(own)) {
+          const inSection = own.filter((l) => l.section === title);
+          result.push({ title: [head, title.trim()].filter(Boolean).join(' · '), lines: inSection, subtotal: sum(inSection) });
+        }
+      }
+      return result;
+    }
 
     // Con secciones elegidas por quien armó el documento, el papel las respeta tal cual.
     if (lines.some((l) => l.section.trim())) {
@@ -90,10 +116,7 @@ export class DocumentSheet {
     return [{ title: null, lines, subtotal: sum(lines) }];
   });
 
-  readonly hasVehicle = computed(() => {
-    const v = this.doc().vehicle;
-    return this.template().showVehicle && !!(v.text || v.plate || v.mileage || v.vin || v.verdict);
-  });
+  readonly hasVehicle = computed(() => this.template().showVehicle && allVehicles(this.doc()).some(hasVehicleData));
 
   /** Las cuentas de ejemplo que deja la migración no se imprimen para un cliente. */
   readonly realBanks = computed(() => this.banks().filter((b) => !b.isExample));

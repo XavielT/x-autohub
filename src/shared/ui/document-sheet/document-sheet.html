@@ -40,15 +40,20 @@
 
   @if (hasVehicle()) {
     <section class="ds__vehicle">
-      <h4>Vehículo</h4>
-      <p>
-        @if (doc().vehicle.text) { <span><b>{{ doc().vehicle.text }}</b></span> }
-        @if (doc().vehicle.plate) { <span>Placa: <b>{{ doc().vehicle.plate }}</b></span> }
-        @if (doc().vehicle.mileage) { <span>Kilometraje: <b>{{ doc().vehicle.mileage }}</b></span> }
-        @if (doc().vehicle.vin) { <span>Chasis: <b>{{ doc().vehicle.vin }}</b></span> }
-      </p>
-      @if (doc().vehicle.verdict; as verdict) {
-        <p class="ds__verdict" [attr.data-verdict]="verdict">{{ verdictLabels[verdict] }}</p>
+      <h4>{{ multiVehicle() ? 'Vehículos' : 'Vehículo' }}</h4>
+      @for (item of vehicles(); track item.index) {
+        @if (item.v.text || item.v.plate || item.v.mileage || item.v.vin || item.v.verdict) {
+          <p>
+            @if (multiVehicle()) { <span class="ds__vehicle-n">{{ item.index + 1 }}.</span> }
+            @if (item.v.text) { <span><b>{{ item.v.text }}</b></span> }
+            @if (item.v.plate) { <span>Placa: <b>{{ item.v.plate }}</b></span> }
+            @if (item.v.mileage) { <span>Kilometraje: <b>{{ item.v.mileage }}</b></span> }
+            @if (item.v.vin) { <span>Chasis: <b>{{ item.v.vin }}</b></span> }
+          </p>
+          @if (item.v.verdict; as verdict) {
+            <p class="ds__verdict" [attr.data-verdict]="verdict">{{ verdictLabels[verdict] }}</p>
+          }
+        }
       }
     </section>
   }

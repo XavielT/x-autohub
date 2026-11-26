@@ -84,6 +84,11 @@ export interface DocumentLine {
   unitPrice: number;
   /** "A determinar": todavía no se sabe qué es ni cuánto cuesta (una falla por descubrir). No suma al total. */
   tbd: boolean;
+  /**
+   * A qué vehículo del documento va esta línea: 0 es el principal, 1 en adelante los extra (`extraVehicles`).
+   * Sin valor = general (no es de un vehículo en particular). Cada vehículo se factura aparte, con su subtotal.
+   */
+  vehicle?: number;
 }
 
 /**
@@ -140,6 +145,8 @@ export interface BusinessDocument {
   /** El cliente de la tabla al que pertenece (nulo si se borró). El documento guarda su propia copia de los datos. */
   customerId: string | null;
   vehicle: DocumentVehicle;
+  /** Otros vehículos del mismo documento (el principal es `vehicle`). Se guardan dentro del jsonb `vehicle`, en `more`. */
+  extraVehicles?: DocumentVehicle[];
   /** `YYYY-MM-DD`. */
   issueDate: string;
   validUntil: string | null;
