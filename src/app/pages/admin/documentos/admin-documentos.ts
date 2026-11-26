@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { switchMap } from 'rxjs';
-import { DOCUMENT, DecimalPipe, DatePipe } from '@angular/common';
+import { DOCUMENT, DecimalPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Icon } from '../../../../shared/ui/icon/icon';
-import { allVehicles, emptyDocumentVehicle, vehicleLabel } from '../../../../shared/utils/document-vehicles';
+import { allVehicles, emptyDocumentVehicle, moveLineInSlot, vehicleLabel, vehicleSlot } from '../../../../shared/utils/document-vehicles';
 import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { DocumentSheet } from '../../../../shared/ui/document-sheet/document-sheet';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
@@ -103,7 +103,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
  */
 @Component({
   selector: 'app-admin-documentos',
-  imports: [Skeleton, DocumentSheet, Icon, VehiclePick, DecimalPipe, DatePipe],
+  imports: [Skeleton, DocumentSheet, Icon, VehiclePick, DecimalPipe, DatePipe, NgTemplateOutlet],
   templateUrl: './admin-documentos.html',
   styleUrl: './admin-documentos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,6 +117,7 @@ export class AdminDocumentos implements OnInit {
   private readonly services = inject(AdminServicesService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly templates = DOCUMENT_TEMPLATES;
   readonly kindLabels = KIND_LABELS;
@@ -658,6 +659,64 @@ export class AdminDocumentos implements OnInit {
     );
   }
 
+  /** El vehículo al que van los conceptos que se tocan o se buscan (cuando hay más de uno). */
+  readonly vehicleTarget = signal<number>(0);
+
+  /** Con más de un vehículo el editor se divide por vehículo, cada uno con su color, líneas y subtotal. */
+  readonly vehicleGroups = computed(() => {
+    const d = this.draft();
+    if (!d) return [];
+    const list = allVehicles(d);
+    const slots: (number | null)[] = [...list.map((_, i) => i), null];
+    return slots
+      .map((slot) => {
+        const lines = d.items.filter((l) => vehicleSlot(l, list.length) === slot);
+        return {
+          slot,
+          label: slot === null ? 'General (sin vehículo)' : vehicleLabel(list[slot], slot),
+          color: slot === null ? 5 : slot % 5,
+          lines,
+          subtotal: lines.reduce((sum, l) => sum + (l.tbd ? 0 : l.quantity * l.unitPrice), 0),
+          pending: lines.filter((l) => l.tbd).length,
+        };
+      })
+      .filter((g) => g.slot !== null || g.lines.length > 0);
+  });
+
+  /** El vehículo donde caen los conceptos nuevos (si el elegido se quitó, el primero). */
+  readonly activeVehicle = computed(() => {
+    const count = this.vehicleChoices().length;
+    return this.vehicleTarget() < count ? this.vehicleTarget() : 0;
+  });
+
+  setVehicleTarget(event: Event): void {
+    this.vehicleTarget.set(Number(value(event)));
+  }
+
+  /** Agrega un concepto en blanco al vehículo de ese bloque. */
+  addLineToVehicle(slot: number | null): void {
+    if (slot !== null) this.vehicleTarget.set(slot);
+    this.addLine(undefined, '', 0, false, slot);
+  }
+
+  /** La línea que acaba de moverse: se resalta un momento para que el ojo la siga. */
+  readonly flashUid = signal<string | null>(null);
+  private flashTimer: ReturnType<typeof setTimeout> | undefined;
+
+  private followLine(uid: string): void {
+    this.flashUid.set(uid);
+    clearTimeout(this.flashTimer);
+    this.flashTimer = setTimeout(() => this.flashUid.set(null), 1600);
+    setTimeout(() => {
+      this.host.nativeElement.querySelector(`[data-uid="${uid}"]`)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    }, 30);
+  }
+
+  /** Al tocar un número se selecciona todo: lo que se escribe reemplaza el 0 en vez de quedar pegado a él. */
+  selectAll(event: Event): void {
+    (event.target as HTMLInputElement).select?.();
+  }
+
   /** A qué vehículo va una línea ('' = general). */
   setLineVehicle(uid: string, event: Event): void {
     const d = this.draft();
@@ -757,7 +816,13 @@ export class AdminDocumentos implements OnInit {
   }
 
   moveLineBy(uid: string, delta: -1 | 1): void {
-    this.draft.update((d) => (d ? { ...d, items: moveLine(d.items, uid, delta) } : d));
+    this.draft.update((d) => {
+      if (!d) return d;
+      // Con varios vehículos solo se mueve entre las de su vehículo; si no, entre las de su sección.
+      const items = (d.extraVehicles?.length ?? 0) > 0 ? moveLineInSlot(d.items, uid, delta, allVehicles(d).length) : moveLine(d.items, uid, delta);
+      return { ...d, items };
+    });
+    this.followLine(uid);
   }
 
   setLineSection(uid: string, event: Event): void {
@@ -776,9 +841,13 @@ export class AdminDocumentos implements OnInit {
     this.addLine();
   }
 
-  addLine(kind?: LineKind, description = '', unitPrice = 0, tbd = false): void {
+  addLine(kind?: LineKind, description = '', unitPrice = 0, tbd = false, forSlot?: number | null): void {
     const d = this.draft();
     if (!d) return;
+    const count = allVehicles(d).length;
+    const multi = (d.extraVehicles?.length ?? 0) > 0;
+    // Con varios vehículos, el concepto cae en el vehículo elegido (o en el del bloque donde se tocó).
+    const slot: number | null = forSlot !== undefined ? forSlot : multi ? this.activeVehicle() : null;
     let titles = this.sectionTitles();
     if (titles.length === 0) {
       titles = [''];
@@ -786,9 +855,10 @@ export class AdminDocumentos implements OnInit {
     }
     const section = this.target();
     const tpl = this.template();
-    const line = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice, section, tbd);
+    const base = blankLine(kind ?? tpl?.defaultLineKind ?? 'servicio', description, 1, unitPrice, section, tbd);
+    const line = multi && slot !== null && slot < count ? { ...base, vehicle: slot } : base;
     // Una línea vacía al final de la sección se reutiliza en vez de dejar un renglón en blanco en medio.
-    const own = d.items.filter((i) => i.section === section);
+    const own = d.items.filter((i) => i.section === section && (!multi || vehicleSlot(i, count) === (slot !== null && slot < count ? slot : null)));
     const last = own[own.length - 1];
     const items =
       last && !last.description.trim() && last.unitPrice === 0

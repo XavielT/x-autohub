@@ -99,26 +99,93 @@
 // Así cabe en 320 px: antes la fila de herramientas medía más que la pantalla.
 .dc__line {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
-  gap: 6px;
+  grid-template-columns: 52px minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: start;
   padding: 10px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
+  transition: background-color 0.3s ease;
+
+  // La línea que acaba de moverse parpadea en el color de la marca: el ojo la sigue.
+  &.is-moved { animation: dc-moved 1.6s ease; }
 }
-.dc__line-desc { grid-column: 1 / -1; }
-.dc__line-kind { grid-column: 1 / -1; }
+@keyframes dc-moved {
+  0%, 35% { background: var(--Hub-translucid); box-shadow: 0 0 0 2px var(--Hub); }
+  100% { background: rgba(255, 255, 255, 0.04); box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc__line.is-moved { animation: none; box-shadow: 0 0 0 2px var(--Hub); }
+}
+
+// Subir / bajar: dos flechas con el número del concepto en medio, a la izquierda de cada tarjeta.
+.dc__line-move { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.dc__line-move .dc__icon { min-width: 44px; min-height: 36px; padding: 0; display: inline-grid; place-items: center; }
+.dc__line-n { font-weight: 800; font-size: 14px; color: var(--text-soft); }
+
+.dc__line-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dc__line-nums { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.2fr) minmax(0, 1.2fr); gap: 8px; align-items: end; }
+.dc__num {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  > span { font-size: 12px; color: var(--text-soft); }
+  &--sum b { min-height: 44px; display: flex; align-items: center; justify-content: flex-end; font-size: 16px; white-space: nowrap; }
+}
+.dc__line-num { text-align: right; width: 100%; }
 .dc__line-del {
-  grid-column: 3;
   min-height: 44px;
+  display: inline-grid;
+  place-items: center;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--text-soft);
-  font-size: 22px;
   cursor: pointer;
   &:hover { color: #ff8d8f; }
 }
-.dc__line-num { text-align: right; }
+
+.dc__more {
+  summary { cursor: pointer; font-size: 13px; color: var(--text-soft); padding: 4px 0; }
+  &[open] summary { margin-bottom: 6px; }
+}
+
+// Un bloque por vehículo: cada uno con su color, para no tener que leer el nombre y saber de cuál es una línea.
+.dc__veh {
+  --veh: #ffb300;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--veh) 45%, transparent);
+  border-left: 6px solid var(--veh);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--veh) 7%, transparent);
+  min-width: 0;
+
+  &[data-color='0'] { --veh: #ffb300; }
+  &[data-color='1'] { --veh: #4aa8ff; }
+  &[data-color='2'] { --veh: #5dd68a; }
+  &[data-color='3'] { --veh: #c58bff; }
+  &[data-color='4'] { --veh: #ff7a59; }
+  &[data-color='5'] { --veh: #9aa0a6; }
+}
+.dc__veh-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dc__veh-badge {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--veh);
+  color: #000;
+  font-weight: 800;
+}
+.dc__veh-title { display: flex; flex-direction: column; min-width: 0; flex: 1 1 160px; strong { overflow-wrap: anywhere; } small { color: var(--text-soft); } }
+.dc__veh-empty { list-style: none; padding: 8px; }
 
 .dc__target { margin-top: 4px; }
 
@@ -155,8 +222,9 @@
   &--danger:hover:not(:disabled) { border-color: #ff8d8f; color: #ff8d8f; }
 }
 
-.dc__line-tools { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.dc__line-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .dc__line-section { flex: 1 1 100%; min-width: 0; }
+.dc__line-kind { flex: 1 1 140px; min-width: 0; }
 .dc__line-vehicle { flex: 1 1 100%; min-width: 0; }
 .dc__extra-vehicle { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.2)); }
 .dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }

@@ -312,38 +312,28 @@
               }
             </div>
 
-            <h3 class="tl__name">Secciones y líneas</h3>
-            <p class="tl__muted">Arma el documento a tu manera: crea secciones con el nombre que quieras, renómbralas, muévelas y pasa líneas de una a otra. En el papel cada sección sale con su título y su subtotal.</p>
+            <h3 class="tl__name">Conceptos</h3>
+            <p class="tl__muted">Agrega lo que se hizo o se vende. Toca un concepto frecuente, búscalo en el catálogo o escribe el tuyo.@if (hasExtraVehicles()) { Cada vehículo tiene su propio bloque y su subtotal. }</p>
 
             <div class="dc__target">
-              <label class="tl__field">
-                <span>Los conceptos que toques abajo se agregan en</span>
-                <select class="tl__input" name="target" (change)="setTarget($event)">
-                  @for (t of sectionTitles(); track $index) {
-                    <option [value]="t" [selected]="target() === t">{{ t || 'Sin título' }}</option>
-                  }
-                </select>
-              </label>
-            </div>
-
-            <div class="dc__suggest">
-              <span class="tl__muted">¿Aún no se sabe qué está malo o cuánto cuesta? Agrégalo sin precio:</span>
-              <div class="tl__chips">
-                <button type="button" class="tl__chip" (click)="addTbdLine('mano_de_obra')"><app-icon name="plus" [size]="14" /> Reparación a determinar</button>
-                <button type="button" class="tl__chip" (click)="addTbdLine('repuesto')"><app-icon name="plus" [size]="14" /> Pieza a determinar</button>
-              </div>
-              <span class="tl__muted">Conceptos frecuentes de cualquier área (el precio lo pones tú):</span>
-              <div class="tl__chips" role="group" aria-label="Área de los conceptos">
-                @for (a of suggestionAreas; track a.id) {
-                  <button type="button" class="tl__chip" [class.is-active]="activeArea().id === a.id" (click)="setSuggestArea(a.id)"><app-icon [name]="a.icon" [size]="16" /> {{ a.label }}</button>
-                }
-              </div>
-              @if (activeArea(); as area) {
-                <div class="tl__chips">
-                  @for (s of area.suggestions; track s.description) {
-                    <button type="button" class="tl__chip" (click)="addLine(s.kind, s.description)"><app-icon name="plus" [size]="14" /> {{ s.description }}</button>
-                  }
-                </div>
+              @if (hasExtraVehicles()) {
+                <label class="tl__field">
+                  <span>Lo que toques o busques aquí abajo se agrega al vehículo</span>
+                  <select class="tl__input dc__target-vehicle" name="targetVehicle" (change)="setVehicleTarget($event)">
+                    @for (c of vehicleChoices(); track c.index) {
+                      <option [value]="c.index" [selected]="activeVehicle() === c.index">{{ c.index + 1 }}. {{ c.label }}</option>
+                    }
+                  </select>
+                </label>
+              } @else if (sectionTitles().length > 1) {
+                <label class="tl__field">
+                  <span>Los conceptos que toques abajo se agregan en</span>
+                  <select class="tl__input" name="target" (change)="setTarget($event)">
+                    @for (t of sectionTitles(); track $index) {
+                      <option [value]="t" [selected]="target() === t">{{ t || 'Sin título' }}</option>
+                    }
+                  </select>
+                </label>
               }
             </div>
 
@@ -360,63 +350,123 @@
               }
             </div>
 
-            @for (group of grouped(); track $index; let first = $first; let last = $last) {
-              <fieldset class="dc__section" [class.is-target]="target() === group.title">
-                <div class="dc__section-head">
-                  <input class="tl__input dc__section-title" type="text" aria-label="Nombre de la sección" placeholder="Sin título (no se muestra)"
-                         [value]="group.title" (change)="renameSectionTo(group.title, $event)" />
-                  <button type="button" class="dc__icon" aria-label="Subir sección" [disabled]="first" (click)="moveSectionBy(group.title, -1)"><app-icon name="arrow-up" [size]="18" /></button>
-                  <button type="button" class="dc__icon" aria-label="Bajar sección" [disabled]="last" (click)="moveSectionBy(group.title, 1)"><app-icon name="arrow-down" [size]="18" /></button>
-                  <button type="button" class="dc__icon dc__icon--danger" [attr.aria-label]="'Quitar la sección ' + group.title" (click)="askRemoveSection(group.title)">
-                    @if (pendingRemove() === group.title) { ¿Quitar? } @else { <app-icon name="trash" [size]="18" /> }
-                  </button>
+            <div class="dc__suggest">
+              <span class="tl__muted">Conceptos frecuentes (el precio lo pones tú):</span>
+              <div class="tl__chips" role="group" aria-label="Área de los conceptos">
+                @for (a of suggestionAreas; track a.id) {
+                  <button type="button" class="tl__chip" [class.is-active]="activeArea().id === a.id" (click)="setSuggestArea(a.id)"><app-icon [name]="a.icon" [size]="16" /> {{ a.label }}</button>
+                }
+              </div>
+              @if (activeArea(); as area) {
+                <div class="tl__chips">
+                  @for (s of area.suggestions; track s.description) {
+                    <button type="button" class="tl__chip" (click)="addLine(s.kind, s.description)"><app-icon name="plus" [size]="14" /> {{ s.description }}</button>
+                  }
                 </div>
+              }
+              <span class="tl__muted">¿Aún no se sabe qué está malo o cuánto cuesta? Agrégalo sin precio:</span>
+              <div class="tl__chips">
+                <button type="button" class="tl__chip" (click)="addTbdLine('mano_de_obra')"><app-icon name="plus" [size]="14" /> Reparación a determinar</button>
+                <button type="button" class="tl__chip" (click)="addTbdLine('repuesto')"><app-icon name="plus" [size]="14" /> Pieza a determinar</button>
+              </div>
+            </div>
 
-                <ul class="dc__lines">
-                  @for (line of group.lines; track line.uid) {
-                    <li class="dc__line">
-                      <input class="tl__input dc__line-desc" type="text" aria-label="Descripción" placeholder="Descripción" [value]="line.description" (input)="setLineDescription(line.uid, $event)" />
+            <ng-template #lineTpl let-line let-n="n" let-first="first" let-last="last">
+              <li class="dc__line" [class.is-moved]="flashUid() === line.uid" [attr.data-uid]="line.uid">
+                <div class="dc__line-move" role="group" aria-label="Mover este concepto">
+                  <button type="button" class="dc__icon" title="Subir un lugar" aria-label="Subir un lugar" [disabled]="first" (click)="moveLineBy(line.uid, -1)"><app-icon name="arrow-up" [size]="18" /></button>
+                  <span class="dc__line-n" aria-hidden="true">{{ n }}</span>
+                  <button type="button" class="dc__icon" title="Bajar un lugar" aria-label="Bajar un lugar" [disabled]="last" (click)="moveLineBy(line.uid, 1)"><app-icon name="arrow-down" [size]="18" /></button>
+                </div>
+                <div class="dc__line-main">
+                  <input class="tl__input dc__line-desc" type="text" aria-label="Descripción" placeholder="Qué se hizo o se vende" [value]="line.description" (input)="setLineDescription(line.uid, $event)" />
+                  <div class="dc__line-nums">
+                    <label class="dc__num"><span>Cant.</span>
+                      <input class="tl__input dc__line-num" type="number" min="0" step="any" inputmode="decimal" [value]="line.quantity" (focus)="selectAll($event)" (input)="setLineNumber(line.uid, 'quantity', $event)" /></label>
+                    <label class="dc__num"><span>Precio RD$</span>
+                      <input class="tl__input dc__line-num" type="number" min="0" step="any" inputmode="decimal" [value]="line.tbd ? '' : line.unitPrice" [disabled]="line.tbd" [placeholder]="line.tbd ? 'A determinar' : '0.00'" (focus)="selectAll($event)" (input)="setLineNumber(line.uid, 'unitPrice', $event)" /></label>
+                    <div class="dc__num dc__num--sum"><span>Importe</span>
+                      <b>@if (line.tbd) { A determinar } @else { {{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }} }</b></div>
+                  </div>
+                  <details class="dc__more">
+                    <summary>Más opciones</summary>
+                    <div class="dc__line-tools">
                       <select class="tl__input dc__line-kind" aria-label="Tipo de línea" (change)="setLineKind(line.uid, $event)">
                         @for (k of lineKinds; track k) { <option [value]="k" [selected]="line.kind === k">{{ lineKindLabels[k] }}</option> }
                       </select>
-                      <input class="tl__input dc__line-num" type="number" aria-label="Cantidad" min="0" step="any" inputmode="decimal" [value]="line.quantity" (input)="setLineNumber(line.uid, 'quantity', $event)" />
-                      <input class="tl__input dc__line-num" type="number" aria-label="Precio unitario" min="0" step="any" inputmode="decimal" [value]="line.tbd ? '' : line.unitPrice" [disabled]="line.tbd" [placeholder]="line.tbd ? 'A determinar' : ''" (input)="setLineNumber(line.uid, 'unitPrice', $event)" />
-                      <button type="button" class="dc__line-del" aria-label="Quitar línea" (click)="removeLine(line.uid)"><app-icon name="x" [size]="18" /></button>
-                      <div class="dc__line-tools">
-                        @if (hasExtraVehicles()) {
-                          <select class="tl__input dc__line-vehicle" aria-label="Vehículo de esta línea" (change)="setLineVehicle(line.uid, $event)">
-                            <option value="" [selected]="line.vehicle === undefined">General (sin vehículo)</option>
-                            @for (c of vehicleChoices(); track c.index) { <option [value]="c.index" [selected]="line.vehicle === c.index">{{ c.label }}</option> }
-                          </select>
-                        }
-                        <select class="tl__input dc__line-section" aria-label="Pasar a otra sección" (change)="setLineSection(line.uid, $event)">
-                          @for (t of sectionTitles(); track $index) { <option [value]="t" [selected]="line.section === t">{{ t || 'Sin título' }}</option> }
+                      @if (hasExtraVehicles()) {
+                        <select class="tl__input dc__line-vehicle" aria-label="Pasar a otro vehículo" (change)="setLineVehicle(line.uid, $event)">
+                          <option value="" [selected]="line.vehicle === undefined">General (sin vehículo)</option>
+                          @for (c of vehicleChoices(); track c.index) { <option [value]="c.index" [selected]="line.vehicle === c.index">Pasar a: {{ c.label }}</option> }
                         </select>
-                        <button type="button" class="dc__icon" aria-label="Subir línea" (click)="moveLineBy(line.uid, -1)"><app-icon name="arrow-up" [size]="16" /></button>
-                        <button type="button" class="dc__icon" aria-label="Bajar línea" (click)="moveLineBy(line.uid, 1)"><app-icon name="arrow-down" [size]="16" /></button>
-                        <label class="dc__tbd"><input type="checkbox" [checked]="line.tbd" (change)="setLineTbd(line.uid, $event)" /> A determinar</label>
-                        <span class="dc__line-total">@if (line.tbd) { A determinar } @else { {{ lineTotal(line.quantity, line.unitPrice) | number: '1.2-2' }} }</span>
-                      </div>
-                    </li>
-                  }
-                </ul>
-
-                <div class="tl__row dc__section-foot">
-                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLineTo(group.title)"><app-icon name="plus" [size]="16" /> Agregar línea aquí</button>
-                  <span class="dc__sum">Subtotal: <strong>RD$ {{ group.subtotal | number: '1.2-2' }}</strong>@if (group.pending > 0) { <small class="tl__muted"> + {{ group.pending }} a determinar</small> }</span>
+                      } @else if (sectionTitles().length > 1) {
+                        <select class="tl__input dc__line-section" aria-label="Pasar a otra sección" (change)="setLineSection(line.uid, $event)">
+                          @for (t of sectionTitles(); track $index) { <option [value]="t" [selected]="line.section === t">Sección: {{ t || 'Sin título' }}</option> }
+                        </select>
+                      }
+                      <label class="dc__tbd"><input type="checkbox" [checked]="line.tbd" (change)="setLineTbd(line.uid, $event)" /> A determinar</label>
+                    </div>
+                  </details>
                 </div>
-              </fieldset>
+                <button type="button" class="dc__line-del" aria-label="Quitar este concepto" title="Quitar" (click)="removeLine(line.uid)"><app-icon name="trash" [size]="18" /></button>
+              </li>
+            </ng-template>
+
+            @if (hasExtraVehicles()) {
+              @for (g of vehicleGroups(); track g.slot) {
+                <section class="dc__veh" [attr.data-color]="g.color" [attr.aria-label]="'Conceptos de ' + g.label">
+                  <header class="dc__veh-head">
+                    <span class="dc__veh-badge">{{ g.slot === null ? '·' : g.slot + 1 }}</span>
+                    <div class="dc__veh-title"><strong>{{ g.label }}</strong><small>{{ g.lines.length }} {{ g.lines.length === 1 ? 'concepto' : 'conceptos' }}</small></div>
+                    <span class="dc__sum">Subtotal <strong>RD$ {{ g.subtotal | number: '1.2-2' }}</strong>@if (g.pending > 0) { <small class="tl__muted"> + {{ g.pending }} a determinar</small> }</span>
+                  </header>
+                  <ul class="dc__lines">
+                    @for (line of g.lines; track line.uid; let i = $index; let first = $first; let last = $last) {
+                      <ng-container *ngTemplateOutlet="lineTpl; context: { $implicit: line, n: i + 1, first: first, last: last }" />
+                    } @empty {
+                      <li class="tl__muted dc__veh-empty">Todavía no hay conceptos para este vehículo.</li>
+                    }
+                  </ul>
+                  <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLineToVehicle(g.slot)"><app-icon name="plus" [size]="16" /> Agregar concepto a este vehículo</button>
+                </section>
+              }
+            } @else {
+              @for (group of grouped(); track $index; let sections = $count) {
+                <fieldset class="dc__section" [class.is-target]="sections > 1 && target() === group.title">
+                  @if (sections > 1 || group.title) {
+                    <div class="dc__section-head">
+                      <input class="tl__input dc__section-title" type="text" aria-label="Nombre de la sección" placeholder="Sin título (no se muestra)"
+                             [value]="group.title" (change)="renameSectionTo(group.title, $event)" />
+                      <button type="button" class="dc__icon" aria-label="Subir sección" [disabled]="$first" (click)="moveSectionBy(group.title, -1)"><app-icon name="arrow-up" [size]="18" /></button>
+                      <button type="button" class="dc__icon" aria-label="Bajar sección" [disabled]="$last" (click)="moveSectionBy(group.title, 1)"><app-icon name="arrow-down" [size]="18" /></button>
+                      <button type="button" class="dc__icon dc__icon--danger" [attr.aria-label]="'Quitar la sección ' + group.title" (click)="askRemoveSection(group.title)">
+                        @if (pendingRemove() === group.title) { ¿Quitar? } @else { <app-icon name="trash" [size]="18" /> }
+                      </button>
+                    </div>
+                  }
+                  <ul class="dc__lines">
+                    @for (line of group.lines; track line.uid; let i = $index; let first = $first; let last = $last) {
+                      <ng-container *ngTemplateOutlet="lineTpl; context: { $implicit: line, n: i + 1, first: first, last: last }" />
+                    }
+                  </ul>
+                  <div class="tl__row dc__section-foot">
+                    <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="addLineTo(group.title)"><app-icon name="plus" [size]="16" /> Agregar concepto{{ sections > 1 ? ' aquí' : '' }}</button>
+                    <span class="dc__sum">Subtotal: <strong>RD$ {{ group.subtotal | number: '1.2-2' }}</strong>@if (group.pending > 0) { <small class="tl__muted"> + {{ group.pending }} a determinar</small> }</span>
+                  </div>
+                </fieldset>
+              }
+
+              <details class="dc__new-section">
+                <summary>Ordenar en secciones <small class="tl__muted">(opcional: títulos con su propio subtotal en el papel)</small></summary>
+                <div class="tl__chips">
+                  <button type="button" class="tl__chip" (click)="addSection()"><app-icon name="plus" [size]="14" /> En blanco</button>
+                  @for (p of sectionPresets; track p) {
+                    <button type="button" class="tl__chip" (click)="addSection(p)"><app-icon name="plus" [size]="14" /> {{ p }}</button>
+                  }
+                </div>
+              </details>
             }
 
-            <div class="dc__new-section">
-              <span class="tl__muted">Nueva sección:</span>
-              <div class="tl__chips">
-                <button type="button" class="tl__chip" (click)="addSection()"><app-icon name="plus" [size]="14" /> En blanco</button>
-                @for (p of sectionPresets; track p) {
-                  <button type="button" class="tl__chip" (click)="addSection(p)"><app-icon name="plus" [size]="14" /> {{ p }}</button>
-                }
-              </div>
-            </div>
 
             <h3 class="tl__name">Totales</h3>
             <div class="tl__form">

@@ -874,6 +874,53 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(c.draft()!.items[0].vehicle).toBeUndefined();
     });
 
+    it('con varios vehículos el editor se divide en un bloque por vehículo, cada uno con su subtotal', async () => {
+      const { fixture, c, el } = await conDosVehiculos();
+      c.addLineToVehicle(0);
+      c.addLineToVehicle(1);
+      const [l0, l1] = c.draft()!.items.filter((i) => !i.description);
+      c.draft.update((d) => ({ ...d!, items: d!.items.map((i) => (i.uid === l0.uid ? { ...i, description: 'A', unitPrice: 100 } : i.uid === l1.uid ? { ...i, description: 'B', unitPrice: 250 } : i)) }));
+      fixture.detectChanges();
+
+      const bloques = el.querySelectorAll('.dc__veh');
+      expect(bloques.length).toBeGreaterThanOrEqual(2);
+      expect(c.vehicleGroups().map((g) => g.subtotal).slice(0, 2)).toEqual([expect.any(Number), 250]);
+      expect(c.vehicleGroups()[0].lines.every((l) => l.vehicle === 0 || l.vehicle === undefined)).toBe(true);
+    });
+
+    it('lo que se agrega sin elegir bloque cae en el vehículo elegido arriba', async () => {
+      const { c } = await conDosVehiculos();
+      c.setVehicleTarget(input('1'));
+      c.addLine('servicio', 'Alineación', 500);
+
+      const nueva = c.draft()!.items.find((i) => i.description === 'Alineación')!;
+      expect(nueva.vehicle).toBe(1);
+    });
+
+    it('subir y bajar solo cambia de lugar entre las líneas de su vehículo y resalta la que se movió', async () => {
+      const { c } = await conDosVehiculos();
+      c.draft.update((d) => ({
+        ...d!,
+        items: [
+          { ...d!.items[0], uid: 'a', description: 'A', vehicle: 0 },
+          { ...d!.items[0], uid: 'x', description: 'X', vehicle: 1 },
+          { ...d!.items[0], uid: 'b', description: 'B', vehicle: 0 },
+        ],
+      }));
+
+      c.moveLineBy('b', -1);
+
+      expect(c.draft()!.items.map((i) => i.uid)).toEqual(['b', 'x', 'a']);
+      expect(c.flashUid()).toBe('b');
+    });
+
+    it('al tocar un número se selecciona todo, para escribir encima del 0', async () => {
+      const { c } = await montar();
+      const select = vi.fn();
+      c.selectAll({ target: { select } } as unknown as Event);
+      expect(select).toHaveBeenCalled();
+    });
+
     it('quitar un vehículo deja sus líneas como generales y recorre las de los siguientes', async () => {
       const { c } = await conDosVehiculos();
       c.addVehicle();

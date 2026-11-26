@@ -20,3 +20,22 @@ export function vehicleLabel(v: DocumentVehicle, index: number): string {
 /** Los extra que de verdad traen datos (los que quedaron en blanco no se guardan). */
 export const cleanExtraVehicles = (list: readonly DocumentVehicle[] | undefined): DocumentVehicle[] =>
   (list ?? []).filter(hasVehicleData);
+
+/** A qué vehículo va una línea (índice en `allVehicles`), o `null` si es general o apunta a uno que ya no existe. */
+export const vehicleSlot = (line: { vehicle?: number }, count: number): number | null =>
+  typeof line.vehicle === 'number' && line.vehicle >= 0 && line.vehicle < count ? line.vehicle : null;
+
+/** Sube o baja una línea entre las de su mismo vehículo (las de los otros no se tocan ni se cruzan). */
+export function moveLineInSlot<T extends { uid: string; vehicle?: number }>(items: readonly T[], uid: string, delta: -1 | 1, count: number): T[] {
+  const at = items.findIndex((i) => i.uid === uid);
+  if (at === -1) return [...items];
+  const slot = vehicleSlot(items[at], count);
+  for (let j = at + delta; j >= 0 && j < items.length; j += delta) {
+    if (vehicleSlot(items[j], count) === slot) {
+      const copy = [...items];
+      [copy[at], copy[j]] = [copy[j], copy[at]];
+      return copy;
+    }
+  }
+  return [...items];
+}

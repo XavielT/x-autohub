@@ -12,7 +12,7 @@ import {
 } from '../../models/business-document.model';
 import { BankAccount } from '../../models/order.model';
 import { computeTotals } from '../../utils/document-totals';
-import { allVehicles, hasVehicleData, vehicleLabel } from '../../utils/document-vehicles';
+import { allVehicles, hasVehicleData, vehicleLabel, vehicleSlot } from '../../utils/document-vehicles';
 import { templateById } from '../../utils/document-templates';
 import { sectionTitlesOf } from '../../utils/document-sections';
 import { lastPaymentDate, sortedPayments } from '../../utils/document-payments';
@@ -84,10 +84,16 @@ export class DocumentSheet {
       const result: LineGroup[] = [];
       const slots: (number | null)[] = [...list.map((x) => x.index), null];
       for (const slot of slots) {
-        const own = lines.filter((l) => (typeof l.vehicle === 'number' && l.vehicle < list.length ? l.vehicle : null) === slot);
+        const own = lines.filter((l) => vehicleSlot(l, list.length) === slot);
         if (own.length === 0) continue;
         const head = slot === null ? 'General' : list[slot].label;
-        for (const title of sectionTitlesOf(own)) {
+        // Las secciones solo se muestran si el vehículo tiene más de una: con una sola no aportan nada.
+        const titles = sectionTitlesOf(own);
+        if (titles.length < 2) {
+          result.push({ title: head, lines: own, subtotal: sum(own) });
+          continue;
+        }
+        for (const title of titles) {
           const inSection = own.filter((l) => l.section === title);
           result.push({ title: [head, title.trim()].filter(Boolean).join(' · '), lines: inSection, subtotal: sum(inSection) });
         }
