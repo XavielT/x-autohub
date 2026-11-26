@@ -95,8 +95,6 @@
 }
 
 .dc__lines { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
-// Una línea: descripción y tipo a todo el ancho; cantidad, precio y quitar en una fila; y abajo sus herramientas.
-// Así cabe en 320 px: antes la fila de herramientas medía más que la pantalla.
 .dc__line {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) 44px;
@@ -223,9 +221,8 @@
 }
 
 .dc__line-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.dc__line-section { flex: 1 1 100%; min-width: 0; }
+.dc__line-section, .dc__line-vehicle { flex: 1 1 100%; min-width: 0; }
 .dc__line-kind { flex: 1 1 140px; min-width: 0; }
-.dc__line-vehicle { flex: 1 1 100%; min-width: 0; }
 .dc__extra-vehicle { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.2)); }
 .dc__line-total { margin-left: auto; font-weight: 700; white-space: nowrap; }
 
@@ -315,3 +312,8 @@
   box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
 }
 .dc__live-total { margin-right: auto; font-size: 14px; strong { font-size: 17px; color: var(--Hub); } }
+
+.dc__actions--sticky { flex-wrap: wrap; }
+.dc__veh > .tl__btn, .dc__section-foot .tl__btn, .dc__actions .tl__btn { max-width: 100%; white-space: normal; }
+.dc__line-tools .tl__btn { flex: 1 1 100%; justify-content: center; text-align: center; }
+.dc__save { flex: 1 1 140px; justify-content: center; }

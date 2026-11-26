@@ -545,7 +545,9 @@
 
             <div class="tl__row dc__actions dc__actions--sticky">
               @if (totals(); as t) { <span class="dc__live-total">Total <strong>RD$ {{ t.total | number: '1.2-2' }}</strong></span> }
-              <button type="submit" class="tl__btn" [disabled]="saving()"><app-icon name="save" [size]="18" /> {{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+              <button type="submit" class="tl__btn dc__save" [disabled]="saving()"><app-icon name="save" [size]="18" /> {{ saving() ? 'Guardando…' : 'Guardar' }}</button>
+            </div>
+            <div class="tl__row dc__actions">
               <button type="button" class="tl__btn tl__btn--ghost" (click)="print()"><app-icon name="printer" [size]="18" /> Imprimir / PDF</button>
               @if (whatsappLink(); as wa) {
                 <a class="tl__btn tl__btn--ghost" [href]="wa" target="_blank" rel="noopener"><app-icon name="message" [size]="18" /> Enviar por WhatsApp</a>
