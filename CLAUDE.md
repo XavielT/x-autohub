@@ -546,6 +546,7 @@ Cosas que ya causaron un bug. No las repitas:
   con `create or replace` desde una copia vieja, **se pierde** la búsqueda por número de parte (la comprobación de `verify-migrations.sh`
   lo atrapa). El `search_vector` es una columna generada que ahora lee `part_number` y `cross_refs`: cambiar su expresión obliga a borrarla
   y volver a crearla (con su índice).
+- **Las cotizaciones y facturas (0063) las numera y suma Postgres, y la regla está en dos sitios.** `business_documents_prepare()` asigna el consecutivo (`document_counters`, nunca retrocede) y recalcula `subtotal`/`itbis`/`total` desde `items`; `document-totals.ts` es su espejo para mostrar en el navegador: si cambias uno, cambia el otro y las pruebas de `verify-migrations.sh`. Solo admin (RLS); solo un borrador se borra, lo emitido se anula. Imprimir pasa por `window.print()` con la clase `xah-print-doc` en el `<body>` (CSS en `styles.scss`): sin esa clase imprimir otras páginas no cambia. Los precios de las plantillas nunca se inventan. **La migración va antes que el frontend.**
 - **`part_number` y `cross_refs` solo llegan a la ficha y al formulario**, no a las listas (`search_products()` devuelve columnas explícitas);
   por eso son opcionales en `HubPartRow` y en `ProductModel`. Las normalizadas (`*_norm`) las escribe un trigger: no las mandes desde un formulario.
 

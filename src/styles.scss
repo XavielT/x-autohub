@@ -230,3 +230,26 @@ button[aria-busy='true'] {
 @media (prefers-reduced-motion: reduce) {
   button[aria-busy='true']::before { animation: none; }
 }
+
+/*
+ * Imprimir una cotización o factura (/admin/documentos). `AdminDocumentos.print()` pone la clase en el
+ * <body> solo mientras imprime: deja a la vista únicamente la hoja (`.doc-sheet`) y la pone en la
+ * esquina de la página. Sin la clase, imprimir cualquier otra página no cambia.
+ */
+@page { margin: 12mm; }
+
+@media print {
+  body.xah-print-doc * { visibility: hidden !important; }
+
+  body.xah-print-doc .doc-sheet,
+  body.xah-print-doc .doc-sheet * { visibility: visible !important; }
+
+  body.xah-print-doc .doc-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+  }
+}

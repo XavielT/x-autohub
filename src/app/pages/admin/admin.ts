@@ -62,6 +62,7 @@ export class Admin {
     { path: 'taller', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
     { path: 'inventario', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
     { path: 'marca', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
+    { path: 'documentos', label: 'Documentos', description: 'Cotizaciones y facturas para tus clientes' },
     { path: 'usuarios', label: 'Usuarios', description: 'Cuentas, verificación y permisos' },
     { path: 'ajustes', label: 'Ajustes', description: 'Cuentas para transferir y dirección de retiro' },
   ];

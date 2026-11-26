@@ -60,6 +60,41 @@ export type CouponRow = {
   created_at: string;
 }
 
+/**
+ * Cotización o factura de X AutoHub (migración 0063). Solo un admin lee y escribe. Los totales
+ * (`subtotal`, `itbis`, `total`) y `number` los pone un trigger: no se mandan.
+ */
+export type BusinessDocumentRow = {
+  id: string;
+  kind: 'cotizacion' | 'factura';
+  number: number;
+  template: 'mecanica' | 'electrica' | 'mantenimiento' | 'instalacion' | 'venta' | 'general';
+  status: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  customer_rnc: string;
+  vehicle: { text?: string; plate?: string; mileage?: string };
+  issue_date: string;
+  valid_until: string | null;
+  /** Líneas: `{ kind, description, quantity, unitPrice }`. */
+  items: { kind: string; description: string; quantity: number; unitPrice: number }[];
+  discount_type: 'amount' | 'percent';
+  discount_value: number;
+  apply_itbis: boolean;
+  itbis_rate: number;
+  paid: number;
+  notes: string;
+  terms: string;
+  source_id: string | null;
+  subtotal: number;
+  itbis: number;
+  total: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** A qué se refiere una reseña. Migración 0020. */
 export type ReviewTargetDb = 'product' | 'service';
 
@@ -1247,6 +1282,13 @@ export type Database = {
         Row: CouponRow;
         Insert: Insert<CouponRow, 'code' | 'discount_type'>;
         Update: Partial<CouponRow>;
+        Relationships: [];
+      };
+      /** Cotizaciones y facturas (0063). Solo admin. */
+      business_documents: {
+        Row: BusinessDocumentRow;
+        Insert: Insert<BusinessDocumentRow, 'kind' | 'template' | 'customer_name'>;
+        Update: Partial<BusinessDocumentRow>;
         Relationships: [];
       };
       service_works: {

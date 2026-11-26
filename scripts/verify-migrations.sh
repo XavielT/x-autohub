@@ -3401,6 +3401,28 @@ apply supabase/migrations/0062_releases_public_view.sql upgrade
 apply supabase/migrations/0062_releases_public_view.sql upgrade
 echo "   (aplicada dos veces)"
 
+echo "→ Cotizaciones y facturas: solo admin, consecutivo y totales en la base (migracion 0063)"
+check "anon no lee los documentos" "ERROR:  permission denied for table business_documents" "$(as_anon "select count(*) from business_documents;")"
+check "un usuario normal ve cero documentos" "0" "$(as_user "$USER_A" "select count(*) from business_documents;")"
+check "y no puede crear uno" "ERROR:  new row violates row-level security policy for table \"business_documents\"" "$(as_user "$USER_A" "insert into business_documents (kind, template, customer_name) values ('factura', 'venta', 'X');")"
+check "el admin crea una cotizacion: numero 1" "1" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name, items) values ('cotizacion', 'mecanica', 'Juan', '[]') returning number;")"
+check "la siguiente cotizacion es la 2" "2" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name) values ('cotizacion', 'general', 'Ana') returning number;")"
+check "la factura lleva su propio consecutivo" "1" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name) values ('factura', 'venta', 'Luis') returning number;")"
+check "los totales los calcula la base: 10000 - 1000 + ITBIS 18% = 10620" "9000.00|1620.00|10620.00" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name, items, discount_value, apply_itbis) values ('factura', 'mecanica', 'Rosa', '[{\"quantity\":2,\"unitPrice\":5000,\"description\":\"x\",\"kind\":\"servicio\"}]', 1000, true) returning (subtotal - discount_value) || '|' || itbis || '|' || total;")"
+check "un total mandado a mano se pisa" "10620.00" "$(as_user "$ADMIN" "update business_documents set total = 1 where customer_name = 'Rosa' returning total;")"
+check "el numero no se cambia al editar (Rosa es la factura 2)" "2" "$(as_user "$ADMIN" "update business_documents set number = 99 where customer_name = 'Rosa' returning number;")"
+check "una cotizacion no puede tener estado de factura" "ERROR:  new row for relation \"business_documents\" violates check constraint \"business_documents_status_valid\"" "$(as_user "$ADMIN" "update business_documents set status = 'pagada' where customer_name = 'Juan';")"
+check "un borrador se borra" "0" "$(as_user "$ADMIN" "delete from business_documents where customer_name = 'Ana'; select count(*) from business_documents where customer_name = 'Ana';")"
+check "una factura emitida no se borra" "1" "$(as_user "$ADMIN" "update business_documents set status = 'emitida' where customer_name = 'Rosa'; delete from business_documents where customer_name = 'Rosa'; select count(*) from business_documents where customer_name = 'Rosa';")"
+check "el contador no retrocede tras borrar" "3" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name) values ('cotizacion', 'general', 'Eva') returning number;")"
+check "el ajuste business_profile existe" "X AutoHub" "$(as_anon "select value->>'legal_name' from site_settings where key = 'business_profile';")"
+scalar "delete from business_documents;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0063"
+apply supabase/migrations/0063_business_documents.sql upgrade
+apply supabase/migrations/0063_business_documents.sql upgrade
+echo "   (aplicada dos veces)"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo

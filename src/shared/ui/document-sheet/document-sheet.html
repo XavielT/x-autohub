@@ -1,0 +1,117 @@
+<article class="doc-sheet">
+  <header class="ds__head">
+    <img class="ds__logo" src="assets/imgs/autohub-logo.png" alt="X AutoHub" width="190" height="51" />
+    <div class="ds__kind">
+      <span class="ds__kind-name">{{ kindLabel() }}</span>
+      @if (code()) { <span class="ds__code">{{ code() }}</span> }
+      @if (doc().status === 'anulada') { <span class="ds__stamp">Anulada</span> }
+    </div>
+  </header>
+
+  <section class="ds__parties">
+    <div>
+      <h4>Emitido por</h4>
+      <p class="ds__strong">{{ profile().legalName }}</p>
+      @if (profile().rnc) { <p>RNC {{ profile().rnc }}</p> }
+      @if (profile().address) { <p>{{ profile().address }}</p> }
+      @if (profile().phone) { <p>Tel. {{ profile().phone }}</p> }
+      @if (profile().email) { <p>{{ profile().email }}</p> }
+    </div>
+    <div>
+      <h4>Cliente</h4>
+      <p class="ds__strong">{{ doc().customerName || '—' }}</p>
+      @if (doc().customerRnc) { <p>RNC / Cédula {{ doc().customerRnc }}</p> }
+      @if (doc().customerPhone) { <p>Tel. {{ doc().customerPhone }}</p> }
+      @if (doc().customerEmail) { <p>{{ doc().customerEmail }}</p> }
+    </div>
+    <div>
+      <h4>Fechas</h4>
+      <p>Emisión: <span class="ds__strong">{{ doc().issueDate | date: 'dd/MM/yyyy' }}</span></p>
+      @if (doc().kind === 'cotizacion' && doc().validUntil) {
+        <p>Válida hasta: <span class="ds__strong">{{ doc().validUntil | date: 'dd/MM/yyyy' }}</span></p>
+      }
+      @if (doc().kind === 'factura') { <p>Estado: <span class="ds__strong">{{ statusLabel() }}</span></p> }
+    </div>
+  </section>
+
+  @if (hasVehicle()) {
+    <section class="ds__vehicle">
+      <h4>Vehículo</h4>
+      <p>
+        @if (doc().vehicle.text) { <span><b>{{ doc().vehicle.text }}</b></span> }
+        @if (doc().vehicle.plate) { <span>Placa: <b>{{ doc().vehicle.plate }}</b></span> }
+        @if (doc().vehicle.mileage) { <span>Kilometraje: <b>{{ doc().vehicle.mileage }}</b></span> }
+      </p>
+    </section>
+  }
+
+  @for (group of groups(); track $index) {
+    @if (group.title) { <h4 class="ds__group">{{ group.title }}</h4> }
+    <table class="ds__table">
+      <thead>
+        <tr>
+          <th class="ds__desc">Descripción</th>
+          <th class="ds__num">Cant.</th>
+          <th class="ds__num">Precio</th>
+          <th class="ds__num">Importe</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of group.lines; track line.uid) {
+          <tr>
+            <td class="ds__desc">
+              {{ line.description }}
+              @if (!group.title) { <small>{{ lineKindLabels[line.kind] }}</small> }
+            </td>
+            <td class="ds__num">{{ line.quantity | number: '1.0-2' }}</td>
+            <td class="ds__num">{{ line.unitPrice | number: '1.2-2' }}</td>
+            <td class="ds__num">{{ line.quantity * line.unitPrice | number: '1.2-2' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @empty {
+    <p class="ds__empty">Aún no hay líneas.</p>
+  }
+
+  <section class="ds__totals">
+    <dl>
+      <div><dt>Subtotal</dt><dd>RD$ {{ totals().subtotal | number: '1.2-2' }}</dd></div>
+      @if (totals().discount > 0) {
+        <div><dt>{{ discountLabel() }}</dt><dd>− RD$ {{ totals().discount | number: '1.2-2' }}</dd></div>
+      }
+      @if (doc().applyItbis) {
+        <div><dt>ITBIS ({{ doc().itbisRate }} %)</dt><dd>RD$ {{ totals().itbis | number: '1.2-2' }}</dd></div>
+      }
+      <div class="ds__total"><dt>Total</dt><dd>RD$ {{ totals().total | number: '1.2-2' }}</dd></div>
+      @if (doc().kind === 'factura' && totals().paid > 0) {
+        <div><dt>Abonado</dt><dd>RD$ {{ totals().paid | number: '1.2-2' }}</dd></div>
+        <div class="ds__balance"><dt>Pendiente</dt><dd>RD$ {{ totals().balance | number: '1.2-2' }}</dd></div>
+      }
+    </dl>
+  </section>
+
+  @if (showPayment() && realBanks().length > 0) {
+    <section class="ds__pay">
+      <h4>Para pagar por transferencia</h4>
+      @for (b of realBanks(); track b.number) {
+        <p>{{ b.bank }} · {{ b.type }} · <b>{{ b.number }}</b> · {{ b.holder }}</p>
+      }
+    </section>
+  }
+
+  @if (doc().notes) {
+    <section class="ds__notes">
+      <h4>Notas</h4>
+      <p>{{ doc().notes }}</p>
+    </section>
+  }
+  @if (doc().terms) {
+    <section class="ds__notes">
+      <h4>Condiciones</h4>
+      <p>{{ doc().terms }}</p>
+    </section>
+  }
+
+  <footer class="ds__foot">{{ profile().footer }}</footer>
+</article>

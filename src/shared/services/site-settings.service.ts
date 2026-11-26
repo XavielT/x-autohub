@@ -4,9 +4,11 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 import { SettingValue } from '../../core/supabase/database.types';
 import { unwrap } from '../../core/supabase/supabase-error';
 import { BankAccount, PickupAddress } from '../models/order.model';
+import { BusinessProfile, EMPTY_BUSINESS_PROFILE } from '../models/business-document.model';
 
 const BANK_ACCOUNTS_KEY = 'bank_accounts';
 const PICKUP_ADDRESS_KEY = 'pickup_address';
+const BUSINESS_PROFILE_KEY = 'business_profile';
 
 /** Donde se guarda el ajuste en modo simulado. Ver `readMockSettings()`. */
 const MOCK_STORAGE_KEY = 'x-autohub.site-settings';
@@ -67,6 +69,22 @@ export class SiteSettingsService {
       hours: value.hours.trim(),
       ...(hasPoint ? { lat: value.lat, lng: value.lng } : {}),
       ...(hasPoint && value.placeId ? { place_id: value.placeId } : {}),
+    });
+  }
+
+  /** Los datos de X AutoHub que salen en el encabezado de cotizaciones y facturas (migración 0063). */
+  getBusinessProfile(): Observable<BusinessProfile> {
+    return this.getSetting(BUSINESS_PROFILE_KEY).pipe(map(toBusinessProfile));
+  }
+
+  setBusinessProfile(profile: BusinessProfile): Observable<void> {
+    return this.setSetting(BUSINESS_PROFILE_KEY, {
+      legal_name: profile.legalName.trim(),
+      rnc: profile.rnc.trim(),
+      phone: profile.phone.trim(),
+      email: profile.email.trim(),
+      address: profile.address.trim(),
+      footer: profile.footer.trim(),
     });
   }
 
@@ -212,6 +230,19 @@ export function toBankAccounts(value: SettingValue): BankAccount[] {
 /** Las cuentas que de verdad se pueden mostrar al público: sin las de ejemplo. */
 export function realBankAccounts(accounts: readonly BankAccount[]): BankAccount[] {
   return accounts.filter((a) => !a.isExample);
+}
+
+export function toBusinessProfile(value: SettingValue): BusinessProfile {
+  const record = asRecord(value);
+  if (!record) return { ...EMPTY_BUSINESS_PROFILE };
+  return {
+    legalName: text(record['legal_name']) || EMPTY_BUSINESS_PROFILE.legalName,
+    rnc: text(record['rnc']),
+    phone: text(record['phone']),
+    email: text(record['email']),
+    address: text(record['address']),
+    footer: text(record['footer']),
+  };
 }
 
 export function toPickupAddress(value: SettingValue): PickupAddress | null {

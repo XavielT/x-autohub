@@ -1,0 +1,94 @@
+@use '../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.dc__profile { margin-bottom: 16px; }
+.dc__amount { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.dc__status { min-height: 40px; width: auto; }
+.dc__actions { margin-top: 12px; justify-content: flex-start; }
+
+.dc__templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dc__template {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  border: 1px solid transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover, &:focus-visible { border-color: var(--Hub); }
+}
+
+// Formulario a un lado y hoja al otro en pantallas anchas; en el teléfono, una debajo de la otra.
+.dc__layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1180px) {
+  .dc__layout { grid-template-columns: minmax(420px, 480px) minmax(0, 1fr); align-items: start; }
+  .dc__preview { position: sticky; top: 12px; }
+}
+
+.dc__form { display: flex; flex-direction: column; gap: 12px; }
+.dc__sum { margin: 0; font-size: 15px; }
+.dc__check { flex-direction: row; align-items: center; gap: 8px; }
+
+.dc__suggest .tl__chips { margin: 6px 0 0; }
+
+.dc__catalog { position: relative; }
+.dc__results {
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 10px;
+  background: var(--main-light);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+
+  button {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    align-items: center;
+
+    &:hover { background: var(--Hub-translucid); }
+  }
+}
+
+.dc__lines { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.dc__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 96px 40px;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.dc__line-desc { grid-column: 1 / -1; }
+.dc__line-kind { grid-column: 1 / 2; }
+.dc__line-total { align-self: center; text-align: right; font-weight: 700; grid-column: 1 / -1; grid-row: 3; }
+.dc__line-del {
+  grid-column: 4; grid-row: 2;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 22px;
+  cursor: pointer;
+  &:hover { color: #ff8d8f; }
+}
+.dc__line-num { text-align: right; }
+
+// Al imprimir, el CSS global (`styles.scss`) deja solo `.doc-sheet`; esto es por si se ve algo del formulario.
+@media print { .dc__noprint { display: none !important; } }
