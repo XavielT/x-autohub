@@ -293,3 +293,25 @@
 // Facturas vencidas: el aviso de arriba y la nota de cada tarjeta.
 .dc__overdue, .dc__late { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; color: #ff8d8f; }
 .dc__late { font-size: 13px; font-weight: 700; }
+
+.dc__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  app-icon { flex: none; color: var(--text-soft); }
+  .tl__input { flex: 1; min-width: 0; min-height: 44px; }
+}
+.dc__leave { border-color: #ff8d8f; color: #ff8d8f; }
+
+// La barra de acciones del editor se queda al pie mientras se baja por el formulario: Guardar siempre a mano.
+.dc__actions--sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--main-light, #2b2b2b);
+  box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
+}
+.dc__live-total { margin-right: auto; font-size: 14px; strong { font-size: 17px; color: var(--Hub); } }

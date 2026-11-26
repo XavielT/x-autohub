@@ -838,6 +838,85 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     });
   });
 
+  describe('buscar, cambios sin guardar y duplicar conceptos', () => {
+    function doc(id: string, number: number, customerName: string, vehicle: string, plate = '') {
+      const now = '2026-11-26T12:00:00.000Z';
+      return {
+        id, kind: 'factura', number, code: 'FAC-000' + number, template: 'mecanica', status: 'emitida',
+        customerName, customerPhone: '809-555-0100', customerEmail: '', customerRnc: '', customerId: null,
+        vehicle: { text: vehicle, plate, mileage: '', vin: '', verdict: '' }, issueDate: '2026-11-01', validUntil: null,
+        items: [{ uid: 'l' + id, section: '', tbd: false, kind: 'servicio', description: 'Trabajo', quantity: 1, unitPrice: 1000 }],
+        discountType: 'amount', discountValue: 0, applyItbis: false, itbisRate: 18, paid: 0, payments: [], notes: '', terms: '', sourceId: null,
+        subtotal: 1000, itbis: 0, total: 1000, createdAt: now, updatedAt: now,
+      };
+    }
+
+    async function conDocs() {
+      localStorage.setItem('x-autohub.business-documents', JSON.stringify([
+        doc('a', 1, 'Constructora Scheker', 'Chevrolet Malibu 2009', 'A631739'),
+        doc('b', 2, 'Ana Lora', 'Isuzu Rodeo 2000', 'L279878'),
+      ]));
+      return montar();
+    }
+
+    it('buscar filtra por cliente, vehículo, placa o número, sin importar acentos ni mayúsculas', async () => {
+      const { fixture, c } = await conDocs();
+      for (const [texto, esperado] of [['SCHEKER', ['a']], ['rodeo', ['b']], ['l279878', ['b']], ['fac-0001', ['a']], ['zzz', []]] as const) {
+        c.query.set(texto);
+        fixture.detectChanges();
+        expect(c.visible().map((d) => d.id)).toEqual(esperado);
+      }
+    });
+
+    it('salir del editor con cambios pide confirmar; sin cambios sale directo', async () => {
+      const { c } = await montar();
+      c.startNew();
+      c.pickTemplate('mecanica');
+      expect(c.dirty()).toBe(false);
+      c.leave();
+      expect(c.view()).toBe('list');
+
+      c.startNew();
+      c.pickTemplate('mecanica');
+      c.setText('customerName', input('Juan'));
+      expect(c.dirty()).toBe(true);
+      c.leave();
+      expect(c.view()).toBe('edit');
+      expect(c.confirmLeave()).toBe(true);
+      c.leave();
+      expect(c.view()).toBe('list');
+    });
+
+    it('guardar deja el editor sin cambios pendientes', async () => {
+      const { c } = await montar();
+      c.startNew();
+      c.pickTemplate('mecanica');
+      c.setText('customerName', input('Juan'));
+      c.addLine('servicio', 'Cambio de aceite', 1500);
+      expect(c.dirty()).toBe(true);
+      c.save();
+      await Promise.resolve();
+      await new Promise((r) => setTimeout(r));
+      expect(c.dirty()).toBe(false);
+    });
+
+    it('duplicar un concepto lo copia justo debajo con otro id', async () => {
+      const { c } = await montar();
+      c.startNew();
+      c.pickTemplate('mecanica');
+      c.addLine('servicio', 'Alineación', 800);
+      const original = c.draft()!.items.find((i) => i.description === 'Alineación')!;
+
+      c.duplicateLine(original.uid);
+
+      const items = c.draft()!.items;
+      const at = items.findIndex((i) => i.uid === original.uid);
+      expect(items[at + 1].description).toBe('Alineación');
+      expect(items[at + 1].uid).not.toBe(original.uid);
+      expect(items[at + 1].unitPrice).toBe(800);
+    });
+  });
+
   describe('más de un vehículo en el mismo documento', () => {
     async function conDosVehiculos() {
       const env = await montar();

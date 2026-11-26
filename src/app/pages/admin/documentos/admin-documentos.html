@@ -66,6 +66,12 @@
         </p>
       }
 
+      <div class="dc__search">
+        <app-icon name="search" [size]="18" />
+        <input class="tl__input" type="search" name="q" autocomplete="off" aria-label="Buscar documentos"
+               placeholder="Buscar por número, cliente, teléfono, vehículo o placa…" [value]="query()" (input)="setQuery($event)" />
+      </div>
+
       <div class="tl__chips" role="group" aria-label="Filtrar documentos">
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
@@ -81,7 +87,7 @@
       @if (loading()) {
         <app-skeleton variant="row" [count]="4" />
       } @else if (visible().length === 0) {
-        <p class="tl__empty">{{ customerFilter() ? 'Este cliente todavía no tiene documentos.' : 'Todavía no hay documentos. Pulsa «Nuevo documento» para crear el primero.' }}</p>
+        <p class="tl__empty">{{ query() ? 'Ningún documento coincide con la búsqueda.' : customerFilter() ? 'Este cliente todavía no tiene documentos.' : 'Todavía no hay documentos. Pulsa «Nuevo documento» para crear el primero.' }}</p>
       } @else {
         <ul class="tl__list">
           @for (doc of visible(); track doc.id) {
@@ -172,9 +178,9 @@
         <header class="tl__head tl__row dc__noprint">
           <div>
             <h2 class="tl__title">{{ kindLabels[d.kind] }}@if (saved(); as s) { · {{ s.code }} }</h2>
-            <p class="tl__lead">{{ template()?.label }}@if (!saved()) { · sin guardar }@if (sourceQuote(); as src) { · desde @if (saved()) { <button type="button" class="dc__linkbtn" (click)="openSourceQuote()">{{ src.code }}</button> } @else { {{ src.code }} } }</p>
+            <p class="tl__lead">{{ template()?.label }}@if (!saved()) { · sin guardar } @else if (dirty()) { · cambios sin guardar }@if (sourceQuote(); as src) { · desde @if (saved()) { <button type="button" class="dc__linkbtn" (click)="openSourceQuote()">{{ src.code }}</button> } @else { {{ src.code }} } }</p>
           </div>
-          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="backToList()"><app-icon name="arrow-left" [size]="16" /> Volver a la lista</button>
+          <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" [class.dc__leave]="confirmLeave()" (click)="leave()"><app-icon name="arrow-left" [size]="16" /> {{ confirmLeave() ? 'Hay cambios sin guardar: toca otra vez para salir' : 'Volver a la lista' }}</button>
         </header>
 
         @if (suggestInvoice(); as s) {
@@ -405,6 +411,7 @@
                         </select>
                       }
                       <label class="dc__tbd"><input type="checkbox" [checked]="line.tbd" (change)="setLineTbd(line.uid, $event)" /> A determinar</label>
+                      <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="duplicateLine(line.uid)"><app-icon name="copy" [size]="16" /> Duplicar concepto</button>
                     </div>
                   </details>
                 </div>
@@ -536,7 +543,8 @@
                 <textarea class="tl__input" name="terms" rows="3" [value]="d.terms" (input)="setText('terms', $event)"></textarea></label>
             </div>
 
-            <div class="tl__row dc__actions">
+            <div class="tl__row dc__actions dc__actions--sticky">
+              @if (totals(); as t) { <span class="dc__live-total">Total <strong>RD$ {{ t.total | number: '1.2-2' }}</strong></span> }
               <button type="submit" class="tl__btn" [disabled]="saving()"><app-icon name="save" [size]="18" /> {{ saving() ? 'Guardando…' : 'Guardar' }}</button>
               <button type="button" class="tl__btn tl__btn--ghost" (click)="print()"><app-icon name="printer" [size]="18" /> Imprimir / PDF</button>
               @if (whatsappLink(); as wa) {

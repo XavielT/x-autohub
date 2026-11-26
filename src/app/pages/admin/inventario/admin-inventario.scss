@@ -459,3 +459,6 @@
 
 // El selector de marca, modelo y año ocupa todo el ancho del formulario.
 .adm-inv__wide { grid-column: 1 / -1; }
+
+.adm-inv__cancel--warn { border-color: #ff8d8f; color: #ff8d8f; }
+.adm-inv__sort { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-soft); select { min-height: 40px; } }

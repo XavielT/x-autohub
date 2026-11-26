@@ -91,6 +91,45 @@ describe('AdminInventario (piezas de la tienda)', () => {
     expect(c.filteredParts().length).toBe(5);
   });
 
+  it('el filtro Poco stock muestra de 1 a 3 unidades y deja fuera las agotadas y las bajo pedido', () => {
+    const { c } = montar();
+    const stocks = [0, 1, 3, 4, 2];
+    c.parts.set(c.parts().map((p, i) => ({ ...p, stock: stocks[i], fulfillment: i === 4 ? ('on_order' as const) : ('stock' as const) })));
+
+    c.partFilter.set('poco');
+
+    expect(c.filteredParts().map((p) => p.stock).sort()).toEqual([1, 3]);
+  });
+
+  it('ordenar por precio o por stock cambia el orden de la lista sin tocar los datos', () => {
+    const { c } = montar();
+    c.parts.set(c.parts().map((p, i) => ({ ...p, price: [500, 100, 300, 200, 400][i], stock: [5, 1, 4, 2, 3][i] })));
+
+    c.partSort.set('precio_asc');
+    expect(c.filteredParts().map((p) => p.price)).toEqual([100, 200, 300, 400, 500]);
+    c.partSort.set('precio_desc');
+    expect(c.filteredParts().map((p) => p.price)).toEqual([500, 400, 300, 200, 100]);
+    c.partSort.set('stock_asc');
+    expect(c.filteredParts().map((p) => p.stock)).toEqual([1, 2, 3, 4, 5]);
+    expect(c.parts().map((p) => p.price)).toEqual([500, 100, 300, 200, 400]);
+  });
+
+  it('cancelar el formulario con algo escrito pide confirmar; sin cambios cierra directo', () => {
+    const { c } = montar();
+    c.startCreate();
+    c.askCancel();
+    expect(c.isCreating()).toBe(false);
+
+    c.startCreate();
+    c.partForm.controls.name.setValue('Algo');
+    c.partForm.controls.name.markAsDirty();
+    c.askCancel();
+    expect(c.isCreating()).toBe(true);
+    expect(c.confirmCancel()).toBe(true);
+    c.askCancel();
+    expect(c.isCreating()).toBe(false);
+  });
+
   it('un artículo bajo pedido con stock 0 no cuenta como agotado', () => {
     const { c } = montar();
     c.parts.set(c.parts().map((p, i) => ({ ...p, stock: 0, fulfillment: i === 0 ? ('on_order' as const) : ('stock' as const) })));

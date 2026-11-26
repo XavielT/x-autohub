@@ -6,7 +6,7 @@ import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-
 import { VehicleSelection } from '../../../../shared/models/business-document.model';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { RouterLink } from '@angular/router';
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   AbstractControl,
@@ -49,7 +49,11 @@ import { SpecsEditor } from './specs-editor/specs-editor';
 import { VariantEditor } from './variant-editor/variant-editor';
 
 type Tab = 'piezas' | 'vehiculos' | 'noticias' | 'categorias' | 'marcas';
-type PartFilter = 'todas' | 'visibles' | 'ocultas' | 'agotadas' | 'pruebas' | 'sin_foto';
+type PartFilter = 'todas' | 'visibles' | 'ocultas' | 'agotadas' | 'poco' | 'pruebas' | 'sin_foto';
+type PartSort = 'nombre' | 'precio_asc' | 'precio_desc' | 'stock_asc' | 'stock_desc';
+
+/** Poco stock: quedan de 1 a 3 y no es bajo pedido. */
+const LOW_STOCK = 3;
 
 /** Agotada = sin existencias y no es bajo pedido (esas nunca se agotan). */
 function matchesPartFilter(p: AdminPartModel, filter: PartFilter): boolean {
@@ -57,6 +61,7 @@ function matchesPartFilter(p: AdminPartModel, filter: PartFilter): boolean {
     case 'visibles': return p.isActive;
     case 'ocultas': return !p.isActive;
     case 'agotadas': return p.stock === 0 && p.fulfillment !== 'on_order';
+    case 'poco': return p.stock > 0 && p.stock <= LOW_STOCK && p.fulfillment !== 'on_order';
     case 'pruebas': return p.isTest;
     case 'sin_foto': return !p.imageUrl;
     default: return true;
@@ -141,6 +146,7 @@ export class AdminInventario implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly branded = inject(BrandedPhotosService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly tab = signal<Tab>('piezas');
   readonly isLoading = signal(true);
@@ -154,11 +160,24 @@ export class AdminInventario implements OnInit {
 
   readonly partQuery = signal('');
   readonly partFilter = signal<PartFilter>('todas');
+  readonly partSort = signal<PartSort>('nombre');
+  readonly partSorts: { key: PartSort; label: string }[] = [
+    { key: 'nombre', label: 'Nombre (A–Z)' },
+    { key: 'precio_asc', label: 'Precio: menor a mayor' },
+    { key: 'precio_desc', label: 'Precio: mayor a menor' },
+    { key: 'stock_asc', label: 'Stock: menos primero' },
+    { key: 'stock_desc', label: 'Stock: más primero' },
+  ];
+
+  setPartSort(event: Event): void {
+    this.partSort.set((event.target as HTMLSelectElement).value as PartSort);
+  }
   readonly partFilters: { key: PartFilter; label: string }[] = [
     { key: 'todas', label: 'Todas' },
     { key: 'visibles', label: 'Visibles' },
     { key: 'ocultas', label: 'Ocultas' },
     { key: 'agotadas', label: 'Agotadas' },
+    { key: 'poco', label: 'Poco stock' },
     { key: 'pruebas', label: 'Pruebas' },
     { key: 'sin_foto', label: 'Sin foto' },
   ];
@@ -175,11 +194,21 @@ export class AdminInventario implements OnInit {
   readonly filteredParts = computed(() => {
     const q = normalizeSearch(this.partQuery());
     const filter = this.partFilter();
-    return this.parts().filter(
+    const sort = this.partSort();
+    const list = this.parts().filter(
       (p) =>
         matchesPartFilter(p, filter) &&
         (q === '' || normalizeSearch(`${p.name} ${p.brand} ${p.sku} ${this.categoryName(p)}`).includes(q)),
     );
+    const byName = (a: AdminPartModel, b: AdminPartModel) => a.name.localeCompare(b.name, 'es');
+    const order: Record<PartSort, (a: AdminPartModel, b: AdminPartModel) => number> = {
+      nombre: byName,
+      precio_asc: (a, b) => a.price - b.price || byName(a, b),
+      precio_desc: (a, b) => b.price - a.price || byName(a, b),
+      stock_asc: (a, b) => a.stock - b.stock || byName(a, b),
+      stock_desc: (a, b) => b.stock - a.stock || byName(a, b),
+    };
+    return sort === 'nombre' ? list : [...list].sort(order[sort]);
   });
 
   setPartQuery(event: Event): void {
@@ -189,6 +218,7 @@ export class AdminInventario implements OnInit {
   clearPartSearch(): void {
     this.partQuery.set('');
     this.partFilter.set('todas');
+    this.partSort.set('nombre');
   }
 
   // --- Alta ----------------------------------------------------------------
@@ -398,6 +428,8 @@ export class AdminInventario implements OnInit {
   });
 
   ngOnInit(): void {
+    window.addEventListener('beforeunload', this.warnBeforeUnload);
+    this.destroyRef.onDestroy(() => window.removeEventListener('beforeunload', this.warnBeforeUnload));
     this.loadAll();
     // Vienen de /admin/marca: fotos ya con la insignia para publicar un artículo nuevo.
     const handoff = this.branded.take('piezas', 'vehiculos', 'noticias');
@@ -661,7 +693,36 @@ export class AdminInventario implements OnInit {
     }
   }
 
+  /** El formulario abierto tiene algo escrito, o fotos nuevas o editadas, que se perdería al cancelar. */
+  formDirty(): boolean {
+    if (!this.isCreating()) return false;
+    const form = this.tab() === 'vehiculos' ? this.vehicleForm : this.tab() === 'noticias' ? this.newsForm : this.partForm;
+    return form.dirty || this.previews().length > 0 || this.replacedPreviews().size > 0;
+  }
+
+  readonly confirmCancel = signal(false);
+  private cancelTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Cancelar con algo escrito pide confirmar con una segunda pulsación, para no perder el formulario por un toque. */
+  askCancel(): void {
+    if (this.formDirty() && !this.confirmCancel()) {
+      this.confirmCancel.set(true);
+      clearTimeout(this.cancelTimer);
+      this.cancelTimer = setTimeout(() => this.confirmCancel.set(false), 5000);
+      return;
+    }
+    this.cancelCreate();
+  }
+
+  private readonly warnBeforeUnload = (event: BeforeUnloadEvent): void => {
+    if (this.formDirty()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  };
+
   cancelCreate(): void {
+    this.confirmCancel.set(false);
     this.isCreating.set(false);
     this.editingId.set(null);
     this.clearImages();

@@ -63,7 +63,15 @@
       <button type="button" class="cl__icon" aria-label="Limpiar búsqueda" (click)="clearQuery()"><app-icon name="x" [size]="16" /></button>
     }
   </div>
-  @if (query().trim()) {
+  @if (owing().count > 0 || onlyOwing()) {
+    <div class="tl__chips" role="group" aria-label="Filtrar clientes">
+      <button type="button" class="tl__chip" [class.is-active]="!onlyOwing()" (click)="onlyOwing.set(false)">Todos</button>
+      <button type="button" class="tl__chip" [class.is-active]="onlyOwing()" [attr.aria-pressed]="onlyOwing()" (click)="toggleOwing()">
+        <app-icon name="clock" [size]="16" /> Con saldo por cobrar ({{ owing().count }} · RD$ {{ owing().total | number: '1.2-2' }})
+      </button>
+    </div>
+  }
+  @if (query().trim() || onlyOwing()) {
     <p class="tl__muted cl__count">{{ shown().length }} de {{ customers().length }}</p>
   }
 
@@ -72,7 +80,7 @@
   } @else if (customers().length === 0) {
     <p class="tl__empty">Todavía no hay clientes. Pulsa «Nuevo cliente», o guarda una cotización y su cliente se agrega solo.</p>
   } @else if (shown().length === 0) {
-    <p class="tl__empty">Ningún cliente coincide con «{{ query() }}».</p>
+    <p class="tl__empty">{{ query() ? 'Ningún cliente coincide con «' + query() + '».' : 'Ningún cliente tiene saldo por cobrar.' }}</p>
   } @else {
     <ul class="tl__list">
       @for (c of shown(); track c.id) {

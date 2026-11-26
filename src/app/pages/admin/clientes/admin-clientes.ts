@@ -75,8 +75,36 @@ export class AdminClientes implements OnInit {
   /** Los que coinciden con lo buscado (todos, si no se escribió nada). */
   readonly shown = computed(() => {
     const q = this.query().trim();
-    return q ? searchCustomers(this.customers(), q) : this.customers();
+    const found = q ? searchCustomers(this.customers(), q) : this.customers();
+    if (!this.onlyOwing()) return found;
+    // Con deuda: los que más deben primero, que es a quien hay que cobrar.
+    return found
+      .map((c) => ({ c, owed: this.statsOf(c).owed }))
+      .filter((x) => x.owed > 0)
+      .sort((a, b) => b.owed - a.owed)
+      .map((x) => x.c);
   });
+
+  /** Solo los clientes con facturas por cobrar. */
+  readonly onlyOwing = signal(false);
+
+  /** Cuántos clientes deben algo, y cuánto suman: el número que importa para cobrar. */
+  readonly owing = computed(() => {
+    let count = 0;
+    let total = 0;
+    for (const c of this.customers()) {
+      const owed = this.statsOf(c).owed;
+      if (owed > 0) {
+        count++;
+        total += owed;
+      }
+    }
+    return { count, total: round2(total) };
+  });
+
+  toggleOwing(): void {
+    this.onlyOwing.update((v) => !v);
+  }
 
   /** Los documentos de cada cliente, del más reciente al más viejo. */
   private readonly docsByCustomer = computed(() => {
@@ -178,6 +206,7 @@ export class AdminClientes implements OnInit {
 
   clearQuery(): void {
     this.query.set('');
+    this.onlyOwing.set(false);
   }
 
   // --- Formulario ----------------------------------------------------------

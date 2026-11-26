@@ -243,6 +243,27 @@ describe('AdminClientes (/admin/clientes)', () => {
       return { ...env, ...seed };
     }
 
+    it('el filtro "con saldo por cobrar" deja solo a quien debe, el que más debe primero', async () => {
+      const customers = TestBed.inject(BusinessCustomerService);
+      const deudor = await firstValueFrom(customers.save({ id: null, name: 'Deudor Grande', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      const chico = await firstValueFrom(customers.save({ id: null, name: 'Deudor Chico', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      await firstValueFrom(customers.save({ id: null, name: 'Al Dia', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      await documento(chico.id, chico.name, 'factura', { status: 'emitida' }, 500);
+      await documento(deudor.id, deudor.name, 'factura', { status: 'emitida' }, 3000);
+
+      const { fixture, c, el } = await montar(false);
+      expect(c.owing()).toEqual({ count: 2, total: 3500 });
+
+      c.toggleOwing();
+      fixture.detectChanges();
+      expect(c.shown().map((x) => x.name)).toEqual(['Deudor Grande', 'Deudor Chico']);
+      expect(el.textContent).toContain('Con saldo por cobrar (2');
+
+      c.clearQuery();
+      expect(c.onlyOwing()).toBe(false);
+      expect(c.shown()).toHaveLength(3);
+    });
+
     it('un cliente sin documentos lo dice', async () => {
       const { el } = await montar();
       expect(el.textContent).toContain('Todavía no tiene');

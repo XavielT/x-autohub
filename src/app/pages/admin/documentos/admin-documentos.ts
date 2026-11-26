@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { DOCUMENT, DecimalPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Icon } from '../../../../shared/ui/icon/icon';
+import { normalizeSearch } from '../../../../shared/ui/searchable-select/searchable-select';
 import { allVehicles, emptyDocumentVehicle, moveLineInSlot, vehicleLabel, vehicleSlot } from '../../../../shared/utils/document-vehicles';
 import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-pick';
 import { DocumentSheet } from '../../../../shared/ui/document-sheet/document-sheet';
@@ -37,7 +38,7 @@ import {
   VehicleSelection,
   Verdict,
 } from '../../../../shared/models/business-document.model';
-import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
+import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, newLineUid, templateById } from '../../../../shared/utils/document-templates';
 import { computeTotals, round2, todayIso } from '../../../../shared/utils/document-totals';
 import { defaultDueDate, overdueDays } from '../../../../shared/utils/document-overdue';
 import {
@@ -118,6 +119,7 @@ export class AdminDocumentos implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly templates = DOCUMENT_TEMPLATES;
   readonly kindLabels = KIND_LABELS;
@@ -275,11 +277,25 @@ export class AdminDocumentos implements OnInit {
     return this.customers().find((c) => c.id === id)?.name ?? this.documents().find((d) => d.customerId === id)?.customerName ?? '';
   });
 
+  /** El texto de la búsqueda de la lista (código, cliente, vehículo o placa). */
+  readonly query = signal('');
+
+  setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
   readonly visible = computed(() => {
     const f = this.filter();
     const customer = this.customerFilter();
+    const q = normalizeSearch(this.query());
     return this.documents().filter((d) => {
       if (customer && d.customerId !== customer) return false;
+      if (q) {
+        const hay = normalizeSearch(
+          [d.code, d.customerName, d.customerPhone, ...allVehicles(d).flatMap((v) => [v.text, v.plate])].join(' '),
+        );
+        if (!hay.includes(q)) return false;
+      }
       if (f === 'all') return true;
       if (f === 'porFacturar') return this.isToInvoice(d);
       if (f === 'vencidas') return this.daysLate(d) > 0;
@@ -344,6 +360,9 @@ export class AdminDocumentos implements OnInit {
   });
 
   ngOnInit(): void {
+    const view = this.document.defaultView;
+    view?.addEventListener('beforeunload', this.warnBeforeUnload);
+    this.destroyRef.onDestroy(() => view?.removeEventListener('beforeunload', this.warnBeforeUnload));
     // Primero lo que pide el enlace y después cargar los datos: si la lista llegara al instante, `abrir` ya tiene que estar anotado.
     const params = this.route.snapshot.queryParamMap;
     const wanted = params.get('cliente');
@@ -532,6 +551,38 @@ export class AdminDocumentos implements OnInit {
     this.catalogQuery.set('');
     this.view.set('edit');
   }
+
+  /** Lo último que se guardó o se abrió (sin los uid de las líneas): lo que se compara para saber si hay cambios. */
+  private baseline = '';
+  private static snapshot(d: DocumentDraft | null): string {
+    return d ? JSON.stringify({ ...d, items: d.items.map(({ uid, ...rest }) => rest) }) : '';
+  }
+
+  /** Hay cambios sin guardar en el editor. */
+  readonly dirty = computed(() => this.view() === 'edit' && AdminDocumentos.snapshot(this.draft()) !== this.baseline);
+
+  /** Pidió salir con cambios sin guardar y espera la segunda pulsación. */
+  readonly confirmLeave = signal(false);
+  private leaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Salir del editor: con cambios sin guardar pide confirmar (una segunda pulsación), para no perder lo escrito. */
+  leave(): void {
+    if (this.dirty() && !this.confirmLeave()) {
+      this.confirmLeave.set(true);
+      clearTimeout(this.leaveTimer);
+      this.leaveTimer = setTimeout(() => this.confirmLeave.set(false), 5000);
+      return;
+    }
+    this.confirmLeave.set(false);
+    this.backToList();
+  }
+
+  private readonly warnBeforeUnload = (event: BeforeUnloadEvent): void => {
+    if (this.dirty()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  };
 
   backToList(): void {
     this.view.set('list');
@@ -764,6 +815,8 @@ export class AdminDocumentos implements OnInit {
     this.targetTitle.set(null);
     this.pendingRemove.set(null);
     this.draft.set(draft);
+    this.baseline = AdminDocumentos.snapshot(draft);
+    this.confirmLeave.set(false);
   }
 
   /** Fija secciones y líneas a la vez, con las líneas siempre en el orden de las secciones. */
@@ -870,6 +923,17 @@ export class AdminDocumentos implements OnInit {
     this.commit(items, titles);
   }
 
+  /** Copia un concepto justo debajo (mismo vehículo y sección), para repetir algo parecido sin escribirlo otra vez. */
+  duplicateLine(uid: string): void {
+    const d = this.draft();
+    if (!d) return;
+    const at = d.items.findIndex((i) => i.uid === uid);
+    if (at === -1) return;
+    const copy = { ...d.items[at], uid: newLineUid() };
+    this.draft.set({ ...d, items: [...d.items.slice(0, at + 1), copy, ...d.items.slice(at + 1)] });
+    this.followLine(copy.uid);
+  }
+
   removeLine(uid: string): void {
     this.draft.update((d) => (d ? { ...d, items: d.items.filter((i) => i.uid !== uid) } : d));
   }
@@ -964,6 +1028,7 @@ export class AdminDocumentos implements OnInit {
         this.saved.set(doc);
         // Con el id, el siguiente "Guardar" actualiza este mismo documento en vez de crear otro.
         this.draft.update((current) => (current ? { ...current, id: doc.id, customerId: doc.customerId } : current));
+        this.baseline = AdminDocumentos.snapshot(this.draft());
         this.reloadCustomers();
         this.toast.show(successMessage ?? `${doc.code} guardada.`);
         this.reload();

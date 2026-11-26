@@ -303,7 +303,7 @@
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a la tienda' : 'Guardar cambios') }}
               </button>
-              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+              <button type="button" class="adm-inv__cancel" [class.adm-inv__cancel--warn]="confirmCancel()" (click)="askCancel()">{{ confirmCancel() ? 'Hay cambios sin guardar: toca otra vez para salir' : 'Cancelar' }}</button>
             </div>
           </form>
         }
@@ -396,7 +396,7 @@
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Agregar a Auto Hub' : 'Guardar cambios') }}
               </button>
-              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+              <button type="button" class="adm-inv__cancel" [class.adm-inv__cancel--warn]="confirmCancel()" (click)="askCancel()">{{ confirmCancel() ? 'Hay cambios sin guardar: toca otra vez para salir' : 'Cancelar' }}</button>
             </div>
           </form>
         }
@@ -447,7 +447,7 @@
               <button type="submit" class="adm-inv__save" [disabled]="isSubmitting()" [attr.aria-busy]="isSubmitting()">
                 {{ isSubmitting() ? 'Guardando...' : (editingId() === null ? 'Publicar noticia' : 'Guardar cambios') }}
               </button>
-              <button type="button" class="adm-inv__cancel" (click)="cancelCreate()">Cancelar</button>
+              <button type="button" class="adm-inv__cancel" [class.adm-inv__cancel--warn]="confirmCancel()" (click)="askCancel()">{{ confirmCancel() ? 'Hay cambios sin guardar: toca otra vez para salir' : 'Cancelar' }}</button>
             </div>
           </form>
         }
@@ -478,6 +478,11 @@
                 </button>
               }
             </div>
+            <label class="adm-inv__sort">Ordenar por
+              <select class="adm-inv__input" name="partSort" (change)="setPartSort($event)">
+                @for (o of partSorts; track o.key) { <option [value]="o.key" [selected]="partSort() === o.key">{{ o.label }}</option> }
+              </select>
+            </label>
             <p class="adm-inv__sub" aria-live="polite">Mostrando {{ filteredParts().length }} de {{ parts().length }} piezas</p>
           </div>
           @if (filteredParts().length === 0) {
