@@ -52,6 +52,14 @@
         </div>
       }
 
+      @if (customerFilter()) {
+        <p class="dc__filterbar" role="status">
+          <app-icon name="contact" [size]="18" />
+          <span>Documentos de <strong>{{ filterCustomerName() || 'este cliente' }}</strong></span>
+          <button type="button" class="tl__chip" (click)="clearCustomerFilter()"><app-icon name="x" [size]="14" /> Ver todos</button>
+        </p>
+      }
+
       <div class="tl__chips" role="group" aria-label="Filtrar documentos">
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'all'" (click)="setFilter('all')"><app-icon name="layers" [size]="16" /> Todos</button>
         <button type="button" class="tl__chip" [class.is-active]="filter() === 'cotizacion'" (click)="setFilter('cotizacion')"><app-icon name="clipboard" [size]="16" /> Cotizaciones</button>
@@ -64,7 +72,7 @@
       @if (loading()) {
         <app-skeleton variant="row" [count]="4" />
       } @else if (visible().length === 0) {
-        <p class="tl__empty">Todavía no hay documentos. Pulsa «Nuevo documento» para crear el primero.</p>
+        <p class="tl__empty">{{ customerFilter() ? 'Este cliente todavía no tiene documentos.' : 'Todavía no hay documentos. Pulsa «Nuevo documento» para crear el primero.' }}</p>
       } @else {
         <ul class="tl__list">
           @for (doc of visible(); track doc.id) {

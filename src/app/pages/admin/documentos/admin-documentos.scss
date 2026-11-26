@@ -205,3 +205,17 @@
   white-space: nowrap;
 }
 .dc__billed--field { width: fit-content; min-height: 44px; }
+
+// La barra que dice "Documentos de <cliente>" cuando se llega filtrado desde /admin/clientes.
+.dc__filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--Hub-translucid);
+  color: var(--Hub);
+  span { color: var(--text-strong); }
+}

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Avatar } from '../../../../shared/ui/avatar/avatar';
@@ -7,8 +8,17 @@ import { VehiclePick } from '../../../../shared/components/vehicle-pick/vehicle-
 import { BusinessCustomerService, validateCustomer } from '../../../../shared/services/business-customer.service';
 import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { BusinessCustomer, BusinessDocument, CustomerDraft, CustomerVehicle, VehicleSelection } from '../../../../shared/models/business-document.model';
+import {
+  BusinessCustomer,
+  BusinessDocument,
+  CustomerDraft,
+  CustomerVehicle,
+  KIND_LABELS,
+  STATUS_LABELS,
+  VehicleSelection,
+} from '../../../../shared/models/business-document.model';
 import { searchCustomers } from '../../../../shared/utils/document-customers';
+import { round2 } from '../../../../shared/utils/document-totals';
 import { buildWaLink } from '../../../../shared/utils/whatsapp';
 
 type TextKey = 'name' | 'phone' | 'email' | 'rnc' | 'address' | 'notes';
@@ -43,7 +53,7 @@ const toDraft = (c: BusinessCustomer): CustomerDraft => ({
  */
 @Component({
   selector: 'app-admin-clientes',
-  imports: [RouterLink, Skeleton, Avatar, Icon, VehiclePick],
+  imports: [RouterLink, Skeleton, Avatar, Icon, VehiclePick, DatePipe, DecimalPipe],
   templateUrl: './admin-clientes.html',
   styleUrl: './admin-clientes.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,6 +87,62 @@ export class AdminClientes implements OnInit {
     }
     return map;
   });
+
+  /** Las cotizaciones que ya tienen factura (sin anular): su estado se ve como "Facturada". */
+  private readonly invoicedQuotes = computed(
+    () => new Set(this.documents().filter((d) => d.kind === 'factura' && d.sourceId && d.status !== 'anulada').map((d) => d.sourceId as string)),
+  );
+
+  /** Los clientes con la lista completa de documentos desplegada (por defecto se ven los 3 más recientes). */
+  readonly allDocs = signal<ReadonlySet<string>>(new Set());
+  readonly docsPreview = 3;
+
+  /** El estado de un documento tal como se le muestra a quien administra: una cotización con factura es "Facturada". */
+  statusLabelOf(doc: BusinessDocument): string {
+    return doc.kind === 'cotizacion' && this.invoicedQuotes().has(doc.id) ? 'Facturada' : STATUS_LABELS[doc.status];
+  }
+
+  /** Para colorear la etiqueta del estado. */
+  statusKeyOf(doc: BusinessDocument): string {
+    return doc.kind === 'cotizacion' && this.invoicedQuotes().has(doc.id) ? 'facturada' : doc.status;
+  }
+
+  kindLabelOf(doc: BusinessDocument): string {
+    return KIND_LABELS[doc.kind];
+  }
+
+  /** Lo que falta por cobrar de una factura emitida (0 en todo lo demás). */
+  owedOf(doc: BusinessDocument): number {
+    return doc.kind === 'factura' && doc.status === 'emitida' ? Math.max(0, round2(doc.total - doc.paid)) : 0;
+  }
+
+  /** Resumen de los documentos de un cliente: cuántos, cuánto se le ha facturado y cuánto debe. */
+  statsOf(customer: BusinessCustomer): { count: number; quotes: number; invoices: number; billed: number; owed: number } {
+    const docs = this.docsOf(customer);
+    const invoices = docs.filter((d) => d.kind === 'factura');
+    return {
+      count: docs.length,
+      quotes: docs.length - invoices.length,
+      invoices: invoices.length,
+      billed: round2(invoices.filter((d) => d.status === 'emitida' || d.status === 'pagada').reduce((sum, d) => sum + d.total, 0)),
+      owed: round2(invoices.reduce((sum, d) => sum + this.owedOf(d), 0)),
+    };
+  }
+
+  /** Los documentos que se ven de un cliente: los más recientes, o todos si desplegó la lista. */
+  shownDocsOf(customer: BusinessCustomer): BusinessDocument[] {
+    const docs = this.docsOf(customer);
+    return this.allDocs().has(customer.id) ? docs : docs.slice(0, this.docsPreview);
+  }
+
+  toggleAllDocs(customer: BusinessCustomer): void {
+    this.allDocs.update((set) => {
+      const next = new Set(set);
+      if (next.has(customer.id)) next.delete(customer.id);
+      else next.add(customer.id);
+      return next;
+    });
+  }
 
   ngOnInit(): void {
     this.reload();

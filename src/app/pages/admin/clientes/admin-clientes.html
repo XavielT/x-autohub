@@ -99,11 +99,52 @@
             </div>
           }
 
-          @if (docsOf(c); as docs) {
-            <p class="tl__muted">
-              @if (docs.length === 0) { Sin documentos todavía. }
-              @else { {{ docs.length }} {{ docs.length === 1 ? 'documento' : 'documentos' }}: {{ docs[0].code }}@if (docs.length > 1) { , {{ docs[1].code }} }@if (docs.length > 2) { y {{ docs.length - 2 }} más }. }
-            </p>
+          @if (statsOf(c); as st) {
+            <section class="cl__docs" [attr.aria-label]="'Documentos de ' + c.name">
+              <header class="cl__docs-head">
+                <strong>Documentos</strong>
+                @if (st.count === 0) {
+                  <span class="tl__muted">Todavía no tiene.</span>
+                } @else {
+                  <span class="tl__muted">
+                    {{ st.quotes }} {{ st.quotes === 1 ? 'cotización' : 'cotizaciones' }} · {{ st.invoices }} {{ st.invoices === 1 ? 'factura' : 'facturas' }}
+                    @if (st.billed > 0) { · Facturado RD$ {{ st.billed | number: '1.2-2' }} }
+                    @if (st.owed > 0) { · <strong class="cl__owed">Por cobrar RD$ {{ st.owed | number: '1.2-2' }}</strong> }
+                  </span>
+                }
+              </header>
+
+              @if (st.count > 0) {
+                <ul class="cl__doclist">
+                  @for (doc of shownDocsOf(c); track doc.id) {
+                    <li>
+                      <a class="cl__doc" routerLink="/admin/documentos" [queryParams]="{ abrir: doc.id }" [attr.aria-label]="'Abrir ' + kindLabelOf(doc) + ' ' + doc.code">
+                        <app-icon [name]="doc.kind === 'factura' ? 'receipt' : 'clipboard'" [size]="18" />
+                        <span class="cl__doc-main">
+                          <span class="cl__doc-code">{{ doc.code }}</span>
+                          <small class="tl__muted">{{ doc.issueDate | date: 'dd/MM/yyyy' }}@if (doc.vehicle.text) { · {{ doc.vehicle.text }} }</small>
+                        </span>
+                        <span class="cl__doc-status" [attr.data-status]="statusKeyOf(doc)">{{ statusLabelOf(doc) }}</span>
+                        <span class="cl__doc-amount">
+                          <strong>RD$ {{ doc.total | number: '1.2-2' }}</strong>
+                          @if (owedOf(doc) > 0) { <small class="cl__owed">Pendiente {{ owedOf(doc) | number: '1.2-2' }}</small> }
+                        </span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+                <div class="tl__row cl__docs-foot">
+                  @if (st.count > docsPreview) {
+                    <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="toggleAllDocs(c)" [attr.aria-expanded]="allDocs().has(c.id)">
+                      {{ allDocs().has(c.id) ? 'Ver menos' : 'Ver los ' + st.count + ' documentos' }}
+                    </button>
+                  }
+                  <a class="tl__btn tl__btn--small tl__btn--ghost" routerLink="/admin/documentos" [queryParams]="{ filtrar: c.id }">
+                    <app-icon name="file-text" [size]="16" /> Abrir en Documentos
+                  </a>
+                </div>
+              }
+            </section>
           }
           @if (c.notes) { <p class="cl__notes">{{ c.notes }}</p> }
 

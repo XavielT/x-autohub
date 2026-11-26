@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 
 import { AdminDocumentos } from './admin-documentos';
+import { firstValueFrom } from 'rxjs';
 import { ToastService } from '../../../../shared/services/toast.service';
+import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
+import { draftFromTemplate } from '../../../../shared/utils/document-templates';
 
 describe('AdminDocumentos (/admin/documentos)', () => {
   const toast = { show: vi.fn() };
@@ -764,6 +768,73 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(text).toContain('Cobrado RD$ 1,000.00');
       expect(text).toContain('Pendiente RD$ 4,000.00');
       expect(text).toContain('Por cobrar');
+    });
+  });
+
+  describe('enlaces desde /admin/clientes (abrir y filtrar)', () => {
+    /** Un documento ya guardado, escrito directo en el almacén simulado (así no hace falta usar `inject` antes de fijar la ruta). */
+    function semilla(id: string, kind: 'cotizacion' | 'factura', number: number, customerName: string, customerId: string) {
+      const now = '2026-11-26T12:00:00.000Z';
+      return {
+        id, kind, number, code: `${kind === 'factura' ? 'FAC' : 'COT'}-${String(number).padStart(4, '0')}`, template: 'mecanica', status: 'borrador',
+        customerName, customerPhone: '', customerEmail: '', customerRnc: '', customerId,
+        vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' },
+        issueDate: '2026-11-26', validUntil: null,
+        items: [{ uid: 'l' + id, section: '', tbd: false, kind: 'servicio', description: 'Trabajo', quantity: 1, unitPrice: 1000 }],
+        discountType: 'amount', discountValue: 0, applyItbis: false, itbisRate: 18, paid: 0, payments: [], notes: '', terms: '', sourceId: null,
+        subtotal: 1000, itbis: 0, total: 1000, createdAt: now, updatedAt: now,
+      };
+    }
+
+    /** Monta la página como si se llegara con esos parámetros (`?abrir=`, `?filtrar=`). */
+    async function montarConParams(params: Record<string, string>, docs: ReturnType<typeof semilla>[] = []) {
+      localStorage.setItem('x-autohub.business-documents', JSON.stringify(docs));
+      TestBed.overrideProvider(ActivatedRoute, { useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } });
+      const fixture = TestBed.createComponent(AdminDocumentos);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+    }
+
+    const dosClientes = () => [
+      semilla('doc-a', 'cotizacion', 1, 'Constructora SD', 'cli-a'),
+      semilla('doc-b', 'cotizacion', 2, 'Ana Lora', 'cli-b'),
+    ];
+
+    it('?abrir=<id> abre ese documento directamente en el editor', async () => {
+      const { c } = await montarConParams({ abrir: 'fac-1' }, [semilla('fac-1', 'factura', 1, 'Juan', 'cli-x')]);
+      expect(c.view()).toBe('edit');
+      expect(c.saved()?.code).toBe('FAC-0001');
+      expect(c.draft()?.customerName).toBe('Juan');
+    });
+
+    it('?abrir con un documento que ya no existe lo dice y deja la lista', async () => {
+      const { c } = await montarConParams({ abrir: 'no-existe' }, dosClientes());
+      expect(c.view()).toBe('list');
+      expect(toast.show).toHaveBeenCalledWith(expect.stringContaining('No encontramos ese documento'), 'error');
+    });
+
+    it('?filtrar=<id de cliente> muestra solo los documentos de ese cliente y lo avisa', async () => {
+      const { fixture, c, el } = await montarConParams({ filtrar: 'cli-a' }, dosClientes());
+      fixture.detectChanges();
+
+      expect(c.visible().map((d) => d.id)).toEqual(['doc-a']);
+      expect(el.querySelector('.dc__filterbar')?.textContent).toContain('Constructora SD');
+    });
+
+    it('"Ver todos" quita el filtro', async () => {
+      const { fixture, c, el } = await montarConParams({ filtrar: 'cli-a' }, dosClientes());
+      c.clearCustomerFilter();
+      fixture.detectChanges();
+
+      expect(c.visible()).toHaveLength(2);
+      expect(el.querySelector('.dc__filterbar')).toBeNull();
+    });
+
+    it('un cliente sin documentos lo dice en vez de mostrar la lista vacía de siempre', async () => {
+      const { el } = await montarConParams({ filtrar: 'cli-sin-docs' }, dosClientes());
+      expect(el.textContent).toContain('Este cliente todavía no tiene documentos.');
     });
   });
 });

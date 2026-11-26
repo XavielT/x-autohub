@@ -5,6 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { AdminClientes } from './admin-clientes';
 import { BusinessCustomerService } from '../../../../shared/services/business-customer.service';
 import { ToastService } from '../../../../shared/services/toast.service';
+import { BusinessDocumentService } from '../../../../shared/services/business-document.service';
+import { draftFromTemplate } from '../../../../shared/utils/document-templates';
 
 describe('AdminClientes (/admin/clientes)', () => {
   const toast = { show: vi.fn() };
@@ -215,5 +217,111 @@ describe('AdminClientes (/admin/clientes)', () => {
     const jose = c.customers().find((x) => x.name === 'José Pérez')!;
     expect(c.whatsappLink(jose)).toContain('wa.me/18095550134');
     expect(c.whatsappLink({ ...jose, phone: '' })).toBe('');
+  });
+
+  describe('documentos de cada cliente', () => {
+    /** Guarda un documento de un cliente; `over` ajusta lo que cada caso necesite. */
+    async function documento(customerId: string, name: string, kind: 'cotizacion' | 'factura', over: Record<string, unknown> = {}, price = 1000) {
+      const docs = TestBed.inject(BusinessDocumentService);
+      const d = { ...draftFromTemplate('mecanica', kind, '2026-11-26'), customerName: name, customerId, ...over };
+      d.items[0].description = 'Trabajo';
+      d.items[0].unitPrice = price;
+      return firstValueFrom(docs.save(d));
+    }
+
+    async function clienteConDocumentos(cantidad = 2) {
+      const customers = TestBed.inject(BusinessCustomerService);
+      const c = await firstValueFrom(customers.save({ id: null, name: 'Constructora SD', phone: '809-975-7642', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      const creados = [];
+      for (let i = 0; i < cantidad; i++) creados.push(await documento(c.id, c.name, 'cotizacion', {}, 1000 * (i + 1)));
+      return { cliente: c, creados };
+    }
+
+    async function montarCon(cantidad: number) {
+      const seed = await clienteConDocumentos(cantidad);
+      const env = await montar(false);
+      return { ...env, ...seed };
+    }
+
+    it('un cliente sin documentos lo dice', async () => {
+      const { el } = await montar();
+      expect(el.textContent).toContain('Todavía no tiene');
+    });
+
+    it('lista los documentos de cada cliente con su código, tipo, fecha, estado y total', async () => {
+      const { el } = await montarCon(2);
+      const rows = Array.from(el.querySelectorAll('.cl__doc'));
+      expect(rows).toHaveLength(2);
+      const text = rows.map((r) => r.textContent!.replace(/\s+/g, ' '));
+      expect(text.join(' ')).toContain('COT-0001');
+      expect(text.join(' ')).toContain('COT-0002');
+      expect(text.join(' ')).toContain('26/11/2026');
+      expect(text.join(' ')).toContain('Borrador');
+      expect(text.join(' ')).toContain('RD$ 2,000.00');
+    });
+
+    it('cada documento es un enlace que lo abre en Documentos', async () => {
+      const { el, creados } = await montarCon(1);
+      const link = el.querySelector('a.cl__doc') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toContain('/admin/documentos');
+      expect(link.getAttribute('href')).toContain(`abrir=${creados[0].id}`);
+      expect(link.getAttribute('aria-label')).toBe('Abrir Cotización COT-0001');
+    });
+
+    it('hay un enlace para abrir todos los documentos del cliente filtrados', async () => {
+      const { el, cliente } = await montarCon(1);
+      const all = Array.from(el.querySelectorAll('a')).find((a) => a.textContent!.includes('Abrir en Documentos')) as HTMLAnchorElement;
+      expect(all.getAttribute('href')).toContain(`filtrar=${cliente.id}`);
+    });
+
+    it('muestra los 3 más recientes y despliega el resto con "Ver los N documentos"', async () => {
+      const { fixture, c, el } = await montarCon(5);
+      expect(el.querySelectorAll('.cl__doc')).toHaveLength(3);
+      expect(el.textContent).toContain('Ver los 5 documentos');
+
+      c.toggleAllDocs(c.customers()[0]);
+      fixture.detectChanges();
+      expect(el.querySelectorAll('.cl__doc')).toHaveLength(5);
+      expect(el.textContent).toContain('Ver menos');
+
+      c.toggleAllDocs(c.customers()[0]);
+      fixture.detectChanges();
+      expect(el.querySelectorAll('.cl__doc')).toHaveLength(3);
+    });
+
+    it('resume cuántos documentos tiene, cuánto se le facturó y cuánto debe', async () => {
+      const customers = TestBed.inject(BusinessCustomerService);
+      const cliente = await firstValueFrom(customers.save({ id: null, name: 'Constructora SD', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      await documento(cliente.id, cliente.name, 'cotizacion', {}, 500);
+      await documento(cliente.id, cliente.name, 'factura', { status: 'emitida', payments: [{ id: 'a', date: '2026-11-26', amount: 1000, method: 'efectivo', note: '' }] }, 4000);
+      await documento(cliente.id, cliente.name, 'factura', { status: 'pagada', payments: [{ id: 'b', date: '2026-11-26', amount: 2000, method: 'efectivo', note: '' }] }, 2000);
+      await documento(cliente.id, cliente.name, 'factura', { status: 'borrador' }, 9000);
+      const { c, el } = await montar(false);
+
+      expect(c.statsOf(c.customers()[0])).toEqual({ count: 4, quotes: 1, invoices: 3, billed: 6000, owed: 3000 });
+      expect(el.textContent).toContain('Facturado RD$ 6,000.00');
+      expect(el.textContent).toContain('Por cobrar RD$ 3,000.00');
+    });
+
+    it('una cotización que ya tiene factura se ve "Facturada"; la factura, con su propio estado', async () => {
+      const customers = TestBed.inject(BusinessCustomerService);
+      const cliente = await firstValueFrom(customers.save({ id: null, name: 'Constructora SD', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      const cot = await documento(cliente.id, cliente.name, 'cotizacion', { status: 'aceptada' });
+      const fac = await documento(cliente.id, cliente.name, 'factura', { sourceId: cot.id, status: 'emitida' });
+      const { c } = await montar(false);
+
+      expect(c.statusLabelOf(cot)).toBe('Facturada');
+      expect(c.statusLabelOf(fac)).toBe('Emitida');
+    });
+
+    it('si la factura se anula, la cotización deja de verse Facturada', async () => {
+      const customers = TestBed.inject(BusinessCustomerService);
+      const cliente = await firstValueFrom(customers.save({ id: null, name: 'Constructora SD', phone: '', email: '', rnc: '', address: '', notes: '', vehicles: [] }));
+      const cot = await documento(cliente.id, cliente.name, 'cotizacion', { status: 'aceptada' });
+      await documento(cliente.id, cliente.name, 'factura', { sourceId: cot.id, status: 'anulada' });
+      const { c } = await montar(false);
+
+      expect(c.statusLabelOf(cot)).toBe('Aceptada');
+    });
   });
 });

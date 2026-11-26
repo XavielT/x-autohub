@@ -85,7 +85,7 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
     id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId,
     vehicle: { ...vehicle }, issueDate, validUntil, items: items.map((i) => ({ ...i })),
     discountType: doc.discountType, discountValue: doc.discountValue, applyItbis: doc.applyItbis, itbisRate: doc.itbisRate,
-    paid: doc.paid, payments: doc.payments.map((p) => ({ ...p })), notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
+    paid: doc.paid, payments: (doc.payments ?? []).map((p) => ({ ...p })), notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
   };
 }
 
@@ -260,9 +260,23 @@ export class AdminDocumentos implements OnInit {
   readonly catalog = signal<CatalogEntry[] | null>(null);
   readonly catalogQuery = signal('');
 
+  /** Solo los documentos de este cliente (se llega con `?filtrar=<id>` desde /admin/clientes). */
+  readonly customerFilter = signal<string | null>(null);
+  /** Un documento que pidió abrirse por enlace (`?abrir=<id>`): se abre en cuanto llega la lista. */
+  private readonly pendingOpenId = signal<string | null>(null);
+
+  /** El nombre del cliente del filtro, para decirlo en pantalla. */
+  readonly filterCustomerName = computed(() => {
+    const id = this.customerFilter();
+    if (!id) return '';
+    return this.customers().find((c) => c.id === id)?.name ?? this.documents().find((d) => d.customerId === id)?.customerName ?? '';
+  });
+
   readonly visible = computed(() => {
     const f = this.filter();
+    const customer = this.customerFilter();
     return this.documents().filter((d) => {
+      if (customer && d.customerId !== customer) return false;
       if (f === 'all') return true;
       if (f === 'porFacturar') return this.isToInvoice(d);
       return d.kind === f;
@@ -306,15 +320,33 @@ export class AdminDocumentos implements OnInit {
   });
 
   ngOnInit(): void {
-    this.reload();
-    this.reloadCustomers();
-    const wanted = this.route.snapshot.queryParamMap.get('cliente');
+    // Primero lo que pide el enlace y después cargar los datos: si la lista llegara al instante, `abrir` ya tiene que estar anotado.
+    const params = this.route.snapshot.queryParamMap;
+    const wanted = params.get('cliente');
     if (wanted) {
       this.prefillCustomerId.set(wanted);
       this.view.set('pick');
     }
+    this.customerFilter.set(params.get('filtrar'));
+    this.pendingOpenId.set(params.get('abrir'));
+    this.reload();
+    this.reloadCustomers();
     this.settings.getBusinessProfile().subscribe({ next: (p) => this.profile.set(p), error: () => undefined });
     this.settings.getBankAccounts().subscribe({ next: (b) => this.banks.set(b), error: () => undefined });
+  }
+
+  /** Abre el documento que se pidió por enlace, una sola vez; si ya no existe, lo dice. */
+  private openPending(list: BusinessDocument[]): void {
+    const id = this.pendingOpenId();
+    if (!id) return;
+    this.pendingOpenId.set(null);
+    const doc = list.find((d) => d.id === id);
+    if (doc) this.open(doc);
+    else this.toast.show('No encontramos ese documento. Puede que se haya borrado.', 'error');
+  }
+
+  clearCustomerFilter(): void {
+    this.customerFilter.set(null);
   }
 
   private reloadCustomers(): void {
@@ -326,6 +358,7 @@ export class AdminDocumentos implements OnInit {
       next: (list) => {
         this.documents.set(list);
         this.loading.set(false);
+        this.openPending(list);
       },
       error: (error: Error) => {
         this.loading.set(false);
