@@ -140,6 +140,17 @@
                   <input class="tl__input" type="text" name="vehiclePlate" [value]="d.vehicle.plate" (input)="setVehicle('plate', $event)" /></label>
                 <label class="tl__field"><span>Kilometraje</span>
                   <input class="tl__input" type="text" name="vehicleMileage" placeholder="85,000 km" [value]="d.vehicle.mileage" (input)="setVehicle('mileage', $event)" /></label>
+                @if (template()?.hasInspection) {
+                  <label class="tl__field tl__field--wide"><span>Chasis (VIN)</span>
+                    <input class="tl__input" type="text" name="vehicleVin" autocomplete="off" [value]="d.vehicle.vin" (input)="setVehicle('vin', $event)" /></label>
+                  <label class="tl__field tl__field--wide"><span>Dictamen de la revisión <small class="tl__muted">(sale en el papel; las observaciones van en las notas)</small></span>
+                    <select class="tl__input" name="verdict" (change)="setVerdict($event)">
+                      <option value="" [selected]="d.vehicle.verdict === ''">Sin dictamen todavía</option>
+                      <option value="aprobado" [selected]="d.vehicle.verdict === 'aprobado'">{{ verdictLabels.aprobado }}</option>
+                      <option value="observaciones" [selected]="d.vehicle.verdict === 'observaciones'">{{ verdictLabels.observaciones }}</option>
+                      <option value="rechazado" [selected]="d.vehicle.verdict === 'rechazado'">{{ verdictLabels.rechazado }}</option>
+                    </select></label>
+                }
               </div>
             }
 

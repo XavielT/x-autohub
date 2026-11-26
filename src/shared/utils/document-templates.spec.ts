@@ -21,6 +21,25 @@ describe('plantillas de documentos', () => {
     expect(templateById('mecanica').showVehicle).toBe(true);
   });
 
+  it('existen el chequeo cobrado aparte y la revisión pre-compra, esta última con dictamen', () => {
+    const chequeo = templateById('chequeo');
+    expect(chequeo.terms).toContain('por separado');
+    expect(chequeo.hasInspection).toBeFalsy();
+
+    const pre = templateById('precompra');
+    expect(pre.hasInspection).toBe(true);
+    expect(pre.showVehicle).toBe(true);
+    expect(pre.suggestions.some((s) => s.description.includes('pre-compra'))).toBe(true);
+    expect(pre.terms).toContain('no es una garantía');
+  });
+
+  it('un documento de pre-compra arranca sin dictamen, y con su sección', () => {
+    const d = draftFromTemplate('precompra', 'factura', '2026-11-26');
+    expect(d.vehicle.verdict).toBe('');
+    expect(d.vehicle.vin).toBe('');
+    expect(d.items[0].section).toBe('Revisión pre-compra');
+  });
+
   it('una cotización nueva trae validez, condiciones y una línea con el tipo de la plantilla', () => {
     const d = draftFromTemplate('mecanica', 'cotizacion', '2026-11-26');
     expect(d.validUntil).toBe('2026-12-11');

@@ -17,6 +17,8 @@ export interface DocumentTemplate {
   description: string;
   /** Si el documento lleva el bloque del vehículo (marca, placa, kilometraje). */
   showVehicle: boolean;
+  /** Si lleva chasis y dictamen (visto bueno / con observaciones / no recomendado): las revisiones de un vehículo. */
+  hasInspection?: boolean;
   /** Secciones con las que arranca el documento (se renombran, mueven o borran). Vacío = una sola, sin título. */
   defaultSections: readonly string[];
   /** Tipo de línea con la que arranca "Agregar línea". */
@@ -125,6 +127,56 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     notes: '',
   },
   {
+    id: 'chequeo',
+    icon: 'search',
+    defaultSections: ['Chequeo'],
+    areaLabel: 'Chequeo',
+    label: 'Chequeo / Diagnóstico',
+    description: 'Un chequeo cobrado aparte, sin reparación: revisión, escáner e informe de lo encontrado.',
+    showVehicle: true,
+    defaultLineKind: 'servicio',
+    suggestions: [
+      { kind: 'servicio', description: 'Chequeo general del vehículo' },
+      { kind: 'servicio', description: 'Diagnóstico con escáner' },
+      { kind: 'servicio', description: 'Revisión de frenos y suspensión' },
+      { kind: 'servicio', description: 'Revisión de niveles y fluidos' },
+      { kind: 'servicio', description: 'Revisión del sistema eléctrico y batería' },
+      { kind: 'servicio', description: 'Revisión del aire acondicionado' },
+      { kind: 'servicio', description: 'Informe del diagnóstico' },
+    ],
+    validDays: 7,
+    terms:
+      'El chequeo se cobra por separado de cualquier reparación. Se entrega el diagnóstico con lo encontrado; ' +
+      'las reparaciones se cotizan aparte y solo se hacen con su aprobación.',
+    notes: '',
+  },
+  {
+    id: 'precompra',
+    icon: 'shield-check',
+    defaultSections: ['Revisión pre-compra'],
+    areaLabel: 'Pre-compra',
+    label: 'Revisión pre-compra',
+    description: 'Revisamos un vehículo antes de que el cliente lo compre y le damos nuestro dictamen.',
+    showVehicle: true,
+    hasInspection: true,
+    defaultLineKind: 'servicio',
+    suggestions: [
+      { kind: 'servicio', description: 'Revisión pre-compra completa' },
+      { kind: 'servicio', description: 'Escaneo de códigos de falla' },
+      { kind: 'servicio', description: 'Prueba de manejo' },
+      { kind: 'servicio', description: 'Revisión de motor y transmisión' },
+      { kind: 'servicio', description: 'Revisión de chasis, suspensión y frenos' },
+      { kind: 'servicio', description: 'Revisión de carrocería y pintura' },
+      { kind: 'servicio', description: 'Verificación de documentos y chasis' },
+      { kind: 'servicio', description: 'Informe con fotos' },
+    ],
+    validDays: 7,
+    terms:
+      'Servicio de revisión previa a la compra. El dictamen refleja el estado del vehículo al momento de la inspección ' +
+      'y no es una garantía de su funcionamiento futuro. Se da el visto bueno solo si el vehículo está en buen estado.',
+    notes: '',
+  },
+  {
     id: 'venta',
     icon: 'bag',
     defaultSections: [],
@@ -144,7 +196,7 @@ export const DOCUMENT_TEMPLATES: readonly DocumentTemplate[] = [
     id: 'general',
     icon: 'layers',
     defaultSections: ['Chequeo', 'Trabajos', 'Repuestos'],
-    areaLabel: 'Chequeo y otros',
+    areaLabel: 'Otros',
     label: 'Mixta / general',
     description: 'Para una factura o cotización que junta varios trabajos: A/C, chequeo, piezas mecánicas y lo que haga falta.',
     showVehicle: true,
@@ -185,7 +237,7 @@ export function draftFromTemplate(templateId: TemplateId, kind: DocumentKind, to
     customerPhone: '',
     customerEmail: '',
     customerRnc: '',
-    vehicle: { text: '', plate: '', mileage: '' },
+    vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' },
     issueDate: today,
     validUntil: kind === 'cotizacion' ? addDaysIso(today, tpl.validDays) : null,
     items: [blankLine(tpl.defaultLineKind, '', 1, 0, tpl.defaultSections[0] ?? '')],

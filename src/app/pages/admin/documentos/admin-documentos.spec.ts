@@ -183,6 +183,30 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(paper).toContain('Subtotal · Chequeo');
   });
 
+  it('la revisión pre-compra pide chasis y dictamen, y el dictamen sale en el papel', async () => {
+    const { fixture, c, el } = await montar();
+    c.startNew();
+    c.pickTemplate('precompra');
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Dictamen de la revisión');
+
+    c.setVehicle('vin', input('JTDBR32E720012345'));
+    c.setVerdict(input('aprobado'));
+    fixture.detectChanges();
+
+    const paper = el.querySelector('.doc-sheet')!.textContent!;
+    expect(paper).toContain('Visto bueno');
+    expect(paper).toContain('JTDBR32E720012345');
+  });
+
+  it('el chequeo no pide dictamen', async () => {
+    const { fixture, c, el } = await montar();
+    c.pickTemplate('chequeo');
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('Dictamen de la revisión');
+    expect(c.sectionTitles()).toEqual(['Chequeo']);
+  });
+
   it('el área abierta arranca en la de la plantilla y cambia al tocar otra', async () => {
     const { c } = await montar();
     c.pickTemplate('mantenimiento');

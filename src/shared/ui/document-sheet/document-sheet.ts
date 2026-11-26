@@ -7,6 +7,7 @@ import {
   KIND_LABELS,
   LINE_KIND_LABELS,
   STATUS_LABELS,
+  VERDICT_LABELS,
 } from '../../models/business-document.model';
 import { BankAccount } from '../../models/order.model';
 import { computeTotals } from '../../utils/document-totals';
@@ -49,6 +50,7 @@ export class DocumentSheet {
   readonly statusLabel = computed(() => STATUS_LABELS[this.doc().status]);
   readonly template = computed(() => templateById(this.doc().template));
   readonly lineKindLabels = LINE_KIND_LABELS;
+  readonly verdictLabels = VERDICT_LABELS;
 
   readonly lines = computed(() => this.doc().items.filter((i) => i.description.trim()));
 
@@ -81,7 +83,7 @@ export class DocumentSheet {
 
   readonly hasVehicle = computed(() => {
     const v = this.doc().vehicle;
-    return this.template().showVehicle && !!(v.text || v.plate || v.mileage);
+    return this.template().showVehicle && !!(v.text || v.plate || v.mileage || v.vin || v.verdict);
   });
 
   /** Las cuentas de ejemplo que deja la migración no se imprimen para un cliente. */

@@ -3423,6 +3423,16 @@ apply supabase/migrations/0063_business_documents.sql upgrade
 apply supabase/migrations/0063_business_documents.sql upgrade
 echo "   (aplicada dos veces)"
 
+echo "→ Plantillas de documentos abiertas: la base ya no las lista una por una (migracion 0064)"
+check "una plantilla nueva (precompra) se acepta" "precompra" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name) values ('cotizacion', 'precompra', 'Marta') returning template;")"
+check "un nombre vacio de plantilla se rechaza" "ERROR:  new row for relation \"business_documents\" violates check constraint \"business_documents_template_valid\"" "$(as_user "$ADMIN" "insert into business_documents (kind, template, customer_name) values ('cotizacion', '  ', 'Marta');")"
+scalar "delete from business_documents;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0064"
+apply supabase/migrations/0064_document_templates_open.sql upgrade
+apply supabase/migrations/0064_document_templates_open.sql upgrade
+echo "   (aplicada dos veces)"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo

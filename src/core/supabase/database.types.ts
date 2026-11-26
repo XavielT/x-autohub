@@ -68,13 +68,14 @@ export type BusinessDocumentRow = {
   id: string;
   kind: 'cotizacion' | 'factura';
   number: number;
-  template: 'mecanica' | 'electrica' | 'mantenimiento' | 'instalacion' | 'venta' | 'general';
+  /** Nombre de la plantilla usada (la lista vive en `document-templates.ts`). */
+  template: string;
   status: string;
   customer_name: string;
   customer_phone: string;
   customer_email: string;
   customer_rnc: string;
-  vehicle: { text?: string; plate?: string; mileage?: string };
+  vehicle: { text?: string; plate?: string; mileage?: string; vin?: string; verdict?: string };
   issue_date: string;
   valid_until: string | null;
   /** Líneas: `{ kind, description, quantity, unitPrice }`. */

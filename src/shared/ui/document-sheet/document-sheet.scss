@@ -61,6 +61,21 @@
   p { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 }
 
+.ds__vehicle .ds__verdict {
+  display: block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 2px solid var(--ds-ink);
+  border-radius: 6px;
+  font-weight: 800;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+
+  &[data-verdict='aprobado'] { border-color: #1b7f3b; color: #1b7f3b; background: #e8f6ec; }
+  &[data-verdict='observaciones'] { border-color: #9a6700; color: #9a6700; background: #fff4d6; }
+  &[data-verdict='rechazado'] { border-color: #b3261e; color: #b3261e; background: #fde8e6; }
+}
+
 .doc-sheet .ds__group { margin: 18px 24px 0; color: var(--ds-ink); }
 
 .ds__table {

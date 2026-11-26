@@ -69,6 +69,20 @@ describe('BusinessDocumentService (modo simulado)', () => {
     expect((await firstValueFrom(service.list())).map((d) => d.id)).toEqual([doc.id]);
   });
 
+  it('la revisión pre-compra guarda el chasis y el dictamen', async () => {
+    const d = draftFromTemplate('precompra', 'factura', '2026-11-26');
+    d.customerName = 'Marta';
+    d.items[0].description = 'Revisión pre-compra completa';
+    d.items[0].unitPrice = 3500;
+    d.vehicle = { text: 'Toyota Corolla 2018', plate: '', mileage: '60,000 km', vin: 'JTDBR32E720012345', verdict: 'aprobado' };
+
+    const saved = await firstValueFrom(service.save(d));
+    expect(saved.vehicle.verdict).toBe('aprobado');
+    expect(saved.vehicle.vin).toBe('JTDBR32E720012345');
+    expect(saved.template).toBe('precompra');
+    expect((await firstValueFrom(service.list()))[0].vehicle.verdict).toBe('aprobado');
+  });
+
   it('convertir una cotización en factura copia los datos y apunta a su origen', async () => {
     const quote = await firstValueFrom(service.save(draft()));
     const invoice = service.duplicate(quote, 'factura');

@@ -24,6 +24,8 @@ import {
   STATUSES_BY_KIND,
   STATUS_LABELS,
   TemplateId,
+  VERDICT_LABELS,
+  Verdict,
 } from '../../../../shared/models/business-document.model';
 import { DOCUMENT_TEMPLATES, blankLine, draftFromTemplate, templateById } from '../../../../shared/utils/document-templates';
 import { computeTotals } from '../../../../shared/utils/document-totals';
@@ -95,6 +97,7 @@ export class AdminDocumentos implements OnInit {
   readonly templates = DOCUMENT_TEMPLATES;
   readonly kindLabels = KIND_LABELS;
   readonly statusLabels = STATUS_LABELS;
+  readonly verdictLabels = VERDICT_LABELS;
   readonly lineKindLabels = LINE_KIND_LABELS;
   readonly lineKinds = Object.keys(LINE_KIND_LABELS) as LineKind[];
 
@@ -303,6 +306,11 @@ export class AdminDocumentos implements OnInit {
 
   setVehicle(key: keyof DocumentVehicle, event: Event): void {
     this.draft.update((d) => (d ? { ...d, vehicle: { ...d.vehicle, [key]: value(event) } } : d));
+  }
+
+  setVerdict(event: Event): void {
+    const verdict = value(event) as Verdict;
+    this.draft.update((d) => (d ? { ...d, vehicle: { ...d.vehicle, verdict } } : d));
   }
 
   setStatus(event: Event): void {

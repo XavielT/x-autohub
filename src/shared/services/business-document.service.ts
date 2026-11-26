@@ -10,6 +10,8 @@ import {
   DocumentLine,
   DocumentStatus,
   LineKind,
+  TemplateId,
+  Verdict,
 } from '../models/business-document.model';
 import { computeTotals, documentCode, todayIso } from '../utils/document-totals';
 import { newLineUid, validateDraft } from '../utils/document-templates';
@@ -26,7 +28,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     kind: row.kind,
     number: row.number,
     code: documentCode(row.kind, row.number),
-    template: row.template,
+    template: row.template as TemplateId,
     status: row.status as DocumentStatus,
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
@@ -36,6 +38,8 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
       text: row.vehicle?.text ?? '',
       plate: row.vehicle?.plate ?? '',
       mileage: row.vehicle?.mileage ?? '',
+      vin: row.vehicle?.vin ?? '',
+      verdict: (row.vehicle?.verdict ?? '') as Verdict,
     },
     issueDate: row.issue_date,
     validUntil: row.valid_until,
@@ -113,6 +117,8 @@ export class BusinessDocumentService {
         text: draft.vehicle.text.trim(),
         plate: draft.vehicle.plate.trim(),
         mileage: draft.vehicle.mileage.trim(),
+        vin: draft.vehicle.vin.trim(),
+        verdict: draft.vehicle.verdict,
       },
       issue_date: draft.issueDate,
       valid_until: draft.kind === 'cotizacion' ? draft.validUntil || null : null,

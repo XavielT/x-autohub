@@ -7,7 +7,24 @@ export type DocumentStatus = 'borrador' | 'enviada' | 'aceptada' | 'rechazada' |
 /** Qué es cada línea: sirve para agruparlas en el documento (mano de obra aparte de repuestos). */
 export type LineKind = 'mano_de_obra' | 'repuesto' | 'servicio' | 'producto' | 'otro';
 
-export type TemplateId = 'mecanica' | 'electrica' | 'mantenimiento' | 'instalacion' | 'venta' | 'general';
+export type TemplateId =
+  | 'mecanica'
+  | 'electrica'
+  | 'mantenimiento'
+  | 'instalacion'
+  | 'chequeo'
+  | 'precompra'
+  | 'venta'
+  | 'general';
+
+/** El resultado de una revisión pre-compra. Vacío = todavía sin dictamen. */
+export type Verdict = '' | 'aprobado' | 'observaciones' | 'rechazado';
+
+export const VERDICT_LABELS: Record<Exclude<Verdict, ''>, string> = {
+  aprobado: 'Visto bueno: el vehículo está en buen estado',
+  observaciones: 'Con observaciones: ver las notas',
+  rechazado: 'No recomendado para la compra',
+};
 
 export const LINE_KIND_LABELS: Record<LineKind, string> = {
   mano_de_obra: 'Mano de obra',
@@ -51,6 +68,10 @@ export interface DocumentVehicle {
   text: string;
   plate: string;
   mileage: string;
+  /** Chasis (VIN). Solo en las plantillas de revisión. */
+  vin: string;
+  /** Dictamen de la revisión pre-compra. */
+  verdict: Verdict;
 }
 
 /** Un documento guardado. */

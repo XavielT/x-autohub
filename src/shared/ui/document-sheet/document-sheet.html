@@ -41,7 +41,11 @@
         @if (doc().vehicle.text) { <span><b>{{ doc().vehicle.text }}</b></span> }
         @if (doc().vehicle.plate) { <span>Placa: <b>{{ doc().vehicle.plate }}</b></span> }
         @if (doc().vehicle.mileage) { <span>Kilometraje: <b>{{ doc().vehicle.mileage }}</b></span> }
+        @if (doc().vehicle.vin) { <span>Chasis: <b>{{ doc().vehicle.vin }}</b></span> }
       </p>
+      @if (doc().vehicle.verdict; as verdict) {
+        <p class="ds__verdict" [attr.data-verdict]="verdict">{{ verdictLabels[verdict] }}</p>
+      }
     </section>
   }
 
