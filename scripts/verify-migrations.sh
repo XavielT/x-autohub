@@ -3433,6 +3433,34 @@ apply supabase/migrations/0064_document_templates_open.sql upgrade
 apply supabase/migrations/0064_document_templates_open.sql upgrade
 echo "   (aplicada dos veces)"
 
+echo "→ Clientes: solo admin, nombre normalizado y traspaso de los que ya estaban en documentos (migracion 0065)"
+check "anon no lee los clientes" "ERROR:  permission denied for table business_customers" "$(as_anon "select count(*) from business_customers;")"
+check "un usuario normal ve cero clientes" "0" "$(as_user "$USER_A" "select count(*) from business_customers;")"
+check "y no puede crear uno" "ERROR:  new row violates row-level security policy for table \"business_customers\"" "$(as_user "$USER_A" "insert into business_customers (name) values ('X');")"
+check "el admin crea un cliente y su nombre se normaliza (sin acentos, mayusculas ni espacios de mas)" "jose perez" "$(as_user "$ADMIN" "insert into business_customers (name) values ('  José   PÉREZ ') returning name_key;")"
+check "un cliente sin nombre se rechaza" "ERROR:  new row for relation \"business_customers\" violates check constraint \"business_customers_name_check\"" "$(as_user "$ADMIN" "insert into business_customers (name) values ('   ');")"
+check "los vehiculos tienen que ser una lista" "ERROR:  new row for relation \"business_customers\" violates check constraint \"business_customers_vehicles_check\"" "$(as_user "$ADMIN" "insert into business_customers (name, vehicles) values ('Z', '{}'::jsonb);")"
+
+# Traspaso: documentos con el mismo cliente escrito de tres maneras, datos repartidos entre ellos y dos vehiculos.
+scalar "delete from business_documents; delete from business_customers;" >/dev/null
+scalar "insert into business_documents (kind, template, customer_name, customer_phone, vehicle, created_at) values ('factura', 'mecanica', 'Juan Pérez', '809 555 0134', '{\"text\":\"Jetta 2012\",\"plate\":\"A123456\"}', '2026-11-01'), ('factura', 'mecanica', 'juan  perez', '', '{\"text\":\"Jetta\",\"plate\":\"a123456\"}', '2026-11-10'), ('cotizacion', 'general', 'JUAN PEREZ', '', '{\"text\":\"Corolla 2018\",\"plate\":\"B999\"}', '2026-11-20'), ('cotizacion', 'general', 'Ana Lora', '829 111 2222', '{}', '2026-11-05');" >/dev/null
+apply supabase/migrations/0065_business_customers.sql
+check "el traspaso crea un cliente por persona (Juan en sus tres escrituras y Ana)" "2" "select count(*) from business_customers;"
+check "el cliente toma el nombre del documento mas reciente" "JUAN PEREZ" "select name from business_customers where name_key = 'juan perez';"
+check "y el telefono que solo traia un documento anterior" "809 555 0134" "select phone from business_customers where name_key = 'juan perez';"
+check "los vehiculos distintos se juntan sin repetir el mismo (por placa)" "2" "select jsonb_array_length(vehicles) from business_customers where name_key = 'juan perez';"
+check "el vehiculo mas reciente va primero" "Corolla 2018" "select vehicles -> 0 ->> 'text' from business_customers where name_key = 'juan perez';"
+check "todos los documentos quedan vinculados a su cliente" "0" "select count(*) from business_documents where customer_id is null;"
+check "borrar un cliente deja sus documentos, sin vinculo" "3" "delete from business_customers where name_key = 'juan perez'; select count(*) from business_documents where customer_id is null;"
+apply supabase/migrations/0065_business_customers.sql
+check "repetir la migracion con clientes ya en la tabla no duplica nada" "1" "select count(*) from business_customers;"
+scalar "delete from business_documents; delete from business_customers;" >/dev/null
+
+echo "→ Camino de actualizacion de la 0065"
+apply supabase/migrations/0065_business_customers.sql upgrade
+apply supabase/migrations/0065_business_customers.sql upgrade
+echo "   (aplicada dos veces)"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo

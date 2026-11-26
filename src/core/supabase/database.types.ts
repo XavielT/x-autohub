@@ -75,6 +75,8 @@ export type BusinessDocumentRow = {
   customer_phone: string;
   customer_email: string;
   customer_rnc: string;
+  /** El cliente de `business_customers` (0065). */
+  customer_id: string | null;
   vehicle: { text?: string; plate?: string; mileage?: string; vin?: string; verdict?: string };
   issue_date: string;
   valid_until: string | null;
@@ -91,6 +93,23 @@ export type BusinessDocumentRow = {
   subtotal: number;
   itbis: number;
   total: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Cliente de cotizaciones y facturas (migración 0065). Solo un admin lee y escribe. `name_key` lo calcula la base. */
+export type BusinessCustomerRow = {
+  id: string;
+  name: string;
+  name_key: string;
+  phone: string;
+  email: string;
+  rnc: string;
+  address: string;
+  notes: string;
+  /** `{ text, plate, mileage, vin }` por vehículo. */
+  vehicles: { text?: string; plate?: string; mileage?: string; vin?: string }[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1283,6 +1302,13 @@ export type Database = {
         Row: CouponRow;
         Insert: Insert<CouponRow, 'code' | 'discount_type'>;
         Update: Partial<CouponRow>;
+        Relationships: [];
+      };
+      /** Clientes de cotizaciones y facturas (0065). Solo admin. */
+      business_customers: {
+        Row: BusinessCustomerRow;
+        Insert: Insert<BusinessCustomerRow, 'name'>;
+        Update: Partial<Omit<BusinessCustomerRow, 'name_key'>>;
         Relationships: [];
       };
       /** Cotizaciones y facturas (0063). Solo admin. */

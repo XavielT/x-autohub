@@ -236,6 +236,43 @@ describe('AdminDocumentos (/admin/documentos)', () => {
     expect(c.customerMatches()).toEqual([]);
   });
 
+  it('al guardar, el cliente queda en la tabla y el documento vinculado a él; el siguiente se sugiere por RNC o correo', async () => {
+    const { fixture, c } = await montar();
+    c.pickTemplate('mecanica');
+    c.setText('customerName', input('Marta Díaz'));
+    c.setText('customerEmail', input('marta@ejemplo.com'));
+    c.setText('customerRnc', input('001-9999999-1'));
+    c.setLineDescription(c.draft()!.items[0].uid, input('Revisión'));
+    c.save();
+    await fixture.whenStable();
+
+    expect(c.customers()).toHaveLength(1);
+    expect(c.saved()?.customerId).toBe(c.customers()[0].id);
+
+    // Otro documento: se la encuentra escribiendo su RNC o su correo.
+    c.backToList();
+    c.pickTemplate('general');
+    c.onCustomerFocus();
+    c.setText('customerName', input('99999'));
+    expect(c.customerMatches().map((m) => m.name)).toEqual(['Marta Díaz']);
+    c.setText('customerName', input('marta@'));
+    expect(c.customerMatches().map((m) => m.name)).toEqual(['Marta Díaz']);
+  });
+
+  it('guardar dos documentos del mismo cliente no lo duplica en la tabla', async () => {
+    const { fixture, c } = await montar();
+    for (const name of ['Pedro Gil', 'pedro  GIL']) {
+      c.backToList();
+      c.pickTemplate('mecanica');
+      c.setText('customerName', input(name));
+      c.setLineDescription(c.draft()!.items[0].uid, input('Revisión'));
+      c.save();
+      await fixture.whenStable();
+    }
+    expect(c.customers()).toHaveLength(1);
+    expect(c.documents()).toHaveLength(2);
+  });
+
   it('cambiar el nombre a mano suelta al cliente elegido y no pisa un vehículo ya escrito', async () => {
     const { fixture, c } = await montar();
     c.pickTemplate('mecanica');

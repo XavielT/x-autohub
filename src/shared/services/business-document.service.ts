@@ -18,7 +18,7 @@ import { newLineUid, validateDraft } from '../utils/document-templates';
 
 /** Una sola cadena literal: ver `PRODUCT_COLUMNS` en `product.service.ts`. */
 const DOCUMENT_COLUMNS =
-  'id, kind, number, template, status, customer_name, customer_phone, customer_email, customer_rnc, vehicle, issue_date, valid_until, items, discount_type, discount_value, apply_itbis, itbis_rate, paid, notes, terms, source_id, subtotal, itbis, total, created_by, created_at, updated_at';
+  'id, kind, number, template, status, customer_name, customer_phone, customer_email, customer_rnc, customer_id, vehicle, issue_date, valid_until, items, discount_type, discount_value, apply_itbis, itbis_rate, paid, notes, terms, source_id, subtotal, itbis, total, created_by, created_at, updated_at';
 
 const MOCK_STORAGE_KEY = 'x-autohub.business-documents';
 
@@ -34,6 +34,7 @@ export function toBusinessDocument(row: BusinessDocumentRow): BusinessDocument {
     customerPhone: row.customer_phone,
     customerEmail: row.customer_email,
     customerRnc: row.customer_rnc,
+    customerId: row.customer_id,
     vehicle: {
       text: row.vehicle?.text ?? '',
       plate: row.vehicle?.plate ?? '',
@@ -116,6 +117,7 @@ export class BusinessDocumentService {
       customer_phone: draft.customerPhone.trim(),
       customer_email: draft.customerEmail.trim(),
       customer_rnc: draft.customerRnc.trim(),
+      customer_id: draft.customerId,
       vehicle: {
         text: draft.vehicle.text.trim(),
         plate: draft.vehicle.plate.trim(),
@@ -223,6 +225,7 @@ export class BusinessDocumentService {
       customerPhone: doc.customerPhone,
       customerEmail: doc.customerEmail,
       customerRnc: doc.customerRnc,
+      customerId: doc.customerId,
       vehicle: { ...doc.vehicle },
       issueDate: today,
       validUntil: null,

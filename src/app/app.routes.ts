@@ -299,6 +299,12 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/admin/marca/admin-marca').then((m) => m.AdminMarca),
       },
       {
+        path: 'clientes',
+        title: `Clientes | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin/clientes/admin-clientes').then((m) => m.AdminClientes),
+      },
+      {
         path: 'documentos',
         title: `Cotizaciones y facturas | ${BRAND}`,
         canActivate: [adminGuard],

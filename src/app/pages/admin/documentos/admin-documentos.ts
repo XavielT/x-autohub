@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { switchMap } from 'rxjs';
 import { DOCUMENT, DecimalPipe, DatePipe } from '@angular/common';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { Icon } from '../../../../shared/ui/icon/icon';
@@ -10,8 +12,10 @@ import { AdminServicesService } from '../../../../shared/services/admin-services
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BankAccount } from '../../../../shared/models/order.model';
 import {
+  BusinessCustomer,
   BusinessDocument,
   BusinessProfile,
+  CustomerVehicle,
   DocumentDraft,
   DocumentKind,
   DocumentLine,
@@ -39,7 +43,8 @@ import {
   uniqueTitle,
 } from '../../../../shared/utils/document-sections';
 import { documentWhatsAppLink } from '../../../../shared/utils/document-whatsapp';
-import { CustomerRecord, customerKey, customersFrom, searchCustomers } from '../../../../shared/utils/document-customers';
+import { customerKey, searchCustomers } from '../../../../shared/utils/document-customers';
+import { BusinessCustomerService } from '../../../../shared/services/business-customer.service';
 
 type View = 'list' | 'pick' | 'edit';
 type Filter = 'all' | DocumentKind;
@@ -61,9 +66,9 @@ const toNumber = (raw: string): number => {
 
 /** De un documento guardado al borrador que se edita. */
 function toDraft(doc: BusinessDocument): DocumentDraft {
-  const { id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, vehicle, issueDate, validUntil, items } = doc;
+  const { id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId, vehicle, issueDate, validUntil, items } = doc;
   return {
-    id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc,
+    id, kind, template, status, customerName, customerPhone, customerEmail, customerRnc, customerId,
     vehicle: { ...vehicle }, issueDate, validUntil, items: items.map((i) => ({ ...i })),
     discountType: doc.discountType, discountValue: doc.discountValue, applyItbis: doc.applyItbis, itbisRate: doc.itbisRate,
     paid: doc.paid, notes: doc.notes, terms: doc.terms, sourceId: doc.sourceId,
@@ -89,6 +94,8 @@ function toDraft(doc: BusinessDocument): DocumentDraft {
 })
 export class AdminDocumentos implements OnInit {
   private readonly docs = inject(BusinessDocumentService);
+  private readonly customerService = inject(BusinessCustomerService);
+  private readonly route = inject(ActivatedRoute);
   private readonly settings = inject(SiteSettingsService);
   private readonly products = inject(ProductService);
   private readonly services = inject(AdminServicesService);
@@ -164,17 +171,19 @@ export class AdminDocumentos implements OnInit {
   });
 
   /** Los clientes de siempre, sacados de los documentos ya guardados. */
-  readonly customers = computed(() => customersFrom(this.documents()));
+  readonly customers = signal<BusinessCustomer[]>([]);
+  /** Cliente con el que se abrió la página (desde /admin/clientes): se aplica al elegir la plantilla. */
+  private readonly prefillCustomerId = signal<string | null>(null);
   readonly customerFocus = signal(false);
   /** El cliente que se eligió de la lista: de él salen los vehículos que se ofrecen. */
-  readonly pickedCustomer = signal<CustomerRecord | null>(null);
+  readonly pickedCustomer = signal<BusinessCustomer | null>(null);
 
   /** Clientes anteriores que coinciden con lo que se escribe en el nombre (mientras el campo está en foco). */
   readonly customerMatches = computed(() => {
     const d = this.draft();
     if (!this.customerFocus() || !d) return [];
-    const picked = this.pickedCustomer()?.key;
-    return searchCustomers(this.customers(), d.customerName).filter((c) => c.key !== picked);
+    const picked = this.pickedCustomer()?.id;
+    return searchCustomers(this.customers(), d.customerName, 6).filter((c) => c.id !== picked);
   });
 
   readonly catalog = signal<CatalogEntry[] | null>(null);
@@ -220,8 +229,18 @@ export class AdminDocumentos implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+    this.reloadCustomers();
+    const wanted = this.route.snapshot.queryParamMap.get('cliente');
+    if (wanted) {
+      this.prefillCustomerId.set(wanted);
+      this.view.set('pick');
+    }
     this.settings.getBusinessProfile().subscribe({ next: (p) => this.profile.set(p), error: () => undefined });
     this.settings.getBankAccounts().subscribe({ next: (b) => this.banks.set(b), error: () => undefined });
+  }
+
+  private reloadCustomers(): void {
+    this.customerService.list().subscribe({ next: (list) => this.customers.set(list), error: () => undefined });
   }
 
   private reload(): void {
@@ -298,6 +317,9 @@ export class AdminDocumentos implements OnInit {
   pickTemplate(id: TemplateId): void {
     this.suggestAreaId.set(null);
     this.edit(draftFromTemplate(id, this.pickKind()), templateById(id).defaultSections);
+    const wanted = this.customers().find((c) => c.id === this.prefillCustomerId());
+    this.prefillCustomerId.set(null);
+    if (wanted) this.useCustomer(wanted);
     this.saved.set(null);
     this.catalogQuery.set('');
     this.view.set('edit');
@@ -317,7 +339,11 @@ export class AdminDocumentos implements OnInit {
 
   setText(key: TextKey, event: Event): void {
     const text = value(event);
-    if (key === 'customerName' && customerKey(text) !== this.pickedCustomer()?.key) this.pickedCustomer.set(null);
+    const picked = this.pickedCustomer();
+    if (key === 'customerName' && picked && customerKey(text) !== customerKey(picked.name)) {
+      this.pickedCustomer.set(null);
+      this.patch({ customerId: null });
+    }
     this.patch({ [key]: key === 'validUntil' ? text || null : text } as Partial<DocumentDraft>);
   }
 
@@ -339,7 +365,7 @@ export class AdminDocumentos implements OnInit {
   }
 
   /** Rellena el documento con los datos guardados del cliente y, si la plantilla lleva vehículo y está vacío, el último que trajo. */
-  useCustomer(customer: CustomerRecord): void {
+  useCustomer(customer: BusinessCustomer): void {
     const d = this.draft();
     if (!d) return;
     const emptyVehicle = !d.vehicle.text && !d.vehicle.plate && !d.vehicle.mileage && !d.vehicle.vin;
@@ -352,16 +378,17 @@ export class AdminDocumentos implements OnInit {
       customerPhone: customer.phone,
       customerEmail: customer.email,
       customerRnc: customer.rnc,
+      customerId: customer.id,
       vehicle,
     });
   }
 
   /** Pone en el documento uno de los vehículos que ya trajo el cliente (el dictamen no se arrastra). */
-  useVehicle(vehicle: DocumentVehicle): void {
+  useVehicle(vehicle: CustomerVehicle): void {
     this.draft.update((d) => (d ? { ...d, vehicle: this.vehicleOf(vehicle, d.vehicle) } : d));
   }
 
-  private vehicleOf(from: DocumentVehicle, current: DocumentVehicle): DocumentVehicle {
+  private vehicleOf(from: CustomerVehicle, current: DocumentVehicle): DocumentVehicle {
     return { text: from.text, plate: from.plate, mileage: from.mileage, vin: from.vin, verdict: current.verdict };
   }
 
@@ -572,12 +599,17 @@ export class AdminDocumentos implements OnInit {
     if (!d || this.saving()) return;
     this.saving.set(true);
 
-    this.docs.save(d).subscribe({
+    // El cliente se deja en la tabla primero (se crea o se completa) y el documento queda vinculado a él.
+    this.customerService
+      .resolveForDocument(d, this.customers())
+      .pipe(switchMap((customerId) => this.docs.save({ ...d, customerId })))
+      .subscribe({
       next: (doc) => {
         this.saving.set(false);
         this.saved.set(doc);
         // Con el id, el siguiente "Guardar" actualiza este mismo documento en vez de crear otro.
-        this.draft.update((current) => (current ? { ...current, id: doc.id } : current));
+        this.draft.update((current) => (current ? { ...current, id: doc.id, customerId: doc.customerId } : current));
+        this.reloadCustomers();
         this.toast.show(`${doc.code} guardada.`);
         this.reload();
       },

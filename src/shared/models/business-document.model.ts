@@ -65,6 +65,14 @@ export interface DocumentLine {
   tbd: boolean;
 }
 
+/** Un vehículo de un cliente, tal como se recuerda para sus próximos documentos. */
+export interface CustomerVehicle {
+  text: string;
+  plate: string;
+  mileage: string;
+  vin: string;
+}
+
 export interface DocumentVehicle {
   /** "Volkswagen Jetta 2012". */
   text: string;
@@ -90,6 +98,8 @@ export interface BusinessDocument {
   customerEmail: string;
   /** RNC o cédula del cliente, si lo da. */
   customerRnc: string;
+  /** El cliente de la tabla al que pertenece (nulo si se borró). El documento guarda su propia copia de los datos. */
+  customerId: string | null;
   vehicle: DocumentVehicle;
   /** `YYYY-MM-DD`. */
   issueDate: string;
@@ -135,3 +145,21 @@ export const EMPTY_BUSINESS_PROFILE: BusinessProfile = {
   address: '',
   footer: 'Gracias por confiar en X AutoHub.',
 };
+
+/** Un cliente de X AutoHub (tabla `business_customers`, migración 0065). */
+export interface BusinessCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  /** RNC o cédula. */
+  rnc: string;
+  address: string;
+  notes: string;
+  vehicles: CustomerVehicle[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Un cliente mientras se edita. `id` nulo = uno nuevo. */
+export type CustomerDraft = Omit<BusinessCustomer, 'id' | 'createdAt' | 'updatedAt'> & { id: string | null };

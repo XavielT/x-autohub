@@ -1,91 +1,103 @@
-import { BusinessDocument } from '../models/business-document.model';
-import { customerKey, customersFrom, searchCustomers } from './document-customers';
+import { CustomerFields, CustomerSource, customerEnrichedBy, customerFromSource, customerKey, searchCustomers } from './document-customers';
 
-function doc(over: Partial<BusinessDocument> & { customerName: string; createdAt: Date }): BusinessDocument {
-  return {
-    id: over.customerName + over.createdAt.getTime(),
-    kind: 'factura',
-    number: 1,
-    code: 'FAC-0001',
-    template: 'mecanica',
-    status: 'emitida',
-    customerPhone: '',
-    customerEmail: '',
-    customerRnc: '',
-    vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' },
-    issueDate: '2026-11-26',
-    validUntil: null,
-    items: [],
-    discountType: 'amount',
-    discountValue: 0,
-    applyItbis: false,
-    itbisRate: 18,
-    paid: 0,
-    notes: '',
-    terms: '',
-    sourceId: null,
-    subtotal: 0,
-    itbis: 0,
-    total: 0,
-    updatedAt: over.createdAt,
-    ...over,
-  };
-}
+const car = (text: string, plate = '') => ({ text, plate, mileage: '', vin: '' });
 
-const d = (day: number) => new Date(2026, 10, day);
+const jose: CustomerFields = {
+  name: 'José Pérez',
+  phone: '809-555-0134',
+  email: 'jose.perez@ejemplo.com',
+  rnc: '131-12345-6',
+  address: 'Calle Duarte 12, Santiago',
+  vehicles: [car('Toyota Corolla 2018', 'B999')],
+};
+const ana: CustomerFields = { name: 'Ana Lora', phone: '829-111-2222', email: '', rnc: '', vehicles: [] };
+const all = [jose, ana];
 
-describe('directorio de clientes', () => {
-  it('"José  PÉREZ" y "jose perez" son el mismo cliente', () => {
+describe('búsqueda de clientes', () => {
+  it('"José  PÉREZ" y "jose perez" son el mismo nombre', () => {
     expect(customerKey('  José  PÉREZ ')).toBe(customerKey('jose perez'));
   });
 
-  it('junta los documentos de un mismo cliente y cuenta cuántos tiene', () => {
-    const list = customersFrom([
-      doc({ customerName: 'Juan Pérez', createdAt: d(1) }),
-      doc({ customerName: 'juan perez', createdAt: d(5) }),
-      doc({ customerName: 'Ana', createdAt: d(3) }),
-    ]);
-    expect(list).toHaveLength(2);
-    expect(list[0].name).toBe('juan perez');
-    expect(list[0].documents).toBe(2);
+  it('por nombre, sin acentos ni mayúsculas y por cualquier parte', () => {
+    expect(searchCustomers(all, 'JOSE')).toEqual([jose]);
+    expect(searchCustomers(all, 'perez')).toEqual([jose]);
+    expect(searchCustomers(all, 'lor')).toEqual([ana]);
   });
 
-  it('vale lo más reciente, y lo que falta ahí se completa con documentos anteriores', () => {
-    const [juan] = customersFrom([
-      doc({ customerName: 'Juan', customerPhone: '809 555 0134', customerEmail: 'viejo@x.com', createdAt: d(1) }),
-      doc({ customerName: 'Juan', customerPhone: '829 555 9999', createdAt: d(9) }),
-    ]);
-    expect(juan.phone).toBe('829 555 9999');
-    expect(juan.email).toBe('viejo@x.com');
+  it('por teléfono, ignorando guiones y espacios', () => {
+    expect(searchCustomers(all, '5550134')).toEqual([jose]);
+    expect(searchCustomers(all, '809 555')).toEqual([jose]);
+    expect(searchCustomers(all, '829-111')).toEqual([ana]);
   });
 
-  it('recuerda los vehículos distintos, sin repetir el mismo (por placa)', () => {
-    const [juan] = customersFrom([
-      doc({ customerName: 'Juan', createdAt: d(1), vehicle: { text: 'Jetta 2012', plate: 'A123456', mileage: '', vin: '', verdict: '' } }),
-      doc({ customerName: 'Juan', createdAt: d(2), vehicle: { text: 'Jetta', plate: 'a123456', mileage: '90,000', vin: '', verdict: '' } }),
-      doc({ customerName: 'Juan', createdAt: d(3), vehicle: { text: 'Corolla 2018', plate: 'B999', mileage: '', vin: '', verdict: '' } }),
-    ]);
-    expect(juan.vehicles.map((v) => v.plate)).toEqual(['B999', 'a123456']);
+  it('por RNC o cédula, con o sin guiones', () => {
+    expect(searchCustomers(all, '131-12345-6')).toEqual([jose]);
+    expect(searchCustomers(all, '12345')).toEqual([jose]);
   });
 
-  it('ignora documentos sin nombre de cliente', () => {
-    expect(customersFrom([doc({ customerName: '   ', createdAt: d(1) })])).toEqual([]);
+  it('por correo', () => {
+    expect(searchCustomers(all, 'jose.perez@')).toEqual([jose]);
+    expect(searchCustomers(all, 'EJEMPLO.COM')).toEqual([jose]);
   });
 
-  it('busca por nombre (sin acentos), por teléfono y por RNC', () => {
-    const list = customersFrom([
-      doc({ customerName: 'José Pérez', customerPhone: '809-555-0134', customerRnc: '131-12345-6', createdAt: d(2) }),
-      doc({ customerName: 'Ana Lora', customerPhone: '829-111-2222', createdAt: d(1) }),
-    ]);
-    expect(searchCustomers(list, 'jose').map((c) => c.name)).toEqual(['José Pérez']);
-    expect(searchCustomers(list, '5550134').map((c) => c.name)).toEqual(['José Pérez']);
-    expect(searchCustomers(list, '12345').map((c) => c.name)).toEqual(['José Pérez']);
-    expect(searchCustomers(list, 'zzz')).toEqual([]);
-    expect(searchCustomers(list, '   ')).toEqual([]);
+  it('por placa o modelo del vehículo, y por dirección', () => {
+    expect(searchCustomers(all, 'b999')).toEqual([jose]);
+    expect(searchCustomers(all, 'corolla')).toEqual([jose]);
+    expect(searchCustomers(all, 'santiago')).toEqual([jose]);
   });
 
-  it('un teléfono con muy pocos dígitos no trae cualquier cosa', () => {
-    const list = customersFrom([doc({ customerName: 'Ana', customerPhone: '829-111-2222', createdAt: d(1) })]);
-    expect(searchCustomers(list, '82')).toEqual([]);
+  it('una placa con números (k123) no se confunde con un teléfono ni un RNC', () => {
+    const kia: CustomerFields = { ...ana, vehicles: [car('Kia Rio', 'K123')] };
+    expect(searchCustomers([jose, kia], 'k123')).toEqual([kia]);
+  });
+
+  it('varias palabras: tienen que cumplirse todas, aunque vengan de campos distintos', () => {
+    expect(searchCustomers(all, 'jose 0134')).toEqual([jose]);
+    expect(searchCustomers(all, 'jose 1112')).toEqual([]);
+  });
+
+  it('un número con muy pocos dígitos no trae cualquier cosa, y vacío no trae nada', () => {
+    expect(searchCustomers(all, '82')).toEqual([]);
+    expect(searchCustomers(all, '   ')).toEqual([]);
+  });
+
+  it('respeta el límite', () => {
+    expect(searchCustomers(all, 'a', 1)).toHaveLength(1);
+  });
+});
+
+describe('lo que un documento le aporta a su cliente', () => {
+  const doc = (over: Partial<CustomerSource> = {}): CustomerSource => ({
+    customerName: 'José Pérez',
+    customerPhone: '',
+    customerEmail: '',
+    customerRnc: '',
+    vehicle: car(''),
+    ...over,
+  });
+
+  it('completa lo que faltaba y suma el vehículo nuevo al principio', () => {
+    const next = customerEnrichedBy(ana, doc({ customerName: 'Ana Lora', customerEmail: 'ana@x.com', vehicle: car('Kia Rio', 'K1') }))!;
+    expect(next.email).toBe('ana@x.com');
+    expect(next.vehicles.map((v) => v.plate)).toEqual(['K1']);
+  });
+
+  it('nunca pisa un dato que el cliente ya tiene', () => {
+    expect(customerEnrichedBy(jose, doc({ customerPhone: '999-999-9999', customerEmail: 'otro@x.com', customerRnc: '1' }))).toBeNull();
+  });
+
+  it('el mismo vehículo (por placa, sin importar mayúsculas) no se repite', () => {
+    expect(customerEnrichedBy(jose, doc({ vehicle: car('Corolla', 'b999') }))).toBeNull();
+  });
+
+  it('sin nada nuevo devuelve null', () => {
+    expect(customerEnrichedBy(jose, doc())).toBeNull();
+  });
+
+  it('un cliente nuevo sale de lo escrito en el documento', () => {
+    const c = customerFromSource(doc({ customerName: '  Marta ', customerPhone: '809 1', vehicle: car('Honda Civic', 'H1') }));
+    expect(c).toMatchObject({ name: 'Marta', phone: '809 1' });
+    expect(c.vehicles).toHaveLength(1);
+    expect(customerFromSource(doc()).vehicles).toEqual([]);
   });
 });

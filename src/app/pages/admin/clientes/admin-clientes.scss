@@ -1,0 +1,56 @@
+@use '../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.tl__btn, .tl__chip { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+
+.cl__form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+
+.cl__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--main-light);
+  color: var(--text-soft);
+
+  .tl__input { flex: 1; min-width: 0; border: 0; background: transparent; }
+}
+.cl__count { margin: 0 0 12px; }
+
+.cl__head { display: flex; align-items: center; gap: 12px; }
+.cl__who { display: flex; flex-direction: column; min-width: 0; }
+.cl__cars { margin: 10px 0 4px; }
+.cl__car { cursor: default; }
+.cl__notes { margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); font-size: 13px; white-space: pre-line; }
+.cl__actions { margin-top: 12px; justify-content: flex-start; }
+
+.cl__vehicles { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.cl__vehicle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.cl__v-text { grid-column: 1 / -1; }
+@media (min-width: 760px) {
+  .cl__vehicle { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) 44px; }
+  .cl__v-text { grid-column: auto; }
+}
+
+.cl__icon {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+
+  &:hover { color: #ff8d8f; }
+}

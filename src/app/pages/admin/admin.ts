@@ -66,6 +66,7 @@ export class Admin {
     { path: 'inventario', icon: 'boxes', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
     { path: 'marca', icon: 'image', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
     { path: 'documentos', icon: 'file-text', label: 'Documentos', description: 'Cotizaciones y facturas para tus clientes' },
+    { path: 'clientes', icon: 'contact', label: 'Clientes', description: 'Tus clientes, sus datos y sus vehículos' },
     { path: 'usuarios', icon: 'users', label: 'Usuarios', description: 'Cuentas, verificación y permisos' },
     { path: 'ajustes', icon: 'sliders', label: 'Ajustes', description: 'Cuentas para transferir y dirección de retiro' },
   ];

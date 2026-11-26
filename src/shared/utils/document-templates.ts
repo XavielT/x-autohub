@@ -244,6 +244,7 @@ export function draftFromTemplate(templateId: TemplateId, kind: DocumentKind, to
     customerPhone: '',
     customerEmail: '',
     customerRnc: '',
+    customerId: null,
     vehicle: { text: '', plate: '', mileage: '', vin: '', verdict: '' },
     issueDate: today,
     validUntil: kind === 'cotizacion' ? addDaysIso(today, tpl.validDays) : null,
