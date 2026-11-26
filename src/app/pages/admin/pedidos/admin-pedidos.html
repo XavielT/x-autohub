@@ -10,6 +10,9 @@
     </div>
   </header>
 
+  <input class="adm-ord__search" type="search" name="q" autocomplete="off" aria-label="Buscar pedidos"
+         placeholder="Buscar por número, nombre, correo o teléfono…" [value]="query()" (input)="setQuery($event)" />
+
   <div class="adm-ord__filters" role="group" aria-label="Filtrar por estado">
     <button type="button" [class.adm-ord__chip--active]="statusFilter() === 'all'"
             class="adm-ord__chip" (click)="setFilter('all')">Todos {{ orders().length }}</button>
@@ -29,7 +32,7 @@
       @if (orders().length === 0) {
         Todavía no hay pedidos.
       } @else {
-        Ningún pedido con ese estado.
+        {{ query() ? 'Ningún pedido coincide con la búsqueda.' : 'Ningún pedido con ese estado.' }}
       }
     </p>
   } @else {

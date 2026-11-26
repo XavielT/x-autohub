@@ -69,6 +69,23 @@ describe('AdminPedidos', () => {
     expect([...el.querySelectorAll('.adm-ord__chip')].map((b) => b.textContent?.trim())).toContain('Esperando pago 2');
   });
 
+  it('buscar filtra por número (con o sin #), nombre, correo o teléfono', async () => {
+    const { c, fixture } = await montar();
+    const first = order(c, 1001);
+
+    c.query.set('#1001');
+    fixture.detectChanges();
+    expect(c.filtered().map((o) => o.orderNumber)).toEqual([1001]);
+
+    c.query.set(first.fullName.toUpperCase());
+    expect(c.filtered().map((o) => o.orderNumber)).toContain(1001);
+
+    c.query.set('zzz-no-existe');
+    fixture.detectChanges();
+    expect(c.filtered()).toEqual([]);
+    expect(fixture.nativeElement.textContent).toContain('Ningún pedido coincide con la búsqueda');
+  });
+
   describe('qué botones se ofrecen', () => {
     it('esperando pago: confirmar el pago o cancelar, y nada de enviar', async () => {
       const { c } = await montar();

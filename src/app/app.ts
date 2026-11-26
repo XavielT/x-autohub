@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
+import { selectNumberOnFocus } from '../shared/utils/select-on-focus';
 import { RouterOutlet } from '@angular/router';
 import { Navbar } from '../shared/components/navbar/navbar';
 import { Footer } from '../shared/components/footer/footer';
@@ -22,6 +23,12 @@ import { VehiclePickerService } from '../shared/services/vehicle-picker.service'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
+  /** En todo el sitio, tocar un campo numérico selecciona su contenido (adiós al 0 pegado en precios y cantidades). */
+  @HostListener('document:focusin', ['$event'])
+  protected onFocusIn(event: Event): void {
+    selectNumberOnFocus(event);
+  }
+
   protected readonly title = signal('x-autohub');
   /** Cuando se abre por primera vez, `@defer` descarga el selector de vehículo. */
   protected readonly pickerOpen = inject(VehiclePickerService).isOpen;

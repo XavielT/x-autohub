@@ -1,3 +1,4 @@
+import { normalizeSearch } from '../../../../shared/ui/searchable-select/searchable-select';
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -80,10 +81,21 @@ export class AdminPedidos implements OnInit {
 
   readonly statuses = ORDER_STATUS_FLOW;
 
+  /** Lo que se busca: número de pedido, nombre, correo o teléfono. */
+  readonly query = signal('');
+
+  setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
   readonly filtered = computed(() => {
     const filter = this.statusFilter();
+    const q = normalizeSearch(this.query()).replace(/^#/, '');
     const all = this.orders();
-    const shown = filter === 'all' ? all : all.filter((o) => o.status === filter);
+    const byStatus = filter === 'all' ? all : all.filter((o) => o.status === filter);
+    const shown = q
+      ? byStatus.filter((o) => normalizeSearch(`${o.orderNumber} ${o.fullName} ${o.contactEmail} ${o.contactPhone ?? ''}`).includes(q))
+      : byStatus;
     // Los comprobantes que coinciden van primero, para confirmarlos de un toque. El orden de los demás no cambia (sort estable).
     const checks = this.proofChecks();
     const rank = (o: AdminOrderModel) => (o.status === 'awaiting_payment' && checks[o.id]?.verdict === 'coincide' ? 0 : 1);
