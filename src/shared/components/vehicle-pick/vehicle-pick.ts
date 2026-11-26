@@ -126,6 +126,25 @@ export class VehiclePick implements OnInit {
 
   onModelChange(value: string | number | null): void {
     this.modelId.set(value === null ? null : Number(value));
+    // Elegir uno del catálogo reemplaza al modelo propio que hubiera escrito antes.
+    if (value !== null) this.modelText.set('');
+    this.emit();
+  }
+
+  /** Un modelo que el catálogo no trae (un código como «TFS55H-20»): se usa tal cual, con la marca del catálogo. */
+  onModelCustom(text: string): void {
+    this.modelId.set(null);
+    this.modelText.set(text.trim());
+    this.emit();
+  }
+
+  /** Una marca que el catálogo no trae: pasa a escribirse a mano (marca y modelo). */
+  onMakeCustom(text: string): void {
+    this.makeId.set(null);
+    this.modelId.set(null);
+    this.modelText.set('');
+    this.models.set([]);
+    this.setManual(text.trim(), '');
     this.emit();
   }
 
@@ -157,7 +176,7 @@ export class VehiclePick implements OnInit {
 
   /**
    * Carga los modelos de la marca y, si venía uno elegido, lo selecciona: por id o por nombre. Si la marca está en el
-   * catálogo pero ese modelo no, el vehículo pasa a escrito a mano para no perderlo.
+   * catálogo pero ese modelo no, queda como modelo propio (`modelText`) para no perderlo.
    */
   private loadModels(makeId: number, preselect: { modelId: number | null; modelName: string | null } | null): void {
     this.isLoadingModels.set(true);
@@ -174,12 +193,9 @@ export class VehiclePick implements OnInit {
         const byName = name ? models.find((m) => normalizeSearch(m.name) === normalizeSearch(name)) : undefined;
         const found = byId ?? byName;
 
+        // Si la marca está en el catálogo pero ese modelo no, se conserva como modelo propio.
         if (found) this.modelId.set(found.id);
-        else if (name && models.length > 0) {
-          const make = this.makes().find((m) => m.id === makeId)?.name ?? '';
-          this.makeId.set(null);
-          this.setManual(make, name);
-        } else if (name) this.modelText.set(name);
+        else if (name) this.modelText.set(name);
       },
       error: () => this.isLoadingModels.set(false),
     });

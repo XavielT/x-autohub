@@ -8,6 +8,7 @@ import {
   inject,
   input,
   model,
+  output,
   signal,
 } from '@angular/core';
 import { trackKeyboard } from '../../utils/keyboard-inset';
@@ -76,6 +77,15 @@ export class SearchableSelect {
   readonly emptyText = input('Sin resultados');
   /** Lo que dice el campo cuando está abierto y vacío: invita a escribir para buscar. */
   readonly searchHint = input('Escribe para buscar…');
+  /**
+   * Deja usar lo que se escribió aunque no esté en la lista: aparece al final una opción «Usar "lo escrito"» y, al
+   * elegirla, se avisa con `customChosen` (no cambia `value`). Para listas que son ayuda y no una frontera, como los
+   * modelos de vehículo, donde siempre hay uno que el catálogo no trae.
+   */
+  readonly allowCustom = input(false);
+  /** Lo que se muestra cuando no hay opción elegida pero sí un valor propio (el que se usó con `allowCustom`). */
+  readonly customText = input('');
+  readonly customChosen = output<string>();
   readonly disabled = input(false);
   readonly invalid = input(false);
   /** Para enlazar un `<label for>` con el campo. */
@@ -88,7 +98,16 @@ export class SearchableSelect {
   readonly selected = computed(() => this.options().find((o) => o.value === this.value()) ?? null);
   readonly filtered = computed(() => filterOptions(this.options(), this.query()));
   /** Lo que muestra el campo: lo escrito mientras busca, y la opción elegida si no. */
-  readonly displayText = computed(() => (this.isOpen() ? this.query() : (this.selected()?.label ?? '')));
+  /** Lo escrito, si se puede usar tal cual: no está ya en la lista (sin distinguir acentos ni mayúsculas). */
+  readonly customOption = computed(() => {
+    const text = this.query().trim();
+    if (!this.allowCustom() || !text) return null;
+    const exact = this.options().some((o) => normalizeSearch(o.label) === normalizeSearch(text));
+    return exact ? null : text;
+  });
+  readonly displayText = computed(() =>
+    this.isOpen() ? this.query() : (this.selected()?.label ?? (this.value() === null ? this.customText() : '')),
+  );
   readonly listId = computed(() => `${this.inputId() ?? 'ss'}-list`);
 
   /**
@@ -146,13 +165,20 @@ export class SearchableSelect {
     this.close();
   }
 
+  chooseCustom(text: string): void {
+    this.customChosen.emit(text);
+    this.close();
+  }
+
   onKeydown(event: KeyboardEvent): void {
     const list = this.filtered();
+    // La opción «Usar lo escrito» es una fila más, al final.
+    const rows = list.length + (this.customOption() ? 1 : 0);
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
         if (!this.isOpen()) this.open();
-        else this.activeIndex.set(Math.min(this.activeIndex() + 1, list.length - 1));
+        else this.activeIndex.set(Math.min(this.activeIndex() + 1, rows - 1));
         break;
       case 'ArrowUp':
         event.preventDefault();
@@ -164,7 +190,9 @@ export class SearchableSelect {
         if (this.isOpen()) {
           event.preventDefault();
           const option = list[this.activeIndex()];
+          const custom = this.customOption();
           if (option) this.choose(option);
+          else if (custom && this.activeIndex() === list.length) this.chooseCustom(custom);
         }
         break;
       case 'Escape':

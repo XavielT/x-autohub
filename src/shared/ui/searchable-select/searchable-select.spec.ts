@@ -140,6 +140,71 @@ describe('SearchableSelect', () => {
     expect(input.placeholder).toBe('Elige una opción');
   });
 
+  describe('usar lo escrito cuando no está en la lista (allowCustom)', () => {
+    function conCustom() {
+      const m = montar();
+      m.fixture.componentRef.setInput('allowCustom', true);
+      const chosen: string[] = [];
+      m.c.customChosen.subscribe((t) => chosen.push(t));
+      m.fixture.detectChanges();
+      return { ...m, chosen };
+    }
+
+    it('sin allowCustom no ofrece nada y dice "Sin resultados"', () => {
+      const { type, el } = montar();
+      type('TFS55H');
+      expect(el.querySelector('.ss__option--custom')).toBeNull();
+      expect(el.querySelector('.ss__empty')).not.toBeNull();
+    });
+
+    it('ofrece "Usar «lo escrito»" cuando no coincide con ninguna opción, y ya no dice "Sin resultados"', () => {
+      const { type, el } = conCustom();
+      type('TFS55H-20');
+      expect(el.querySelector('.ss__option--custom')?.textContent).toContain('Usar «TFS55H-20»');
+      expect(el.querySelector('.ss__empty')).toBeNull();
+    });
+
+    it('no la ofrece si lo escrito ya es una opción (sin importar acentos ni mayúsculas)', () => {
+      const { type, el } = conCustom();
+      type('CITROEN');
+      expect(el.querySelector('.ss__option--custom')).toBeNull();
+    });
+
+    it('al elegirla avisa el texto, sin cambiar el valor, y cierra la lista', () => {
+      const { type, el, chosen, c, fixture } = conCustom();
+      type('TFS55H-20');
+      (el.querySelector('.ss__option--custom') as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(chosen).toEqual(['TFS55H-20']);
+      expect(c.value()).toBeNull();
+      expect(c.isOpen()).toBe(false);
+    });
+
+    it('con el teclado: Enter sobre la fila elige lo escrito', () => {
+      const { type, key, chosen } = conCustom();
+      type('TFS55H-20');
+      key('Enter');
+      expect(chosen).toEqual(['TFS55H-20']);
+    });
+
+    it('junto a coincidencias parciales va al final, y se llega con la flecha abajo', () => {
+      const { type, key, chosen, labels } = conCustom();
+      type('Ho'); // coincide con "Honda"; "Ho" no es una opción exacta
+      expect(labels().at(-1)).toContain('Usar «Ho»');
+      key('ArrowDown');
+      key('Enter');
+      expect(chosen).toEqual(['Ho']);
+    });
+
+    it('cerrado, muestra el texto propio cuando no hay opción elegida', () => {
+      const { fixture, input } = conCustom();
+      fixture.componentRef.setInput('customText', 'TFS55H-20');
+      fixture.detectChanges();
+      expect(input.value).toBe('TFS55H-20');
+    });
+  });
+
   it('al escribir "citroen" encuentra "Citroën"', () => {
     const { type, labels } = montar();
     type('citroen');

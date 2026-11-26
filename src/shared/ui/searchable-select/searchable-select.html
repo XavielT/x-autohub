@@ -35,7 +35,20 @@
           (mouseenter)="activeIndex.set(i)"
         >{{ option.label }}</li>
       } @empty {
-        <li class="ss__empty" role="presentation">{{ emptyText() }}</li>
+        @if (!customOption()) {
+          <li class="ss__empty" role="presentation">{{ emptyText() }}</li>
+        }
+      }
+      @if (customOption(); as custom) {
+        <li
+          role="option"
+          class="ss__option ss__option--custom"
+          [id]="listId() + '-' + filtered().length"
+          [class.ss__option--active]="activeIndex() === filtered().length"
+          (pointerdown)="$event.preventDefault()"
+          (click)="chooseCustom(custom)"
+          (mouseenter)="activeIndex.set(filtered().length)"
+        >Usar «{{ custom }}»</li>
       }
     </ul>
   }

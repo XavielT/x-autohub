@@ -102,3 +102,6 @@
     }
   }
 }
+
+// La fila «Usar lo escrito»: se distingue de las opciones de la lista.
+.ss__option--custom { font-style: italic; border-top: 1px solid rgba(255, 255, 255, 0.1); }

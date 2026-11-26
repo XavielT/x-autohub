@@ -19,7 +19,8 @@
     <div class="vp__field">
       <label [for]="idPrefix() + '-make'">Marca</label>
       <app-searchable-select [inputId]="idPrefix() + '-make'" [options]="makeOptions()"
-        [value]="makeId()" (valueChange)="onMakeChange($event)" placeholder="Elige la marca" />
+        [value]="makeId()" (valueChange)="onMakeChange($event)" placeholder="Elige la marca"
+        [allowCustom]="true" (customChosen)="onMakeCustom($event)" />
     </div>
 
     <div class="vp__field">
@@ -30,6 +31,7 @@
       } @else {
         <app-searchable-select [inputId]="idPrefix() + '-model'" [options]="modelOptions()"
           [value]="modelId()" (valueChange)="onModelChange($event)"
+          [allowCustom]="true" [customText]="modelText()" (customChosen)="onModelCustom($event)"
           [disabled]="makeId() === null || isLoadingModels()"
           [placeholder]="makeId() === null ? 'Primero la marca' : (isLoadingModels() ? 'Cargando…' : 'Elige el modelo')" />
       }

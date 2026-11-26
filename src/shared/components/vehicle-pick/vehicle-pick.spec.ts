@@ -79,14 +79,15 @@ describe('VehiclePick', () => {
       expect(c.manualModel()).toBe('Modelo 1');
     });
 
-    it('si la marca está pero el modelo no, también pasa a mano con la marca y el modelo originales', () => {
+    it('si la marca está pero el modelo no, conserva la marca del catálogo y el modelo como propio', () => {
       const { c, emitted } = montar({ makeName: 'Toyota', modelName: 'Modelo Que No Existe' });
-      expect(c.manual()).toBe(true);
-      expect(c.manualMake()).toBe('Toyota');
-      expect(c.manualModel()).toBe('Modelo Que No Existe');
+      expect(c.manual()).toBe(false);
+      expect(c.makeId()).toBe(toyota.id);
+      expect(c.modelId()).toBeNull();
+      expect(c.modelText()).toBe('Modelo Que No Existe');
 
       c.onYearChange(2012);
-      expect(emitted.at(-1)).toMatchObject({ makeName: 'Toyota', modelName: 'Modelo Que No Existe', makeId: null });
+      expect(emitted.at(-1)).toMatchObject({ makeName: 'Toyota', modelName: 'Modelo Que No Existe', makeId: toyota.id, modelId: null });
     });
 
     it('un año viejo fuera de la lista se conserva como opción', () => {
@@ -135,6 +136,52 @@ describe('VehiclePick', () => {
     c.onModelTextChange('Modelo X');
     c.onYearChange(2021);
     expect(emitted.at(-1)?.text).toBe(`${sinModelos.name} Modelo X 2021`);
+  });
+
+  describe('un modelo o una marca que el catálogo no trae', () => {
+    it('se usa lo escrito como modelo propio, con la marca del catálogo (un código como TFS55H-20)', () => {
+      const isuzu = VEHICLE_MAKES_MOCK.find((m) => m.slug === 'isuzu') ?? toyota;
+      const { c, emitted } = montar();
+      c.onMakeChange(isuzu.id);
+      c.onModelCustom('  TFS55H-20 ');
+      c.onYearChange(2000);
+
+      expect(c.modelId()).toBeNull();
+      expect(emitted.at(-1)).toEqual({
+        text: `${isuzu.name} TFS55H-20 2000`,
+        makeName: isuzu.name,
+        modelName: 'TFS55H-20',
+        makeId: isuzu.id,
+        modelId: null,
+        modelText: 'TFS55H-20',
+        year: 2000,
+      });
+    });
+
+    it('elegir después uno del catálogo reemplaza al modelo propio', () => {
+      const { c, emitted } = montar();
+      c.onMakeChange(toyota.id);
+      c.onModelCustom('Mi modelo');
+      c.onModelChange(corolla.id);
+      expect(c.modelText()).toBe('');
+      expect(emitted.at(-1)).toMatchObject({ modelName: 'Corolla', modelId: corolla.id });
+    });
+
+    it('un modelo propio guardado se vuelve a mostrar al editar', () => {
+      const { c } = montar({ makeId: toyota.id, modelId: null, modelText: 'TFS55H-20', year: 2000 });
+      expect(c.makeId()).toBe(toyota.id);
+      expect(c.modelText()).toBe('TFS55H-20');
+      expect(c.manual()).toBe(false);
+    });
+
+    it('una marca propia pasa a escribirse a mano (marca y modelo)', () => {
+      const { c, emitted } = montar();
+      c.onMakeCustom('Marca Rara');
+      expect(c.manual()).toBe(true);
+      expect(c.manualMake()).toBe('Marca Rara');
+      c.onManualModel('X1');
+      expect(emitted.at(-1)).toMatchObject({ makeName: 'Marca Rara', modelName: 'X1', makeId: null });
+    });
   });
 
   it('el año arranca bloqueado hasta elegir la marca', () => {
