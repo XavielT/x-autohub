@@ -550,7 +550,7 @@ Cosas que ya causaron un bug. No las repitas:
 - **`part_number` y `cross_refs` solo llegan a la ficha y al formulario**, no a las listas (`search_products()` devuelve columnas explícitas);
   por eso son opcionales en `HubPartRow` y en `ProductModel`. Las normalizadas (`*_norm`) las escribe un trigger: no las mandes desde un formulario.
 
-- **El movimiento del sitio vive en , y todo se apaga con .** Las animaciones de entrada usan  y no , para no pisar los  de hover de las tarjetas; el efecto de pulsación de los botones usa la propiedad  (no ) porque algunos botones se centran con . La aparición de tarjetas al hacer scroll usa  y **nunca dentro de un carrusel horizontal** (ahí la línea de tiempo no avanza y las tarjetas se quedan en opacidad 0).  bloquea el scroll de fondo con una ventana abierta: una ventana nueva tiene que sumar su clase a esa lista, y solo puede existir en el DOM mientras está abierta (un ), o la página se queda sin scroll.
+- **El movimiento del sitio vive en `src/styles/_motion.scss`, y todo se apaga con `prefers-reduced-motion`.** Las animaciones de entrada usan `backwards` y no `both`, para no pisar los `transform` de hover de las tarjetas; el efecto de pulsación de los botones usa la propiedad `scale` (no `transform`) porque algunos botones se centran con `translate`. La aparición de tarjetas al hacer scroll usa `animation-timeline: view()` y **nunca dentro de un carrusel horizontal** (ahí la línea de tiempo no avanza y las tarjetas se quedan en opacidad 0). `body:has(.cart-modal, .vpm, …)` bloquea el scroll de fondo con una ventana abierta: una ventana nueva tiene que sumar su clase a esa lista, y solo puede existir en el DOM mientras está abierta (un `@if`), o la página se queda sin scroll.
 
 ---
 
