@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 
 import { HubMarket } from './hub-market';
 
@@ -54,5 +55,58 @@ describe('HubMarket', () => {
     component.clearFilters();
     expect(component.hasFilters()).toBe(false);
     expect(component.filteredItems().length).toBeGreaterThan(0);
+  });
+});
+
+describe('HubMarket: filtros en la URL', () => {
+  async function montar(query: Record<string, string> = {}) {
+    await TestBed.configureTestingModule({
+      imports: [HubMarket],
+      providers: [{ provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(HubMarket);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance };
+  }
+
+  it('arranca con los filtros que trae el enlace', async () => {
+    const { component } = await montar({ cat: 'vehiculos', orden: 'precio-desc' });
+
+    expect(component.selectedCategory()).toBe('vehiculos');
+    expect(component.sort()).toBe('precio-desc');
+    expect(component.hasFilters()).toBe(true);
+    expect(component.filteredItems().every((i) => i.category === 'vehiculos')).toBe(true);
+  });
+
+  it('un enlace con valores raros no rompe nada', async () => {
+    const { component } = await montar({ cat: 'hackeado', orden: 'x', marca: 'Toyota' });
+
+    expect(component.selectedCategory()).toBe('all');
+    expect(component.brand()).toBe('');
+  });
+
+  it('las tarjetas con foto prioritaria se fijan al cargar y no cambian al filtrar', async () => {
+    const { fixture, component } = await montar();
+    const antes = [...(component as unknown as { priorityIds: () => ReadonlySet<number> }).priorityIds()];
+    expect(antes.length).toBeLessThanOrEqual(3);
+
+    component.onCategorySelect('piezas');
+    fixture.detectChanges();
+
+    expect([...(component as unknown as { priorityIds: () => ReadonlySet<number> }).priorityIds()]).toEqual(antes);
+  });
+
+  it('escribe los filtros en la URL', async () => {
+    const { fixture, component } = await montar();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    component.onCategorySelect('accesorios');
+    fixture.detectChanges();
+
+    const last = navigate.mock.calls.at(-1)![1]!.queryParams as Record<string, string | null>;
+    expect(last['cat']).toBe('accesorios');
+    expect(last['q']).toBeNull();
   });
 });

@@ -14,11 +14,12 @@ import { CarCard } from '../../../shared/components/car-card/car-card';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { VehicleDetail } from '../../../shared/components/vehicle-detail/vehicle-detail';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
+import { LoadFailed } from '../../../shared/ui/load-failed/load-failed';
 import { relatedVehicles } from '../../../shared/utils/related-vehicles';
 
 @Component({
   selector: 'app-car-details',
-  imports: [PublicationNotice, CarCard, RouterLink, VehicleDetail, Skeleton],
+  imports: [PublicationNotice, CarCard, RouterLink, VehicleDetail, Skeleton, LoadFailed],
   templateUrl: './car-details.html',
   styleUrl: './car-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,31 +71,46 @@ export class CarDetails implements OnInit {
     );
   });
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.isLoading.set(true);
+  /** La consulta falló (no es lo mismo que "no existe"): se ofrece reintentar. */
+  readonly hasError = signal(false);
+  private currentId = 0;
 
-      forkJoin({
-        car: this.hubMarketService.getById(id),
-        related: this.hubMarketService.getByCategory('vehiculos'),
-      }).subscribe({
-        next: ({ car, related }) => {
-          this.car.set(car);
-          this.images.set(car?.images ?? []);
-          this.applySeo(car);
-          this.relatedVehicles.set(
-            car
-              ? relatedVehicles(
-                  { id: car.id, price: car.price, brand: car.vehicleSpecs?.brand },
-                  related.map((v) => Object.assign(v, { brand: v.vehicleSpecs?.brand })),
-                )
-              : [],
-          );
-          this.isLoading.set(false);
-        },
-        error: () => this.isLoading.set(false),
-      });
+  retry(): void {
+    this.load(this.currentId);
+  }
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => this.load(Number(params.get('id'))));
+  }
+
+  private load(id: number): void {
+    this.currentId = id;
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
+    forkJoin({
+      car: this.hubMarketService.getById(id),
+      related: this.hubMarketService.getByCategory('vehiculos'),
+    }).subscribe({
+      next: ({ car, related }) => {
+        this.car.set(car);
+        this.images.set(car?.images ?? []);
+        this.applySeo(car);
+        this.relatedVehicles.set(
+          car
+            ? relatedVehicles(
+                { id: car.id, price: car.price, brand: car.vehicleSpecs?.brand },
+                related.map((v) => ({ ...v, brand: v.vehicleSpecs?.brand })),
+              )
+            : [],
+        );
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.car.set(undefined);
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
     });
   }
 

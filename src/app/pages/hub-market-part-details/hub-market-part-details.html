@@ -37,6 +37,8 @@
       </div>
     } @else if (isLoading()) {
       <app-skeleton variant="detail" label="Cargando el artículo…" />
+    } @else if (hasError()) {
+      <app-load-failed title="No pudimos cargar este artículo" backLink="/hub-market" backLabel="Volver a Hub Market" (retry)="retry()" />
     } @else {
       <div class="hub-market-part-details__not-found">
         <h2 class="hub-market-part-details__not-found-title">Upss, Artículo no encontrado!</h2>

@@ -132,6 +132,14 @@
     }
 
 
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        margin-top: 16px;
+        color: var(--Hub);
+    }
+
     &__not-found {
         text-align: center;
         padding: 60px 20px;

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { CarDetails } from './car-details';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
@@ -138,5 +138,31 @@ describe('CarDetails', () => {
     expect(componente.waLink()).toBe('');
     expect(boton(fixture)).toBeNull();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Juan M.');
+  });
+});
+
+describe('CarDetails: cuando la consulta falla', () => {
+  it('dice que no pudo cargar (no "no encontrado") y al reintentar muestra el vehículo', async () => {
+    const getById = vi.fn().mockReturnValueOnce(throwError(() => new Error('red'))).mockReturnValue(of(VEHICULO));
+    TestBed.configureTestingModule({
+      providers: [{ provide: HubMarketService, useValue: { getById, getByCategory: vi.fn(() => of([])) } }],
+    });
+    const fixture = TestBed.createComponent(CarDetails);
+    const el = fixture.nativeElement as HTMLElement;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('No pudimos cargar este vehículo');
+    expect(el.textContent).not.toContain('No encontramos este vehículo');
+
+    fixture.componentInstance.retry();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).not.toContain('No pudimos cargar');
+    expect(el.textContent).toContain('Toyota Supra MK4');
   });
 });

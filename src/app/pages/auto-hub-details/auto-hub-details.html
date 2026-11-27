@@ -16,10 +16,13 @@
   </app-vehicle-detail>
 } @else if (isLoading()) {
   <app-skeleton variant="detail" label="Cargando el vehículo…" />
+} @else if (hasError()) {
+  <app-load-failed title="No pudimos cargar este vehículo" backLink="/auto-hub" backLabel="Volver a Auto Hub" (retry)="retry()" />
 } @else {
   <div class="auto-hub-details__not-found">
     <h2>¡Ups! Vehículo no encontrado</h2>
     <span>Este vehículo ya no está disponible o fue borrado.</span>
     <img src="assets/icons/not-found-hub-icon.svg" alt="" />
+    <a class="auto-hub-details__back" routerLink="/auto-hub">Ver los vehículos de Auto Hub</a>
   </div>
 }

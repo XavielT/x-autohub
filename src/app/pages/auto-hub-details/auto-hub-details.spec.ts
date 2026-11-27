@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { AutoHubDetails } from './auto-hub-details';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
@@ -131,5 +131,45 @@ describe('AutoHubDetails', () => {
     expect(enlace).not.toBeNull();
     expect(enlace!.getAttribute('href')).toBe(componente.waLink());
     expect(enlace!.getAttribute('rel')).toBe('noopener');
+  });
+});
+
+describe('AutoHubDetails: cuando la consulta falla', () => {
+  it('dice que no pudo cargar (no "no encontrado") y al reintentar muestra el vehículo', async () => {
+    const getById = vi.fn().mockReturnValueOnce(throwError(() => new Error('red'))).mockReturnValue(of(VEHICULO));
+    TestBed.configureTestingModule({
+      providers: [{ provide: AutoHubService, useValue: { getById, getAll: vi.fn(() => of([VEHICULO])) } }],
+    });
+    const fixture = TestBed.createComponent(AutoHubDetails);
+    const el = fixture.nativeElement as HTMLElement;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('No pudimos cargar este vehículo');
+    expect(el.textContent).not.toContain('no encontrado');
+    expect(el.querySelector('a[href="/auto-hub"]')).not.toBeNull();
+
+    fixture.componentInstance.retry();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).not.toContain('No pudimos cargar');
+    expect(el.textContent).toContain('Corolla');
+  });
+
+  it('un vehículo que no existe ofrece volver a Auto Hub (antes era un callejón sin salida)', async () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: AutoHubService, useValue: { getById: vi.fn(() => of(undefined)), getAll: vi.fn(() => of([])) } }],
+    });
+    const fixture = TestBed.createComponent(AutoHubDetails);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('.auto-hub-details__back');
+    expect(link?.getAttribute('href')).toBe('/auto-hub');
   });
 });

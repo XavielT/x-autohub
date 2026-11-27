@@ -9,6 +9,7 @@ import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
 import { isLive } from '../../../shared/utils/publication-lifecycle';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
+import { LoadFailed } from '../../../shared/ui/load-failed/load-failed';
 import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
@@ -18,7 +19,7 @@ import { TestBadge } from '../../../shared/ui/test-badge/test-badge';
 
 @Component({
   selector: 'app-hub-market-part-details',
-  imports: [PublicationNotice, DecimalPipe, RouterLink, HubMarketCard, TestBadge, ImageGallery, Skeleton],
+  imports: [PublicationNotice, DecimalPipe, RouterLink, HubMarketCard, TestBadge, ImageGallery, Skeleton, LoadFailed],
   templateUrl: './hub-market-part-details.html',
   styleUrl: './hub-market-part-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,32 +54,47 @@ export class HubMarketPartDetails implements OnInit {
     );
   });
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.isLoading.set(true);
+  /** La consulta falló (no es lo mismo que "no existe"): se ofrece reintentar. */
+  readonly hasError = signal(false);
+  private currentId = 0;
 
-      this.hubMarketService
-        .getById(id)
-        .pipe(
-          switchMap((part) =>
-            forkJoin({
-              part: of(part),
-              related: this.hubMarketService.getByCategory(part?.category ?? 'piezas'),
-            }),
-          ),
-        )
-        .subscribe({
-          next: ({ part, related }) => {
-            this.part.set(part);
-            this.images.set(part?.images ?? []);
-            this.applySeo(part);
-            this.relatedParts.set(related.filter((item) => item.id !== id).slice(0, 4));
-            this.isLoading.set(false);
-          },
-          error: () => this.isLoading.set(false),
+  retry(): void {
+    this.load(this.currentId);
+  }
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => this.load(Number(params.get('id'))));
+  }
+
+  private load(id: number): void {
+    this.currentId = id;
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
+    this.hubMarketService
+      .getById(id)
+      .pipe(
+        switchMap((part) =>
+          forkJoin({
+            part: of(part),
+            related: this.hubMarketService.getByCategory(part?.category ?? 'piezas'),
+          }),
+        ),
+      )
+      .subscribe({
+        next: ({ part, related }) => {
+          this.part.set(part);
+          this.images.set(part?.images ?? []);
+          this.applySeo(part);
+          this.relatedParts.set(related.filter((item) => item.id !== id).slice(0, 4));
+          this.isLoading.set(false);
+        },
+        error: () => {
+          this.part.set(undefined);
+          this.hasError.set(true);
+          this.isLoading.set(false);
+        },
         });
-    });
   }
 
   /** Título, descripción y vista previa de la ficha. Una publicación de prueba no se anuncia. */

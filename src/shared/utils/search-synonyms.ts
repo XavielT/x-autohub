@@ -117,3 +117,23 @@ export function relatedTerms(query: string, groups: readonly (readonly string[])
   }
   return out.slice(0, limit);
 }
+
+/**
+ * ¿El texto responde a lo que se buscó? Para listas que se filtran en el navegador (Hub Market): cada palabra de la consulta tiene
+ * que estar dentro del texto (a medias también, como antes) o estar escrita con uno de sus sinónimos ("bumper" encuentra "parachoques").
+ * Sin acentos ni mayúsculas. Una consulta vacía lo encuentra todo.
+ */
+export function textMatchesQuery(text: string, query: string, groups: readonly (readonly string[])[] = DEFAULT_SEARCH_SYNONYMS): boolean {
+  const q = normalizeTerm(query);
+  if (q === '') return true;
+  const hay = normalizeTerm(text);
+  if (hay.includes(q)) return true;
+
+  const tokens = hay.split(/[^a-z0-9]+/).filter(Boolean);
+  const joined = ` ${tokens.join(' ')} `;
+  return q.split(' ').every(
+    (word) =>
+      hay.includes(word) ||
+      synonymsOf(word, groups).some((term) => term !== word && (term.includes(' ') ? joined.includes(` ${term} `) : tokens.includes(term))),
+  );
+}

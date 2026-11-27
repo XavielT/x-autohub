@@ -8,6 +8,7 @@ import { SeoService } from '../../../shared/services/seo.service';
 import { hubMarketSeo } from '../../../shared/utils/community-seo';
 import { isLive } from '../../../shared/utils/publication-lifecycle';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
+import { LoadFailed } from '../../../shared/ui/load-failed/load-failed';
 import { PublicationNotice } from '../../../shared/ui/publication-notice/publication-notice';
 import { hubMarketJsonLd } from '../../../shared/utils/structured-data';
 import { buildWaLink } from '../../../shared/utils/whatsapp';
@@ -16,7 +17,7 @@ import { ImageGallery } from '../../../shared/ui/image-gallery/image-gallery';
 
 @Component({
   selector: 'app-accessory-details',
-  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink, ImageGallery, Skeleton],
+  imports: [PublicationNotice, DecimalPipe, TestBadge, RouterLink, ImageGallery, Skeleton, LoadFailed],
   templateUrl: './accessory-details.html',
   styleUrl: './accessory-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,19 +67,34 @@ export class AccessoryDetails implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.isLoading.set(true);
+  /** La consulta falló (no es lo mismo que "no existe"): se ofrece reintentar. */
+  readonly hasError = signal(false);
+  private currentId = 0;
 
-      this.hubMarketService.getById(id).subscribe({
-        next: (accessory) => {
-          this.accessory.set(accessory);
-          this.applySeo(accessory);
-          this.isLoading.set(false);
-        },
-        error: () => this.isLoading.set(false),
-      });
+  retry(): void {
+    this.load(this.currentId);
+  }
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => this.load(Number(params.get('id'))));
+  }
+
+  private load(id: number): void {
+    this.currentId = id;
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
+    this.hubMarketService.getById(id).subscribe({
+      next: (accessory) => {
+        this.accessory.set(accessory);
+        this.applySeo(accessory);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.accessory.set(undefined);
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
     });
   }
 }

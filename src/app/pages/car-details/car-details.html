@@ -19,6 +19,8 @@
   </app-vehicle-detail>
 } @else if (isLoading()) {
   <app-skeleton variant="detail" label="Cargando el vehículo…" />
+} @else if (hasError()) {
+  <app-load-failed title="No pudimos cargar este vehículo" backLink="/hub-market" backLabel="Volver a Hub Market" (retry)="retry()" />
 } @else {
   <div class="car-details__not-found">
     <h2>No encontramos este vehículo</h2>

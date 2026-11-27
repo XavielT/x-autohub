@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AutoHubModel } from '../../../shared/models/auto-hub.model';
 import { AutoHubService } from '../../../shared/services/auto-hub.service';
 import { JsonLdService } from '../../../shared/services/json-ld.service';
@@ -11,12 +11,13 @@ import { buildWaLink } from '../../../shared/utils/whatsapp';
 import { AutohubCard } from '../../../shared/components/autohub-card/autohub-card';
 import { VehicleDetail } from '../../../shared/components/vehicle-detail/vehicle-detail';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
+import { LoadFailed } from '../../../shared/ui/load-failed/load-failed';
 import { CHASIS_LABELS, FUEL_LABELS, TRACTION_LABELS } from '../../../shared/utils/auto-hub-filters';
 import { relatedVehicles } from '../../../shared/utils/related-vehicles';
 
 @Component({
   selector: 'app-auto-hub-details',
-  imports: [VehicleDetail, AutohubCard, Skeleton],
+  imports: [VehicleDetail, AutohubCard, Skeleton, LoadFailed, RouterLink],
   templateUrl: './auto-hub-details.html',
   styleUrl: './auto-hub-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,21 +74,36 @@ export class AutoHubDetails implements OnInit {
     );
   });
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.isLoading.set(true);
+  /** La consulta falló (no es lo mismo que "no existe"): se ofrece reintentar. */
+  readonly hasError = signal(false);
+  private currentId = 0;
 
-      this.autoHubService.getById(id).subscribe({
-        next: (auto) => {
-          this.auto.set(auto);
-          this.images.set(auto?.images ?? []);
-          this.applySeo(auto);
-          this.isLoading.set(false);
-          this.loadRelated(auto);
-        },
-        error: () => this.isLoading.set(false),
-      });
+  retry(): void {
+    this.load(this.currentId);
+  }
+
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((params) => this.load(Number(params.get('id'))));
+  }
+
+  private load(id: number): void {
+    this.currentId = id;
+    this.hasError.set(false);
+    this.isLoading.set(true);
+
+    this.autoHubService.getById(id).subscribe({
+      next: (auto) => {
+        this.auto.set(auto);
+        this.images.set(auto?.images ?? []);
+        this.applySeo(auto);
+        this.isLoading.set(false);
+        this.loadRelated(auto);
+      },
+      error: () => {
+        this.auto.set(undefined);
+        this.hasError.set(true);
+        this.isLoading.set(false);
+      },
     });
   }
 
@@ -100,7 +116,7 @@ export class AutoHubDetails implements OnInit {
         this.related.set(
           relatedVehicles(
             { id: auto.id, price: auto.price, brand: auto.brand, body: auto.chasisType },
-            all.map((v) => Object.assign(v, { brand: v.brand, body: v.chasisType })),
+            all.map((v) => ({ ...v, body: v.chasisType })),
           ),
         ),
       // Los relacionados son un extra: sin ellos la ficha queda completa.

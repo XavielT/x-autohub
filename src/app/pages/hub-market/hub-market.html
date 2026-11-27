@@ -19,14 +19,13 @@
       (ngModelChange)="searchQuery.set($event)"
     />
 
-    <div class="hub-market__chips" role="tablist" aria-label="Categoría">
+    <div class="hub-market__chips" role="group" aria-label="Categoría">
       @for (category of categories; track category.value) {
         <button
           type="button"
-          role="tab"
           class="hub-market__chip"
           [class.hub-market__chip--active]="selectedCategory() === category.value"
-          [attr.aria-selected]="selectedCategory() === category.value"
+          [attr.aria-pressed]="selectedCategory() === category.value"
           (click)="onCategorySelect(category.value)"
         >
           {{ category.label }}
@@ -50,8 +49,8 @@
   </div>
 
   <div class="hub-market__grid">
-    @for (item of filteredItems(); track item.id; let i = $index) {
-      <app-hub-market-card [item]="item" [priority]="i < 3" />
+    @for (item of filteredItems(); track item.id) {
+      <app-hub-market-card [item]="item" [priority]="priorityIds().has(item.id)" />
     }
   </div>
 

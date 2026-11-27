@@ -1,14 +1,18 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HubMarketCategory, HubMarketItemModel } from '../../../shared/models/hub-market-item.model';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { HubMarketCard } from '../../../shared/components/hub-market-card/hub-market-card';
 import { OfflineState } from '../../../shared/components/offline-state/offline-state';
 import { OnlineService } from '../../../shared/services/online.service';
 import { SeoService } from '../../../shared/services/seo.service';
+import {
+  HUB_MARKET_PARAM_KEYS, HubMarketFilters, activeHubMarketFilters, filterHubMarket, hubMarketFiltersFromParams, hubMarketFiltersToParams,
+} from '../../../shared/utils/hub-market-filters';
 
-import { SearchableSelect, SelectOption, normalizeSearch } from '../../../shared/ui/searchable-select/searchable-select';
+import { SearchableSelect, SelectOption } from '../../../shared/ui/searchable-select/searchable-select';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 interface HubMarketCategoryOption {
   value: 'all' | HubMarketCategory;
@@ -25,9 +29,25 @@ interface HubMarketCategoryOption {
 export class HubMarket implements OnInit {
   private readonly hubMarketService = inject(HubMarketService);
   private readonly seo = inject(SeoService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /** Lo que trae la URL (un enlace compartido): `?cat=vehiculos&marca=Toyota`. Sin parámetros, sin filtros. */
+  private readonly initial = hubMarketFiltersFromParams((key) => this.route.snapshot.queryParamMap.get(key));
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.seo.reset());
+
+    // La búsqueda queda en la URL para poder compartirla y para que "atrás" no la pierda. Solo en el navegador: el
+    // prerenderizado no tiene filtros y no debe navegar. `merge` con nulos quita los filtros que ya no están sin pisar utm_…
+    effect(() => {
+      const params = hubMarketFiltersToParams(this.filters());
+      if (!this.isBrowser) return;
+      const queryParams: Record<string, string | null> = Object.fromEntries(HUB_MARKET_PARAM_KEYS.map((k) => [k, null]));
+      Object.assign(queryParams, params);
+      void this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge', replaceUrl: true });
+    });
   }
 
   private readonly allItems = signal<HubMarketItemModel[]>([]);
@@ -36,8 +56,14 @@ export class HubMarket implements OnInit {
 
   readonly isLoading = signal(true);
   readonly hasError = signal(false);
-  readonly searchQuery = signal('');
-  readonly selectedCategory = signal<HubMarketCategoryOption['value']>('all');
+  readonly searchQuery = signal(this.initial.query);
+  readonly selectedCategory = signal<HubMarketCategoryOption['value']>(this.initial.category);
+
+  /**
+   * Las tarjetas cuya foto carga con prioridad (LCP): las primeras tres al llegar los datos. Se fijan **una vez**, por id:
+   * `NgOptimizedImage` no admite que `priority` cambie después (NG02953), y con filtros u orden las primeras cambian.
+   */
+  protected readonly priorityIds = signal<ReadonlySet<number>>(new Set());
 
   readonly categories: readonly HubMarketCategoryOption[] = [
     { value: 'all', label: 'Todo' },
@@ -46,9 +72,17 @@ export class HubMarket implements OnInit {
     { value: 'accesorios', label: 'Accesorios' },
   ];
 
-  readonly location = signal('');
-  readonly brand = signal('');
-  readonly sort = signal<'recientes' | 'precio-asc' | 'precio-desc'>('recientes');
+  readonly location = signal(this.initial.location);
+  readonly brand = signal(this.initial.brand);
+  readonly sort = signal<HubMarketFilters['sort']>(this.initial.sort);
+
+  private readonly filters = computed<HubMarketFilters>(() => ({
+    query: this.searchQuery(),
+    category: this.selectedCategory(),
+    location: this.location(),
+    brand: this.brand(),
+    sort: this.sort(),
+  }));
 
   readonly sortOptions: readonly SelectOption[] = [
     { value: 'recientes', label: 'Más recientes' },
@@ -78,40 +112,10 @@ export class HubMarket implements OnInit {
       .map((value) => ({ value, label: value })),
   ]);
 
-  readonly hasFilters = computed(
-    () =>
-      this.searchQuery().trim() !== '' ||
-      this.selectedCategory() !== 'all' ||
-      this.location() !== '' ||
-      this.brand() !== '',
-  );
+  readonly hasFilters = computed(() => activeHubMarketFilters(this.filters()) > 0);
 
   /** Se recalcula solo cuando cambian las publicaciones o cualquier filtro. */
-  readonly filteredItems = computed(() => {
-    const query = normalizeSearch(this.searchQuery());
-    const category = this.selectedCategory();
-    const location = this.location();
-    const brand = this.brand();
-
-    const items = this.allItems().filter((item) => {
-      const matchesCategory = category === 'all' || item.category === category;
-      const matchesLocation = location === '' || item.location === location;
-      const matchesBrand = brand === '' || item.vehicleSpecs?.brand === brand;
-
-      const matchesSearch =
-        query.length === 0 ||
-        normalizeSearch(item.title).includes(query) ||
-        normalizeSearch(item.description).includes(query) ||
-        normalizeSearch(item.sellerName).includes(query);
-
-      return matchesCategory && matchesLocation && matchesBrand && matchesSearch;
-    });
-
-    const sort = this.sort();
-    if (sort === 'precio-asc') return [...items].sort((a, b) => a.price - b.price);
-    if (sort === 'precio-desc') return [...items].sort((a, b) => b.price - a.price);
-    return items;
-  });
+  readonly filteredItems = computed(() => filterHubMarket(this.allItems(), this.filters()));
 
   ngOnInit(): void {
     // El mismo título que la ruta; lo que aporta es la descripción y la vista previa al compartir el enlace.
@@ -131,6 +135,7 @@ export class HubMarket implements OnInit {
 
     this.hubMarketService.getAll().subscribe({
       next: (items) => {
+        this.priorityIds.set(new Set(filterHubMarket(items, this.filters()).slice(0, 3).map((i) => i.id)));
         this.allItems.set(items);
         this.isLoading.set(false);
       },

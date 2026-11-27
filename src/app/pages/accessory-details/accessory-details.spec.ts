@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { AccessoryDetails } from './accessory-details';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
@@ -57,5 +57,21 @@ describe('AccessoryDetails', () => {
 
     expect(pantalla.textContent).toContain('Artículo no encontrado');
     expect(pantalla.querySelector('h1')).toBeNull();
+  });
+});
+
+describe('AccessoryDetails: cuando la consulta falla', () => {
+  it('ofrece reintentar en vez de decir que el artículo no existe', async () => {
+    TestBed.configureTestingModule({
+      providers: [{ provide: HubMarketService, useValue: { getById: vi.fn(() => throwError(() => new Error('red'))) } }],
+    });
+    const fixture = TestBed.createComponent(AccessoryDetails);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No pudimos cargar este artículo');
+    expect(text).not.toContain('Artículo no encontrado');
   });
 });
