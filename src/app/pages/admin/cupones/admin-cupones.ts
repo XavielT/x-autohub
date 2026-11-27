@@ -98,6 +98,23 @@ export class AdminCupones implements OnInit {
   /** El cupón cuyo "Borrar" está esperando el segundo toque. */
   readonly confirmingDeleteId = signal<number | null>(null);
 
+  /** Buscar por código o descripción, y ver solo los que funcionan o los que no. */
+  readonly query = signal('');
+  readonly onlyActive = signal<'all' | 'active' | 'inactive'>('all');
+
+  readonly shown = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    const mode = this.onlyActive();
+    return this.coupons().filter((c) => {
+      if (mode !== 'all' && (couponStatus(c) === 'active') !== (mode === 'active')) return false;
+      return !q || `${c.code} ${c.description ?? ''}`.toLowerCase().includes(q);
+    });
+  });
+
+  setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
   readonly activeCount = computed(() => this.coupons().filter((c) => couponStatus(c) === 'active').length);
 
   ngOnInit(): void {

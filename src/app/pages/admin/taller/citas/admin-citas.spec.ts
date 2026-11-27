@@ -34,6 +34,23 @@ describe('AdminCitas', () => {
     expect(el.querySelectorAll('.tl__card')).toHaveLength(1);
   });
 
+  it('buscar encuentra citas de cualquier rango por número, nombre, teléfono o servicio', async () => {
+    const { c, fixture, el } = await montar();
+    const hecha = cita(c, 2001);
+
+    c.query.set('#2001');
+    fixture.detectChanges();
+    expect(c.days().flatMap((d) => d.items.map((a) => a.number))).toEqual([2001]);
+
+    c.query.set(hecha.contactName.toUpperCase());
+    expect(c.days().flatMap((d) => d.items.map((a) => a.number))).toContain(2001);
+
+    c.query.set('zzz-no-existe');
+    fixture.detectChanges();
+    expect(c.days()).toEqual([]);
+    expect(el.textContent).toContain('Ninguna cita coincide con la búsqueda');
+  });
+
   it('las citas se agrupan por día, en orden', async () => {
     const { c, fixture } = await montar();
 

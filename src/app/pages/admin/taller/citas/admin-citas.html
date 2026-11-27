@@ -6,7 +6,10 @@
     </p>
   </header>
 
-  <div class="tl__chips" role="group" aria-label="Qué citas ver">
+  <input class="tl__input" type="search" name="q" autocomplete="off" aria-label="Buscar citas"
+         placeholder="Buscar por número, cliente, teléfono o vehículo…" [value]="query()" (input)="setQuery($event)" />
+
+  <div class="tl__chips" [class.is-muted]="query()" role="group" aria-label="Qué citas ver">
     @for (r of ranges; track r.value) {
       <button type="button" class="tl__chip" [class.is-active]="range() === r.value" (click)="setRange(r.value)">
         {{ r.label }}@if (r.value === 'pending' && pendingCount() > 0) { <strong> {{ pendingCount() }}</strong> }
@@ -18,13 +21,14 @@
     <app-skeleton variant="row" [count]="4" label="Cargando las citas…" />
   } @else if (days().length === 0) {
     <p class="tl__empty">
-      @switch (range()) {
+      @if (query()) { Ninguna cita coincide con la búsqueda. }
+      @else { @switch (range()) {
         @case ('pending') { No hay citas por confirmar. }
         @case ('today') { No hay citas hoy. }
         @case ('week') { No hay citas esta semana. }
         @case ('past') { No hay citas pasadas. }
         @default { No hay citas próximas. }
-      }
+      } }
     </p>
   } @else {
     @for (day of days(); track day.date) {

@@ -97,8 +97,16 @@
   } @else if (coupons().length === 0) {
     <p class="tl__empty">Todavía no hay cupones. Crea el primero con "+ Nuevo cupón".</p>
   } @else {
+    <input class="tl__input" type="search" name="q" autocomplete="off" aria-label="Buscar cupones"
+           placeholder="Buscar por código o descripción…" [value]="query()" (input)="setQuery($event)" />
+    <div class="tl__chips" role="group" aria-label="Qué cupones ver">
+      <button type="button" class="tl__chip" [class.is-active]="onlyActive() === 'all'" (click)="onlyActive.set('all')">Todos {{ coupons().length }}</button>
+      <button type="button" class="tl__chip" [class.is-active]="onlyActive() === 'active'" (click)="onlyActive.set('active')">Activos {{ activeCount() }}</button>
+      <button type="button" class="tl__chip" [class.is-active]="onlyActive() === 'inactive'" (click)="onlyActive.set('inactive')">No activos {{ coupons().length - activeCount() }}</button>
+    </div>
+    @if (shown().length === 0) { <p class="tl__empty">Ningún cupón coincide.</p> }
     <ul class="tl__list">
-      @for (c of coupons(); track c.id) {
+      @for (c of shown(); track c.id) {
         <li class="tl__card" [class.is-off]="statusOf(c) !== 'active'">
           <div class="tl__row">
             <div class="tl__lead-item">

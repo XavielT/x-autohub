@@ -51,6 +51,25 @@ describe('AdminCupones (/admin/cupones)', () => {
     expect(c.activeCount()).toBe(4);
   });
 
+  it('buscar y filtrar por activos acota la lista', async () => {
+    const { c, fixture, el } = await montar();
+
+    c.query.set('bienvenido');
+    expect(c.shown().map((x) => x.code)).toEqual(['BIENVENIDO10']);
+
+    c.query.set('');
+    c.onlyActive.set('inactive');
+    fixture.detectChanges();
+    expect(c.shown()).toHaveLength(c.coupons().length - c.activeCount());
+
+    c.onlyActive.set('active');
+    expect(c.shown()).toHaveLength(c.activeCount());
+
+    c.query.set('zzz-no-existe');
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Ningún cupón coincide');
+  });
+
   it('las condiciones salen en una línea: mínimo, tope y por cliente', async () => {
     const { c } = await montar();
     const verano = c.coupons().find((x) => x.code === 'VERANO25')!;

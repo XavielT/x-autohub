@@ -5,3 +5,5 @@
 .agenda__day { margin: 20px 0 10px; font-family: var(--font-brand); font-size: 15px; color: var(--Hub); &::first-letter { text-transform: uppercase; } }
 .agenda__time { margin-left: 8px; font-size: 18px; }
 .agenda__note { margin-top: 10px; }
+.tl__input[type='search'] { margin-bottom: 12px; }
+.tl__chips.is-muted { opacity: 0.5; }

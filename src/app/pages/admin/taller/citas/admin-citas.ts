@@ -13,6 +13,7 @@ import { addDays, formatDay, formatTime, localDate } from '../../../../../shared
 import { buildWaLink } from '../../../../../shared/utils/whatsapp';
 import { WaDraft } from '../../../../../shared/components/wa-draft/wa-draft';
 import { appointmentReplyDraft } from '../../../../../shared/utils/reply-templates';
+import { normalizeSearch } from '../../../../../shared/ui/searchable-select/searchable-select';
 
 export type AgendaRange = 'pending' | 'today' | 'week' | 'upcoming' | 'past';
 
@@ -59,6 +60,8 @@ export class AdminCitas implements OnInit {
   readonly ranges = RANGES;
   readonly range = signal<AgendaRange>('pending');
   readonly appointments = signal<AdminAppointmentModel[]>([]);
+  /** Buscar por número, cliente, teléfono, vehículo o servicio: con texto, busca en todas las citas y no solo en el rango. */
+  readonly query = signal('');
   readonly isLoading = signal(true);
   readonly savingId = signal<string | null>(null);
   readonly confirmCancelId = signal<string | null>(null);
@@ -75,7 +78,9 @@ export class AdminCitas implements OnInit {
     const weekEnd = addDays(today, 6);
     const now = Date.now();
 
+    const q = normalizeSearch(this.query()).replace(/^#/, '');
     const inRange = this.appointments().filter((a) => {
+      if (q) return normalizeSearch(`${a.number} ${a.contactName} ${a.contactPhone} ${a.vehicleText ?? ''} ${a.serviceTitle}`).includes(q);
       const day = localDate(a.scheduledAt);
       switch (this.range()) {
         case 'pending':
@@ -121,6 +126,11 @@ export class AdminCitas implements OnInit {
         this.toast.show(error.message, 'error');
       },
     });
+  }
+
+  setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+    this.confirmCancelId.set(null);
   }
 
   setRange(range: AgendaRange): void {
