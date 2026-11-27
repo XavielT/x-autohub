@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
-import { Title } from '@angular/platform-browser';
+import { SeoService } from '../../../shared/services/seo.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map } from 'rxjs';
 import { CatalogoCard } from '../../../shared/components/catalogo-card/catalogo-card';
@@ -62,7 +62,7 @@ export class Tienda {
   private readonly categoryService = inject(CategoryService);
   private readonly vehicles = inject(VehicleService);
   private readonly picker = inject(VehiclePickerService);
-  private readonly pageTitle = inject(Title);
+  private readonly seo = inject(SeoService);
   protected readonly online = inject(OnlineService);
 
   readonly sortOptions = SORT_OPTIONS;
@@ -153,12 +153,21 @@ export class Tienda {
       untracked(() => this.fetch(params, vehicle, 0));
     });
 
+    // Título, descripción y canónica de la tienda y de cada categoría. La canónica es la de la categoría (sin filtros ni
+    // orden): las variantes con `?precio=…` no compiten con ella.
     effect(() => {
       const heading = this.heading();
-      this.pageTitle.setTitle(
-        heading === 'Tienda' ? 'Tienda — Accesorios y piezas | X AutoHub' : `${heading} — Tienda | X AutoHub`,
-      );
+      const slug = this.filters().categorySlug;
+      const isCategory = heading !== 'Tienda';
+      this.seo.set({
+        title: isCategory ? `${heading} — Tienda | X AutoHub` : 'Tienda — Accesorios y piezas | X AutoHub',
+        description: isCategory
+          ? `${heading} para tu carro en X AutoHub: compra en línea, instálalo en nuestro taller y filtra por tu vehículo. Envíos en República Dominicana.`
+          : 'Accesorios y piezas para tu carro, con taller propio, en República Dominicana. Filtra por tu vehículo y compra en línea.',
+        path: isCategory && slug ? `/tienda/c/${slug}` : '/tienda',
+      });
     });
+    inject(DestroyRef).onDestroy(() => this.seo.reset());
   }
 
   private fetch(

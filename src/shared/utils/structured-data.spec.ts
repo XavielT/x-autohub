@@ -1,4 +1,4 @@
-import { SITE_URL, absoluteUrl, autoHubJsonLd, hubMarketJsonLd, productJsonLd, serializeJsonLd, serviceJsonLd, workshopJsonLd } from './structured-data';
+import { SITE_URL, absoluteUrl, autoHubJsonLd, hubMarketJsonLd, productJsonLd, serializeJsonLd, serviceJsonLd, workshopJsonLd, siteJsonLd } from './structured-data';
 import { AUTO_HUB_MOCK } from '../data/auto-hub.mock';
 import { HUB_MARKET_ITEMS_MOCK } from '../data/hub-market-item.mock';
 import { HubMarketItemModel } from '../models/hub-market-item.model';
@@ -235,6 +235,18 @@ describe('structured-data', () => {
 
       expect(out).not.toContain('<');
       expect(JSON.parse(out).name).toBe('x</script><script>alert(1)</script>');
+    });
+  });
+
+  describe('siteJsonLd', () => {
+    it('declara la organización y el buscador del sitio con URLs canónicas', () => {
+      const ld = siteJsonLd() as { '@graph': Record<string, any>[] };
+      const org = ld['@graph'].find((n) => n['@type'] === 'Organization')!;
+      const site = ld['@graph'].find((n) => n['@type'] === 'WebSite')!;
+
+      expect(org['url']).toBe(SITE_URL);
+      expect(org['logo']).toBe(`${SITE_URL}/assets/imgs/autohub-logo.png`);
+      expect(site['potentialAction'].target.urlTemplate).toBe(`${SITE_URL}/buscar?q={search_term_string}`);
     });
   });
 });

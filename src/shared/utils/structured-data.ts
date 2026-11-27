@@ -254,3 +254,37 @@ export function hubMarketJsonLd(item: HubMarketItemModel): Record<string, unknow
 export function serializeJsonLd(data: unknown): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
+
+/**
+ * JSON-LD del sitio en el inicio: la organización y el buscador (`SearchAction` apunta a `/buscar?q=`), que es lo que
+ * deja a un buscador mostrar la caja de búsqueda del sitio junto al resultado. No inventa nada: nombre, enlace, logo y teléfono
+ * son los que ya salen en el sitio.
+ */
+export function siteJsonLd(): Record<string, unknown> {
+  return {
+    '@context': SCHEMA,
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: 'X AutoHub',
+        url: SITE_URL,
+        logo: `${SITE_URL}/assets/imgs/autohub-logo.png`,
+        telephone: `+1${STORE_PHONE}`,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: 'X AutoHub',
+        url: SITE_URL,
+        inLanguage: 'es-DO',
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/buscar?q={search_term_string}` },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+}

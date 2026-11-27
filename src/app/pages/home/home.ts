@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { JsonLdService } from '../../../shared/services/json-ld.service';
+import { SeoService } from '../../../shared/services/seo.service';
+import { siteJsonLd } from '../../../shared/utils/structured-data';
 import { HomeSearch } from '../../components/home-search/home-search';
 import { HomeCategories } from '../../components/home-categories/home-categories';
 import { HomeVehiclePicker } from '../../components/home-vehicle-picker/home-vehicle-picker';
@@ -39,4 +42,21 @@ import { HomeCommunity } from '../../components/home-community/home-community';
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Home {}
+export class Home {
+  constructor() {
+    const seo = inject(SeoService);
+    const jsonLd = inject(JsonLdService);
+    // Canónica del inicio y los datos de la organización y del buscador del sitio.
+    seo.set({
+      title: 'X AutoHub — Todo lo que tu carro necesita',
+      description:
+        'Accesorios y piezas para tu carro, con taller propio, en República Dominicana. Encuentra lo que le sirve a tu vehículo, instálalo con nosotros y mira además vehículos y la comunidad automotriz.',
+      path: '/',
+    });
+    jsonLd.set('site', siteJsonLd());
+    inject(DestroyRef).onDestroy(() => {
+      seo.reset();
+      jsonLd.set('site', null);
+    });
+  }
+}

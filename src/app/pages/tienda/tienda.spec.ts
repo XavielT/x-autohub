@@ -15,4 +15,14 @@ describe('Tienda', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(c.filtersOpen()).toBe(false);
   });
+
+  it('pone su canónica y su título propios', async () => {
+    const fixture = TestBed.createComponent(Tienda);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://xautohubrd.com/tienda');
+    expect(document.title).toContain('Tienda');
+  });
 });
