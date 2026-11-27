@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CartItem, CartService, lineStock } from '../../services/cart.service';
@@ -14,6 +14,27 @@ import { availabilityOf } from '../../utils/product-availability';
 export class CartModal {
   readonly cartService = inject(CartService);
   private readonly router = inject(Router);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** "Vaciar carrito" borra todo: el primer toque pide confirmar (5 s) y el segundo vacía. */
+  readonly confirmClear = signal(false);
+  private clearTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {
+    // Al abrirse, el foco entra al panel (un lector de pantalla y el teclado empiezan ahí) y la confirmación se reinicia.
+    effect(() => {
+      if (!this.cartService.isOpen()) {
+        this.confirmClear.set(false);
+        return;
+      }
+      setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('.cart-modal')?.focus(), 0);
+    });
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.cartService.isOpen()) this.close();
+  }
 
   /** Lo que se dice de cada línea: en stock, bajo pedido (y cuándo llega) o agotado. */
   availability(item: CartItem) {
@@ -44,6 +65,14 @@ export class CartModal {
   }
 
   clearCart(): void {
+    if (!this.confirmClear()) {
+      this.confirmClear.set(true);
+      clearTimeout(this.clearTimer);
+      this.clearTimer = setTimeout(() => this.confirmClear.set(false), 5000);
+      return;
+    }
+    clearTimeout(this.clearTimer);
+    this.confirmClear.set(false);
     this.cartService.clearCart();
   }
 

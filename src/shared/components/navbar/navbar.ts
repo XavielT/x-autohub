@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { BumpOnChange } from '../../directives/bump-on-change';
 import { Avatar } from '../../ui/avatar/avatar';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
@@ -51,7 +52,7 @@ const SECTION_PREFIXES: Record<NavSection, readonly string[]> = {
  */
 @Component({
   selector: 'app-navbar',
-  imports: [LogoHub, RouterModule, SearchBox, Avatar],
+  imports: [LogoHub, RouterModule, SearchBox, Avatar, BumpOnChange],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

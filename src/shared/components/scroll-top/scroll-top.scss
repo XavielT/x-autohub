@@ -1,0 +1,27 @@
+// Encima del contenido, por debajo de las ventanas (cart 100, selector 95, barra de pestañas 90).
+.scroll-top {
+  position: fixed;
+  right: 16px;
+  bottom: 20px;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--Hub);
+  background-color: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  animation: xah-rise 0.25s ease-out;
+
+  svg { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  &:hover { border-color: var(--Hub); }
+}
+
+// En el teléfono vive sobre la barra de pestañas (60 px); si hay barra de compra fija, sobre esa también.
+@media (max-width: 900px) {
+  .scroll-top { bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px); }
+}

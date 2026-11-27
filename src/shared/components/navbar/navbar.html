@@ -89,7 +89,7 @@
         }
         </span>
 
-        <button type="button" class="navbar__cart" (click)="openCart()"
+        <button type="button" class="navbar__cart" [xahBump]="cartCount()" (click)="openCart()"
                 [attr.aria-label]="cartCount() > 0 ? 'Abrir el carrito, ' + cartCount() + ' artículos' : 'Abrir el carrito'">
             <img src="assets/icons/cart-b-icon.svg" alt="" aria-hidden="true">
             @if (cartCount() > 0) { <span class="navbar__cart-count">{{ cartCount() }}</span> }

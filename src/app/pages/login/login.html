@@ -43,14 +43,17 @@
 
         <div class="auth__field">
           <label for="login-password">Contraseña</label>
-          <input
-            id="login-password"
-            type="password"
-            formControlName="password"
-            autocomplete="current-password"
-            placeholder="Mínimo 6 caracteres"
-            [class.is-invalid]="showError('password')"
-          />
+          <div class="auth__pw">
+            <input
+              id="login-password"
+              type="password"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Mínimo 6 caracteres"
+              [class.is-invalid]="showError('password')"
+            />
+            <app-password-toggle for="login-password" />
+          </div>
           @if (showError('password')) {
             <span class="auth__error">La contraseña debe tener al menos 6 caracteres.</span>
           }
@@ -62,7 +65,7 @@
       </form>
 
       <p class="auth__meta">
-        No tienes cuenta? <a routerLink="/registro">Registrate gratis</a>
+        ¿No tienes cuenta? <a routerLink="/registro">Regístrate gratis</a>
       </p>
 
       @if (isDemoMode) {

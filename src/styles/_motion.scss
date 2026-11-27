@@ -107,3 +107,10 @@
 @media (prefers-reduced-motion: reduce) {
   html, body { scroll-behavior: auto; }
 }
+
+// Con una ventana abierta (carrito, selector de vehículo, novedades, menú del teléfono, foto ampliada,
+// editor de fotos, filtros) la página de atrás no se desplaza: en el teléfono el scroll se "escapaba" detrás.
+body:has(.cart-modal, .vpm, .wn__backdrop, .tabs__sheet, .lb, .ie, .tienda__sheet) { overflow: hidden; }
+
+// Con la barra de compra fija de una ficha de producto, el botón de volver arriba se sube para no taparse.
+@media (max-width: 900px) { body:has(.prod__sticky) .scroll-top { bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 84px); } }

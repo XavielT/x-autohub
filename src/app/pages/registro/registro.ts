@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
+import { PasswordToggle } from '../../../shared/ui/password-toggle/password-toggle';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
@@ -20,7 +21,7 @@ type RegistroField =
 
 @Component({
   selector: 'app-registro',
-  imports: [ReactiveFormsModule, RouterLink, LogoHub, LocationSelect],
+  imports: [ReactiveFormsModule, RouterLink, LogoHub, LocationSelect, PasswordToggle],
   templateUrl: './registro.html',
   styleUrl: './registro.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,10 +1,10 @@
 @if (cartService.isOpen()) {
     <div class="cart-overlay" (click)="close()"></div>
   
-    <div class="cart-modal">
+    <div class="cart-modal" role="dialog" aria-modal="true" aria-label="Tu carrito" tabindex="-1">
       <div class="cart-modal__header">
         <h3 class="cart-modal__title">Tu <span class="cart-modal__highlight">Carrito</span></h3>
-        <button class="cart-modal__close" (click)="close()">✕</button>
+        <button class="cart-modal__close" aria-label="Cerrar el carrito" (click)="close()">✕</button>
       </div>
   
       @if (cartService.items().length === 0) {
@@ -50,7 +50,7 @@
             <span>Total</span>
             <span>RD$ {{ cartService.totalPrice() | number:'1.0-0' }}</span>
           </div>
-          <button class="cart-modal__clear" (click)="clearCart()">Vaciar carrito</button>
+          <button class="cart-modal__clear" (click)="clearCart()">{{ confirmClear() ? '¿Vaciar todo? Toca otra vez' : 'Vaciar carrito' }}</button>
           <button type="button" class="cart-modal__checkout" (click)="proceedToCheckout()">Proceder al pago →</button>
           @if (cartService.stockIssues().length > 0) {
             <p class="cart-modal__issues" role="status">

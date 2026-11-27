@@ -10,6 +10,7 @@ import { InstallPrompt } from '../shared/components/install-prompt/install-promp
 import { UpdateToast } from '../shared/components/update-toast/update-toast';
 import { VehiclePickerModal } from '../shared/components/vehicle-picker-modal/vehicle-picker-modal';
 import { RouteProgress } from '../shared/components/route-progress/route-progress';
+import { ScrollTop } from '../shared/components/scroll-top/scroll-top';
 import { WhatsNewModal } from '../shared/components/whats-new-modal/whats-new-modal';
 import { VehiclePickerService } from '../shared/services/vehicle-picker.service';
 
@@ -17,7 +18,7 @@ import { VehiclePickerService } from '../shared/services/vehicle-picker.service'
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, Navbar, Footer, CartModal, Toast, MobileTabBar, VehiclePickerModal, InstallPrompt, UpdateToast, WhatsNewModal, RouteProgress],
+  imports: [RouterOutlet, Navbar, Footer, CartModal, Toast, MobileTabBar, VehiclePickerModal, InstallPrompt, UpdateToast, WhatsNewModal, RouteProgress, ScrollTop],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

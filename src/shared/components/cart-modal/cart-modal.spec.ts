@@ -48,6 +48,28 @@ describe('CartModal', () => {
     expect(avail).toEqual(['En stock: 4', 'Bajo pedido: llega en 10 días']);
   });
 
+  it('Escape cierra el carrito y el panel es un diálogo accesible', () => {
+    const el = abrir({ id: 1 });
+    const dialog = el.querySelector('.cart-modal')!;
+    expect(dialog.getAttribute('role')).toBe('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(cart.isOpen()).toBe(false);
+  });
+
+  it('vaciar el carrito pide un segundo toque', () => {
+    abrir({ id: 1 }, { id: 2 });
+
+    component.clearCart();
+    expect(component.confirmClear()).toBe(true);
+    expect(cart.items()).toHaveLength(2);
+
+    component.clearCart();
+    expect(cart.items()).toHaveLength(0);
+    expect(component.confirmClear()).toBe(false);
+  });
+
   it('los botones de cantidad suben y bajan, y bajar de uno la quita', () => {
     const el = abrir({ id: 101, stock: 5 });
     const [menos, mas] = Array.from(el.querySelectorAll<HTMLButtonElement>('.cart-modal__qty-btn'));

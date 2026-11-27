@@ -1,5 +1,5 @@
 import { DOCUMENT, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { forkJoin, map, of, switchMap } from 'rxjs';
@@ -77,6 +77,10 @@ export class Producto {
   readonly variants = signal<ProductVariantModel[]>([]);
   private readonly selectedVariantId = signal<number | null>(null);
   readonly isLoading = signal(true);
+
+  /** El bloque de botones de la ficha: cuando se sale de pantalla, el teléfono ofrece una barra fija para comprar. */
+  private readonly actions = viewChild<ElementRef<HTMLElement>>('actions');
+  readonly showStickyBuy = signal(false);
   /** Las estadísticas de las reseñas reales; el bloque de reseñas las avisa al cargarlas. */
   readonly reviewStats = signal<ReviewStats | null>(null);
 
@@ -177,6 +181,17 @@ export class Producto {
   });
 
   constructor() {
+    // Barra de compra fija: aparece cuando los botones de la ficha dejan de verse. Sin IntersectionObserver (servidor, pruebas) no hay barra.
+    effect((onCleanup) => {
+      const node = this.actions()?.nativeElement;
+      if (!node || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver(([entry]) => this.showStickyBuy.set(!entry.isIntersecting));
+      observer.observe(node);
+      onCleanup(() => {
+        observer.disconnect();
+        this.showStickyBuy.set(false);
+      });
+    });
     inject(DestroyRef).onDestroy(() => {
       this.seo.reset();
       this.jsonLd.set('product', null);

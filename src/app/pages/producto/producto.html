@@ -95,7 +95,7 @@
           </fieldset>
         }
 
-        <div class="prod__actions">
+        <div class="prod__actions" #actions>
           <button type="button" class="prod__add" [disabled]="!availability()?.canBuy" (click)="addToCart()">
             {{ availability()?.canBuy ? 'Agregar al carrito' : 'Agotado' }}
           </button>
@@ -103,6 +103,18 @@
             Comprar ahora
           </button>
         </div>
+
+        @if (showStickyBuy()) {
+          <div class="prod__sticky" role="region" aria-label="Comprar este producto">
+            <span class="prod__sticky-info">
+              <strong>RD$ {{ p.price | number:'1.0-0' }}</strong>
+              <small>{{ p.name }}</small>
+            </span>
+            <button type="button" class="prod__sticky-btn" [disabled]="!availability()?.canBuy" (click)="addToCart()">
+              {{ availability()?.canBuy ? 'Agregar al carrito' : 'Agotado' }}
+            </button>
+          </div>
+        }
 
         @if (p.installable) {
           <p class="prod__install">

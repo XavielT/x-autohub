@@ -102,14 +102,17 @@
             <label for="reg-password"
               >Contraseña<span class="req" aria-hidden="true">*</span></label
             >
-            <input
-              id="reg-password"
-              type="password"
-              formControlName="password"
-              autocomplete="new-password"
-              placeholder="Mínimo 6 caracteres"
-              [class.is-invalid]="showError('password')"
-            />
+            <div class="auth__pw">
+              <input
+                id="reg-password"
+                type="password"
+                formControlName="password"
+                autocomplete="new-password"
+                placeholder="Mínimo 6 caracteres"
+                [class.is-invalid]="showError('password')"
+              />
+              <app-password-toggle for="reg-password" />
+            </div>
             @if (showError('password')) {
               <span class="auth__error">La contraseña debe tener al menos 6 caracteres.</span>
             }
@@ -119,14 +122,17 @@
             <label for="reg-confirm"
               >Confirmar contraseña<span class="req" aria-hidden="true">*</span></label
             >
-            <input
-              id="reg-confirm"
-              type="password"
-              formControlName="confirmPassword"
-              autocomplete="new-password"
-              placeholder="Repite tu contraseña"
-              [class.is-invalid]="showMismatch"
-            />
+            <div class="auth__pw">
+              <input
+                id="reg-confirm"
+                type="password"
+                formControlName="confirmPassword"
+                autocomplete="new-password"
+                placeholder="Repite tu contraseña"
+                [class.is-invalid]="showMismatch"
+              />
+              <app-password-toggle for="reg-confirm" />
+            </div>
             @if (showMismatch) {
               <span class="auth__error">Las contraseñas no coinciden.</span>
             }
@@ -137,7 +143,7 @@
           </button>
         </form>
 
-        <p class="auth__meta">Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+        <p class="auth__meta">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
 
         <p class="auth__hint">
           Al crear tu cuenta aceptas los

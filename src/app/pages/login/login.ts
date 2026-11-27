@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LogoHub } from '../../../shared/components/logo-hub/logo-hub';
+import { PasswordToggle } from '../../../shared/ui/password-toggle/password-toggle';
 import { AuthService } from '../../../shared/services/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
@@ -27,7 +28,7 @@ export function safeReturnUrl(value: string | null): string {
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink, LogoHub],
+  imports: [ReactiveFormsModule, RouterLink, LogoHub, PasswordToggle],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

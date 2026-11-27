@@ -65,6 +65,34 @@ describe('Producto (/tienda/p/:slug)', () => {
     expect(el.textContent).toContain('Aún no hay reseñas');
   });
 
+  describe('barra de compra fija', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('aparece cuando los botones salen de pantalla y se va cuando vuelven', async () => {
+      let notify: (entries: { isIntersecting: boolean }[]) => void = () => undefined;
+      vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+          constructor(cb: typeof notify) { notify = cb; }
+          observe() {}
+          disconnect() {}
+        },
+      );
+      const { fixture, el } = await montar(makeProduct({ id: 3 }));
+      expect(el.querySelector('.prod__sticky')).toBeNull();
+
+      notify([{ isIntersecting: false }]);
+      fixture.detectChanges();
+      const bar = el.querySelector('.prod__sticky');
+      expect(bar).not.toBeNull();
+      expect(bar?.textContent).toContain('Agregar al carrito');
+
+      notify([{ isIntersecting: true }]);
+      fixture.detectChanges();
+      expect(el.querySelector('.prod__sticky')).toBeNull();
+    });
+  });
+
   describe('opciones (color, talla…)', () => {
     const alfombra = () =>
       makeProduct({ id: 8, name: 'Alfombras', slug: 'alfombras-8', hasVariants: true, variantLabel: 'Color', stock: 8 });

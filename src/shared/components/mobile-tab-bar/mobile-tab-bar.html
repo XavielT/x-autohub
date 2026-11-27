@@ -64,7 +64,7 @@
   <button type="button" class="tabs__tab" [class.is-active]="activeTab() === 'carrito'"
           [attr.aria-label]="cartCount() > 0 ? 'Carrito, ' + cartCount() + ' artículos' : 'Carrito'"
           (click)="openCart()">
-    <span class="tabs__icon-wrap">
+    <span class="tabs__icon-wrap" [xahBump]="cartCount()">
       <img [src]="icon('carrito')" alt="" aria-hidden="true" />
       @if (cartCount() > 0) { <span class="tabs__count">{{ cartCount() }}</span> }
     </span>Carrito

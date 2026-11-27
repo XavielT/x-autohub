@@ -311,3 +311,12 @@
     }
   }
 }
+
+// El ojito de la contraseña vive dentro de este contenedor; el campo deja sitio a la derecha.
+.auth__pw {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  input { padding-right: 48px; }
+}

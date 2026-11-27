@@ -248,3 +248,49 @@
 }
 
 .prod__faq { margin: 0 0 8px; summary { cursor: pointer; font-weight: 700; } p { margin: 6px 0 0; color: var(--text-soft); } }
+
+// Barra de compra fija, solo en el teléfono: justo encima de la barra de pestañas.
+.prod__sticky { display: none; }
+
+@media (max-width: 900px) {
+  .prod__sticky {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background-color: var(--secondary);
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4);
+    animation: xah-rise 0.25s ease-out;
+  }
+
+  .prod__sticky-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    strong { font-size: 17px; color: var(--Hub); }
+    small { overflow: hidden; font-size: 12px; color: var(--text-soft); white-space: nowrap; text-overflow: ellipsis; }
+  }
+
+  .prod__sticky-btn {
+    flex: none;
+    min-height: 44px;
+    padding: 0 18px;
+    font-family: var(--font-btns);
+    font-size: 15px;
+    font-weight: 700;
+    color: #121212;
+    background-color: var(--Hub);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}

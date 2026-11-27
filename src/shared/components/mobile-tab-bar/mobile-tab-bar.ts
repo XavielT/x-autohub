@@ -1,3 +1,4 @@
+import { BumpOnChange } from '../../directives/bump-on-change';
 import { Avatar } from '../../ui/avatar/avatar';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
@@ -27,7 +28,7 @@ type Tab = 'inicio' | 'categorias' | 'buscar' | 'carrito' | 'cuenta';
  */
 @Component({
   selector: 'app-mobile-tab-bar',
-  imports: [RouterLink, Avatar],
+  imports: [RouterLink, Avatar, BumpOnChange],
   templateUrl: './mobile-tab-bar.html',
   styleUrl: './mobile-tab-bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
