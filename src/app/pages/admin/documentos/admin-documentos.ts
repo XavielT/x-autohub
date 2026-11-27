@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { StoredDocumentDraft, clearDocumentDraft, readDocumentDraft, saveDocumentDraft } from '../../../../shared/utils/document-draft-store';
 import { ActivatedRoute } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { DOCUMENT, DecimalPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
@@ -558,6 +559,45 @@ export class AdminDocumentos implements OnInit {
     return d ? JSON.stringify({ ...d, items: d.items.map(({ uid, ...rest }) => rest) }) : '';
   }
 
+  /** Un borrador que quedó sin guardar la vez anterior (se cerró la pestaña, falló la luz): se ofrece retomarlo. */
+  readonly recovered = signal<StoredDocumentDraft | null>(readDocumentDraft());
+  private draftTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {
+    // Mientras se edita con cambios, el borrador se guarda en este navegador (sin tocar la base) con 1 s de calma;
+    // sin cambios (recién guardado o recién abierto) se borra.
+    effect(() => {
+      const dirty = this.dirty();
+      const draft = this.draft();
+      const titles = this.sectionTitles();
+      clearTimeout(this.draftTimer);
+      if (this.view() !== 'edit' || !draft) return;
+      if (!dirty) {
+        clearDocumentDraft();
+        return;
+      }
+      this.draftTimer = setTimeout(() => saveDocumentDraft(draft, titles), 1000);
+    });
+    this.destroyRef.onDestroy(() => clearTimeout(this.draftTimer));
+  }
+
+  resumeDraft(): void {
+    const found = this.recovered();
+    if (!found) return;
+    this.recovered.set(null);
+    this.edit(found.draft, found.titles);
+    // Sigue contando como "sin guardar": no es lo último que está en la base.
+    this.baseline = '';
+    this.saved.set(null);
+    this.catalogQuery.set('');
+    this.view.set('edit');
+  }
+
+  discardDraft(): void {
+    this.recovered.set(null);
+    clearDocumentDraft();
+  }
+
   /** Hay cambios sin guardar en el editor. */
   readonly dirty = computed(() => this.view() === 'edit' && AdminDocumentos.snapshot(this.draft()) !== this.baseline);
 
@@ -585,6 +625,8 @@ export class AdminDocumentos implements OnInit {
   };
 
   backToList(): void {
+    clearTimeout(this.draftTimer);
+    clearDocumentDraft();
     this.view.set('list');
     this.suggestInvoice.set(null);
     this.draft.set(null);
@@ -705,6 +747,10 @@ export class AdminDocumentos implements OnInit {
 
   setExtraVehicle(extraIndex: number, key: 'plate' | 'mileage' | 'vin', event: Event): void {
     this.patchExtra(extraIndex, { [key]: value(event) });
+  }
+
+  setExtraVerdict(extraIndex: number, event: Event): void {
+    this.patchExtra(extraIndex, { verdict: value(event) as Verdict });
   }
 
   private patchExtra(extraIndex: number, change: Partial<DocumentVehicle>): void {

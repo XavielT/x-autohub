@@ -887,6 +887,57 @@ describe('AdminDocumentos (/admin/documentos)', () => {
       expect(c.view()).toBe('list');
     });
 
+    it('un borrador sin guardar se recupera al volver, y salir a propósito lo borra', async () => {
+      vi.useFakeTimers();
+      try {
+        const a = await montar();
+        a.c.startNew();
+        a.c.pickTemplate('mecanica');
+        a.c.setText('customerName', input('Juan Pérez'));
+        a.fixture.detectChanges();
+        await vi.advanceTimersByTimeAsync(1500);
+        expect(localStorage.getItem('x-autohub.documentDraft')).toContain('Juan Pérez');
+        a.fixture.destroy();
+
+        // "Se cerró la pestaña": un componente nuevo encuentra el borrador y ofrece retomarlo.
+        const b = await montar();
+        expect(b.c.recovered()?.draft.customerName).toBe('Juan Pérez');
+        expect(b.el.textContent).toContain('Quedó un borrador sin guardar');
+        b.c.resumeDraft();
+        expect(b.c.view()).toBe('edit');
+        expect(b.c.draft()?.customerName).toBe('Juan Pérez');
+        expect(b.c.dirty()).toBe(true);
+
+        // Salir a propósito (segunda pulsación) lo descarta.
+        b.c.leave();
+        b.c.leave();
+        expect(localStorage.getItem('x-autohub.documentDraft')).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('cada vehículo de una revisión lleva su propio dictamen', async () => {
+      const { c } = await montar();
+      c.startNew();
+      c.pickTemplate('precompra');
+      c.setVerdict(input('aprobado'));
+      c.addVehicle();
+      c.setExtraVerdict(0, input('rechazado'));
+
+      expect(c.draft()?.vehicle.verdict).toBe('aprobado');
+      expect(c.draft()?.extraVehicles?.[0].verdict).toBe('rechazado');
+    });
+
+    it('descartar el borrador recuperado lo borra', async () => {
+      localStorage.setItem('x-autohub.documentDraft', JSON.stringify({ draft: { kind: 'cotizacion', items: [], customerName: 'Ana', id: null }, titles: [], savedAt: Date.now() }));
+      const { c } = await montar();
+      expect(c.recovered()).not.toBeNull();
+      c.discardDraft();
+      expect(c.recovered()).toBeNull();
+      expect(localStorage.getItem('x-autohub.documentDraft')).toBeNull();
+    });
+
     it('guardar deja el editor sin cambios pendientes', async () => {
       const { c } = await montar();
       c.startNew();

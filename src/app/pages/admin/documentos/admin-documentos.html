@@ -21,6 +21,16 @@
         </div>
       </header>
 
+      @if (recovered(); as rec) {
+        <div class="tl__card is-attention" role="status">
+          <p class="tl__sub"><strong>Quedó un borrador sin guardar</strong> de {{ rec.draft.customerName || 'un documento sin cliente' }} ({{ rec.savedAt | date: 'd MMM, h:mm a' }}).</p>
+          <div class="tl__actions">
+            <button type="button" class="tl__btn tl__btn--small" (click)="resumeDraft()">Retomarlo</button>
+            <button type="button" class="tl__btn tl__btn--small tl__btn--ghost" (click)="discardDraft()">Descartarlo</button>
+          </div>
+        </div>
+      }
+
       @if (profileOpen()) {
         <form class="tl__card dc__profile" (submit)="$event.preventDefault(); saveProfile()" novalidate>
           <h3 class="tl__name">Datos que salen en el encabezado</h3>
@@ -283,6 +293,13 @@
                     @if (template()?.hasInspection) {
                       <label class="tl__field tl__field--wide"><span>Chasis (VIN)</span>
                         <input class="tl__input" type="text" [name]="'vehicleVin' + (i + 2)" autocomplete="off" [value]="ev.vin" (input)="setExtraVehicle(i, 'vin', $event)" /></label>
+                      <label class="tl__field tl__field--wide"><span>Dictamen de este vehículo</span>
+                        <select class="tl__input" [name]="'verdict' + (i + 2)" (change)="setExtraVerdict(i, $event)">
+                          <option value="" [selected]="ev.verdict === ''">Sin dictamen todavía</option>
+                          <option value="aprobado" [selected]="ev.verdict === 'aprobado'">{{ verdictLabels.aprobado }}</option>
+                          <option value="observaciones" [selected]="ev.verdict === 'observaciones'">{{ verdictLabels.observaciones }}</option>
+                          <option value="rechazado" [selected]="ev.verdict === 'rechazado'">{{ verdictLabels.rechazado }}</option>
+                        </select></label>
                     }
                   </div>
                 }

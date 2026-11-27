@@ -462,3 +462,9 @@
 
 .adm-inv__cancel--warn { border-color: #ff8d8f; color: #ff8d8f; }
 .adm-inv__sort { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-soft); select { min-height: 40px; } }
+
+// En una pantalla táctil, los botones y campos de cada fila (precio, stock, ocultar, editar) miden lo que un dedo necesita.
+@media (pointer: coarse) {
+  .adm-inv__btn { min-height: 44px; padding: 0 14px; }
+  .adm-inv__item .adm-inv__input { min-height: 44px; font-size: 16px; }
+}
