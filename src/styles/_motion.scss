@@ -1,0 +1,86 @@
+// Movimiento del sitio, en un solo lugar. Todo es CSS y todo se apaga con
+// `prefers-reduced-motion`. Las animaciones usan `backwards` (no `both`) para no
+// pisar los `transform` de hover que ya tienen las tarjetas una vez terminadas.
+
+@keyframes xah-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes xah-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes xah-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+// Para lo que ya se centra con translate(-50%, -50%).
+@keyframes xah-pop-center {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+@keyframes xah-drop {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes xah-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes xah-badge {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes xah-reveal {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  // Cada página entra con un fundido corto: la navegación deja de sentirse como un parpadeo.
+  router-outlet + * { animation: xah-page-in 0.28s ease-out backwards; }
+
+  // Modales, hojas y avisos.
+  .wn__backdrop, .vpm__overlay, .tabs__overlay { animation: xah-fade 0.2s ease-out backwards; }
+  .wn { animation: xah-pop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .vpm { animation: xah-pop-center 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .ut { animation: xah-drop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .ip, .tabs__sheet { animation: xah-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+
+  // El número del carrito rebota al cambiar (el nodo se recrea al aparecer el primero).
+  .navbar__cart-count, .tabs__count { animation: xah-badge 0.35s ease-out; }
+
+  // Un botón se hunde un poco al tocarlo (propiedad `scale`, que no pisa los transform de cada botón).
+  button:not(:disabled):active,
+  a[class*='btn']:active,
+  [role='button']:not([aria-disabled='true']):active { scale: 0.97; }
+  button, a[class*='btn'] { transition: scale 0.12s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+
+  // Las tarjetas se levantan al pasar el ratón (solo donde hay ratón).
+  @media (hover: hover) {
+    .hub-part-card, .catalog-card, .new-card, .scard, .servicios-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      &:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); }
+    }
+  }
+
+  // Al hacer scroll, las tarjetas aparecen al entrar en pantalla. Solo donde el navegador
+  // sabe enlazar una animación al scroll, y nunca dentro de un carrusel horizontal (ahí la línea
+  // de tiempo no avanza y las tarjetas quedarían ocultas); en los demás las tarjetas simplemente están ahí.
+  @supports (animation-timeline: view()) {
+    :is(.hub-part-card, .vcard, .catalog-card, .new-card, .scard, .servicios-card, .post):not(.hrow *, [class*='carousel'] *) {
+      animation: xah-reveal linear backwards;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+
+// Un anillo de foco para quien navega con teclado, con baja especificidad: el de cada componente gana.
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--Hub);
+  outline-offset: 2px;
+}
+
+// Sin movimiento: nada de scroll suave ni de animaciones largas.
+@media (prefers-reduced-motion: reduce) {
+  html, body { scroll-behavior: auto; }
+}

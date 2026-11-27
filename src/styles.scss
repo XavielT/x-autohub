@@ -3,6 +3,8 @@
 @use 'styles/forms';
 // `.whatsapp-btn`, el mismo botón en las cuatro páginas de detalle.
 @use 'styles/whatsapp-btn';
+// Animaciones y foco del sitio entero (todo respeta prefers-reduced-motion).
+@use 'styles/motion';
 
 //Global Palette colors
 :root{
