@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HasUnsavedWork } from '../../../core/guards/unsaved.guard';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
@@ -41,7 +42,7 @@ export const MAX_PHOTOS = MAX_QUOTE_PHOTOS;
   styleUrl: './cotizar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Cotizar {
+export class Cotizar implements HasUnsavedWork {
   private readonly route = inject(ActivatedRoute);
   private readonly catalog = inject(ServiceCatalogService);
   private readonly vehicles = inject(VehicleService);
@@ -70,6 +71,11 @@ export class Cotizar {
   readonly isSending = signal(false);
   /** La solicitud ya guardada: su código y lo que se mandó (para el mensaje de WhatsApp). */
   readonly sent = signal<{ code: string; photos: number } | null>(null);
+
+  /** Escribió el problema o eligió fotos y todavía no envió la solicitud: salir pide confirmar. */
+  hasUnsavedWork(): boolean {
+    return this.sent() === null && (this.details().trim().length > 0 || this.photos().length > 0);
+  }
 
   /** El vehículo elegido en "Mi vehículo", si hay uno. */
   readonly pickedVehicle = this.vehicles.selectedLabel;

@@ -76,6 +76,26 @@ describe('Publicar', () => {
     expect(componente).toBeTruthy();
   });
 
+  it('hay trabajo sin guardar solo cuando se escribió algo o se eligió una foto', async () => {
+    const { fixture, componente } = montar();
+    await fixture.whenStable();
+    expect(componente.hasUnsavedWork()).toBe(false);
+
+    componente.publishForm.controls.title.setValue('Discos');
+    componente.publishForm.controls.title.markAsDirty();
+    expect(componente.hasUnsavedWork()).toBe(true);
+  });
+
+  it('avisa al cerrar la pestaña con trabajo a medias', async () => {
+    const { fixture, componente } = montar();
+    await fixture.whenStable();
+    componente.publishForm.controls.title.markAsDirty();
+
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('precarga el teléfono del perfil, para no hacerlo escribir de nuevo', async () => {
     const { fixture, componente } = montar();
     await fixture.whenStable();

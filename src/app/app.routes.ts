@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from '../core/guards/auth.guard';
+import { unsavedGuard } from '../core/guards/unsaved.guard';
 import { adminGuard } from '../core/guards/admin.guard';
 import { moderatorGuard } from '../core/guards/moderator.guard';
 import { productIdRedirectGuard } from '../core/guards/product-redirect.guard';
@@ -112,6 +113,8 @@ export const routes: Routes = [
     title: `Publicar en Hub Market | ${BRAND}`,
     // Publicar requiere sesion: la publicacion queda asociada a un vendedor.
     canActivate: [authGuard],
+    // Un formulario largo con fotos: salir con trabajo a medias pide confirmar.
+    canDeactivate: [unsavedGuard],
     loadComponent: () => import('./pages/publicar/publicar').then((m) => m.Publicar),
   },
 
@@ -126,6 +129,7 @@ export const routes: Routes = [
   {
     path: 'servicios/cotizar',
     title: `Cotizar un servicio | ${BRAND}`,
+    canDeactivate: [unsavedGuard],
     loadComponent: () => import('./pages/cotizar/cotizar').then((m) => m.Cotizar),
   },
   {

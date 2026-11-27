@@ -214,4 +214,17 @@ describe('Cotizar (/servicios/cotizar)', () => {
 
     expect(picker.open).toHaveBeenCalled();
   });
+
+  it('hay trabajo sin guardar cuando se escribió el problema y todavía no se envió', async () => {
+    const fixture = TestBed.createComponent(Cotizar);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const c = fixture.componentInstance;
+
+    expect(c.hasUnsavedWork()).toBe(false);
+    c.details.set('hace un ruido al frenar');
+    expect(c.hasUnsavedWork()).toBe(true);
+    c.sent.set({ code: 'COT-1', photos: 0 });
+    expect(c.hasUnsavedWork()).toBe(false);
+  });
 });

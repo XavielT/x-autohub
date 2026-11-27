@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, signal } from '@angular/core';
+import { HasUnsavedWork } from '../../../core/guards/unsaved.guard';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -29,7 +30,7 @@ import { compressImage } from '../../../shared/utils/image-compress';
   styleUrl: './publicar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Publicar {
+export class Publicar implements HasUnsavedWork {
   private readonly fb = inject(FormBuilder);
   private readonly hubMarketService = inject(HubMarketService);
   private readonly storage = inject(StorageService);
@@ -43,6 +44,21 @@ export class Publicar {
   readonly selectedFiles = signal<File[]>([]);
 
   readonly isSubmitting = signal(false);
+
+  /** Ya se publicó: de ahí en adelante salir de la página no pierde nada. */
+  private published = false;
+
+  /** Hay algo escrito o alguna foto elegida que todavía no se publicó. */
+  hasUnsavedWork(): boolean {
+    return !this.published && (this.publishForm.dirty || this.selectedFiles().length > 0);
+  }
+
+  private readonly warnBeforeUnload = (event: BeforeUnloadEvent): void => {
+    if (this.hasUnsavedWork()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  };
 
   /**
    * La caja de imágenes no es un control, así que no tiene `touched` propio: sin
@@ -78,6 +94,9 @@ export class Publicar {
   });
 
   constructor() {
+    window.addEventListener('beforeunload', this.warnBeforeUnload);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', this.warnBeforeUnload));
+
     // Fotos con la insignia que el admin mandó desde /admin/marca eligiendo Hub Market.
     const handoff = this.branded.take('hubmarket');
     if (handoff) {
@@ -311,6 +330,7 @@ export class Publicar {
           // resto, a /perfil: es la única pantalla donde puede ver la suya
           // mientras espera revisión, con su distintivo "Pendiente". Mandarlo a
           // Hub Market —donde todavía no sale— parecía que se había perdido.
+          this.published = true;
           void this.router.navigate([
             canModerate ? (created.detailRoute ?? '/hub-market') : '/perfil',
           ]);
