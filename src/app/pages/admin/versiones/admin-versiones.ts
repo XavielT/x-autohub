@@ -1,4 +1,5 @@
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
+import { localDate } from '../../../../shared/utils/service-time';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -74,7 +75,7 @@ export class AdminVersiones implements OnInit {
     this.editingId.set(0);
     this.version.set('');
     // Por defecto hoy, en formato ISO corto que es lo que espera <input type=date>.
-    this.releasedAt.set(new Date().toISOString().slice(0, 10));
+    this.releasedAt.set(localDate(new Date()));
     this.title.set('');
     this.summary.set('');
     this.userSummary.set('');

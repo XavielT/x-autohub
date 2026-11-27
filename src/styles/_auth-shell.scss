@@ -8,7 +8,7 @@
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
 
   @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -153,6 +153,9 @@
   }
 
   input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     padding: 14px 16px;
     background-color: #2a2a2a;
     border: 1px solid #3a3a3a;

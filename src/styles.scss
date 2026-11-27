@@ -203,6 +203,8 @@ app-autohub-card,
 app-hub-market-card {
   display: block;
   height: 100%;
+  // En una grilla de una columna el mínimo automático era el texto más largo sin cortar (un título de 397 px en un teléfono de 390).
+  min-width: 0;
 }
 
 // Un botón que espera al servidor: `[attr.aria-busy]="enCurso()"`. Muestra un spinner a la izquierda

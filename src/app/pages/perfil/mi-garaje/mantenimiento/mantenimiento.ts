@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { localDate } from '../../../../../shared/utils/service-time';
 import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -48,7 +49,7 @@ export class Mantenimiento implements OnInit {
   readonly busy = signal(false);
   readonly serviceIds = signal<Record<string, number>>({});
 
-  readonly today = new Date().toISOString().slice(0, 10);
+  readonly today = localDate(new Date());
   readonly hasGuide = computed(() => this.items().length > 0);
   /** La guía viene de la IA y nadie la ha revisado. */
   readonly showAiNote = computed(() => this.items().some((i) => i.source === 'ia') && this.reviewed() !== true);

@@ -1,4 +1,5 @@
 import { AliasEditor } from './alias-editor/alias-editor';
+import { localDate } from '../../../../shared/utils/service-time';
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { Lightbox } from '../../../../shared/ui/lightbox/lightbox';
 import { ImageEditor } from '../../../../shared/components/image-editor/image-editor';
@@ -422,7 +423,7 @@ export class AdminInventario implements OnInit {
     textLarge: [''],
     scope: ['local' as NewsScope, Validators.required],
     author: [''],
-    publishedAt: [new Date().toISOString().slice(0, 10), Validators.required],
+    publishedAt: [localDate(new Date()), Validators.required],
     isPublished: [true],
     isTest: [false],
   });
