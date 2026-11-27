@@ -30,6 +30,19 @@ export class App {
     selectNumberOnFocus(event);
   }
 
+  /** "/" lleva el cursor al buscador de arriba, como en cualquier sitio de búsqueda (solo si no se está escribiendo ya). */
+  @HostListener('document:keydown', ['$event'])
+  protected onKeydown(event: KeyboardEvent): void {
+    if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+    const search = document.querySelector<HTMLInputElement>('app-navbar input[type="search"]');
+    if (!search || getComputedStyle(search.closest('app-search-box') ?? search).display === 'none') return;
+    event.preventDefault();
+    search.focus();
+    search.select();
+  }
+
   protected readonly title = signal('x-autohub');
   /** Cuando se abre por primera vez, `@defer` descarga el selector de vehículo. */
   protected readonly pickerOpen = inject(VehiclePickerService).isOpen;

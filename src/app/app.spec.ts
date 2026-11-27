@@ -25,4 +25,24 @@ describe('App', () => {
     expect(compiled.querySelector('app-cart-modal')).toBeTruthy();
     expect(compiled.querySelector('app-toast')).toBeTruthy();
   });
+
+  it('la tecla / lleva el cursor al buscador, salvo que ya se esté escribiendo', async () => {
+    const fixture = TestBed.createComponent(App);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+    const search = fixture.nativeElement.querySelector('app-navbar input[type="search"]') as HTMLInputElement;
+    expect(search).toBeTruthy();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }));
+    expect(document.activeElement).toBe(search);
+
+    search.blur();
+    const otro = document.createElement('input');
+    document.body.appendChild(otro);
+    otro.focus();
+    otro.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }));
+    expect(document.activeElement).toBe(otro);
+    otro.remove();
+    fixture.nativeElement.remove();
+  });
 });

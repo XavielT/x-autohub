@@ -324,6 +324,11 @@ export class Producto {
       return false;
     }
 
+    if (this.cart.atStockLimit(product, this.selectedVariant())) {
+      this.toast.show('Ya tienes en el carrito todas las unidades disponibles', 'error');
+      return false;
+    }
+
     try {
       if (!this.cart.addToCart(product, this.selectedVariant())) return false;
       const option = this.selectedVariant() ? ` (${this.selectedVariant()?.name})` : '';

@@ -72,7 +72,19 @@ export class AdminGuias implements OnInit {
     this.act(row, this.maintenance.markReviewed(row.template.id), 'Guía marcada como revisada.');
   }
 
+  /** La guía que se está por borrar: el primer toque la marca, el segundo la borra (5 s). */
+  readonly confirmId = signal<number | null>(null);
+  private confirmTimer: ReturnType<typeof setTimeout> | undefined;
+
   remove(row: Row): void {
+    if (this.confirmId() !== row.template.id) {
+      this.confirmId.set(row.template.id);
+      clearTimeout(this.confirmTimer);
+      this.confirmTimer = setTimeout(() => this.confirmId.set(null), 5000);
+      return;
+    }
+    clearTimeout(this.confirmTimer);
+    this.confirmId.set(null);
     this.act(row, this.maintenance.deleteTemplate(row.template.id), 'Guía borrada. Se arma una nueva cuando alguien la pida.');
   }
 

@@ -99,6 +99,11 @@ export class CatalogoCard {
     if (!this.isVariantAvailable(variant)) return;
 
     const hubPart = this.hubPart();
+    if (this.cartService.atStockLimit(hubPart, variant)) {
+      this.toastService.show('Ya tienes en el carrito todas las unidades disponibles', 'error');
+      this.choosing.set(false);
+      return;
+    }
     if (this.cartService.addToCart(hubPart, variant)) {
       this.toastService.show(`${hubPart.name} (${variant.name}) agregado al carrito`);
     }
@@ -112,6 +117,11 @@ export class CatalogoCard {
     // Con opciones no se agrega directo: se abre el selector para elegir color, talla…
     if (hubPart.hasVariants) {
       this.toggleChooser();
+      return;
+    }
+
+    if (this.cartService.atStockLimit(hubPart)) {
+      this.toastService.show('Ya tienes en el carrito todas las unidades disponibles', 'error');
       return;
     }
 

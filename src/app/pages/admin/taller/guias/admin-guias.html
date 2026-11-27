@@ -27,7 +27,7 @@
           </ul>
           <div class="gui__actions">
             <button type="button" class="gui__btn gui__btn--main" [disabled]="busyId() !== null" (click)="review(row)">Marcar como revisada</button>
-            <button type="button" class="gui__btn" [disabled]="busyId() !== null" (click)="remove(row)">Borrar</button>
+            <button type="button" class="gui__btn" [disabled]="busyId() !== null" (click)="remove(row)">{{ confirmId() === row.template.id ? '¿Seguro? Toca otra vez' : 'Borrar' }}</button>
           </div>
         </li>
       }

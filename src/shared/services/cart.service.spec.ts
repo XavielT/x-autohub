@@ -293,6 +293,21 @@ describe('CartService', () => {
       expect(cart.items()[0].quantity).toBe(9);
     });
 
+    it('atStockLimit avisa cuando el carrito ya tiene todo lo que hay, y no limita lo bajo pedido', () => {
+      const cart = montar();
+      const disco = makeProduct({ id: 1, stock: 2 });
+      expect(cart.atStockLimit(disco)).toBe(false);
+      cart.addToCart(disco);
+      expect(cart.atStockLimit(disco)).toBe(false);
+      cart.addToCart(disco);
+      expect(cart.atStockLimit(disco)).toBe(true);
+
+      const pedido = makeProduct({ id: 2, fulfillment: 'on_order', leadTimeDays: 5, stock: 0 });
+      cart.addToCart(pedido);
+      cart.addToCart(pedido);
+      expect(cart.atStockLimit(pedido)).toBe(false);
+    });
+
     it('stockIssues lista las líneas que piden más de lo que hay, y no cuenta lo bajo pedido', () => {
       const cart = montar();
       cart.addToCart(makeProduct({ id: 1, name: 'Disco', stock: 1 }));

@@ -115,6 +115,17 @@ export class CartService {
   }
 
   /**
+   * ¿Ya está en el carrito todo lo que hay en inventario de esta pieza (u opción)? Sirve para decirlo
+   * al tocar "Agregar" en vez de dejar que el carrito pida más de lo que existe. Lo bajo pedido no tiene tope.
+   */
+  atStockLimit(part: ProductModel, variant: ProductVariantModel | null = null): boolean {
+    if (part.fulfillment !== 'stock') return false;
+    const variantId = part.hasVariants ? (variant?.id ?? null) : null;
+    const line = this._items().find((i) => sameLine(i, part.id, variantId));
+    return !!line && line.quantity >= (variant && part.hasVariants ? variant.stock : part.stock);
+  }
+
+  /**
    * Agrega una unidad. Un producto con opciones **exige** la opción: sin ella no se agrega
    * nada (`create_order()` lo rechazaría, y el carrito no debe aceptar lo que no se puede
    * comprar). Devuelve si se agregó.
