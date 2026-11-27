@@ -11,6 +11,8 @@
         [ngModel]="email()"
         (ngModelChange)="email.set($event)"
         placeholder="tucorreo@gmail.com"
+        aria-label="Tu correo electrónico"
+        autocomplete="email"
         type="email"
         [disabled]="isLoading()"
       />

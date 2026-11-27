@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -244,6 +244,12 @@ export class Tienda {
 
   openFilters(): void {
     this.filtersOpen.set(true);
+  }
+
+  /** Escape cierra la hoja de filtros del teléfono. */
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.filtersOpen()) this.closeFilters();
   }
 
   closeFilters(): void {

@@ -69,7 +69,7 @@
 
       <div class="cot__label">
         <span>Fotos <small>(opcional, hasta {{ maxPhotos }})</small></span>
-        <input class="cot__file" type="file" accept="image/jpeg,image/png,image/webp" multiple (change)="onPhotos($event)" aria-describedby="cot-photos-note" />
+        <input class="cot__file" type="file" aria-label="Agregar fotos" accept="image/jpeg,image/png,image/webp" multiple (change)="onPhotos($event)" aria-describedby="cot-photos-note" />
         @if (photos().length > 0) {
           <ul class="cot__files">
             @for (f of photos(); track $index; let i = $index) {
