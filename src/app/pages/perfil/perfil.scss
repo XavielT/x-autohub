@@ -478,3 +478,42 @@
     row-gap: 8px;
   }
 }
+
+.perfil__jump {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &-chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 14px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    transition: border-color 0.2s, color 0.2s;
+
+    strong { color: var(--Hub); }
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+  }
+
+  &-alert {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    color: #121212;
+    font-size: 12px;
+    font-weight: 800;
+    background: var(--Hub);
+    border-radius: 50%;
+  }
+}

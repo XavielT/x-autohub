@@ -165,6 +165,20 @@ describe('Perfil', () => {
     });
   });
 
+  it('los atajos llevan a cada sección y Pedidos va primero', async () => {
+    const { fixture } = montar();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.perfil__jump-chip')).toHaveLength(5);
+    for (const id of ['pedidos', 'citas', 'garaje', 'favoritos', 'publicaciones']) {
+      expect(el.querySelector('#' + id)).not.toBeNull();
+    }
+    const ids = [...el.querySelectorAll('.perfil__section')].map((s) => s.id);
+    expect(ids.indexOf('pedidos')).toBeLessThan(ids.indexOf('citas'));
+  });
+
   it('muestra los datos del usuario en sesión', async () => {
     const { fixture } = montar();
     await fixture.whenStable();
@@ -338,6 +352,26 @@ describe('Perfil', () => {
         phone: '809-555-0101',
         location: 'Santiago',
       });
+    });
+
+    it('cancelar sin cambios cierra; con cambios pide un segundo toque', async () => {
+      const { fixture, componente } = montar();
+      await fixture.whenStable();
+
+      componente.startEdit();
+      componente.cancelEdit();
+      expect(componente.isEditing()).toBe(false);
+
+      componente.startEdit();
+      componente.form.controls.displayName.setValue('Otro nombre');
+      componente.form.controls.displayName.markAsDirty();
+      componente.cancelEdit();
+      expect(componente.isEditing()).toBe(true);
+      expect(componente.confirmDiscard()).toBe(true);
+
+      componente.cancelEdit();
+      expect(componente.isEditing()).toBe(false);
+      expect(componente.confirmDiscard()).toBe(false);
     });
 
     it('no guarda con el nombre vacío y lo nombra en el aviso', async () => {

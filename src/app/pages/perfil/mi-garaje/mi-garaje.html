@@ -18,7 +18,12 @@
   @if (isLoading()) {
     <app-skeleton variant="row" [count]="2" label="Cargando tu garaje…" />
   } @else if (rows().length === 0) {
-    <p class="garage__empty">Todavía no tienes vehículos guardados. Agrega el primero y te lo recordamos en cada visita.</p>
+    @if (!isAdding()) {
+      <div class="garage__empty">
+        <p>Todavía no tienes vehículos guardados. Agrega el primero y te lo recordamos en cada visita.</p>
+        <button type="button" class="garage__add-btn" (click)="toggleForm()">Agregar mi primer vehículo</button>
+      </div>
+    }
   } @else {
     <ul class="garage__list">
       @for (row of rows(); track row.vehicle.id) {
@@ -40,7 +45,7 @@
             }
             <button type="button" class="garage__btn garage__btn--danger" [disabled]="busyId() === row.vehicle.id"
                     [attr.aria-label]="'Quitar ' + row.label + ' del garaje'" (click)="remove(row)">
-              Quitar
+              {{ confirmRemoveId() === row.vehicle.id ? '¿Seguro? Toca otra vez' : 'Quitar' }}
             </button>
           </div>
           @if (maintenanceId() === row.vehicle.id) {

@@ -119,7 +119,19 @@ export class MiGaraje implements OnInit {
     });
   }
 
+  /** El vehículo que se está por quitar: el primer toque lo marca, el segundo lo quita (5 s). */
+  readonly confirmRemoveId = signal<number | null>(null);
+  private removeTimer: ReturnType<typeof setTimeout> | undefined;
+
   remove(row: GarageRow): void {
+    if (this.confirmRemoveId() !== row.vehicle.id) {
+      this.confirmRemoveId.set(row.vehicle.id);
+      clearTimeout(this.removeTimer);
+      this.removeTimer = setTimeout(() => this.confirmRemoveId.set(null), 5000);
+      return;
+    }
+    clearTimeout(this.removeTimer);
+    this.confirmRemoveId.set(null);
     this.busyId.set(row.vehicle.id);
     this.vehicles.removeFromGarage(row.vehicle.id).subscribe({
       next: () => {

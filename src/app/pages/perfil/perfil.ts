@@ -84,6 +84,9 @@ export class Perfil implements OnInit {
   readonly myOrders = signal<UserOrderModel[]>([]);
   readonly isLoadingOrders = signal(true);
 
+  /** Pedidos que esperan un comprobante: el aviso de la pestaña "Pedidos". */
+  readonly proofCount = computed(() => this.myOrders().filter((o) => needsProof(o)).length);
+
   /** La inicial del círculo, igual que en el navbar. */
   readonly initial = computed(() => this.user()?.displayName?.charAt(0)?.toUpperCase() ?? '?');
 
@@ -138,7 +141,19 @@ export class Perfil implements OnInit {
     this.isEditing.set(true);
   }
 
+  /** Con cambios sin guardar, cancelar pide un segundo toque (5 s) antes de descartarlos. */
+  readonly confirmDiscard = signal(false);
+  private discardTimer: ReturnType<typeof setTimeout> | undefined;
+
   cancelEdit(): void {
+    if (this.form.dirty && !this.confirmDiscard()) {
+      this.confirmDiscard.set(true);
+      clearTimeout(this.discardTimer);
+      this.discardTimer = setTimeout(() => this.confirmDiscard.set(false), 5000);
+      return;
+    }
+    clearTimeout(this.discardTimer);
+    this.confirmDiscard.set(false);
     this.isEditing.set(false);
     this.form.reset();
   }
