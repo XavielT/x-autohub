@@ -34,7 +34,7 @@ export function orderReplyDraft(input: { name: string; orderNumber: number; stat
     return [head, `No pudimos leer bien el comprobante de tu pedido #${n}. ¿Nos lo puedes enviar de nuevo, más claro y completo?`, 'Gracias.'].join('\n');
   }
   const body: Record<string, string> = {
-    awaiting_payment: `Seguimos esperando el pago o el comprobante de tu pedido #${n}. En cuanto lo recibamos lo preparamos.`,
+    awaiting_payment: `Seguimos esperando el pago o el comprobante de tu pedido #${n}. Las cuentas para pagar están en https://xautohubrd.com/cuentas. En cuanto lo recibamos lo preparamos.`,
     paid: `Ya recibimos el pago de tu pedido #${n}. Lo estamos preparando.`,
     preparing: `Estamos preparando tu pedido #${n}. Te avisamos cuando esté listo.`,
     ready_for_pickup: `Tu pedido #${n} ya está listo: puedes pasar a retirarlo por el taller.`,

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { buildBankAccountsPdf, downloadFile } from '../../../../shared/utils/bank-accounts-pdf';
+import { downloadBankAccountsPdf } from '../../../../shared/utils/bank-accounts-pdf';
+import { BusinessProfile, EMPTY_BUSINESS_PROFILE } from '../../../../shared/models/business-document.model';
 import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BankAccount } from '../../../../shared/models/order.model';
@@ -66,11 +67,36 @@ export class AdminAjustes implements OnInit {
   /** Las cuentas reales (sin las de ejemplo) tal como están en el formulario: lo que lleva el PDF. */
   readonly realAccounts = computed(() => this.accounts().filter((a) => !a.isExample && a.bank.trim() && a.number.trim()));
 
-  downloadAccountsPdf(): void {
-    downloadFile(buildBankAccountsPdf(this.realAccounts()), 'cuentas-x-autohub.pdf');
+  /** Razón social y RNC (`business_profile`): salen en el PDF de cuentas y en el encabezado de las facturas. */
+  readonly business = signal<BusinessProfile>({ ...EMPTY_BUSINESS_PROFILE });
+  readonly isSavingBusiness = signal(false);
+
+  setBusinessField(field: 'legalName' | 'rnc', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.business.update((b) => ({ ...b, [field]: value }));
+  }
+
+  saveBusiness(): void {
+    if (this.isSavingBusiness()) return;
+    this.isSavingBusiness.set(true);
+    this.settings.setBusinessProfile(this.business()).subscribe({
+      next: () => {
+        this.isSavingBusiness.set(false);
+        this.toast.show('Datos de la empresa guardados.');
+      },
+      error: () => {
+        this.isSavingBusiness.set(false);
+        this.toast.show('No pudimos guardar los datos de la empresa.', 'error');
+      },
+    });
+  }
+
+  downloadAccountsPdf(): Promise<void> {
+    return downloadBankAccountsPdf(this.realAccounts(), { legalName: this.business().legalName, rnc: this.business().rnc });
   }
 
   ngOnInit(): void {
+    this.settings.getBusinessProfile().subscribe({ next: (profile) => this.business.set(profile), error: () => undefined });
     this.settings.getBankAccounts().subscribe({
       next: (accounts) => this.accounts.set(accounts.map(toDraft)),
       error: () => this.toast.show('No pudimos leer las cuentas bancarias.', 'error'),

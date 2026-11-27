@@ -5,7 +5,7 @@ import { SeoService } from '../../../shared/services/seo.service';
 import { SiteSettingsService, realBankAccounts } from '../../../shared/services/site-settings.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
-import { buildBankAccountsPdf, downloadFile } from '../../../shared/utils/bank-accounts-pdf';
+import { PdfBusiness, downloadBankAccountsPdf } from '../../../shared/utils/bank-accounts-pdf';
 import { STORE_PHONE_DISPLAY, storeWhatsAppLink } from '../../../shared/utils/contact';
 
 /**
@@ -27,6 +27,8 @@ export class Cuentas implements OnInit {
 
   readonly accounts = signal<BankAccount[]>([]);
   readonly isLoading = signal(true);
+  /** Razón social y RNC de `business_profile`: salen en el PDF. */
+  private readonly business = signal<PdfBusiness>({});
   readonly phone = STORE_PHONE_DISPLAY;
   readonly whatsappLink = storeWhatsAppLink('Hola X AutoHub, quiero pagar un pedido. ¿Me confirman los datos de la cuenta?');
 
@@ -41,6 +43,10 @@ export class Cuentas implements OnInit {
   }
 
   ngOnInit(): void {
+    this.settings.getBusinessProfile().subscribe({
+      next: (profile) => this.business.set({ legalName: profile.legalName, rnc: profile.rnc }),
+      error: () => undefined,
+    });
     this.settings.getBankAccounts().subscribe({
       next: (list) => {
         this.accounts.set(realBankAccounts(list));
@@ -59,7 +65,7 @@ export class Cuentas implements OnInit {
     }
   }
 
-  downloadPdf(): void {
-    downloadFile(buildBankAccountsPdf(this.accounts()), 'cuentas-x-autohub.pdf');
+  downloadPdf(): Promise<void> {
+    return downloadBankAccountsPdf(this.accounts(), this.business());
   }
 }

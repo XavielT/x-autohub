@@ -47,6 +47,7 @@ describe('reply-templates', () => {
 
     it('esperando pago sin comprobante ilegible: seguimos esperando', () => {
       expect(orderReplyDraft({ name: '', orderNumber: 7, status: 'awaiting_payment' })).toContain('Seguimos esperando');
+      expect(orderReplyDraft({ name: '', orderNumber: 7, status: 'awaiting_payment' })).toContain('xautohubrd.com/cuentas');
     });
 
     it('un estado desconocido no rompe: un mensaje genérico con el número', () => {

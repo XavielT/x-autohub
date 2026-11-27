@@ -42,6 +42,23 @@
   </article>
 
   <article class="adm-set__card">
+    <h3 class="adm-set__card-title">Datos de la empresa</h3>
+    <p class="adm-set__card-text">
+      Salen en el PDF de las cuentas y en el encabezado de cotizaciones y facturas. Cuando tengas RNC, solo escríbelo aquí y listo:
+      el PDF lo muestra; mientras esté vacío, no aparece.
+    </p>
+    <div class="adm-set__account">
+      <label>Nombre legal<input type="text" [value]="business().legalName" (input)="setBusinessField('legalName', $event)" placeholder="X AutoHub" /></label>
+      <label>RNC <small>(opcional)</small><input type="text" inputmode="numeric" [value]="business().rnc" (input)="setBusinessField('rnc', $event)" placeholder="Aún no tenemos" /></label>
+    </div>
+    <div class="adm-set__row">
+      <button type="button" class="adm-set__primary" [disabled]="isSavingBusiness()" [attr.aria-busy]="isSavingBusiness()" (click)="saveBusiness()">
+        {{ isSavingBusiness() ? 'Guardando…' : 'Guardar los datos' }}
+      </button>
+    </div>
+  </article>
+
+  <article class="adm-set__card">
     <h3 class="adm-set__card-title">Dirección de retiro</h3>
     <p class="adm-set__card-text">Dónde pasa a buscar su pedido quien elige "Retiro en el taller".</p>
 

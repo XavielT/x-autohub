@@ -54,6 +54,7 @@ describe('Pedido', () => {
           provide: SiteSettingsService,
           useValue: {
             getBankAccounts: () => of(options.accounts ?? []),
+            getBusinessProfile: () => of({ legalName: 'X AutoHub', rnc: '' }),
             getPickupAddress: () => of({ address: 'Av. Principal 1', hours: 'L-V 8 a 5', isExample: false }),
           },
         },
@@ -118,7 +119,7 @@ describe('Pedido', () => {
       providers: [
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: 'o-1' })) } },
         { provide: OrderService, useValue: { getOrder } },
-        { provide: SiteSettingsService, useValue: { getBankAccounts: () => of([]), getPickupAddress: () => of(null) } },
+        { provide: SiteSettingsService, useValue: { getBankAccounts: () => of([]), getBusinessProfile: () => of({ legalName: 'X AutoHub', rnc: '' }), getPickupAddress: () => of(null) } },
       ],
     });
     const fixture = TestBed.createComponent(Pedido);

@@ -7,7 +7,7 @@ import { OrderService } from '../../../shared/services/order.service';
 import { SiteSettingsService, realBankAccounts } from '../../../shared/services/site-settings.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BankAccount, OrderView, PickupAddress } from '../../../shared/models/order.model';
-import { buildBankAccountsPdf, downloadFile } from '../../../shared/utils/bank-accounts-pdf';
+import { PdfBusiness, downloadBankAccountsPdf } from '../../../shared/utils/bank-accounts-pdf';
 import { ORDER_STATUS_LABELS } from '../../../shared/models/user-order.model';
 import {
   acceptsProof,
@@ -110,6 +110,10 @@ export class Pedido {
 
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => this.load(params.get('id') ?? ''));
 
+    this.settings.getBusinessProfile().subscribe({
+      next: (profile) => this.business.set({ legalName: profile.legalName, rnc: profile.rnc }),
+      error: () => undefined,
+    });
     this.settings.getBankAccounts().subscribe({
       next: (accounts) => this.bankAccounts.set(realBankAccounts(accounts)),
       error: () => this.bankAccounts.set([]),
@@ -178,8 +182,10 @@ export class Pedido {
     this.orders.markWhatsAppOpened(order.id).subscribe({ error: () => undefined });
   }
 
-  downloadAccountsPdf(): void {
-    downloadFile(buildBankAccountsPdf(this.bankAccounts()), 'cuentas-x-autohub.pdf');
+  private readonly business = signal<PdfBusiness>({});
+
+  downloadAccountsPdf(): Promise<void> {
+    return downloadBankAccountsPdf(this.bankAccounts(), this.business());
   }
 
   async copy(text: string, what: string): Promise<void> {

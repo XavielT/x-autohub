@@ -1,7 +1,7 @@
 /**
  * Un escritor de PDF mínimo, sin dependencias: texto en Helvetica o Courier (con tildes y ñ), rectángulos y líneas.
  * Alcanza para documentos de una o pocas páginas como "Cuentas para pagar"; no es una librería de uso general
- * (sin imágenes, sin fuentes propias). Todo el contenido es Latin-1, así que un carácter es un byte.
+ * (imágenes solo JPEG, sin fuentes propias). Todo el contenido es Latin-1, así que un carácter es un byte.
  */
 
 export type PdfFont = 'regular' | 'bold' | 'mono';
@@ -48,8 +48,25 @@ export function wrapText(text: string, size: number, maxWidth: number, font: Pdf
   return lines;
 }
 
+/** Una imagen JPEG ya codificada, lista para incrustar con `PdfDoc.addImage()`. */
+export interface PdfImage {
+  /** Los bytes del JPEG. */
+  bytes: Uint8Array;
+  /** Medidas en píxeles. */
+  width: number;
+  height: number;
+  /** Se asigna al agregarla al documento. */
+  name?: string;
+}
+
 export class PdfPage {
   readonly ops: string[] = [];
+
+  /** Dibuja una imagen agregada con `PdfDoc.addImage()`. `y` se mide desde ARRIBA. */
+  image(img: PdfImage, x: number, y: number, w: number, h: number): this {
+    if (img.name) this.ops.push(`q ${num(w)} 0 0 ${num(h)} ${num(x)} ${num(PDF_PAGE.height - y - h)} cm /${img.name} Do Q`);
+    return this;
+  }
 
   /** `y` se mide desde ARRIBA de la hoja (como en una página web), no desde abajo como en el PDF. */
   text(text: string, x: number, y: number, size: number, font: PdfFont = 'regular', color: PdfColor = [0, 0, 0]): this {
@@ -74,8 +91,16 @@ export class PdfPage {
 
 export class PdfDoc {
   private readonly pages: PdfPage[] = [];
+  private readonly images: PdfImage[] = [];
 
   constructor(private readonly title = '') {}
+
+  /** Agrega un JPEG al documento y lo devuelve para dibujarlo en cualquier página. */
+  addImage(bytes: Uint8Array, width: number, height: number): PdfImage {
+    const img: PdfImage = { bytes, width, height, name: `Im${this.images.length + 1}` };
+    this.images.push(img);
+    return img;
+  }
 
   addPage(): PdfPage {
     const page = new PdfPage();
@@ -91,10 +116,18 @@ export class PdfDoc {
     const fontIds = (Object.keys(FONT_NAME) as PdfFont[]).map((f) =>
       add(`<< /Type /Font /Subtype /Type1 /BaseFont /${FONT_BASE[f]} /Encoding /WinAnsiEncoding >>`),
     );
-    const resources = `<< /Font << ${(Object.keys(FONT_NAME) as PdfFont[]).map((f, i) => `/${FONT_NAME[f]} ${fontIds[i]} 0 R`).join(' ')} >> >>`;
+    const imageIds = this.images.map((img) => {
+      const data = Array.from(img.bytes, (b) => String.fromCharCode(b)).join('');
+      return add(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${data.length} >>
+stream
+${data}
+endstream`);
+    });
+    const xobjects = this.images.length ? ` /XObject << ${this.images.map((img, i) => `/${img.name} ${imageIds[i]} 0 R`).join(' ')} >>` : '';
+    const resources = `<< /Font << ${(Object.keys(FONT_NAME) as PdfFont[]).map((f, i) => `/${FONT_NAME[f]} ${fontIds[i]} 0 R`).join(' ')} >>${xobjects} >>`;
 
     // Los ids de las páginas se conocen de antemano: contenido y página se agregan de a pares.
-    const firstPageId = objects.length + 3; // 1..3 fuentes ya puestas; reservamos catálogo y árbol de páginas
+    const firstPageId = objects.length + 3; // fuentes e imágenes ya puestas; reservamos catálogo y árbol de páginas
     const pageIds: number[] = [];
     const contentBodies: string[] = [];
     this.pages.forEach((p, i) => {

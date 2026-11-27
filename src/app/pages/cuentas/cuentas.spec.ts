@@ -16,7 +16,7 @@ describe('Cuentas', () => {
       providers: [
         provideRouter([]),
         { provide: ToastService, useValue: { show: vi.fn() } },
-        { provide: SiteSettingsService, useValue: { getBankAccounts: () => of(accounts) } },
+        { provide: SiteSettingsService, useValue: { getBankAccounts: () => of(accounts), getBusinessProfile: () => of({ legalName: 'X AutoHub SRL', rnc: '131-00000-1' }) } },
       ],
     });
     const fixture = TestBed.createComponent(Cuentas);
@@ -45,11 +45,14 @@ describe('Cuentas', () => {
   it('el botón descarga el PDF', async () => {
     const { el } = await montar([real]);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('sin red'))));
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = vi.fn(() => 'blob:x');
     (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = vi.fn();
 
     (el.querySelector('.cta__actions button') as HTMLButtonElement).click();
-    expect(click).toHaveBeenCalled();
+    // El logo falla sin red y el PDF sale igual, con el nombre en letras.
+    await vi.waitFor(() => expect(click).toHaveBeenCalled());
     click.mockRestore();
+    vi.unstubAllGlobals();
   });
 });
