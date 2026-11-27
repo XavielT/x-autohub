@@ -9,7 +9,7 @@
   </header>
 
   @if (!loaded()) {
-    <p class="hoy__muted">Cargando…</p>
+    <app-skeleton variant="row" [count]="2" label="Cargando el resumen…" />
   } @else if (!current()) {
     <p class="hoy__muted">Todavía no hay un resumen. Sale cada mañana a las 7:30 a. m.</p>
   } @else {

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Skeleton } from '../../../../../shared/ui/skeleton/skeleton';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ProfileVehicleModel } from '../../../../../shared/models/product.model';
@@ -19,7 +20,7 @@ const GUIDE_MESSAGES: Record<Exclude<GuideResult, 'ok'>, string> = {
  */
 @Component({
   selector: 'app-mantenimiento',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink, Skeleton],
   templateUrl: './mantenimiento.html',
   styleUrl: './mantenimiento.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

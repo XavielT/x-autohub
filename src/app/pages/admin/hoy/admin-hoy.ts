@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Digest, DigestService, renderDigest } from '../../../../shared/services/digest.service';
@@ -11,7 +12,7 @@ import { ToastService } from '../../../../shared/services/toast.service';
  */
 @Component({
   selector: 'app-admin-hoy',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, Skeleton],
   templateUrl: './admin-hoy.html',
   styleUrl: './admin-hoy.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

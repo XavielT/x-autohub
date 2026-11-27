@@ -7,7 +7,7 @@
   </div>
 
   @if (isLoading()) {
-    <p class="mnt__muted">Cargando…</p>
+    <app-skeleton variant="row" [count]="2" label="Cargando la guía…" />
   } @else if (!hasGuide()) {
     <p class="mnt__muted">Armamos una guía general con los servicios que suele pedir tu {{ label() }} (aceite, filtros, frenos, batería…). La confirmas con el manual o con el taller.</p>
     <button type="button" class="mnt__btn mnt__btn--main" [disabled]="isBuilding()" [attr.aria-busy]="isBuilding()" (click)="build()">
