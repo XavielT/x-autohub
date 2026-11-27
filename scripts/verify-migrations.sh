@@ -3525,10 +3525,28 @@ check "un grupo del admin entra a la busqueda al instante" "1" \
 check "la siembra no repite grupos (bumper esta una sola vez)" "1" "select count(*) from search_synonym_groups where terms @> array['bumper'];"
 scalar "delete from search_synonym_groups where terms && array['zzcanon2', 'zzcapacitor']; delete from product_aliases where alias = 'zzchapa'; delete from hub_parts where name like 'ZZ %';" >/dev/null
 
+echo "→ Sinonimos en ingles y 'pantalla' (migracion 0068)"
+scalar "insert into hub_parts (name, brand, img_url, price) values ('ZZ Pantallas Santa Fe', 'Hyundai', 'x.jpg', 100), ('ZZ Aleta lateral', 'Universal', 'x.jpg', 100);" >/dev/null
+check "'headlamp' (ingles) encuentra el faro aunque el producto diga 'pantallas'" "1" "$(sr headlamp 'ZZ Pantallas Santa Fe')"
+check "'pantalla' sigue encontrando el producto que dice 'Pantallas'" "1" "$(sr pantalla 'ZZ Pantallas Santa Fe')"
+check "un faro en inglés: 'headlight' encuentra 'Pantallas'" "1" "$(sr headlight 'ZZ Pantallas Santa Fe')"
+check "'head light' (dos palabras) tambien" "1" "$(sr 'head light' 'ZZ Pantallas Santa Fe')"
+check "y 'faro' ahora encuentra las pantallas" "1" "$(sr faro 'ZZ Pantallas Santa Fe')"
+check "'fender' encuentra el guardafango (grupo nuevo)" "1" "$(as_user "$ADMIN" "update hub_parts set name = 'ZZ Guardafango delantero' where name = 'ZZ Aleta lateral';") $(sr fender 'ZZ Guardafango delantero')"
+check "el grupo del faro quedo con 12 terminos, sin repetir" "12" "select cardinality(terms) from search_synonym_groups where terms @> array['faro'];"
+check "'wheel' entra al grupo de los aros" "t" "select terms @> array['wheel'] from search_synonym_groups where terms @> array['rin'];"
+apply supabase/migrations/0068_search_synonyms_english.sql
+check "repetirla no agrega nada" "12" "select cardinality(terms) from search_synonym_groups where terms @> array['faro'];"
+check "ni duplica los grupos nuevos" "1" "select count(*) from search_synonym_groups where terms @> array['fender'];"
+scalar "delete from hub_parts where name like 'ZZ %';" >/dev/null
+
 echo "→ Camino de actualizacion de la 0067"
 apply supabase/migrations/0067_search_synonyms.sql upgrade
 apply supabase/migrations/0067_search_synonyms.sql upgrade
 echo "   (aplicada dos veces)"
+apply supabase/migrations/0068_search_synonyms_english.sql upgrade
+apply supabase/migrations/0068_search_synonyms_english.sql upgrade
+echo "   (la 0068 tambien, dos veces)"
 CHECK_DB=upgrade check "la siembra queda una sola vez tras repetirla" "1" "select count(*) from search_synonym_groups where terms @> array['bumper'];"
 CHECK_DB=upgrade check "search_products sigue respondiendo en la base que se actualiza" "t" "select count(*) >= 0 from search_products(p_query => 'frenos');"
 

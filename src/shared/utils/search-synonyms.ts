@@ -8,9 +8,9 @@
 export const DEFAULT_SEARCH_SYNONYMS: readonly (readonly string[])[] = [
   ['parachoques', 'parachoque', 'bumper', 'bomper', 'defensa', 'defensas'],
   ['llanta', 'llantas', 'goma', 'gomas', 'neumatico', 'neumaticos', 'caucho', 'cauchos', 'tire', 'tires'],
-  ['aro', 'aros', 'rin', 'rines', 'rim', 'rims', 'mag', 'mags'],
-  ['faro', 'faros', 'farola', 'farolas', 'headlight', 'headlights'],
-  ['calavera', 'calaveras', 'stop', 'stops', 'taillight', 'taillights'],
+  ['aro', 'aros', 'rin', 'rines', 'rim', 'rims', 'mag', 'mags', 'wheel', 'wheels'],
+  ['faro', 'faros', 'farola', 'farolas', 'headlight', 'headlights', 'pantalla', 'pantallas', 'headlamp', 'headlamps', 'head light', 'head lights'],
+  ['calavera', 'calaveras', 'stop', 'stops', 'taillight', 'taillights', 'tail light', 'tail lights'],
   ['bocina', 'bocinas', 'parlante', 'parlantes', 'altavoz', 'altavoces', 'bafle', 'bafles', 'speaker', 'speakers'],
   ['corneta', 'cornetas', 'claxon', 'klaxon', 'horn'],
   ['amortiguador', 'amortiguadores', 'shock', 'shocks', 'strut', 'struts'],
@@ -52,6 +52,11 @@ export const DEFAULT_SEARCH_SYNONYMS: readonly (readonly string[])[] = [
   ['anticongelante', 'refrigerante', 'coolant', 'antifreeze'],
   ['ventilador', 'ventiladores', 'fan', 'fans', 'abanico', 'abanicos'],
   ['compresor', 'compresores', 'compressor'],
+  ['capo', 'hood'],
+  ['parrilla', 'parrillas', 'grille', 'grill'],
+  ['guardafango', 'guardafangos', 'guardalodo', 'guardalodos', 'fender', 'fenders'],
+  ['neblinero', 'neblineros', 'fog light', 'fog lights', 'fog lamp', 'foglight'],
+  ['catalizador', 'catalizadores', 'catalytic converter', 'cat converter'],
 ];
 
 /** Minúsculas, sin tildes y con los espacios colapsados: la forma en que la base guarda cada término. */
