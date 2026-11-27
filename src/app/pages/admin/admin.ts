@@ -81,6 +81,7 @@ export class Admin {
     { path: 'cupones', icon: 'ticket', label: 'Cupones', description: 'Códigos de descuento del checkout' },
     { path: 'taller', icon: 'wrench', label: 'Taller', description: 'Citas, servicios, horario y trabajos' },
     { path: 'inventario', icon: 'boxes', label: 'Inventario', description: 'Catálogo, Auto Hub y noticias' },
+    { path: 'busqueda', icon: 'search', label: 'Búsqueda', description: 'Sinónimos y lo que la gente no encuentra' },
     { path: 'marca', icon: 'image', label: 'Marca', description: 'Ponle la insignia de X AutoHub a tus fotos' },
     { path: 'documentos', icon: 'file-text', label: 'Documentos', description: 'Cotizaciones y facturas para tus clientes' },
     { path: 'clientes', icon: 'contact', label: 'Clientes', description: 'Tus clientes, sus datos y sus vehículos' },

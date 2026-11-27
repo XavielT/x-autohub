@@ -1,6 +1,7 @@
 import { ProductCategoryModel, ProductFitmentModel, ProductModel, ProductSort } from '../models/product.model';
 import { makeProduct } from '../testing/product.fixture';
 import { fitsVehicle, searchProductsInMemory } from './product-search';
+import { normalizeSynonymTerms, relatedTerms, synonymsOf } from './search-synonyms';
 
 /**
  * La búsqueda en memoria tiene que dar lo mismo que `search_products()` en
@@ -259,6 +260,85 @@ describe('searchProductsInMemory', () => {
       expect(search({ limit: 0 }, muchos).items.length).toBe(1);
       expect(search({ offset: -5 }, muchos).items[0].id).toBe(1);
     });
+  });
+});
+
+describe('searchProductsInMemory: categoría y sinónimos (migración 0067)', () => {
+  const DISCO = makeProduct({ id: 1, categoryId: 7, name: 'Disco ventilado GTR', brand: 'Brembo' });
+  const KIT = makeProduct({ id: 2, categoryId: 8, name: 'Kit de frenos cerámico', brand: 'EBC' });
+  const BUMPER = makeProduct({ id: 3, categoryId: 8, name: 'Parachoques deportivo', brand: 'Universal' });
+  const LLANTA = makeProduct({ id: 4, categoryId: 8, name: 'Llanta deportiva 17', brand: 'Michelin' });
+  const INTERCOOLER = makeProduct({ id: 5, categoryId: 8, name: 'Intercooler front mount', brand: 'Garrett' });
+  const CATALOGO = [DISCO, KIT, BUMPER, LLANTA, INTERCOOLER];
+
+  const buscar = (query: string) => names(search({ query }, CATALOGO).items);
+
+  it("la categoría cuenta: 'frenos' encuentra el disco cuyo nombre no lo dice (y la del padre también)", () => {
+    expect(buscar('frenos')).toContain('Disco ventilado GTR');
+    expect(buscar('frenos')).toContain('Kit de frenos cerámico');
+  });
+
+  it('lo que dice el nombre sube sobre lo que solo dice la categoría', () => {
+    expect(buscar('frenos')).toEqual(['Kit de frenos cerámico', 'Disco ventilado GTR']);
+  });
+
+  it("un sinónimo exacto, con prefijo y en habla dominicana: 'bumper', 'bump', 'goma'", () => {
+    expect(buscar('bumper')).toEqual(['Parachoques deportivo']);
+    expect(buscar('bump')).toEqual(['Parachoques deportivo']);
+    expect(buscar('goma')).toEqual(['Llanta deportiva 17']);
+  });
+
+  it("'fren' no trae el intercooler 'front mount'", () => {
+    expect(buscar('fren')).not.toContain('Intercooler front mount');
+  });
+
+  it('con varias palabras y palabras vacías', () => {
+    expect(buscar('discos de frenos')).toEqual(['Disco ventilado GTR']);
+  });
+
+  it('una palabra que no existe no devuelve nada', () => {
+    expect(buscar('xqzvw')).toEqual([]);
+  });
+});
+
+describe('search-synonyms', () => {
+  it('expande una palabra a todo su grupo, ella incluida', () => {
+    expect(synonymsOf('bumper')).toEqual(expect.arrayContaining(['parachoques', 'bumper', 'defensa']));
+  });
+
+  it('desde 4 letras entiende lo que se está tecleando, y con menos solo la palabra exacta', () => {
+    expect(synonymsOf('bump')).toContain('parachoques');
+    expect(synonymsOf('bum')).toEqual([]);
+    expect(synonymsOf('ac')).toEqual([]);
+  });
+
+  it('sin tildes ni mayúsculas', () => {
+    expect(synonymsOf('Neumático')).toContain('goma');
+  });
+
+  it('relatedTerms ofrece otras formas de buscar lo mismo, sin plurales ni lo ya escrito', () => {
+    const related = relatedTerms('bumper');
+    expect(related).toEqual(expect.arrayContaining(['parachoques', 'defensa']));
+    expect(related).not.toContain('bumper');
+    expect(related).not.toContain('defensas');
+    expect(relatedTerms('goma').length).toBeLessThanOrEqual(6);
+  });
+
+  it('relatedTerms no ofrece nada para una frase de varias palabras ni para una palabra suelta', () => {
+    expect(relatedTerms('frenos delanteros')).toEqual([]);
+    expect(relatedTerms('xqzvw')).toEqual([]);
+    expect(relatedTerms('a')).toEqual([]);
+  });
+
+  it('relatedTerms entiende una frase que es justo un término (brake pad)', () => {
+    expect(relatedTerms('brake pad')).toContain('pastilla');
+  });
+
+  it('normalizeSynonymTerms limpia, quita repetidos y valida como el trigger de la base', () => {
+    expect(normalizeSynonymTerms(['  Cañón ', 'CANON', 'zzcanon2', ' '])).toEqual(['canon', 'zzcanon2']);
+    expect(() => normalizeSynonymTerms(['solo', 'SOLO'])).toThrow('al menos dos');
+    expect(() => normalizeSynonymTerms(['a', 'bb'])).toThrow('entre 2 y 40');
+    expect(() => normalizeSynonymTerms(Array.from({ length: 15 }, (_, i) => `termino${i}`))).toThrow('hasta 14');
   });
 });
 

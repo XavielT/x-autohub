@@ -1,0 +1,98 @@
+<section class="tl sy">
+  <header class="tl__head">
+    <h2 class="tl__title">Búsqueda</h2>
+    <p class="tl__lead">
+      Cómo encuentra la gente los productos. El buscador ya entiende la categoría, los alias de cada producto y los errores de tecleo;
+      aquí le enseñas las palabras que usa la gente (bumper, goma, mofle…).
+    </p>
+  </header>
+
+  <form class="tl__card" (submit)="$event.preventDefault(); runTest()" novalidate>
+    <h3 class="tl__name">Probar una búsqueda</h3>
+    <p class="tl__sub">Escribe lo que escribiría un cliente y mira qué sale.</p>
+    <div class="sy__row">
+      <input class="tl__input" type="search" name="test" autocomplete="off" aria-label="Búsqueda de prueba"
+             placeholder="Ej.: bumper, goma, balata…" [value]="testQuery()" (input)="setTestQuery($event)" />
+      <button type="submit" class="tl__btn tl__btn--small" [disabled]="isTesting() || testQuery().trim().length < 2">
+        {{ isTesting() ? 'Buscando…' : 'Probar' }}
+      </button>
+    </div>
+
+    @if (testResults(); as results) {
+      @if (results.length === 0) {
+        <p class="tl__empty">No sale nada. Crea un sinónimo aquí abajo o agrega un alias al producto en Inventario.</p>
+      } @else {
+        <ul class="sy__results" aria-live="polite">
+          @for (p of results; track p.id) {
+            <li class="sy__result"><span>{{ p.name }}</span><small>{{ p.brand }}</small></li>
+          }
+        </ul>
+        <p class="tl__muted">{{ testTotal() }} resultado(s){{ testTotal() > results.length ? ', se muestran los primeros ' + results.length : '' }}.</p>
+      }
+    }
+  </form>
+
+  @if (gaps().length > 0) {
+    <div class="tl__card">
+      <h3 class="tl__name">Buscaron y no encontraron</h3>
+      <p class="tl__sub">Los últimos 30 días, sin datos de quién buscó. Si es otra forma de decir un producto que ya tienes, hazla sinónimo.</p>
+      @for (g of gaps(); track g.query) {
+        <div class="sy__gap">
+          <span class="sy__gap-text"><strong>{{ g.query }}</strong> · {{ g.searches }} {{ g.searches === 1 ? 'vez' : 'veces' }} · {{ g.lastSeen | date:'d MMM' }}</span>
+          <span class="sy__gap-actions">
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="runTest(g.query)">Probar</button>
+            <button type="button" class="tl__btn tl__btn--ghost" (click)="startFromGap(g)">Hacer sinónimo</button>
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <form class="tl__card" (submit)="$event.preventDefault(); addGroup()" novalidate>
+    <h3 class="tl__name">Nuevo grupo de sinónimos</h3>
+    <p class="tl__sub">Palabras que significan lo mismo, separadas por coma. Buscar cualquiera encuentra los productos de todas.</p>
+    <div class="sy__row">
+      <input id="sy-new" class="tl__input" type="text" name="terms" autocomplete="off" aria-label="Términos del grupo nuevo"
+             placeholder="parachoques, bumper, defensa" [value]="newTerms()" (input)="setNewTerms($event)" />
+      <button type="submit" class="tl__btn tl__btn--small" [disabled]="isAdding()">Agregar</button>
+    </div>
+    @if (newError()) { <p class="tl__error" role="alert">{{ newError() }}</p> }
+  </form>
+
+  <div>
+    <h3 class="tl__name">Sinónimos ({{ groups().length }})</h3>
+    <input class="tl__input" type="search" name="filter" autocomplete="off" aria-label="Buscar entre los sinónimos"
+           placeholder="Buscar un término…" [value]="filter()" (input)="setFilter($event)" />
+
+    @if (isLoading()) {
+      <app-skeleton variant="row" [count]="4" label="Cargando los sinónimos…" />
+    } @else if (loadError()) {
+      <p class="tl__error" role="alert">{{ loadError() }}</p>
+    } @else if (shown().length === 0) {
+      <p class="tl__empty">Ningún grupo coincide.</p>
+    } @else {
+      <ul class="tl__list">
+        @for (g of shown(); track g.id) {
+          <li class="tl__card">
+            <ul class="sy__chips">
+              @for (t of g.terms; track t) {
+                <li class="sy__term">
+                  {{ t }}
+                  <button type="button" class="sy__x" [attr.aria-label]="'Quitar ' + t" (click)="removeTerm(g, t)">×</button>
+                </li>
+              }
+            </ul>
+            <form class="sy__row" (submit)="$event.preventDefault(); addTerm(g)" novalidate>
+              <input class="tl__input" type="text" autocomplete="off" [attr.aria-label]="'Agregar un término a ' + g.terms[0]"
+                     placeholder="Agregar un término…" [value]="extra()[g.id] || ''" (input)="setExtra(g.id, $event)" />
+              <button type="submit" class="tl__btn tl__btn--ghost">Agregar</button>
+              <button type="button" class="tl__btn tl__btn--danger" [class.tl__btn--confirm]="confirmingId() === g.id" (click)="removeGroup(g)">
+                {{ confirmingId() === g.id ? '¿Seguro? Toca otra vez' : 'Borrar' }}
+              </button>
+            </form>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

@@ -297,6 +297,12 @@ export const routes: Routes = [
           import('./pages/admin/usuarios/admin-usuarios').then((m) => m.AdminUsuarios),
       },
       {
+        path: 'busqueda',
+        title: `Búsqueda de la tienda | ${BRAND}`,
+        canActivate: [adminGuard],
+        loadComponent: () => import('./pages/admin/busqueda/admin-busqueda').then((m) => m.AdminBusqueda),
+      },
+      {
         path: 'marca',
         title: `Marca en fotos | ${BRAND}`,
         canActivate: [adminGuard],

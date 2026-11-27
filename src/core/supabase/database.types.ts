@@ -499,6 +499,13 @@ export type ProductAliasRow = {
   created_at: string;
 }
 
+/** Un grupo de términos intercambiables en la búsqueda (migración 0067). */
+export type SearchSynonymGroupRow = {
+  id: number;
+  terms: string[];
+  created_at: string;
+}
+
 /** Fila de `suggest_products()` (0042): lo mínimo que pinta una sugerencia. */
 export type SuggestProductRow = {
   id: number;
@@ -1195,6 +1202,13 @@ export type Database = {
         Insert: Insert<ProductAliasRow, 'product_id' | 'alias'>;
         Update: Partial<ProductAliasRow>;
         Relationships: ProductAliasRelationships;
+      };
+      /** Sinónimos de la búsqueda (0067). Los lee cualquiera; los escribe un admin. */
+      search_synonym_groups: {
+        Row: SearchSynonymGroupRow;
+        Insert: Insert<SearchSynonymGroupRow, 'terms'>;
+        Update: Partial<SearchSynonymGroupRow>;
+        Relationships: [];
       };
       product_variants: {
         Row: ProductVariantRow;

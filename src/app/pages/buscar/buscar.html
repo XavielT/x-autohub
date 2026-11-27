@@ -26,6 +26,13 @@
   } @else if (isLoading()) {
     <app-skeleton variant="product-card" [count]="4" label="Buscando…" />
   } @else {
+    @if (related().length > 0) {
+      <p class="bus__related">También se busca como:
+        @for (t of related(); track t) {
+          <a class="bus__chip" routerLink="/buscar" [queryParams]="{ q: t }">{{ t }}</a>
+        }
+      </p>
+    }
     <section class="bus__section" aria-labelledby="bus-store">
       <h2 id="bus-store" class="bus__h2">En la tienda <span>{{ results().storeTotal }}</span></h2>
 
@@ -33,7 +40,8 @@
         <p class="bus__empty" role="alert">No pudimos buscar en la tienda ahora mismo. Inténtalo otra vez en un momento.</p>
       } @else if (results().store.length === 0) {
         <p class="bus__empty">No encontramos nada en la tienda para “{{ query() }}”.
-          <a routerLink="/tienda">Ver toda la tienda</a></p>
+          <a routerLink="/tienda">Ver toda la tienda</a>
+          · ¿No lo encuentras? <a [href]="whatsappLink()" target="_blank" rel="noopener">Escríbenos por WhatsApp</a> y te lo conseguimos.</p>
       } @else {
         <ul class="bus__grid">
           @for (p of results().store; track p.id; let i = $index) {

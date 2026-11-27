@@ -6,6 +6,7 @@ import {
   ProductSearchResult,
   SelectedVehicle,
 } from '../models/product.model';
+import { DEFAULT_SEARCH_SYNONYMS, synonymsOf } from './search-synonyms';
 
 /**
  * La misma búsqueda que `public.search_products()` (migración 0017), para el
@@ -13,9 +14,12 @@ import {
  * categoría, compatibilidad y filtros, así que se hace aquí **con la misma
  * semántica**: lo que se vea con mocks tiene que verse igual con la base.
  *
- * Una diferencia que no se puede cerrar: Postgres usa el diccionario `spanish`
- * (que también reduce las palabras a su raíz: "frenos" encuentra "freno"), y aquí
- * solo hay prefijos sin acentos. Para un mock alcanza.
+ * Desde la migración 0067 la búsqueda también mira el nombre de la categoría (y la del padre) y entiende
+ * sinónimos (`search-synonyms.ts`: "bumper" encuentra "parachoques"), igual que la base.
+ *
+ * Diferencias que no se pueden cerrar: Postgres usa el diccionario `spanish` (que también reduce las palabras a su
+ * raíz: "frenos" encuentra "freno") y perdona errores de tecleo con trigramas; aquí solo hay prefijos sin acentos y
+ * los plurales que traen los grupos de sinónimos. Para un mock alcanza.
  */
 
 /** Minúsculas y sin acentos. Es lo que `xah_unaccent(lower(x))` hace en Postgres. */
@@ -37,11 +41,29 @@ function queryWords(query: string): string[] {
     .filter((w) => w !== '' && !STOP_WORDS.has(w));
 }
 
-/** Cada palabra de la consulta es el comienzo de alguna palabra del producto. */
-function matchesWords(product: ProductModel, words: string[]): boolean {
+/** El nombre de la categoría del producto y el de su padre, como los junta la base al buscar. */
+function categoryText(product: ProductModel, categories: readonly ProductCategoryModel[]): string {
+  const own = categories.find((c) => c.id === product.categoryId);
+  const parent = own?.parentId == null ? undefined : categories.find((c) => c.id === own.parentId);
+  return [own?.name, parent?.name].filter(Boolean).join(' ');
+}
+
+const tokensOf = (text: string): string[] => fold(text).split(/[^a-z0-9]+/).filter(Boolean);
+
+/** ¿La palabra (o alguno de sus sinónimos) está en las palabras del texto? La palabra por prefijo; los sinónimos, exactos. */
+function wordMatches(tokens: readonly string[], word: string): boolean {
+  if (tokens.some((t) => t.startsWith(word))) return true;
+  const joined = ` ${tokens.join(' ')} `;
+  return synonymsOf(word, DEFAULT_SEARCH_SYNONYMS).some((term) =>
+    term === word ? false : term.includes(' ') ? joined.includes(` ${term} `) : tokens.includes(term),
+  );
+}
+
+/** Cada palabra de la consulta (o un sinónimo suyo) está en el producto o en su categoría. */
+function matchesWords(product: ProductModel, words: string[], categories: readonly ProductCategoryModel[]): boolean {
   if (words.length === 0) return false;
-  const tokens = fold(`${product.name} ${product.brand} ${product.shortDescription} ${product.sku}`).split(/[^a-z0-9]+/);
-  return words.every((w) => tokens.some((t) => t.startsWith(w)));
+  const tokens = tokensOf(`${product.name} ${product.brand} ${product.shortDescription} ${product.sku} ${categoryText(product, categories)}`);
+  return words.every((w) => wordMatches(tokens, w));
 }
 
 /** Coincidencia parcial en nombre, marca o SKU: recupera lo que el diccionario descarta. */
@@ -90,11 +112,12 @@ function categoryIds(slug: string, categories: readonly ProductCategoryModel[]):
   return ids;
 }
 
-/** Relevancia aproximada: cuántas palabras de la consulta están en el nombre. */
-function relevance(product: ProductModel, words: string[]): number {
+/** Relevancia aproximada: lo que dice el nombre pesa más (1 por palabra) que lo que solo dice la categoría o la descripción (0,3). */
+function relevance(product: ProductModel, words: string[], categories: readonly ProductCategoryModel[]): number {
   if (words.length === 0) return 0;
-  const name = fold(product.name).split(/[^a-z0-9]+/);
-  return words.filter((w) => name.some((t) => t.startsWith(w))).length;
+  const nameTokens = tokensOf(product.name);
+  const allTokens = tokensOf(`${product.name} ${product.brand} ${product.shortDescription} ${categoryText(product, categories)}`);
+  return words.reduce((sum, w) => sum + (wordMatches(nameTokens, w) ? 1 : wordMatches(allTokens, w) ? 0.3 : 0), 0);
 }
 
 /**
@@ -115,7 +138,7 @@ export function searchProductsInMemory(
   const matched = products.filter((p) => {
     if (p.isActive === false) return false;
     if (params.brand && p.brand !== params.brand) return false;
-    if (query && !matchesWords(p, words) && !matchesPartial(p, query)) return false;
+    if (query && !matchesWords(p, words, categories) && !matchesPartial(p, query)) return false;
     if (ids && (p.categoryId === null || !ids.has(p.categoryId))) return false;
     if (!fitsVehicle(p, fitments, { makeId: params.makeId, modelId: params.modelId, year: params.year })) return false;
     if (params.minPrice !== undefined && p.price < params.minPrice) return false;
@@ -138,7 +161,7 @@ export function searchProductsInMemory(
       case 'newest':
         return (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0) || byDefault(a, b);
       default:
-        return relevance(b, words) - relevance(a, words) || byDefault(a, b);
+        return relevance(b, words, categories) - relevance(a, words, categories) || byDefault(a, b);
     }
   });
 

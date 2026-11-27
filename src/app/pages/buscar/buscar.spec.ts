@@ -79,6 +79,30 @@ describe('Buscar', () => {
     expect(el.querySelectorAll('.bus__section--community app-hub-market-card').length).toBe(1);
   });
 
+  it('ofrece otras formas de buscar lo mismo cuando la palabra tiene sinónimos', async () => {
+    const { el } = await montar('bumper');
+
+    const chips = [...el.querySelectorAll('.bus__chip')].map((a) => a.textContent?.trim());
+    expect(chips).toContain('parachoques');
+    expect(chips).not.toContain('bumper');
+  });
+
+  it('una palabra sin sinónimos no muestra atajos', async () => {
+    const { el } = await montar('xqzvw');
+
+    expect(el.querySelector('.bus__related')).toBeNull();
+  });
+
+  it('sin resultados en la tienda ofrece el WhatsApp con la búsqueda escrita', async () => {
+    searchProducts.mockReturnValue(of({ items: [], total: 0 }));
+    searchCommunity.mockReturnValue(of([]));
+    const { el } = await montar('rines');
+
+    const link = el.querySelector<HTMLAnchorElement>('.bus__empty a[href*="wa.me"]');
+    expect(link).not.toBeNull();
+    expect(decodeURIComponent(link!.href)).toContain('estoy buscando: rines');
+  });
+
   it('si falla la tienda avisa, y la comunidad se muestra igual', async () => {
     searchProducts.mockReturnValue(throwError(() => new Error('caido')));
     searchCommunity.mockReturnValue(of(community));

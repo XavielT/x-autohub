@@ -1,0 +1,46 @@
+@use '../../../../styles/admin-taller' as *;
+
+@include taller-base;
+
+.sy { display: flex; flex-direction: column; gap: 22px; }
+
+.sy__row { display: flex; gap: 10px; }
+.sy__row .tl__input { flex: 1; min-width: 0; }
+
+.sy__results { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.sy__result { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.sy__result small { color: var(--text-soft); white-space: nowrap; }
+
+.sy__chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; padding: 0; list-style: none; }
+
+.sy__term {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 6px 0 12px;
+  border-radius: 18px;
+  background-color: rgba(255, 255, 255, 0.07);
+  font-size: 14px;
+}
+
+.sy__x {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover { background-color: rgba(255, 255, 255, 0.12); color: var(--Hub); }
+}
+
+.sy__gap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; flex-wrap: wrap; }
+.sy__gap + .sy__gap { border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.sy__gap-text { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.sy__gap-actions { display: flex; flex-shrink: 0; gap: 8px; }

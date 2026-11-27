@@ -25,6 +25,29 @@
 
   &__hint { margin: 0; color: var(--text-soft); }
 
+  &__related {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: -12px 0 24px;
+    font-size: 14px;
+    color: var(--text-soft);
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 18px;
+    color: var(--text-strong);
+    text-decoration: none;
+
+    &:hover { border-color: var(--Hub); color: var(--Hub); }
+  }
+
   &__section {
     margin-bottom: 40px;
 

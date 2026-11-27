@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,6 +13,9 @@ import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { ProductService } from '../../../shared/services/product.service';
 import { AiSearchService, ParsedSearch, understoodChips } from '../../../shared/services/ai-search.service';
 import { VehicleService } from '../../../shared/services/vehicle.service';
+import { SearchSynonymsService } from '../../../shared/services/search-synonyms.service';
+import { storeWhatsAppLink } from '../../../shared/utils/contact';
+import { relatedTerms } from '../../../shared/utils/search-synonyms';
 
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 /** Cuántos productos de la tienda se muestran en los resultados. */
@@ -49,9 +53,15 @@ export class Buscar {
   private readonly title = inject(Title);
   private readonly aiSearch = inject(AiSearchService);
   private readonly vehicles = inject(VehicleService);
+  private readonly synonyms = inject(SearchSynonymsService);
 
   readonly isLoading = signal(false);
   readonly hasError = signal(false);
+
+  constructor() {
+    // Los sinónimos vigentes vienen de la base, y solo en el navegador (el servidor usa la siembra).
+    if (isPlatformBrowser(inject(PLATFORM_ID))) this.synonyms.ensureLoaded();
+  }
 
   readonly results = toSignal(
     this.route.queryParamMap.pipe(
@@ -68,6 +78,10 @@ export class Buscar {
   );
 
   readonly query = computed(() => this.results().query);
+  /** Otras formas de buscar lo mismo ("bumper" → parachoques, defensa): atajos bajo el título. */
+  readonly related = computed(() => relatedTerms(this.query(), this.synonyms.groups()));
+  /** El WhatsApp de la tienda con lo que se buscó ya escrito: cuando no hay resultados, lo conseguimos. */
+  readonly whatsappLink = computed(() => storeWhatsAppLink(`Hola X AutoHub, estoy buscando: ${this.query()}`));
 
   private empty(query: string): Results {
     return { query, store: [], storeTotal: 0, community: [], understood: null };

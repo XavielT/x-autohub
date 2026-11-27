@@ -3482,6 +3482,56 @@ apply supabase/migrations/0066_document_payments.sql upgrade
 apply supabase/migrations/0066_document_payments.sql upgrade
 echo "   (aplicada dos veces)"
 
+echo "→ Busqueda con sinonimos, categoria, alias y errores de tecleo (migracion 0067)"
+scalar "insert into hub_parts (name, brand, img_url, price, category_id) values
+  ('ZZ Disco ventilado', 'Brembo', 'x.jpg', 100, (select id from product_categories where slug = 'frenos')),
+  ('ZZ Frenos kit', 'Brembo', 'x.jpg', 100, (select id from product_categories where slug = 'suspension')),
+  ('ZZ Parachoques deportivo', 'Universal', 'x.jpg', 100, (select id from product_categories where slug = 'accesorios-exterior')),
+  ('ZZ Llanta deportiva', 'Michelin', 'x.jpg', 100, (select id from product_categories where slug = 'llantas-aros')),
+  ('ZZ Intercooler front mount', 'Garrett', 'x.jpg', 100, (select id from product_categories where slug = 'motor-filtros'));
+insert into product_aliases (product_id, alias) select id, 'zzchapa' from hub_parts where name = 'ZZ Llanta deportiva';" >/dev/null
+sr() { as_anon "select count(*) from search_products(p_query => '$1', p_limit => 100) where name = '$2';"; }
+
+check "la categoria cuenta: 'frenos' encuentra un disco cuyo nombre no lo dice" "1" "$(sr frenos 'ZZ Disco ventilado')"
+check "la categoria del padre tambien cuenta (accesorios exterior → parachoques)" "1" "$(sr 'accesorios' 'ZZ Parachoques deportivo')"
+check "lo que dice el nombre sube sobre lo que solo dice la categoria" "t" \
+  "$(as_anon "with r as (select name, row_number() over () rn from search_products(p_query => 'frenos', p_limit => 100)) select (select rn from r where name = 'ZZ Frenos kit') < (select rn from r where name = 'ZZ Disco ventilado');")"
+check "un sinonimo exacto: 'bumper' encuentra el parachoques" "1" "$(sr bumper 'ZZ Parachoques deportivo')"
+check "con prefijo de un sinonimo: 'bump' tambien" "1" "$(sr bump 'ZZ Parachoques deportivo')"
+check "habla dominicana: 'goma' encuentra la llanta" "1" "$(sr goma 'ZZ Llanta deportiva')"
+check "con palabras vacias y varias palabras: 'discos de frenos'" "1" "$(sr 'discos de frenos' 'ZZ Disco ventilado')"
+check "un alias tambien lo encuentra la busqueda completa, no solo las sugerencias" "1" "$(sr zzchapa 'ZZ Llanta deportiva')"
+check "un error de tecleo en una palabra larga: 'parachoquez'" "1" "$(sr parachoquez 'ZZ Parachoques deportivo')"
+check "un error de tecleo en la marca: 'brenbo'" "1" "$(sr brenbo 'ZZ Disco ventilado')"
+check "'fren' NO trae el intercooler 'front mount' (era el error de las sugerencias)" "0" "$(sr fren 'ZZ Intercooler front mount')"
+check "una palabra que no existe no devuelve nada" "0" "$(as_anon "select count(*) from search_products(p_query => 'xqzvw', p_limit => 100);")"
+check "una consulta de solo palabras vacias no devuelve todo el catalogo" "t" \
+  "$(as_anon "select (select count(*) from search_products(p_query => 'de para', p_limit => 100)) < (select count(*) from hub_parts where is_active);")"
+check "los filtros de categoria siguen funcionando junto al texto" "0" "$(as_anon "select count(*) from search_products(p_query => 'frenos', p_category_slug => 'suspension', p_limit => 100) where name = 'ZZ Disco ventilado';")"
+
+check "sugerencias: la categoria encuentra el disco" "1" "$(as_anon "select count(*) from suggest_products('frenos', 20) where name = 'ZZ Disco ventilado';")"
+check "sugerencias: un sinonimo (bumper) sugiere el parachoques" "ZZ Parachoques deportivo" "$(as_anon "select name from suggest_products('bumper', 1);")"
+check "sugerencias: 'fren' ya no sugiere el 'front mount'" "0" "$(as_anon "select count(*) from suggest_products('fren', 20) where name like '%front%';")"
+check "sugerencias: el nombre le gana a la categoria" "ZZ Frenos kit" "$(as_anon "select name from suggest_products('ZZ Frenos', 1);")"
+
+check "anon no escribe sinonimos" 'ERROR:  permission denied for table search_synonym_groups' "$(as_anon "insert into search_synonym_groups (terms) values (array['aa','bb']);")"
+check "un usuario normal tampoco" 'ERROR:  new row violates row-level security policy for table "search_synonym_groups"' "$(as_user "$USER_A" "insert into search_synonym_groups (terms) values (array['aa','bb']);")"
+check "cualquiera los lee (anon ve la siembra)" "t" "$(as_anon "select count(*) >= 40 from search_synonym_groups;")"
+check "el admin crea un grupo y se normaliza (tildes, mayusculas, repetidos y espacios)" "{canon,zzcanon2}" "$(as_user "$ADMIN" "insert into search_synonym_groups (terms) values (array['  Cañón ', 'CANON', 'cañón', 'zzcanon2', '  ']) returning terms;")"
+check "un grupo de un solo termino se rechaza" 'ERROR:  Un grupo de sinónimos necesita al menos dos términos distintos.' "$(as_user "$ADMIN" "insert into search_synonym_groups (terms) values (array['solo', 'SOLO']);")"
+check "un termino de una letra se rechaza" 'ERROR:  Cada término tiene entre 2 y 40 letras.' "$(as_user "$ADMIN" "insert into search_synonym_groups (terms) values (array['a', 'bb']);")"
+check "un grupo del admin entra a la busqueda al instante" "1" \
+  "insert into search_synonym_groups (terms) values (array['zzcapacitor', 'ventilado']); $(sr zzcapacitor 'ZZ Disco ventilado')"
+check "la siembra no repite grupos (bumper esta una sola vez)" "1" "select count(*) from search_synonym_groups where terms @> array['bumper'];"
+scalar "delete from search_synonym_groups where terms && array['zzcanon2', 'zzcapacitor']; delete from product_aliases where alias = 'zzchapa'; delete from hub_parts where name like 'ZZ %';" >/dev/null
+
+echo "→ Camino de actualizacion de la 0067"
+apply supabase/migrations/0067_search_synonyms.sql upgrade
+apply supabase/migrations/0067_search_synonyms.sql upgrade
+echo "   (aplicada dos veces)"
+CHECK_DB=upgrade check "la siembra queda una sola vez tras repetirla" "1" "select count(*) from search_synonym_groups where terms @> array['bumper'];"
+CHECK_DB=upgrade check "search_products sigue respondiendo en la base que se actualiza" "t" "select count(*) >= 0 from search_products(p_query => 'frenos');"
+
 # --- Resumen ------------------------------------------------------------------
 
 echo
