@@ -45,6 +45,17 @@
   .ut { animation: xah-drop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   .ip, .tabs__sheet { animation: xah-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 
+  // Home: el título, la frase y el buscador entran en cascada; los chips de categoría también.
+  .hsearch__title { animation: xah-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .hsearch__lead { animation: xah-rise 0.5s 0.08s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .hsearch__box { animation: xah-rise 0.5s 0.16s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .hcat__chip { animation: xah-rise 0.4s ease-out backwards; }
+  .hcat__list li:nth-child(2) .hcat__chip { animation-delay: 0.04s; }
+  .hcat__list li:nth-child(3) .hcat__chip { animation-delay: 0.08s; }
+  .hcat__list li:nth-child(4) .hcat__chip { animation-delay: 0.12s; }
+  .hcat__list li:nth-child(5) .hcat__chip { animation-delay: 0.16s; }
+  .hcat__list li:nth-child(n + 6) .hcat__chip { animation-delay: 0.2s; }
+
   // El número del carrito rebota al cambiar (el nodo se recrea al aparecer el primero).
   .navbar__cart-count, .tabs__count { animation: xah-badge 0.35s ease-out; }
 
@@ -66,7 +77,7 @@
   // sabe enlazar una animación al scroll, y nunca dentro de un carrusel horizontal (ahí la línea
   // de tiempo no avanza y las tarjetas quedarían ocultas); en los demás las tarjetas simplemente están ahí.
   @supports (animation-timeline: view()) {
-    :is(.hub-part-card, .vcard, .catalog-card, .new-card, .scard, .servicios-card, .post):not(.hrow *, [class*='carousel'] *) {
+    :is(.hs__head, .hub-part-card, .vcard, .catalog-card, .new-card, .scard, .servicios-card, .post):not(.hrow *, [class*='carousel'] *) {
       animation: xah-reveal linear backwards;
       animation-timeline: view();
       animation-range: entry 0% entry 35%;

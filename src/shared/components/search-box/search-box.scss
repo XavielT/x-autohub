@@ -159,3 +159,9 @@
 @media (prefers-reduced-motion: reduce) {
   .sb__spinner { animation: none; border-top-color: rgba(255, 255, 255, 0.25); border-right-color: var(--Hub); }
 }
+
+// En un escritorio justo (901–1360px) el menú se come el ancho y el campo quedaba en ~70px
+// ("Busca p…"): el botón sobra, el Enter busca y la lupa ya está a la vista.
+@media (min-width: 901px) and (max-width: 1360px) {
+  .sb:not(.sb--hero) .sb__submit { display: none; }
+}
