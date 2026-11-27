@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../shared/services/auth.service';
+import { AdminService } from '../../../shared/services/admin.service';
+import { AdminServicesService } from '../../../shared/services/admin-services.service';
 import { HubMarketService } from '../../../shared/services/hub-market.service';
 import { AdminPublicar } from './publicar/admin-publicar';
 import { AdminHoy } from './hoy/admin-hoy';
@@ -38,9 +40,24 @@ interface AdminSection {
 export class Admin {
   private readonly auth = inject(AuthService);
   private readonly hubMarket = inject(HubMarketService);
+  private readonly admin = inject(AdminService);
+  private readonly adminServices = inject(AdminServicesService);
 
   /** Publicaciones que esperan revisión: el número de la insignia de "Moderación". */
   readonly pendingCount = signal(0);
+  /** Pedidos que esperan algo de ti (comprobante por revisar, pagados por preparar) y citas por confirmar. */
+  readonly ordersCount = signal(0);
+  readonly appointmentsCount = signal(0);
+
+  /** El número de la insignia de cada pestaña, o 0 si no lleva. */
+  badgeOf(path: string): number {
+    switch (path) {
+      case 'moderacion': return this.pendingCount();
+      case 'pedidos': return this.ordersCount();
+      case 'taller': return this.appointmentsCount();
+      default: return 0;
+    }
+  }
 
   readonly adminName = this.auth.user;
   readonly isAdmin = this.auth.isAdmin;
@@ -84,6 +101,19 @@ export class Admin {
       next: (items) => this.pendingCount.set(items.length),
       error: () => undefined,
     });
+    if (this.auth.isAdmin()) {
+      this.admin.getOrders().subscribe({
+        next: (orders) =>
+          this.ordersCount.set(
+            orders.filter((o) => o.status === 'paid' || o.status === 'pending' || (o.status === 'awaiting_payment' && o.proofPath)).length,
+          ),
+        error: () => undefined,
+      });
+      this.adminServices.getAppointments().subscribe({
+        next: (list) => this.appointmentsCount.set(list.filter((a) => a.status === 'requested').length),
+        error: () => undefined,
+      });
+    }
   }
 
   readonly sections = computed(() =>

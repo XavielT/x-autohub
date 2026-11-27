@@ -56,6 +56,18 @@
   .hcat__list li:nth-child(5) .hcat__chip { animation-delay: 0.16s; }
   .hcat__list li:nth-child(n + 6) .hcat__chip { animation-delay: 0.2s; }
 
+  // Comunidad: el hero entra en cascada, y el corazón de "me gusta" late al activarse.
+  .home-welcome-info { animation: xah-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .home-welcome-cta { animation: xah-rise 0.5s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .post__action--on span { display: inline-block; animation: xah-badge 0.35s ease-out; }
+  .fav.is-saved svg { animation: xah-badge 0.35s ease-out; }
+
+  // Pago: cada paso entra con un fundido (el contenido se recrea al cambiar de paso).
+  .checkout__fields, .checkout__choices { animation: xah-page-in 0.25s ease-out backwards; }
+
+  // Panel: las tarjetas de las listas aparecen con un fundido al terminar de cargar.
+  .tl__card { animation: xah-fade 0.25s ease-out backwards; }
+
   // El número del carrito rebota al cambiar (el nodo se recrea al aparecer el primero).
   .navbar__cart-count, .tabs__count { animation: xah-badge 0.35s ease-out; }
 

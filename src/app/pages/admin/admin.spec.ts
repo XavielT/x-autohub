@@ -90,4 +90,21 @@ describe('Admin', () => {
       'Sesión de Xaviel Terrero · Moderador',
     );
   });
+
+  it('las pestañas con trabajo pendiente llevan su número', async () => {
+    const { fixture, componente } = montar('admin');
+    await fixture.whenStable();
+
+    expect(componente.badgeOf('pedidos')).toBe(componente.ordersCount());
+    expect(componente.badgeOf('taller')).toBe(componente.appointmentsCount());
+    expect(componente.badgeOf('inventario')).toBe(0);
+  });
+
+  it('un moderador no consulta pedidos ni citas', async () => {
+    const { fixture, componente } = montar('moderador');
+    await fixture.whenStable();
+
+    expect(componente.ordersCount()).toBe(0);
+    expect(componente.appointmentsCount()).toBe(0);
+  });
 });
