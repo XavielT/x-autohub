@@ -76,8 +76,11 @@
   } @else if (items().length === 0) {
     <p class="adm-rel__empty">Todavía no hay ninguna versión registrada.</p>
   } @else {
+    <input class="adm-rel__search" type="search" name="q" autocomplete="off" aria-label="Buscar versiones"
+           placeholder="Buscar por versión, título o resumen…" [value]="query()" (input)="setQuery($event)" />
+    @if (shown().length === 0) { <p class="adm-rel__empty">Ninguna versión coincide con la búsqueda.</p> }
     <ol class="adm-rel__list">
-      @for (item of items(); track item.id) {
+      @for (item of shown(); track item.id) {
         <li class="adm-rel__item" [class.adm-rel__item--draft]="!item.isPublished">
           <div class="adm-rel__item-head">
             <div class="adm-rel__item-id">
@@ -125,5 +128,8 @@
         </li>
       }
     </ol>
+    @if (hiddenCount() > 0) {
+      <button type="button" class="adm-rel__more" (click)="showMore()">Ver {{ hiddenCount() > 15 ? 15 : hiddenCount() }} más antiguas ({{ hiddenCount() }} en total)</button>
+    }
   }
 </section>

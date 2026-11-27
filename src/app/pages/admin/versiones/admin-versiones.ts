@@ -1,7 +1,8 @@
 import { Thumb } from '../../../../shared/ui/thumb/thumb';
 import { localDate } from '../../../../shared/utils/service-time';
 import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { normalizeSearch } from '../../../../shared/ui/searchable-select/searchable-select';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReleaseService } from '../../../../shared/services/release.service';
@@ -35,6 +36,29 @@ export class AdminVersiones implements OnInit {
 
   readonly items = signal<ReleaseModel[]>([]);
   readonly isLoading = signal(true);
+
+  /** El historial crece con cada versión: se ven las últimas y un buscador llega a las demás. */
+  static readonly PAGE = 15;
+  readonly query = signal('');
+  readonly visibleCount = signal(AdminVersiones.PAGE);
+
+  /** Las que coinciden con la búsqueda (versión, título o resumen), sin acentos ni mayúsculas. */
+  readonly filtered = computed(() => {
+    const q = normalizeSearch(this.query()).replace(/^v/, '');
+    return q ? this.items().filter((i) => normalizeSearch(`${i.version} ${i.title} ${i.summary}`).includes(q)) : this.items();
+  });
+
+  /** Con búsqueda se ven todas las que coinciden; sin ella, solo la primera tanda. */
+  readonly shown = computed(() => (this.query().trim() ? this.filtered() : this.filtered().slice(0, this.visibleCount())));
+  readonly hiddenCount = computed(() => this.filtered().length - this.shown().length);
+
+  setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+  }
+
+  showMore(): void {
+    this.visibleCount.update((n) => n + AdminVersiones.PAGE);
+  }
   readonly isSaving = signal(false);
 
   /** null = no hay formulario abierto. 0 = creando. >0 = editando ese id. */
