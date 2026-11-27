@@ -89,6 +89,12 @@ describe('Footer', () => {
     expect(el.querySelector('.footer__legal a')?.getAttribute('href')).toBe('/terminos-condiciones');
     expect(el.querySelectorAll('.footer__social-link').length).toBe(3);
   });
+
+  it('enlaza a las cuentas para pagar', async () => {
+    const { el } = await montar();
+
+    expect([...el.querySelectorAll('.footer__legal a')].map((a) => a.getAttribute('href'))).toContain('/cuentas');
+  });
 });
 
 describe('contacto de la tienda', () => {

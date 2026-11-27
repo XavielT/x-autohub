@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { buildBankAccountsPdf, downloadFile } from '../../../../shared/utils/bank-accounts-pdf';
 import { SiteSettingsService } from '../../../../shared/services/site-settings.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { BankAccount } from '../../../../shared/models/order.model';
@@ -32,7 +34,7 @@ const emptyAccount = (): AccountDraft => ({ bank: '', holder: '', number: '', ty
  */
 @Component({
   selector: 'app-admin-ajustes',
-  imports: [AdminIaPanel],
+  imports: [AdminIaPanel, RouterLink],
   templateUrl: './admin-ajustes.html',
   styleUrl: './admin-ajustes.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,6 +62,13 @@ export class AdminAjustes implements OnInit {
   readonly onlyExampleAccounts = computed(
     () => this.accounts().length > 0 && this.accounts().every((a) => a.isExample),
   );
+
+  /** Las cuentas reales (sin las de ejemplo) tal como están en el formulario: lo que lleva el PDF. */
+  readonly realAccounts = computed(() => this.accounts().filter((a) => !a.isExample && a.bank.trim() && a.number.trim()));
+
+  downloadAccountsPdf(): void {
+    downloadFile(buildBankAccountsPdf(this.realAccounts()), 'cuentas-x-autohub.pdf');
+  }
 
   ngOnInit(): void {
     this.settings.getBankAccounts().subscribe({

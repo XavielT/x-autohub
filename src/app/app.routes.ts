@@ -340,6 +340,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/novedades/novedades').then((m) => m.Novedades),
   },
 
+  // --- Pagos ---
+  {
+    path: 'cuentas',
+    title: `Cuentas para pagar | ${BRAND}`,
+    loadComponent: () => import('./pages/cuentas/cuentas').then((m) => m.Cuentas),
+  },
+
   // --- Legal ---
   {
     path: 'terminos-condiciones',

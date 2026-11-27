@@ -1,0 +1,32 @@
+<main class="cta">
+  <nav class="cta__crumb" aria-label="Navegación"><a routerLink="/tienda">← Seguir comprando</a></nav>
+
+  <h1 class="cta__title">Cuentas para <span>pagar</span></h1>
+  <p class="cta__lead">Depósitos y transferencias a nombre de X AutoHub. Después de pagar, sube tu comprobante en tu pedido o envíalo por WhatsApp.</p>
+
+  @if (isLoading()) {
+    <app-skeleton variant="row" [count]="2" label="Cargando las cuentas…" />
+  } @else if (accounts().length === 0) {
+    <div class="cta__empty">
+      <p>Por ahora te damos los datos de la cuenta por WhatsApp.</p>
+      <a class="cta__btn" [href]="whatsappLink" target="_blank" rel="noopener noreferrer">Pedir los datos por WhatsApp</a>
+    </div>
+  } @else {
+    <ul class="cta__list">
+      @for (acc of accounts(); track acc.number) {
+        <li class="cta__card">
+          <span class="cta__bank">{{ acc.bank }}</span>
+          <span class="cta__meta">{{ acc.holder }}@if (acc.type) { · {{ acc.type }} }</span>
+          <span class="cta__number">{{ acc.number }}</span>
+          <button type="button" class="cta__copy" (click)="copy(acc.number, 'El número de cuenta')">Copiar número</button>
+        </li>
+      }
+    </ul>
+
+    <div class="cta__actions">
+      <button type="button" class="cta__btn" (click)="downloadPdf()">Descargar en PDF</button>
+      <a class="cta__btn cta__btn--ghost" [href]="whatsappLink" target="_blank" rel="noopener noreferrer">Preguntar por WhatsApp</a>
+    </div>
+    <p class="cta__note">Verifica el nombre del titular antes de transferir. ¿Dudas? Escríbenos al {{ phone }}.</p>
+  }
+</main>

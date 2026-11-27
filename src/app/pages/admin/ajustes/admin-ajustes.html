@@ -9,8 +9,10 @@
   <article class="adm-set__card">
     <h3 class="adm-set__card-title">Cuentas para transferir</h3>
     <p class="adm-set__card-text">
-      Las ve el cliente al confirmar un pedido por transferencia, junto al monto exacto.
+      Las ve el cliente al confirmar un pedido por transferencia, junto al monto exacto. También están en la página pública
+      <a routerLink="/cuentas">/cuentas</a>, con un PDF para descargar.
     </p>
+    <button type="button" class="adm-set__secondary" [disabled]="realAccounts().length === 0" (click)="downloadAccountsPdf()">Descargar el PDF de las cuentas</button>
 
     @if (onlyExampleAccounts()) {
       <p class="adm-set__warn" role="status">

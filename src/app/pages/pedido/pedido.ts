@@ -7,6 +7,7 @@ import { OrderService } from '../../../shared/services/order.service';
 import { SiteSettingsService, realBankAccounts } from '../../../shared/services/site-settings.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { BankAccount, OrderView, PickupAddress } from '../../../shared/models/order.model';
+import { buildBankAccountsPdf, downloadFile } from '../../../shared/utils/bank-accounts-pdf';
 import { ORDER_STATUS_LABELS } from '../../../shared/models/user-order.model';
 import {
   acceptsProof,
@@ -175,6 +176,10 @@ export class Pedido {
     const order = this.order();
     if (!order) return;
     this.orders.markWhatsAppOpened(order.id).subscribe({ error: () => undefined });
+  }
+
+  downloadAccountsPdf(): void {
+    downloadFile(buildBankAccountsPdf(this.bankAccounts()), 'cuentas-x-autohub.pdf');
   }
 
   async copy(text: string, what: string): Promise<void> {
